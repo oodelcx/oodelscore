@@ -8,12 +8,15 @@
   "scripts": {
     "seed": "tsx scripts/seed.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
+    "setup:stripe-prices": "tsx scripts/setup-stripe-prices.ts",
+    "check:billing-integrity": "tsx scripts/check-billing-integrity.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^8.9.0"
+    "mongoose": "^8.9.0",
+    "stripe": "^22.6.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
