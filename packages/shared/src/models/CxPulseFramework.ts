@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model } from "mongoose";
+import mongoose, { Schema, model, type Model } from "mongoose";
 import type { ICxPulseDimensions } from "./CxPulseScore";
 
 /** Singleton, admin-editable. Only one document should ever exist. */
@@ -33,4 +33,4 @@ const CxPulseFrameworkSchema = new Schema<ICxPulseFramework>(
 );
 
 export const CxPulseFramework: Model<ICxPulseFramework> =
-  models.CxPulseFramework ?? model<ICxPulseFramework>("CxPulseFramework", CxPulseFrameworkSchema);
+  mongoose.models.CxPulseFramework ?? model<ICxPulseFramework>("CxPulseFramework", CxPulseFrameworkSchema);

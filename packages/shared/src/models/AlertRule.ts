@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export const ALERT_SCOPES = ["business", "parentOrg_all", "parentOrg_region"] as const;
 export type AlertScope = (typeof ALERT_SCOPES)[number];
@@ -44,4 +44,4 @@ const AlertRuleSchema = new Schema<IAlertRule>(
   { timestamps: true }
 );
 
-export const AlertRule: Model<IAlertRule> = models.AlertRule ?? model<IAlertRule>("AlertRule", AlertRuleSchema);
+export const AlertRule: Model<IAlertRule> = mongoose.models.AlertRule ?? model<IAlertRule>("AlertRule", AlertRuleSchema);

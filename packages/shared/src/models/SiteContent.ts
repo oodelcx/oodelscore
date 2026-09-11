@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model } from "mongoose";
+import mongoose, { Schema, model, type Model } from "mongoose";
 
 export const SITE_CONTENT_PAGES = ["menu", "home", "pricing", "product", "solutions", "company"] as const;
 export type SiteContentPage = (typeof SITE_CONTENT_PAGES)[number];
@@ -55,4 +55,4 @@ const SiteContentSchema = new Schema<ISiteContent>(
 );
 
 export const SiteContent: Model<ISiteContent> =
-  models.SiteContent ?? model<ISiteContent>("SiteContent", SiteContentSchema);
+  mongoose.models.SiteContent ?? model<ISiteContent>("SiteContent", SiteContentSchema);

@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export interface IPlaybook {
   parentOrgId: Types.ObjectId;
@@ -25,4 +25,4 @@ const PlaybookSchema = new Schema<IPlaybook>(
   { timestamps: true }
 );
 
-export const Playbook: Model<IPlaybook> = models.Playbook ?? model<IPlaybook>("Playbook", PlaybookSchema);
+export const Playbook: Model<IPlaybook> = mongoose.models.Playbook ?? model<IPlaybook>("Playbook", PlaybookSchema);

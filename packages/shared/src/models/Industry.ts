@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model } from "mongoose";
+import mongoose, { Schema, model, type Model } from "mongoose";
 
 export interface IIndustry {
   name: string;
@@ -15,4 +15,4 @@ const IndustrySchema = new Schema<IIndustry>(
   { timestamps: true }
 );
 
-export const Industry: Model<IIndustry> = models.Industry ?? model<IIndustry>("Industry", IndustrySchema);
+export const Industry: Model<IIndustry> = mongoose.models.Industry ?? model<IIndustry>("Industry", IndustrySchema);

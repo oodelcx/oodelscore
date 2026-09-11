@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { BILLING_OWNER_TYPES, type BillingOwnerType } from "./BillingSubscription";
 
 export const AI_REPORT_PERIODS = ["weekly", "monthly", "quarterly", "yearly"] as const;
@@ -48,4 +48,4 @@ const AiInsightReportSchema = new Schema<IAiInsightReport>(
 AiInsightReportSchema.index({ ownerType: 1, ownerId: 1, period: 1, periodStart: 1 });
 
 export const AiInsightReport: Model<IAiInsightReport> =
-  models.AiInsightReport ?? model<IAiInsightReport>("AiInsightReport", AiInsightReportSchema);
+  mongoose.models.AiInsightReport ?? model<IAiInsightReport>("AiInsightReport", AiInsightReportSchema);

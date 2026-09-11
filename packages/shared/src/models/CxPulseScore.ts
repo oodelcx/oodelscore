@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { BILLING_OWNER_TYPES, type BillingOwnerType } from "./BillingSubscription";
 
 export type CxPulseLevel = 1 | 2 | 3 | 4 | 5;
@@ -52,4 +52,4 @@ const CxPulseScoreSchema = new Schema<ICxPulseScore>(
 CxPulseScoreSchema.index({ ownerType: 1, ownerId: 1, period: 1 }, { unique: true });
 
 export const CxPulseScore: Model<ICxPulseScore> =
-  models.CxPulseScore ?? model<ICxPulseScore>("CxPulseScore", CxPulseScoreSchema);
+  mongoose.models.CxPulseScore ?? model<ICxPulseScore>("CxPulseScore", CxPulseScoreSchema);

@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { BILLING_OWNER_TYPES, type BillingOwnerType } from "./BillingSubscription";
 
 export interface IPulseAnswer {
@@ -36,4 +36,4 @@ const CxPulsePulseResponseSchema = new Schema<ICxPulsePulseResponse>(
 CxPulsePulseResponseSchema.index({ ownerType: 1, ownerId: 1, quarter: 1 }, { unique: true });
 
 export const CxPulsePulseResponse: Model<ICxPulsePulseResponse> =
-  models.CxPulsePulseResponse ?? model<ICxPulsePulseResponse>("CxPulsePulseResponse", CxPulsePulseResponseSchema);
+  mongoose.models.CxPulsePulseResponse ?? model<ICxPulsePulseResponse>("CxPulsePulseResponse", CxPulsePulseResponseSchema);

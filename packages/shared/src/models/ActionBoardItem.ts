@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export const ACTION_PRIORITIES = ["low", "medium", "high", "critical"] as const;
 export type ActionPriority = (typeof ACTION_PRIORITIES)[number];
@@ -44,4 +44,4 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
 ActionBoardItemSchema.index({ parentOrgId: 1, status: 1, dueDate: 1 });
 
 export const ActionBoardItem: Model<IActionBoardItem> =
-  models.ActionBoardItem ?? model<IActionBoardItem>("ActionBoardItem", ActionBoardItemSchema);
+  mongoose.models.ActionBoardItem ?? model<IActionBoardItem>("ActionBoardItem", ActionBoardItemSchema);

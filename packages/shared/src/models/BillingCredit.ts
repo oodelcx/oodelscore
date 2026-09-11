@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { BILLING_OWNER_TYPES, type BillingOwnerType } from "./BillingSubscription";
 
 export const BILLING_CREDIT_TYPES = ["credit", "refund"] as const;
@@ -34,4 +34,4 @@ const BillingCreditSchema = new Schema<IBillingCredit>(
 );
 
 export const BillingCredit: Model<IBillingCredit> =
-  models.BillingCredit ?? model<IBillingCredit>("BillingCredit", BillingCreditSchema);
+  mongoose.models.BillingCredit ?? model<IBillingCredit>("BillingCredit", BillingCreditSchema);

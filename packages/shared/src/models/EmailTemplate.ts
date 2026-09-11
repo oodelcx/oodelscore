@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model } from "mongoose";
+import mongoose, { Schema, model, type Model } from "mongoose";
 
 export const EMAIL_TEMPLATE_KEYS = [
   "welcome",
@@ -35,4 +35,4 @@ const EmailTemplateSchema = new Schema<IEmailTemplate>(
 );
 
 export const EmailTemplate: Model<IEmailTemplate> =
-  models.EmailTemplate ?? model<IEmailTemplate>("EmailTemplate", EmailTemplateSchema);
+  mongoose.models.EmailTemplate ?? model<IEmailTemplate>("EmailTemplate", EmailTemplateSchema);

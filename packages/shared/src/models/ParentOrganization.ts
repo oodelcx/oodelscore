@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { AddressSchema, type IAddress } from "./common";
 
 export const BILLING_MODES = ["group_pays", "branch_pays"] as const;
@@ -32,4 +32,4 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
 );
 
 export const ParentOrganization: Model<IParentOrganization> =
-  models.ParentOrganization ?? model<IParentOrganization>("ParentOrganization", ParentOrganizationSchema);
+  mongoose.models.ParentOrganization ?? model<IParentOrganization>("ParentOrganization", ParentOrganizationSchema);

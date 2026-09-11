@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { AddressSchema, type IAddress } from "./common";
 
 export const BILLING_ASSIGNMENTS = ["group_pays", "branch_pays", "unassigned"] as const;
@@ -79,4 +79,4 @@ const BusinessSchema = new Schema<IBusiness>(
   { timestamps: true }
 );
 
-export const Business: Model<IBusiness> = models.Business ?? model<IBusiness>("Business", BusinessSchema);
+export const Business: Model<IBusiness> = mongoose.models.Business ?? model<IBusiness>("Business", BusinessSchema);

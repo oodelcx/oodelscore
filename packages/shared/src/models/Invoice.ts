@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { BILLING_OWNER_TYPES, type BillingOwnerType } from "./BillingSubscription";
 
 export const INVOICE_STATUSES = ["paid", "failed", "refunded"] as const;
@@ -35,4 +35,4 @@ const InvoiceSchema = new Schema<IInvoice>(
 
 InvoiceSchema.index({ ownerType: 1, ownerId: 1, issuedAt: -1 });
 
-export const Invoice: Model<IInvoice> = models.Invoice ?? model<IInvoice>("Invoice", InvoiceSchema);
+export const Invoice: Model<IInvoice> = mongoose.models.Invoice ?? model<IInvoice>("Invoice", InvoiceSchema);

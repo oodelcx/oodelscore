@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export const QUESTION_TYPES = [
   "star_1_5",
@@ -54,4 +54,4 @@ const QuestionTemplateSchema = new Schema<IQuestionTemplate>(
 );
 
 export const QuestionTemplate: Model<IQuestionTemplate> =
-  models.QuestionTemplate ?? model<IQuestionTemplate>("QuestionTemplate", QuestionTemplateSchema);
+  mongoose.models.QuestionTemplate ?? model<IQuestionTemplate>("QuestionTemplate", QuestionTemplateSchema);

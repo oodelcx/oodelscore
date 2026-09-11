@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model } from "mongoose";
+import mongoose, { Schema, model, type Model } from "mongoose";
 
 export interface ICategory {
   name: string;
@@ -13,4 +13,4 @@ const CategorySchema = new Schema<ICategory>(
   { timestamps: true }
 );
 
-export const Category: Model<ICategory> = models.Category ?? model<ICategory>("Category", CategorySchema);
+export const Category: Model<ICategory> = mongoose.models.Category ?? model<ICategory>("Category", CategorySchema);

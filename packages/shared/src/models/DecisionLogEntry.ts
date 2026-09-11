@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export const DECISION_STATUSES = ["planned", "in_progress", "implemented"] as const;
 export type DecisionStatus = (typeof DECISION_STATUSES)[number];
@@ -41,4 +41,4 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
 DecisionLogEntrySchema.index({ parentOrgId: 1, affectedBusinessIds: 1 });
 
 export const DecisionLogEntry: Model<IDecisionLogEntry> =
-  models.DecisionLogEntry ?? model<IDecisionLogEntry>("DecisionLogEntry", DecisionLogEntrySchema);
+  mongoose.models.DecisionLogEntry ?? model<IDecisionLogEntry>("DecisionLogEntry", DecisionLogEntrySchema);

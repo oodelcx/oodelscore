@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { DEMOGRAPHIC_MODES, type DemographicMode } from "./Business";
 
 export const FORM_LAYOUTS = ["single_page", "one_per_screen"] as const;
@@ -51,4 +51,4 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
 );
 
 export const FeedbackPoint: Model<IFeedbackPoint> =
-  models.FeedbackPoint ?? model<IFeedbackPoint>("FeedbackPoint", FeedbackPointSchema);
+  mongoose.models.FeedbackPoint ?? model<IFeedbackPoint>("FeedbackPoint", FeedbackPointSchema);

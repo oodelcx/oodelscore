@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export const ACCOUNT_TYPES = ["admin_staff", "parent_org", "business"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
@@ -36,4 +36,4 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-export const User: Model<IUser> = models.User ?? model<IUser>("User", UserSchema);
+export const User: Model<IUser> = mongoose.models.User ?? model<IUser>("User", UserSchema);

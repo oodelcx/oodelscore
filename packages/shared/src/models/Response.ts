@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { QUESTION_TYPES, type QuestionType } from "./QuestionTemplate";
 
 export interface IAnswer {
@@ -64,4 +64,4 @@ const ResponseSchema = new Schema<IResponse>(
 
 ResponseSchema.index({ businessId: 1, submittedAt: -1 });
 
-export const Response: Model<IResponse> = models.Response ?? model<IResponse>("Response", ResponseSchema);
+export const Response: Model<IResponse> = mongoose.models.Response ?? model<IResponse>("Response", ResponseSchema);

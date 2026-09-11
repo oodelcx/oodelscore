@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 export const BILLING_OWNER_TYPES = ["business", "parentOrg"] as const;
 export type BillingOwnerType = (typeof BILLING_OWNER_TYPES)[number];
@@ -47,4 +47,4 @@ const BillingSubscriptionSchema = new Schema<IBillingSubscription>(
 BillingSubscriptionSchema.index({ ownerType: 1, ownerId: 1 }, { unique: true });
 
 export const BillingSubscription: Model<IBillingSubscription> =
-  models.BillingSubscription ?? model<IBillingSubscription>("BillingSubscription", BillingSubscriptionSchema);
+  mongoose.models.BillingSubscription ?? model<IBillingSubscription>("BillingSubscription", BillingSubscriptionSchema);

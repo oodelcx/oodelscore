@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model } from "mongoose";
+import mongoose, { Schema, model, type Model } from "mongoose";
 
 export const PERMISSION_SCOPES = ["all", "assigned"] as const;
 export type PermissionScope = (typeof PERMISSION_SCOPES)[number];
@@ -78,4 +78,4 @@ const RoleSchema = new Schema<IRole>(
   { timestamps: true }
 );
 
-export const Role: Model<IRole> = models.Role ?? model<IRole>("Role", RoleSchema);
+export const Role: Model<IRole> = mongoose.models.Role ?? model<IRole>("Role", RoleSchema);

@@ -1,4 +1,4 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
 /**
  * Powers "fired X times this week" displays and Overview "flagged" counts —
@@ -26,4 +26,4 @@ const AlertActivitySchema = new Schema<IAlertActivity>(
 AlertActivitySchema.index({ businessId: 1, triggeredAt: -1 });
 
 export const AlertActivity: Model<IAlertActivity> =
-  models.AlertActivity ?? model<IAlertActivity>("AlertActivity", AlertActivitySchema);
+  mongoose.models.AlertActivity ?? model<IAlertActivity>("AlertActivity", AlertActivitySchema);
