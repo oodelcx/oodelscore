@@ -16,6 +16,12 @@ export interface IUser {
   inviteTokenHash: string | null;
   inviteExpiresAt: Date | null; // 7 days from send
   lastLoginAt: Date | null;
+  // Bumped on every password change; embedded in issued JWTs so changing a
+  // password invalidates all previously issued sessions (spec Section 3).
+  tokenVersion: number;
+  // Brute-force lockout (spec Section 3).
+  failedLoginAttempts: number;
+  lockedUntil: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +38,9 @@ const UserSchema = new Schema<IUser>(
     inviteTokenHash: { type: String, default: null },
     inviteExpiresAt: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },
+    tokenVersion: { type: Number, default: 0 },
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockedUntil: { type: Date, default: null },
   },
   { timestamps: true }
 );

@@ -9,6 +9,7 @@
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "seed": "npm run seed -w @oodelscore/shared",
+    "seed:demo": "npm run seed:demo -w @oodelscore/shared",
     "typecheck": "npm run typecheck -w @oodelscore/shared && npm run typecheck -w apps/web && npm run typecheck -w apps/worker"
   },
   "engines": {
