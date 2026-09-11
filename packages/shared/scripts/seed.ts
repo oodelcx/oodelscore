@@ -1,55 +1,25 @@
 import { connectToDatabase, disconnectFromDatabase } from "../src/db";
-import { Role } from "../src/models/Role";
-import { EmailTemplate } from "../src/models/EmailTemplate";
-import { CxPulseFramework, CX_PULSE_FRAMEWORK_SINGLETON_KEY } from "../src/models/CxPulseFramework";
-import { SYSTEM_ROLES } from "../src/seedData/roles";
-import { SEED_EMAIL_TEMPLATES } from "../src/seedData/emailTemplates";
-import { DEFAULT_CX_PULSE_WEIGHTS, DEFAULT_CX_PULSE_QUESTIONS } from "../src/seedData/cxPulseFramework";
+import { seedPlatformDefaults } from "../src/seedData/platformDefaults";
 
 /**
- * Idempotent — safe to re-run. Seeds only the platform-wide defaults called
- * out in the spec: the 3 system roles, the 9 default email templates, and
- * the singleton CX Pulse framework config. Does not touch any tenant data.
+ * Manual CLI entry point for the platform-wide defaults — connects, seeds,
+ * disconnects. The same seeding logic also runs automatically on app boot
+ * when SEED_BASE=true (see apps/web/instrumentation.ts); this script is
+ * for local/manual use.
  */
-async function seed(): Promise<void> {
+async function main(): Promise<void> {
   await connectToDatabase();
+  const result = await seedPlatformDefaults();
 
-  for (const role of SYSTEM_ROLES) {
-    await Role.updateOne(
-      { name: role.name },
-      { $setOnInsert: role },
-      { upsert: true }
-    );
-    console.log(`role ensured: ${role.name}`);
-  }
-
-  for (const template of SEED_EMAIL_TEMPLATES) {
-    await EmailTemplate.updateOne(
-      { key: template.key },
-      { $setOnInsert: template },
-      { upsert: true }
-    );
-    console.log(`email template ensured: ${template.key}`);
-  }
-
-  await CxPulseFramework.updateOne(
-    { singletonKey: CX_PULSE_FRAMEWORK_SINGLETON_KEY },
-    {
-      $setOnInsert: {
-        singletonKey: CX_PULSE_FRAMEWORK_SINGLETON_KEY,
-        weights: DEFAULT_CX_PULSE_WEIGHTS,
-        pulseQuestions: DEFAULT_CX_PULSE_QUESTIONS,
-      },
-    },
-    { upsert: true }
-  );
+  for (const name of result.roles) console.log(`role ensured: ${name}`);
+  for (const key of result.emailTemplates) console.log(`email template ensured: ${key}`);
   console.log("cx pulse framework ensured");
 
   await disconnectFromDatabase();
   console.log("seed complete");
 }
 
-seed().catch((err) => {
+main().catch((err) => {
   console.error(err);
   process.exitCode = 1;
 });
