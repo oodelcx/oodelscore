@@ -170,12 +170,25 @@ export default function QuestionTemplateBuilderPage() {
       </Link>
       <div className="page-head">
         <div>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 6 }}>
+            Template name
+          </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Template name"
-            style={{ fontSize: 22, fontWeight: 600, border: "none", background: "none", padding: 0, marginBottom: 4, width: "100%" }}
+            placeholder="e.g. School Feedback Template"
+            style={{
+              fontSize: 20,
+              fontWeight: 600,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "#fff",
+              padding: "8px 11px",
+              marginBottom: 4,
+              width: "100%",
+              maxWidth: 480,
+            }}
           />
           {!isNew && <p className="subtitle">Used by {usedByCount} business(es)</p>}
         </div>
