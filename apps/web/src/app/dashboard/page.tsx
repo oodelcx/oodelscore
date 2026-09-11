@@ -21,6 +21,11 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  // Admin has a real portal now (Milestone 3) — send admin_staff straight
+  // there instead of the placeholder below. Group/Business accounts still
+  // land here since their portals don't exist yet.
+  if (user.accountType === "admin_staff") redirect("/admin/accounts");
+
   const parentName = await resolveParentName(user.accountType, user.parentId);
 
   return (
@@ -32,8 +37,8 @@ export default async function DashboardPage() {
       <p>Account type: {user.accountType}</p>
       {parentName && <p>Attached to: {parentName}</p>}
       <p style={{ color: "#666" }}>
-        This is a placeholder landing page — the four real portals (Admin, Group, Business,
-        Business-as-branch) get built against the mockups in a later milestone.
+        This is a placeholder landing page — the Group and Business portals get built against the
+        mockups in a later milestone.
       </p>
       <LogoutButton />
     </main>
