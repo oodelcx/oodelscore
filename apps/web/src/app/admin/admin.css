@@ -1,0 +1,532 @@
+/*
+ * Design tokens and component classes lifted directly from
+ * oodel-score-admin-rebuild.html (the click-tested mockup) so the real
+ * Admin UI matches it visually, not just structurally. Trimmed to the
+ * classes actually used by the CRUD screens built so far (Accounts,
+ * Business/Parent Org detail, Question Templates) — see the mockup itself
+ * for the full set covering screens not yet built.
+ */
+:root {
+  --sidebar-bg: #15181b;
+  --sidebar-text: #a9aeb4;
+  --sidebar-hover: #1f2327;
+  --sidebar-active: #262b30;
+  --bg: #f6f6f4;
+  --card: #ffffff;
+  --border: #e6e5e1;
+  --text: #17171a;
+  --text-2: #68686a;
+  --text-3: #9a9a97;
+  --accent: #0f6e56;
+  --accent-bg: #e1f5ee;
+  --green: #3b6d11;
+  --green-bg: #eaf3de;
+  --amber: #854f0b;
+  --amber-bg: #faeeda;
+  --red: #a32d2d;
+  --red-bg: #fcebeb;
+  --blue: #185fa5;
+  --blue-bg: #e6f1fb;
+  --purple: #3c3489;
+  --purple-bg: #eeedfe;
+}
+
+.admin-app {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.admin-sidebar {
+  width: 220px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.admin-sidebar-top {
+  padding: 22px 18px 14px;
+}
+.admin-brand {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+}
+.admin-brand-sub {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #6e7379;
+  margin-top: 2px;
+}
+.admin-nav {
+  margin-top: 18px;
+  padding: 0 10px;
+}
+.admin-nav a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+  color: var(--sidebar-text);
+  margin-bottom: 1px;
+  text-decoration: none;
+}
+.admin-nav a:hover {
+  background: var(--sidebar-hover);
+  color: #fff;
+}
+.admin-nav a.active {
+  background: var(--sidebar-active);
+  color: #fff;
+  font-weight: 500;
+}
+.admin-sidebar-bottom {
+  padding: 16px 18px;
+  border-top: 1px solid #24282c;
+  font-size: 13px;
+}
+.admin-sidebar-bottom .email {
+  color: #787d82;
+  font-size: 12px;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 32px 40px;
+  max-width: 1200px;
+}
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.subtitle {
+  color: var(--text-2);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.btn {
+  border: 1px solid #d8d7d2;
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btn:hover {
+  border-color: #bfbeb8;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-dark {
+  background: var(--sidebar-bg);
+  color: #fff;
+  border-color: var(--sidebar-bg);
+}
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.btn-danger {
+  color: var(--red);
+  border-color: #f0c7c7;
+}
+.btn-group {
+  display: flex;
+  gap: 8px;
+}
+.icon-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+.grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+.card .card-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 0 0 14px;
+}
+
+.pill {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+.pill-green {
+  background: var(--green-bg);
+  color: var(--green);
+}
+.pill-amber {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+.pill-red {
+  background: var(--red-bg);
+  color: var(--red);
+}
+.pill-gray {
+  background: #efefec;
+  color: var(--text-2);
+}
+.pill-blue {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.pill-purple {
+  background: var(--purple-bg);
+  color: var(--purple);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 30px 0 14px;
+}
+.section-title:first-child {
+  margin-top: 0;
+}
+.section-sub {
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin: -10px 0 14px;
+}
+.callout {
+  background: var(--accent-bg);
+  border: 1px solid #c7e8dc;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+
+table.clean {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.clean th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+table.clean td {
+  padding: 11px 8px 11px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+table.clean tr:last-child td {
+  border-bottom: none;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--purple-bg);
+  color: var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.row-flex {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+select,
+input[type="text"],
+input[type="email"],
+input[type="number"] {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.backlink {
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+  margin-bottom: 10px;
+  display: inline-block;
+  text-decoration: none;
+}
+
+.toggle {
+  width: 38px;
+  height: 22px;
+  border-radius: 20px;
+  background: #dadad5;
+  position: relative;
+  cursor: pointer;
+  display: inline-block;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  border: none;
+  padding: 0;
+}
+.toggle::after {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: left 0.15s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.toggle.on {
+  background: var(--sidebar-bg);
+}
+.toggle.on::after {
+  left: 18px;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background: #fff;
+}
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+.field-row .field {
+  flex: 1;
+}
+.field-hint {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 5px;
+}
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  text-transform: uppercase;
+  margin: 22px 0 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+.section-label:first-of-type {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+}
+
+.subtabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.subtabs button {
+  all: unset;
+  padding: 9px 16px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.subtabs button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.subtabs button.active {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--sidebar-bg);
+}
+
+.role-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #fff;
+  margin-bottom: 12px;
+}
+.perm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+.perm-table th {
+  text-align: center;
+  font-weight: 500;
+  color: var(--text-3);
+  font-size: 11px;
+  padding-bottom: 6px;
+}
+.perm-table td {
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.perm-table td:first-child {
+  color: var(--text-2);
+}
+.perm-table td:not(:first-child) {
+  text-align: center;
+}
+
+.builder-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+.qrow {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  background: #fafaf8;
+}
+.qrow-top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.qrow-opts {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.qrow-opts select {
+  flex: 1;
+  min-width: 130px;
+}
+.tag-input {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+.tag-chip {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.tag-chip .x {
+  cursor: pointer;
+  font-weight: 700;
+}
+.tag-add {
+  border: 1px dashed var(--border);
+  background: none;
+  font-size: 12px;
+  color: var(--text-2);
+  padding: 3px 9px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.error-text {
+  color: var(--red);
+  font-size: 13px;
+  margin: 8px 0;
+}
