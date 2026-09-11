@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Oodel Score — Group dashboard with Act layer</title>
+<style>
+  :root{
+    --sidebar-bg:#15181B; --sidebar-text:#A9AEB4; --sidebar-hover:#1F2327; --sidebar-active:#262B30;
+    --bg:#F6F6F4; --card:#FFFFFF; --border:#E6E5E1;
+    --text:#17171A; --text-2:#68686A; --text-3:#9A9A97;
+    --accent:#0F6E56; --accent-bg:#E1F5EE;
+    --green:#3B6D11; --green-bg:#EAF3DE;
+    --amber:#854F0B; --amber-bg:#FAEEDA;
+    --red:#A32D2D; --red-bg:#FCEBEB;
+    --blue:#185FA5; --blue-bg:#E6F1FB;
+    --purple:#3C3489; --purple-bg:#EEEDFE;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .app{display:flex;min-height:100vh;}
+  .sidebar{width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between;position:sticky;top:0;height:100vh;}
+  .sidebar-top{padding:22px 18px 10px;}
+  .brand{color:#fff;font-size:17px;font-weight:600;}
+  .brand-sub{font-size:11px;letter-spacing:.06em;color:#6E7379;margin-top:2px;}
+  .nav-group-label{font-size:10.5px;letter-spacing:.06em;color:#5C6167;padding:14px 14px 4px;text-transform:uppercase;}
+  .nav{padding:0 10px;}
+  .nav button{all:unset;display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border-radius:8px;font-size:13.5px;cursor:pointer;color:var(--sidebar-text);margin-bottom:1px;}
+  .nav button:hover{background:var(--sidebar-hover);color:#fff;}
+  .nav button.active{background:var(--sidebar-active);color:#fff;font-weight:500;}
+  .nav .badge{margin-left:auto;font-size:9.5px;background:var(--red);color:#fff;padding:1px 6px;border-radius:20px;}
+  .sidebar-bottom{padding:16px 18px;border-top:1px solid #24282C;font-size:13px;}
+  .sidebar-bottom .biz{color:#fff;font-weight:500;}
+  .sidebar-bottom .email{color:#787D82;font-size:12px;margin-top:2px;}
+  .sidebar-bottom .logout{margin-top:12px;color:#9A9EA3;font-size:12.5px;cursor:pointer;}
+
+  .main{flex:1;padding:32px 40px;max-width:1440px;}
+  .page{display:none;} .page.active{display:block;}
+  h1{font-size:24px;font-weight:600;margin:0 0 4px;}
+  .subtitle{color:var(--text-2);font-size:14px;margin:0 0 24px;}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px;}
+  .btn{border:1px solid #D8D7D2;background:#fff;color:var(--text);font-size:13px;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap;}
+  .btn:hover{border-color:#BFBEB8;}
+  .btn-dark{background:var(--sidebar-bg);color:#fff;border-color:var(--sidebar-bg);}
+  .btn-sm{padding:4px 10px;font-size:12px;}
+
+  .grid{display:grid;gap:16px;}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-2{grid-template-columns:1fr 1fr;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}
+  .card h3{font-size:14px;font-weight:600;margin:0 0 2px;}
+  .card .card-sub{font-size:12px;color:var(--text-3);margin:0 0 14px;}
+
+  .metric-label{font-size:11.5px;letter-spacing:.04em;color:var(--text-3);text-transform:uppercase;}
+  .metric-val{font-size:26px;font-weight:600;margin-top:6px;}
+  .metric-note{font-size:12px;color:var(--text-2);margin-top:6px;}
+
+  .pill{display:inline-block;font-size:11.5px;font-weight:500;padding:3px 9px;border-radius:20px;}
+  .pill-green{background:var(--green-bg);color:var(--green);}
+  .pill-amber{background:var(--amber-bg);color:var(--amber);}
+  .pill-red{background:var(--red-bg);color:var(--red);}
+  .pill-gray{background:#EFEFEC;color:var(--text-2);}
+  .pill-blue{background:var(--blue-bg);color:var(--blue);}
+  .pill-accent{background:var(--accent-bg);color:var(--accent);}
+  .pill-purple{background:var(--purple-bg);color:var(--purple);}
+
+  .section-title{font-size:16px;font-weight:600;margin:30px 0 14px;}
+  .section-title:first-child{margin-top:0;}
+  .section-sub{font-size:12.5px;color:var(--text-2);margin:-10px 0 14px;}
+
+  .callout{background:var(--accent-bg);border:1px solid #C7E8DC;border-radius:10px;padding:12px 16px;font-size:13px;color:var(--accent);margin-bottom:20px;}
+  .callout-amber{background:var(--amber-bg);border-color:#F0DFB8;color:var(--amber);}
+
+  table.clean{width:100%;border-collapse:collapse;font-size:13px;}
+  table.clean th{text-align:left;font-weight:500;color:var(--text-3);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  table.clean td{padding:12px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
+  table.clean tr:last-child td{border-bottom:none;}
+
+  .avatar{width:34px;height:34px;border-radius:9px;background:var(--purple-bg);color:var(--purple);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0;}
+  .avatar.teal{background:var(--accent-bg);color:var(--accent);}
+  .avatar.gray{background:#EFEFEC;color:var(--text-3);}
+  .row-flex{display:flex;align-items:center;gap:9px;}
+
+  .bars .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;font-size:13px;}
+  .bars .bar-label{width:100px;flex-shrink:0;color:var(--text-2);}
+  .bars .bar-track{flex:1;background:#F1F0EC;border-radius:5px;height:16px;overflow:hidden;}
+  .bars .bar-fill{height:100%;border-radius:5px;}
+  .bars .bar-val{width:30px;text-align:right;font-size:12px;color:var(--text-2);}
+
+  .filters{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center;}
+  .chip{border:1px solid var(--border);background:#fff;font-size:12.5px;padding:6px 12px;border-radius:20px;cursor:pointer;color:var(--text-2);}
+  .chip.active{background:var(--sidebar-bg);color:#fff;border-color:var(--sidebar-bg);}
+  select,input[type=date],input[type=text]{border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12.5px;background:#fff;color:var(--text);}
+
+  .fb-card{border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:10px;background:#fff;}
+  .fb-meta{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--text-2);flex-wrap:wrap;}
+  .fb-comment{margin-top:10px;padding:10px 12px;background:#FAFAF8;border-radius:8px;font-size:13px;font-style:italic;}
+  .fb-actions{display:flex;gap:14px;margin-top:9px;font-size:12px;color:var(--text-2);}
+  .fb-actions span{cursor:pointer;}
+  .fb-actions .primary{color:var(--accent);font-weight:600;}
+
+  .backlink{font-size:13px;color:var(--text-2);cursor:pointer;margin-bottom:10px;display:inline-block;}
+
+  /* Action board */
+  .action-card{border:1px solid var(--border);border-radius:12px;padding:14px 18px;background:#fff;margin-bottom:10px;}
+  .action-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .action-title{font-size:13.5px;font-weight:500;}
+  .action-meta{font-size:12px;color:var(--text-2);margin-top:4px;}
+  .action-side{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .overdue-tag{font-size:11.5px;color:var(--red);font-weight:600;}
+
+  /* Decision log */
+  .decision-card{border:1px solid var(--border);border-radius:12px;padding:16px 20px;background:#fff;margin-bottom:14px;}
+  .decision-title{font-size:15px;font-weight:600;margin-bottom:4px;}
+  .decision-meta{font-size:12px;color:var(--text-3);margin-bottom:10px;}
+  .decision-row{display:flex;gap:24px;font-size:13px;margin-top:10px;flex-wrap:wrap;}
+  .decision-row .k{color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
+  .outcome-bar{display:flex;align-items:center;gap:10px;margin-top:10px;}
+  .outcome-bar .ov{font-weight:600;}
+
+  /* Playbooks */
+  .playbook-card{border:1px solid var(--border);border-radius:12px;padding:16px 18px;background:#fff;}
+
+  /* Maturity */
+  .dim-row{border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:10px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:16px;}
+  .dim-track{flex:1;background:#F1F0EC;border-radius:6px;height:10px;overflow:hidden;margin:0 16px;}
+  .dim-fill{height:100%;border-radius:6px;}
+  .level-badge{display:inline-flex;align-items:center;gap:8px;background:var(--accent-bg);color:var(--accent);padding:7px 16px;border-radius:20px;font-weight:600;font-size:15px;}
+
+  /* Compare branches */
+  .compare-chip{display:flex;align-items:center;gap:8px;background:var(--accent-bg);color:var(--accent);font-size:12.5px;padding:5px 10px 5px 12px;border-radius:20px;}
+  .compare-chip .x{cursor:pointer;font-weight:700;}
+  .compare-summary{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:#fff;}
+  .compare-summary .cs-name{font-weight:600;font-size:13.5px;margin-bottom:8px;}
+  .compare-summary .cs-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-2);padding:4px 0;}
+  .compare-summary .cs-row b{color:var(--text);font-weight:600;}
+  .grouped-bar{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+  .grouped-bar .glabel{width:100px;font-size:13px;color:var(--text-2);flex-shrink:0;}
+  .grouped-bar .gtrack{flex:1;display:flex;flex-direction:column;gap:5px;}
+  .grouped-bar .gseg{display:flex;align-items:center;gap:8px;}
+  .grouped-bar .gseg .gfill-track{flex:1;background:#F1F0EC;border-radius:4px;height:10px;}
+  .grouped-bar .gseg .gfill{height:100%;border-radius:4px;}
+  .grouped-bar .gseg .gval{width:30px;font-size:11.5px;color:var(--text-3);}
+  .legend-row{display:flex;gap:18px;font-size:12.5px;color:var(--text-2);margin-top:8px;flex-wrap:wrap;}
+  .legend-row .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;}
+
+  /* Modals */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,17,19,.45);z-index:100;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:#fff;border-radius:14px;width:100%;max-width:560px;padding:26px 28px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+  .modal-head h2{font-size:18px;font-weight:600;margin:0;}
+  .modal-close{cursor:pointer;color:var(--text-3);font-size:20px;line-height:1;background:none;border:none;}
+  .modal-sub{font-size:12.5px;color:var(--text-2);margin:0 0 20px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;}
+  .field input[type=text], .field textarea, .field select{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;}
+  .field textarea{resize:vertical;min-height:64px;}
+  .field-row{display:flex;gap:12px;}
+  .field-row .field{flex:1;}
+  .field-hint{font-size:11.5px;color:var(--text-3);margin-top:5px;}
+  .step-input-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+  .step-input-row input{flex:1;}
+  .step-input-row .step-num{width:20px;font-size:12px;color:var(--text-3);flex-shrink:0;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;border-top:1px solid var(--border);padding-top:18px;}
+  .linked-source{background:#FAFAF8;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--text-2);margin-bottom:16px;}
+  .linked-source b{color:var(--text);}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div>
+      <div class="sidebar-top">
+        <div class="brand">Oodel Score</div>
+        <div class="brand-sub">PARENT ORGANISATION PORTAL</div>
+      </div>
+      <div class="nav-group-label">Organisation</div>
+      <div class="nav" id="nav1"></div>
+      <div class="nav-group-label">Listen</div>
+      <div class="nav" id="nav2"></div>
+      <div class="nav-group-label">Act</div>
+      <div class="nav" id="nav3"></div>
+      <div class="nav-group-label">Measure</div>
+      <div class="nav" id="nav4"></div>
+      <div class="nav-group-label">Admin</div>
+      <div class="nav" id="nav5"></div>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="biz">Meridian Retail Group</div>
+      <div class="email">group@oodelscore.com</div>
+      <div class="logout">Log out</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="page-head">
+        <div><h1>Meridian Retail Group</h1><p class="subtitle" style="margin:0;">1,042 branches across 9 regions.</p></div>
+        <input type="text" placeholder="Jump to a branch…" style="width:260px;">
+      </div>
+      <div class="grid grid-4" style="margin-bottom:20px;">
+        <div class="card"><div class="metric-label">Branches</div><div class="metric-val">1,042</div></div>
+        <div class="card"><div class="metric-label">Network average</div><div class="metric-val">4.41/5</div></div>
+        <div class="card"><div class="metric-label">Network NPS</div><div class="metric-val">+31</div></div>
+        <div class="card"><div class="metric-label">CX Pulse</div><div class="metric-val" style="font-size:18px;">Level 2 · Reacting</div><div class="metric-note"><span onclick="showPage('maturity')" style="color:var(--accent);cursor:pointer;">See what's behind this →</span></div></div>
+      </div>
+      <div class="callout">Outliers and regions are surfaced here first — every branch is always fully searchable in detail on Branches, regardless of network size.</div>
+      <div class="section-title">Regions</div>
+      <table class="clean" style="margin-bottom:28px;">
+        <tr><th>Region</th><th>Branches</th><th>Average</th><th>NPS</th><th>Flagged</th><th></th></tr>
+        <tr><td><div class="row-flex"><div class="avatar teal">NW</div>North West</div></td><td>142</td><td>4.58/5</td><td>+44</td><td><span class="pill pill-green">0</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="showPage('region-detail')">Open →</span></td></tr>
+        <tr><td><div class="row-flex"><div class="avatar">SE</div>South East</div></td><td>206</td><td>4.12/5</td><td>+18</td><td><span class="pill pill-red" style="cursor:pointer;" onclick="showPage('region-detail')">6</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="showPage('region-detail')">Open →</span></td></tr>
+        <tr><td><div class="row-flex"><div class="avatar">MI</div>Midlands</div></td><td>178</td><td>4.39/5</td><td>+29</td><td><span class="pill pill-amber">2</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="showPage('region-detail')">Open →</span></td></tr>
+      </table>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Needs attention</h3>
+          <p class="card-sub">Branches scoring meaningfully below their own region's average.</p>
+          <table class="clean">
+            <tr style="cursor:pointer;" onclick="showPage('branch-detail')"><td>Croydon High St</td><td>3.1/5</td><td style="color:var(--text-3);">1.4σ below region</td></tr>
+            <tr style="cursor:pointer;"><td>Brighton Marina</td><td>3.4/5</td><td style="color:var(--text-3);">1.2σ below region</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Top performers</h3>
+          <table class="clean">
+            <tr><td>Manchester Deansgate</td><td>4.96/5</td><td>412 responses</td></tr>
+            <tr><td>Leeds Trinity</td><td>4.93/5</td><td>388 responses</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRANCHES -->
+    <div class="page" id="page-branches">
+      <h1>Branches</h1>
+      <p class="subtitle">All 1,042 branches. Search, filter, or browse by region — full detail, no matter the scale.</p>
+      <div class="filters">
+        <input type="text" placeholder="Search by branch name or ID…" style="width:240px;">
+        <select><option>All regions</option></select><select><option>Any score</option></select><select><option>Sort: highest score</option></select>
+      </div>
+      <table class="clean">
+        <tr><th>Branch</th><th>Region</th><th>Average</th><th>NPS</th><th>Responses</th><th>Billed to</th><th></th></tr>
+        <tr><td>Manchester Deansgate</td><td>North West</td><td>4.96/5</td><td>+68</td><td>412</td><td><span class="pill pill-blue">Group</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="showPage('branch-detail')">Open →</span></td></tr>
+        <tr><td>Croydon High St</td><td>South East</td><td>3.10/5</td><td>-4</td><td>54</td><td><span class="pill pill-gray">Branch</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="showPage('branch-detail')">Open →</span></td></tr>
+      </table>
+      <p style="font-size:12px;color:var(--text-3);margin-top:10px;">Showing 1–20 of 1,042 branches.</p>
+    </div>
+
+    <!-- REGION DETAIL -->
+    <div class="page" id="page-region-detail">
+      <span class="backlink" onclick="showPage('overview')">← Back to overview</span>
+      <h1>South East region</h1>
+      <p class="subtitle">206 branches · 4.12/5 average · +18 NPS · 6 branches currently flagged</p>
+      <div class="section-title">Why 6 are flagged</div>
+      <p class="section-sub">Sourced from Alert rules — the same rules you can see and edit on Alert Rules.</p>
+      <table class="clean" style="margin-bottom:26px;">
+        <tr><th>Branch</th><th>Average</th><th>Rule triggered</th><th></th></tr>
+        <tr><td>Croydon High St</td><td>3.1/5</td><td>Regional outlier — 1.4σ below region</td><td style="text-align:right;"><span class="btn btn-sm" onclick="showPage('branch-detail')">Open →</span></td></tr>
+        <tr><td>Brighton Marina</td><td>3.4/5</td><td>Regional outlier — 1.2σ below region</td><td style="text-align:right;"><span class="btn btn-sm">Open →</span></td></tr>
+        <tr><td>Reading Central</td><td>3.5/5</td><td>Sudden drop — 22% below 90-day baseline</td><td style="text-align:right;"><span class="btn btn-sm">Open →</span></td></tr>
+      </table>
+      <div class="section-title">All branches in this region</div>
+      <div class="filters"><input type="text" placeholder="Search branches in this region…"><select><option>Sort: highest score</option><option>Sort: lowest score</option></select></div>
+      <table class="clean">
+        <tr><th>Branch</th><th>Average</th><th>NPS</th><th>Responses</th><th></th></tr>
+        <tr><td>Croydon High St</td><td>3.10/5</td><td>-4</td><td>54</td><td style="text-align:right;"><span class="btn btn-sm" onclick="showPage('branch-detail')">Open →</span></td></tr>
+        <tr><td>Reading Central</td><td>3.50/5</td><td>+2</td><td>71</td><td style="text-align:right;"><span class="btn btn-sm">Open →</span></td></tr>
+      </table>
+      <p style="font-size:12px;color:var(--text-3);margin-top:10px;">Showing 1–20 of 206 branches.</p>
+    </div>
+
+    <!-- BRANCH DETAIL -->
+    <div class="page" id="page-branch-detail">
+      <span class="backlink" onclick="showPage('region-detail')">← Back to South East</span>
+      <h1>Croydon High St <span class="pill pill-gray">Read-only</span></h1>
+      <p class="subtitle">Same dashboard the branch manager sees — this is where every number on the Overview and Billing pages traces back to.</p>
+      <div class="grid grid-4" style="margin-bottom:20px;">
+        <div class="card"><div class="metric-label">Responses (30d)</div><div class="metric-val">54</div></div>
+        <div class="card"><div class="metric-label">Average score</div><div class="metric-val">3.10/5</div></div>
+        <div class="card"><div class="metric-label">NPS</div><div class="metric-val">-4</div></div>
+        <div class="card"><div class="metric-label">Billed to</div><div class="metric-val" style="font-size:18px;">Branch</div><div class="metric-note"><span class="pill pill-red">Overdue</span></div></div>
+      </div>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Open Action Board items here</h3>
+          <table class="clean">
+            <tr><td>Repeated queue-length complaints</td><td><span class="pill pill-red">Overdue</span></td></tr>
+          </table>
+          <button class="btn btn-sm" style="margin-top:10px;" onclick="showPage('actions')">View on Action Board →</button>
+        </div>
+        <div class="card">
+          <h3>CX Pulse</h3>
+          <div class="level-badge">Level 1 · Collecting</div>
+          <div class="metric-note" style="margin-top:10px;">Low score and no owner assigned to the open item above — this is why it's flagged.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPARE -->
+    <div class="page" id="page-compare">
+      <h1>Compare branches</h1>
+      <p class="subtitle">Search and add up to 6 branches to compare category by category. For larger groups, compare by region on the Overview instead.</p>
+      <div class="filters">
+        <input type="text" placeholder="Search branches to add…" style="width:260px;">
+      </div>
+      <div class="filters">
+        <div class="compare-chip">Manchester Deansgate <span class="x">×</span></div>
+        <div class="compare-chip">Croydon High St <span class="x">×</span></div>
+        <div class="compare-chip">Reading Central <span class="x">×</span></div>
+        <div class="compare-chip">Leeds Trinity <span class="x">×</span></div>
+        <span style="font-size:12.5px;color:var(--text-3);">4 of 6 selected</span>
+        <select style="margin-left:auto;"><option>Last 8 weeks</option><option>This quarter</option><option>This year</option></select>
+      </div>
+
+      <div class="grid grid-4" style="margin-bottom:24px;">
+        <div class="compare-summary">
+          <div class="cs-name">Manchester Deansgate</div>
+          <div class="cs-row"><span>Average</span><b style="color:var(--green);">4.96/5</b></div>
+          <div class="cs-row"><span>NPS</span><b>+68</b></div>
+          <div class="cs-row"><span>Responses (30d)</span><b>412</b></div>
+          <div class="cs-row"><span>CX Pulse</span><b>Level 4</b></div>
+        </div>
+        <div class="compare-summary">
+          <div class="cs-name">Croydon High St</div>
+          <div class="cs-row"><span>Average</span><b style="color:var(--red);">3.10/5</b></div>
+          <div class="cs-row"><span>NPS</span><b>-4</b></div>
+          <div class="cs-row"><span>Responses (30d)</span><b>54</b></div>
+          <div class="cs-row"><span>CX Pulse</span><b>Level 1</b></div>
+        </div>
+        <div class="compare-summary">
+          <div class="cs-name">Reading Central</div>
+          <div class="cs-row"><span>Average</span><b style="color:var(--amber);">3.50/5</b></div>
+          <div class="cs-row"><span>NPS</span><b>+2</b></div>
+          <div class="cs-row"><span>Responses (30d)</span><b>71</b></div>
+          <div class="cs-row"><span>CX Pulse</span><b>Level 4</b></div>
+        </div>
+        <div class="compare-summary">
+          <div class="cs-name">Leeds Trinity</div>
+          <div class="cs-row"><span>Average</span><b style="color:var(--green);">4.93/5</b></div>
+          <div class="cs-row"><span>NPS</span><b>+61</b></div>
+          <div class="cs-row"><span>Responses (30d)</span><b>388</b></div>
+          <div class="cs-row"><span>CX Pulse</span><b>Level 3</b></div>
+        </div>
+      </div>
+
+      <div class="section-title">Response trend, overlaid</div>
+      <div class="card" style="margin-bottom:24px;">
+        <svg viewBox="0 0 760 140" width="100%" height="140">
+          <line x1="30" y1="8" x2="30" y2="120" stroke="#E6E5E1"/><line x1="30" y1="120" x2="740" y2="120" stroke="#E6E5E1"/>
+          <text x="6" y="12" font-size="9" fill="#9A9A97">5</text><text x="6" y="122" font-size="9" fill="#9A9A97">0</text>
+          <polyline fill="none" stroke="#0F6E56" stroke-width="2" points="30,45 100,42 170,48 240,38 310,44 380,36 450,41 520,34 590,39 660,32 730,37"/>
+          <polyline fill="none" stroke="#E24B4A" stroke-width="2" points="30,88 100,92 170,85 240,95 310,90 380,98 450,93 520,96 590,91 660,94 730,89"/>
+          <polyline fill="none" stroke="#EF9F27" stroke-width="2" points="30,78 100,74 170,80 240,70 310,72 380,64 450,68 520,60 590,63 660,58 730,55"/>
+          <polyline fill="none" stroke="#7F77DD" stroke-width="2" points="30,48 100,46 170,50 240,42 310,45 380,40 450,43 520,39 590,41 660,37 730,40"/>
+        </svg>
+        <div class="legend-row">
+          <div><span class="dot" style="background:#0F6E56;"></span>Manchester Deansgate</div>
+          <div><span class="dot" style="background:#E24B4A;"></span>Croydon High St</div>
+          <div><span class="dot" style="background:#EF9F27;"></span>Reading Central</div>
+          <div><span class="dot" style="background:#7F77DD;"></span>Leeds Trinity</div>
+        </div>
+      </div>
+
+      <div class="section-title">By category</div>
+      <p class="section-sub">Where the real gaps are, not just the overall average.</p>
+      <div class="card" style="margin-bottom:24px;">
+        <div class="grouped-bar">
+          <div class="glabel">Value</div>
+          <div class="gtrack">
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:98%;background:#0F6E56;"></div></div><div class="gval">4.9</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:62%;background:#E24B4A;"></div></div><div class="gval">3.1</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:70%;background:#EF9F27;"></div></div><div class="gval">3.5</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:94%;background:#7F77DD;"></div></div><div class="gval">4.7</div></div>
+          </div>
+        </div>
+        <div class="grouped-bar">
+          <div class="glabel">Staff</div>
+          <div class="gtrack">
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:99%;background:#0F6E56;"></div></div><div class="gval">5.0</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:64%;background:#E24B4A;"></div></div><div class="gval">3.2</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:76%;background:#EF9F27;"></div></div><div class="gval">3.8</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:96%;background:#7F77DD;"></div></div><div class="gval">4.8</div></div>
+          </div>
+        </div>
+        <div class="grouped-bar">
+          <div class="glabel">Cleanliness</div>
+          <div class="gtrack">
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:96%;background:#0F6E56;"></div></div><div class="gval">4.8</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:56%;background:#E24B4A;"></div></div><div class="gval">2.8</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:66%;background:#EF9F27;"></div></div><div class="gval">3.3</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:90%;background:#7F77DD;"></div></div><div class="gval">4.5</div></div>
+          </div>
+        </div>
+        <div class="grouped-bar">
+          <div class="glabel">Facilities</div>
+          <div class="gtrack">
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:88%;background:#0F6E56;"></div></div><div class="gval">4.4</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:70%;background:#E24B4A;"></div></div><div class="gval">3.5</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:72%;background:#EF9F27;"></div></div><div class="gval">3.6</div></div>
+            <div class="gseg"><div class="gfill-track"><div class="gfill" style="width:86%;background:#7F77DD;"></div></div><div class="gval">4.3</div></div>
+          </div>
+        </div>
+        <div class="legend-row">
+          <div><span class="dot" style="background:#0F6E56;"></span>Manchester Deansgate</div>
+          <div><span class="dot" style="background:#E24B4A;"></span>Croydon High St</div>
+          <div><span class="dot" style="background:#EF9F27;"></span>Reading Central</div>
+          <div><span class="dot" style="background:#7F77DD;"></span>Leeds Trinity</div>
+        </div>
+        <div class="callout" style="margin:18px 0 0;">Croydon's biggest gap vs the group's top performer is Cleanliness (2.8 vs 4.8) — bigger than its Staff or Value gap. Worth checking against the open Action Board item there.</div>
+      </div>
+
+      <div class="section-title">Full comparison table</div>
+      <table class="clean">
+        <tr><th>Branch</th><th>Average</th><th>NPS</th><th>Value</th><th>Staff</th><th>Cleanliness</th><th>Facilities</th><th>Responses</th></tr>
+        <tr><td>Manchester Deansgate</td><td><b style="color:var(--green);">4.96/5</b></td><td>+68</td><td>4.9</td><td>5.0</td><td>4.8</td><td>4.4</td><td>412</td></tr>
+        <tr><td>Croydon High St</td><td><b style="color:var(--red);">3.10/5</b></td><td>-4</td><td>3.1</td><td>3.2</td><td>2.8</td><td>3.5</td><td>54</td></tr>
+        <tr><td>Reading Central</td><td><b style="color:var(--amber);">3.50/5</b></td><td>+2</td><td>3.5</td><td>3.8</td><td>3.3</td><td>3.6</td><td>71</td></tr>
+        <tr><td>Leeds Trinity</td><td><b style="color:var(--green);">4.93/5</b></td><td>+61</td><td>4.7</td><td>4.8</td><td>4.5</td><td>4.3</td><td>388</td></tr>
+      </table>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="page" id="page-insights">
+      <h1>Insights</h1>
+      <p class="subtitle">Network-wide narrative reports, reviewed before publishing.</p>
+      <div class="filters"><div class="chip active">Monthly</div><div class="chip">Quarterly</div><div class="chip">Yearly</div></div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;"><div><h3>August 2026 — network summary</h3><p class="card-sub">Published 1 Sept, 08:02</p></div><span class="pill pill-green">Published</span></div>
+        <p style="font-size:13.5px;line-height:1.6;">The network averaged 4.41/5 across 48,320 responses in August. South East continues to lag — six branches are now flagged on the Overview page. Two decisions in the South East region are already logged in the Decision Log in response to this trend.</p>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="page" id="page-analytics">
+      <div class="page-head"><div><h1>Analytics</h1><p class="subtitle" style="margin:0;">Network-wide deep dive.</p></div><button class="btn">⬇ Export CSV</button></div>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Average score by region</h3>
+          <div class="bars">
+            <div class="bar-row"><div class="bar-label">North West</div><div class="bar-track"><div class="bar-fill" style="width:92%;background:#639922;"></div></div><div class="bar-val">4.6</div></div>
+            <div class="bar-row"><div class="bar-label">South East</div><div class="bar-track"><div class="bar-fill" style="width:82%;background:#E24B4A;"></div></div><div class="bar-val">4.1</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>NPS by region</h3>
+          <div class="bars">
+            <div class="bar-row"><div class="bar-label">North West</div><div class="bar-track"><div class="bar-fill" style="width:88%;background:#639922;"></div></div><div class="bar-val">+44</div></div>
+            <div class="bar-row"><div class="bar-label">South East</div><div class="bar-track"><div class="bar-fill" style="width:36%;background:#E24B4A;"></div></div><div class="bar-val">+18</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAW FEEDBACK -->
+    <div class="page" id="page-rawall">
+      <h1>Raw feedback</h1>
+      <p class="subtitle">Every response, network-wide. Flagging one sends it straight to the Action Board.</p>
+      <div class="filters">
+        <input type="text" placeholder="Search branch name…" style="width:220px;">
+        <div class="chip active">All</div><div class="chip">Has comment</div><div class="chip">Lowest scores</div>
+      </div>
+      <div class="fb-card">
+        <div class="fb-meta"><span class="pill pill-red">Croydon High St</span><span class="pill pill-gray">South East</span> 9 Sept, 09:12</div>
+        <div class="fb-comment">"Queue was very long for a Tuesday morning."</div>
+        <div class="fb-actions"><span>Reply</span><span class="primary" onclick="openModal('modal-new-action')">+ Log action taken →</span></div>
+      </div>
+      <div class="fb-card">
+        <div class="fb-meta"><span class="pill pill-accent">Manchester Deansgate</span><span class="pill pill-gray">North West</span> 9 Sept, 11:54</div>
+        <div class="fb-comment">"Quick, friendly, would come back."</div>
+        <div class="fb-actions"><span>Reply</span><span>Flag</span></div>
+      </div>
+    </div>
+
+    <!-- ALERT RULES -->
+    <div class="page" id="page-alerts">
+      <div class="page-head"><div><h1>Alert rules</h1><p class="subtitle" style="margin:0;">Outlier-based, network-wide. This is what produces the "Flagged" counts you see on Overview.</p></div><button class="btn btn-dark" onclick="openModal('modal-new-alert')">+ New alert rule</button></div>
+      <table class="clean">
+        <tr><th>Rule</th><th>Condition</th><th>Delivery</th><th>Fired this week</th><th>Active</th></tr>
+        <tr><td>Regional outlier</td><td>Score more than 1.5σ below region average</td><td>Weekly digest</td><td><span class="pill pill-red" style="cursor:pointer;" onclick="showPage('region-detail')">6 branches →</span></td><td><span class="pill pill-green">On</span></td></tr>
+        <tr><td>Sudden drop</td><td>7-day average falls 20%+ vs 90-day baseline</td><td>Immediate email</td><td><span class="pill pill-amber" style="cursor:pointer;" onclick="showPage('region-detail')">1 branch →</span></td><td><span class="pill pill-green">On</span></td></tr>
+        <tr><td>NPS floor</td><td>NPS below 0</td><td>Immediate email</td><td><span class="pill pill-red" style="cursor:pointer;" onclick="showPage('branch-detail')">1 branch →</span></td><td><span class="pill pill-green">On</span></td></tr>
+      </table>
+      <p style="font-size:12px;color:var(--text-3);margin-top:12px;">6 + 1 + 1 = 8 firings this week across 6 distinct branches (Croydon appears on two rules) — matches the 6 shown flagged on South East's Overview row.</p>
+    </div>
+
+    <!-- ===================== ACT: ACTION BOARD ===================== -->
+    <div class="page" id="page-actions">
+      <div class="page-head">
+        <div><h1>Action board</h1><p class="subtitle" style="margin:0;">Every flagged issue becomes tracked work — this is where Response and Ownership actually get earned, not just measured.</p></div>
+        <button class="btn btn-dark" onclick="openModal('modal-new-action')">+ New action</button>
+      </div>
+      <div class="grid grid-4" style="margin-bottom:20px;">
+        <div class="card"><div class="metric-label">Open</div><div class="metric-val">38</div></div>
+        <div class="card"><div class="metric-label">In progress</div><div class="metric-val">21</div></div>
+        <div class="card" style="background:var(--red-bg);"><div class="metric-label" style="color:var(--red);">Overdue</div><div class="metric-val" style="color:var(--red);">9</div></div>
+        <div class="card"><div class="metric-label">Resolved (30d)</div><div class="metric-val">64</div></div>
+      </div>
+      <div class="filters">
+        <div class="chip active">All</div><div class="chip">Unassigned</div><div class="chip">Overdue</div><div class="chip">Resolved</div>
+        <select><option>All regions</option></select>
+      </div>
+
+      <div class="action-card">
+        <div class="action-top">
+          <div>
+            <div class="action-title">Repeated queue-length complaints — Value category</div>
+            <div class="action-meta">Croydon High St · South East · sourced from 6 flagged responses this week</div>
+          </div>
+          <div class="action-side">
+            <span class="pill pill-red">Overdue by 2 days</span>
+            <span class="pill pill-amber">High priority</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+          <div class="row-flex"><div class="avatar">PN</div><span style="font-size:13px;">Priya N. · Regional Ops</span></div>
+          <span class="pill pill-gray">In progress</span>
+        </div>
+      </div>
+
+      <div class="action-card">
+        <div class="action-top">
+          <div>
+            <div class="action-title">Cleanliness dip in morning shift</div>
+            <div class="action-meta">Reading Central · South East · sourced from 3 flagged responses</div>
+          </div>
+          <div class="action-side"><span class="overdue-tag">Overdue by 1 day</span></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+          <div class="row-flex"><div class="avatar gray">?</div><span style="font-size:13px;color:var(--text-3);">Unassigned — nobody owns this yet</span></div>
+          <span class="pill pill-red">Open</span>
+        </div>
+      </div>
+
+      <div class="action-card">
+        <div class="action-top">
+          <div>
+            <div class="action-title">Staff friendliness praised — worth replicating</div>
+            <div class="action-meta">Manchester Deansgate · North West</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+          <div class="row-flex"><div class="avatar teal">SK</div><span style="font-size:13px;">Sam K. · Branch Manager</span></div>
+          <span class="pill pill-green">Resolved — rolled out to 3 other NW branches</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== ACT: DECISION LOG ===================== -->
+    <div class="page" id="page-decisions">
+      <div class="page-head">
+        <div><h1>Decision log</h1><p class="subtitle" style="margin:0;">What actually changed because of what customers told you.</p></div>
+        <button class="btn btn-dark" onclick="openModal('modal-log-decision')">+ Log a decision</button>
+      </div>
+
+      <div class="decision-card">
+        <div class="decision-title">Added a second till at peak hours (12–2pm) across South East region</div>
+        <div class="decision-meta">Logged 15 Aug 2026 · Priya N., Regional Ops Director</div>
+        <div class="decision-row">
+          <div><div class="k">Trigger</div>Value category down 0.6 pts network-wide, driven by wait-time comments across 14 South East branches — see 6 linked Action Board items</div>
+        </div>
+        <div class="decision-row">
+          <div><div class="k">Affected</div>14 branches, South East</div>
+          <div><div class="k">Status</div><span class="pill pill-green">Implemented</span></div>
+        </div>
+        <div class="outcome-bar">
+          <div class="k">Outcome</div>
+          <div class="ov" style="color:var(--green);">Value score up 3.9 → 4.3</div>
+          <div style="font-size:12px;color:var(--text-3);">in the four weeks since rollout</div>
+        </div>
+        <button class="btn btn-sm" style="margin-top:10px;" onclick="showPage('analytics')">View underlying trend on Analytics →</button>
+      </div>
+
+      <div class="decision-card">
+        <div class="decision-title">Rolled out Manchester Deansgate's staff onboarding script network-wide</div>
+        <div class="decision-meta">Logged 2 Sept 2026 · Amara Khan, Group Admin</div>
+        <div class="decision-row">
+          <div><div class="k">Trigger</div>Manchester's Staff category consistently 0.4+ above network average, root-caused via Action Board to a specific onboarding checklist</div>
+        </div>
+        <div class="decision-row">
+          <div><div class="k">Affected</div>Rolling out to 40% of branches</div>
+          <div><div class="k">Status</div><span class="pill pill-amber">In progress</span></div>
+        </div>
+        <div class="outcome-bar">
+          <div class="k">Outcome</div>
+          <div class="ov" style="color:var(--text-3);">Measuring — too early to tell</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== ACT: PLAYBOOKS ===================== -->
+    <div class="page" id="page-playbooks">
+      <div class="page-head">
+        <div><h1>Playbooks</h1><p class="subtitle" style="margin:0;">Standard guidance per issue type, so a manager isn't improvising a response from scratch.</p></div>
+        <button class="btn btn-dark" onclick="openModal('modal-new-playbook')">+ New playbook</button>
+      </div>
+      <div class="grid grid-2">
+        <div class="playbook-card">
+          <h3>Long wait time complaints</h3>
+          <p class="card-sub">4 steps · used 34 times this quarter</p>
+          <ol style="font-size:13px;padding-left:18px;margin:0;">
+            <li>Acknowledge and apologise within 24h if contact info given</li>
+            <li>Check if it's recurring (3+ mentions in 2 weeks) or one-off</li>
+            <li>If recurring, escalate to regional ops for a staffing review</li>
+            <li>Log resolution and expected fix date</li>
+          </ol>
+          <div class="metric-note" style="margin-top:10px;color:var(--green);">Issues resolved ~2× faster when this is followed</div>
+          <button class="btn btn-sm" style="margin-top:8px;" onclick="showPage('actions')">View the 34 linked actions →</button>
+        </div>
+        <div class="playbook-card">
+          <h3>Cleanliness complaint</h3>
+          <p class="card-sub">3 steps · used 19 times this quarter</p>
+          <ol style="font-size:13px;padding-left:18px;margin:0;">
+            <li>Confirm time of day and area with the branch manager</li>
+            <li>Check shift schedule for that window</li>
+            <li>Log outcome and any schedule adjustment made</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== MEASURE: CX MATURITY ===================== -->
+    <div class="page" id="page-maturity">
+      <h1>CX Pulse</h1>
+      <p class="subtitle">Not just what customers said — whether that actually turned into action, ownership, and results. Every dimension below is computed from your Act section, not a self-assessment guess.</p>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div class="level-badge">Level 2 · Reacting</div>
+        <p class="metric-note" style="margin-top:12px;">Average action rate on flagged feedback: 44%. Best regions close the loop in under 48 hours; South East averages 9 days.</p>
+      </div>
+
+      <div class="section-title">Where each score comes from</div>
+      <div class="dim-row">
+        <div style="width:110px;">Awareness</div>
+        <div class="dim-track"><div class="dim-fill" style="width:71%;background:#639922;"></div></div>
+        <div style="width:30px;text-align:right;">71</div>
+        <span class="btn btn-sm" onclick="showPage('insights')" style="margin-left:14px;">Report open rate → Insights</span>
+      </div>
+      <div class="dim-row">
+        <div style="width:110px;">Response</div>
+        <div class="dim-track"><div class="dim-fill" style="width:38%;background:#E24B4A;"></div></div>
+        <div style="width:30px;text-align:right;">38</div>
+        <span class="btn btn-sm" onclick="showPage('actions')" style="margin-left:14px;">% actioned within 48h → Action board</span>
+      </div>
+      <div class="dim-row">
+        <div style="width:110px;">Ownership</div>
+        <div class="dim-track"><div class="dim-fill" style="width:44%;background:#EF9F27;"></div></div>
+        <div style="width:30px;text-align:right;">44</div>
+        <span class="btn btn-sm" onclick="showPage('actions')" style="margin-left:14px;">% items with an owner → Action board</span>
+      </div>
+      <div class="dim-row">
+        <div style="width:110px;">Culture</div>
+        <div class="dim-track"><div class="dim-fill" style="width:52%;background:#EF9F27;"></div></div>
+        <div style="width:30px;text-align:right;">52</div>
+        <span class="btn btn-sm" onclick="showPage('playbooks')" style="margin-left:14px;">Playbook adoption + pulse → Playbooks</span>
+      </div>
+      <div class="dim-row">
+        <div style="width:110px;">Outcome</div>
+        <div class="dim-track"><div class="dim-fill" style="width:49%;background:#EF9F27;"></div></div>
+        <div style="width:30px;text-align:right;">49</div>
+        <span class="btn btn-sm" onclick="showPage('decisions')" style="margin-left:14px;">% decisions with confirmed lift → Decision log</span>
+      </div>
+
+      <div class="callout callout-amber" style="margin-top:20px;">Response is your lowest score, and it's the most fixable: 9 items on the Action Board are currently unassigned or overdue. Assigning owners to those is the single fastest lever to move this number.</div>
+
+      <div class="section-title">Score vs. CX Pulse — where the real gap is</div>
+      <table class="clean">
+        <tr><th>Branch</th><th>Average score</th><th>CX Pulse</th><th>Note</th></tr>
+        <tr><td>Croydon High St</td><td>3.1/5</td><td><span class="pill pill-red">Level 1</span></td><td><span style="color:var(--accent);cursor:pointer;" onclick="showPage('actions')">Low score AND nobody's acting — see Action Board</span></td></tr>
+        <tr><td>Reading Central</td><td>3.5/5</td><td><span class="pill pill-green">Level 4</span></td><td><span style="color:var(--accent);cursor:pointer;" onclick="showPage('decisions')">Recovering fast — see the logged decision behind it</span></td></tr>
+      </table>
+    </div>
+
+    <!-- TEAM & ACCESS -->
+    <div class="page" id="page-team">
+      <div class="page-head"><div><h1>Team &amp; access</h1><p class="subtitle" style="margin:0;">Who can see network data, and how much.</p></div><button class="btn btn-dark" onclick="openModal('modal-invite-person')">+ Invite person</button></div>
+      <table class="clean">
+        <tr><th>Person</th><th>Role</th><th>Access</th></tr>
+        <tr><td><div class="row-flex"><div class="avatar teal">AK</div>Amara Khan</div></td><td>Group admin</td><td>Full access, all regions</td></tr>
+        <tr><td><div class="row-flex"><div class="avatar">PN</div>Priya N.</div></td><td>Regional Ops Director</td><td>Full access, South East · owns Action Board items there</td></tr>
+      </table>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="page" id="page-messages">
+      <h1>Messages</h1>
+      <p class="subtitle">Chat with your assigned account manager.</p>
+      <div class="card" style="display:flex;gap:12px;align-items:center;">
+        <div class="avatar teal">JT</div>
+        <div><div style="font-weight:500;font-size:13.5px;">Jordan Tate</div><div style="font-size:12px;color:var(--text-2);">Your Oodel Score account manager</div></div>
+      </div>
+    </div>
+
+    <!-- BILLING -->
+    <div class="page" id="page-billing">
+      <h1>Billing</h1>
+      <p class="subtitle">What you're billed for, how you pay it, and the record of every payment.</p>
+
+      <div class="callout callout-amber"><b>Which model each branch is on</b> (Group pays vs. branch pays) is set by your Oodel Score account manager, not editable here — this keeps commercial arrangements consistent when branches are onboarded or transferred. <b>How you pay for the branches on "Group pays"</b> is yours to manage below.</div>
+
+      <div class="grid grid-4" style="margin-bottom:10px;">
+        <div class="card"><div class="metric-label">Branches billed to group</div><div class="metric-val">823</div><div class="metric-note">of 1,042 total</div></div>
+        <div class="card"><div class="metric-label">Self-billed branches</div><div class="metric-val">219</div><div class="metric-note">pay individually, group sees status only</div></div>
+        <div class="card"><div class="metric-label">Group invoice, this cycle</div><div class="metric-val">£31,240</div></div>
+        <div class="card" style="background:var(--red-bg);"><div class="metric-label" style="color:var(--red);">Overdue (self-billed)</div><div class="metric-val" style="color:var(--red);">4 branches</div><div class="metric-note" style="color:var(--red);">visible to you, not payable by you</div></div>
+      </div>
+
+      <div class="section-title">How the group pays</div>
+      <div class="grid grid-2" style="margin-bottom:10px;">
+        <div class="card">
+          <h3>Payment method</h3>
+          <p class="card-sub">Used to pay the single consolidated invoice for all 823 group-billed branches.</p>
+          <div class="row-flex" style="margin-bottom:14px;">
+            <div class="avatar gray">💳</div>
+            <div><div style="font-weight:500;font-size:13.5px;">Visa ending 4242</div><div style="font-size:12px;color:var(--text-3);">Expires 08/28 · managed by Amara Khan</div></div>
+          </div>
+          <button class="btn">Update payment method</button>
+        </div>
+        <div class="card">
+          <h3>Next payment</h3>
+          <div class="metric-val" style="font-size:22px;">£31,240</div>
+          <div class="metric-note">Due 1 Oct 2026 · covers 823 branches on "Group pays" this cycle</div>
+          <button class="btn" style="margin-top:14px;">Manage subscription</button>
+        </div>
+      </div>
+
+      <div class="section-title">Branch billing status</div>
+      <p class="section-sub">Search to check any branch. Assignment changes go through your account manager — use Messages.</p>
+      <div class="filters">
+        <input type="text" placeholder="Search branch…" style="width:220px;">
+        <select><option>All</option><option>Group pays</option><option>Branch pays</option><option>Overdue</option></select>
+      </div>
+      <table class="clean">
+        <tr><th>Branch</th><th>Billed to</th><th>Status</th><th></th></tr>
+        <tr><td>Manchester Deansgate</td><td><span class="pill pill-blue">Group</span></td><td><span class="pill pill-green">Paid</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="showPage('branch-detail')">View branch →</span></td></tr>
+        <tr><td>Croydon High St</td><td><span class="pill pill-gray">Branch</span></td><td><span class="pill pill-red">Overdue</span></td><td style="text-align:right;"><span class="btn btn-sm">Message about this →</span></td></tr>
+        <tr><td>Reading Central</td><td><span class="pill pill-blue">Group</span></td><td><span class="pill pill-green">Paid</span></td><td style="text-align:right;"><span class="btn btn-sm">View branch →</span></td></tr>
+      </table>
+      <p style="font-size:12px;color:var(--text-3);margin:10px 0 0;">Showing 1–20 of 1,042 branches.</p>
+
+      <div class="section-title">Invoice history</div>
+      <p class="section-sub">Every payment made against the group invoice — this is the payment record.</p>
+      <div class="filters"><div class="chip active">All</div><div class="chip">Group invoices</div><div class="chip">Failed / retried</div></div>
+      <table class="clean">
+        <tr><th>Date</th><th>Covers</th><th>Amount</th><th>Payment method</th><th>Status</th><th></th></tr>
+        <tr><td>1 Sept 2026</td><td>812 branches</td><td>£31,240.00</td><td>Visa •••• 4242</td><td><span class="pill pill-green">Paid</span></td><td style="text-align:right;color:var(--accent);cursor:pointer;">Download</td></tr>
+        <tr><td>1 Aug 2026</td><td>798 branches</td><td>£30,684.00</td><td>Visa •••• 4242</td><td><span class="pill pill-green">Paid</span></td><td style="text-align:right;color:var(--accent);cursor:pointer;">Download</td></tr>
+        <tr><td>1 Jul 2026</td><td>791 branches</td><td>£30,455.00</td><td>Visa •••• 4242</td><td><span class="pill pill-amber">Paid after retry</span></td><td style="text-align:right;color:var(--accent);cursor:pointer;">Download</td></tr>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== MODAL: NEW ACTION ===================== -->
+<div class="modal-overlay" id="modal-new-action">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>New action</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-action')">×</button>
+    </div>
+    <p class="modal-sub">Creates a tracked item on the Action Board. Feeds the Response and Ownership scores on CX Pulse.</p>
+
+    <div class="linked-source">Linked to feedback: <b>"Queue was very long for a Tuesday morning."</b> · Croydon High St · 9 Sept, 09:12</div>
+
+    <div class="field">
+      <label>Title</label>
+      <input type="text" value="Repeated queue-length complaints — Value category">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea>6 flagged responses this week at Croydon High St all mention long wait times at the till, particularly weekday mornings.</textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Branch</label>
+        <select><option>Croydon High St</option><option>Reading Central</option><option>Brighton Marina</option></select>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select><option>Value</option><option>Staff</option><option>Cleanliness</option><option>Facilities</option></select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Priority</label>
+        <select><option>High</option><option>Medium</option><option>Low</option><option>Critical</option></select>
+      </div>
+      <div class="field">
+        <label>Due date</label>
+        <input type="date" value="2026-09-15">
+      </div>
+    </div>
+    <div class="field">
+      <label>Assign owner</label>
+      <select><option>Priya N. — Regional Ops Director</option><option>Sam K. — Branch Manager, Manchester Deansgate</option><option>Leave unassigned</option></select>
+      <div class="field-hint">Unassigned items count against your Ownership score on CX Pulse.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-new-action')">Cancel</button>
+      <button class="btn btn-dark" onclick="closeModal('modal-new-action')">Create action</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: LOG A DECISION ===================== -->
+<div class="modal-overlay" id="modal-log-decision">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Log a decision</h2>
+      <button class="modal-close" onclick="closeModal('modal-log-decision')">×</button>
+    </div>
+    <p class="modal-sub">For changes that affect more than one branch. Feeds the Outcome score on CX Pulse.</p>
+
+    <div class="field">
+      <label>Decision title</label>
+      <input type="text" placeholder="e.g. Added a second till at peak hours across South East region">
+    </div>
+    <div class="field">
+      <label>Trigger — what feedback pattern prompted this</label>
+      <textarea placeholder="e.g. Value category down 0.6 pts network-wide, driven by wait-time comments across 14 South East branches"></textarea>
+      <div class="field-hint">Link related Action Board items below if this grew out of individual cases.</div>
+    </div>
+    <div class="field">
+      <label>Linked Action Board items (optional)</label>
+      <select><option>6 items — "Repeated queue-length complaints" (Croydon, Reading, +4 more)</option><option>No linked items</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Branches / region affected</label>
+        <select><option>South East (14 branches)</option><option>All branches</option><option>Choose specific branches…</option></select>
+      </div>
+      <div class="field">
+        <label>Decision owner</label>
+        <select><option>Priya N. — Regional Ops Director</option><option>Amara Khan — Group Admin</option></select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Implementation date</label>
+        <input type="date" value="2026-09-20">
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select><option>Planned</option><option>In progress</option><option>Implemented</option></select>
+      </div>
+    </div>
+    <div class="field">
+      <label>How will you know it worked?</label>
+      <textarea placeholder="e.g. Value category average across South East branches, checked again in 4 weeks"></textarea>
+      <div class="field-hint">This becomes the before/after outcome shown on this decision once enough data comes in.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-log-decision')">Cancel</button>
+      <button class="btn btn-dark" onclick="closeModal('modal-log-decision')">Log decision</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: NEW PLAYBOOK ===================== -->
+<div class="modal-overlay" id="modal-new-playbook">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>New playbook</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-playbook')">×</button>
+    </div>
+    <p class="modal-sub">Standard guidance for a recurring issue type. Adoption feeds the Culture score on CX Pulse.</p>
+
+    <div class="field">
+      <label>Playbook title</label>
+      <input type="text" placeholder="e.g. Staff friendliness complaint">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Applies to category</label>
+        <select><option>Staff</option><option>Value</option><option>Cleanliness</option><option>Facilities</option></select>
+      </div>
+      <div class="field">
+        <label>Trigger condition</label>
+        <input type="text" value="3+ mentions in 2 weeks">
+      </div>
+    </div>
+    <div class="field">
+      <label>Steps</label>
+      <div class="step-input-row"><div class="step-num">1</div><input type="text" value="Acknowledge and apologise within 24h if contact info was given"></div>
+      <div class="step-input-row"><div class="step-num">2</div><input type="text" value="Confirm with the branch manager whether this is a one-off or recurring"></div>
+      <div class="step-input-row"><div class="step-num">3</div><input type="text" value="If recurring, escalate to regional ops for a review"></div>
+      <div class="step-input-row"><div class="step-num">4</div><input type="text" placeholder="Add another step…"></div>
+      <button class="btn btn-sm" style="margin-top:4px;">+ Add step</button>
+    </div>
+    <div class="field">
+      <label>Escalation contact (optional)</label>
+      <select><option>Regional Ops Director</option><option>Group Admin</option><option>None</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-new-playbook')">Cancel</button>
+      <button class="btn btn-dark" onclick="closeModal('modal-new-playbook')">Save playbook</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(ov=>{
+  ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('open'); });
+});
+</script>
+
+<!-- ===================== MODAL: INVITE PERSON ===================== -->
+<div class="modal-overlay" id="modal-invite-person">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Invite person</h2>
+      <button class="modal-close" onclick="closeModal('modal-invite-person')">×</button>
+    </div>
+    <p class="modal-sub">They'll get an email to set a password. No account is created until they accept.</p>
+    <div class="field">
+      <label>Email address</label>
+      <input type="text" placeholder="name@company.com">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Role</label>
+        <select><option>Group admin — full access, all regions</option><option>Regional manager — full access, one region</option><option>Branch manager — read-only, one branch</option><option>Governor / viewer — read-only, everything</option></select>
+      </div>
+      <div class="field">
+        <label>Scope</label>
+        <select><option>All regions</option><option>North West</option><option>South East</option><option>Midlands</option><option>Choose specific branch…</option></select>
+      </div>
+    </div>
+    <div class="field-hint" style="margin-bottom:16px;">Scope narrows automatically if the role is branch-level.</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-invite-person')">Cancel</button>
+      <button class="btn btn-dark" onclick="closeModal('modal-invite-person')">Send invite</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: NEW ALERT RULE ===================== -->
+<div class="modal-overlay" id="modal-new-alert">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>New alert rule</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-alert')">×</button>
+    </div>
+    <p class="modal-sub">Fixed thresholds rarely work across branches with different baselines — outlier and baseline rules are recommended.</p>
+    <div class="field">
+      <label>Rule name</label>
+      <input type="text" placeholder="e.g. Cleanliness outlier">
+    </div>
+    <div class="field">
+      <label>Rule type</label>
+      <select><option>Regional outlier — flags branches far below their own region's average</option><option>Sudden drop — flags a branch falling sharply vs its own history</option><option>Fixed threshold — flags any branch below a set number</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Sensitivity</label>
+        <select><option>1.5σ below region average</option><option>1.0σ below region average</option><option>2.0σ below region average</option></select>
+      </div>
+      <div class="field">
+        <label>Applies to</label>
+        <select><option>All branches</option><option>Choose a region…</option></select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Delivery</label>
+      <select><option>Weekly digest</option><option>Immediate email</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-new-alert')">Cancel</button>
+      <button class="btn btn-dark" onclick="closeModal('modal-new-alert')">Create rule</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const g1=[['overview','Overview'],['branches','Branches'],['compare','Compare branches']];
+const g2=[['insights','Insights'],['analytics','Analytics'],['rawall','Raw feedback'],['alerts','Alert rules']];
+const g3=[['actions','Action board'],['decisions','Decision log'],['playbooks','Playbooks']];
+const g4=[['maturity','CX Pulse']];
+const g5=[['team','Team & access'],['messages','Messages'],['billing','Billing']];
+function build(list, el){
+  list.forEach(([id,label])=>{
+    const b=document.createElement('button');
+    b.textContent=label; b.dataset.id=id;
+    b.onclick=()=>showPage(id);
+    el.appendChild(b);
+  });
+}
+build(g1, document.getElementById('nav1'));
+build(g2, document.getElementById('nav2'));
+build(g3, document.getElementById('nav3'));
+build(g4, document.getElementById('nav4'));
+build(g5, document.getElementById('nav5'));
+document.querySelector('#nav1 button').classList.add('active');
+
+function showPage(id){
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+  const navBtn = document.querySelector(`.nav button[data-id="${id}"]`);
+  if(navBtn) navBtn.classList.add('active');
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+}
+</script>
+</body>
+</html>

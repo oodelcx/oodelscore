@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Oodel Score — Admin</title>
+<style>
+  :root{
+    --sidebar-bg:#15181B; --sidebar-text:#A9AEB4; --sidebar-hover:#1F2327; --sidebar-active:#262B30;
+    --bg:#F6F6F4; --card:#FFFFFF; --border:#E6E5E1;
+    --text:#17171A; --text-2:#68686A; --text-3:#9A9A97;
+    --accent:#0F6E56; --accent-bg:#E1F5EE;
+    --green:#3B6D11; --green-bg:#EAF3DE;
+    --amber:#854F0B; --amber-bg:#FAEEDA;
+    --red:#A32D2D; --red-bg:#FCEBEB;
+    --blue:#185FA5; --blue-bg:#E6F1FB;
+    --purple:#3C3489; --purple-bg:#EEEDFE;
+    --resend:#5B3DF5; --resend-bg:#F3EEFF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .app{display:flex;min-height:100vh;}
+  .sidebar{width:240px;background:var(--sidebar-bg);color:var(--sidebar-text);flex-shrink:0;display:flex;flex-direction:column;justify-content:space-between;position:sticky;top:0;height:100vh;overflow-y:auto;}
+  .sidebar-top{padding:22px 18px 14px;}
+  .sidebar-top img{width:120px;display:block;}
+  .brand-sub{font-size:11px;letter-spacing:.06em;color:#6E7379;margin-top:8px;}
+  .nav-group-label{font-size:10.5px;letter-spacing:.06em;color:#5C6167;padding:14px 14px 4px;text-transform:uppercase;}
+  .nav{padding:0 10px;}
+  .nav button{all:unset;display:flex;align-items:center;gap:9px;width:100%;padding:8px 12px;border-radius:8px;font-size:13.5px;cursor:pointer;color:var(--sidebar-text);margin-bottom:1px;}
+  .nav button:hover{background:var(--sidebar-hover);color:#fff;}
+  .nav button.active{background:var(--sidebar-active);color:#fff;font-weight:500;}
+  .nav .badge{margin-left:auto;font-size:9.5px;background:var(--red);color:#fff;padding:1px 6px;border-radius:20px;min-width:16px;text-align:center;}
+  .sidebar-bottom{padding:16px 18px;border-top:1px solid #24282C;font-size:13px;}
+  .sidebar-bottom .biz{color:#fff;font-weight:500;}
+  .sidebar-bottom .email{color:#787D82;font-size:12px;margin-top:2px;}
+
+  .main{flex:1;padding:32px 40px;max-width:1520px;}
+  .page{display:none;} .page.active{display:block;}
+  h1{font-size:24px;font-weight:600;margin:0 0 4px;}
+  .subtitle{color:var(--text-2);font-size:14px;margin:0 0 24px;}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px;}
+  .btn{border:1px solid #D8D7D2;background:#fff;color:var(--text);font-size:13px;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap;}
+  .btn:hover{border-color:#BFBEB8;}
+  .btn-dark{background:var(--sidebar-bg);color:#fff;border-color:var(--sidebar-bg);}
+  .btn-sm{padding:4px 10px;font-size:12px;}
+  .btn-danger{color:var(--red);border-color:#F0C7C7;}
+  .btn-group{display:flex;gap:8px;}
+  .icon-btn{border:1px solid var(--border);background:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:14px;}
+  .icon-btn:hover{border-color:#BFBEB8;}
+
+  .grid{display:grid;gap:16px;}
+  .grid-4{grid-template-columns:repeat(4,1fr);} .grid-3{grid-template-columns:repeat(3,1fr);} .grid-2{grid-template-columns:1fr 1fr;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}
+  .card h3{font-size:14px;font-weight:600;margin:0 0 2px;}
+  .card .card-sub{font-size:12px;color:var(--text-3);margin:0 0 14px;}
+  .metric-label{font-size:11.5px;letter-spacing:.04em;color:var(--text-3);text-transform:uppercase;}
+  .metric-val{font-size:26px;font-weight:600;margin-top:6px;}
+  .metric-note{font-size:12px;color:var(--text-2);margin-top:6px;}
+
+  .pill{display:inline-block;font-size:11.5px;font-weight:500;padding:3px 9px;border-radius:20px;}
+  .pill-green{background:var(--green-bg);color:var(--green);} .pill-amber{background:var(--amber-bg);color:var(--amber);}
+  .pill-red{background:var(--red-bg);color:var(--red);} .pill-gray{background:#EFEFEC;color:var(--text-2);}
+  .pill-blue{background:var(--blue-bg);color:var(--blue);} .pill-accent{background:var(--accent-bg);color:var(--accent);}
+  .pill-purple{background:var(--purple-bg);color:var(--purple);} .pill-resend{background:var(--resend-bg);color:var(--resend);}
+
+  .section-title{font-size:16px;font-weight:600;margin:30px 0 14px;} .section-title:first-child{margin-top:0;}
+  .section-sub{font-size:12.5px;color:var(--text-2);margin:-10px 0 14px;}
+  .callout{background:var(--accent-bg);border:1px solid #C7E8DC;border-radius:10px;padding:12px 16px;font-size:13px;color:var(--accent);margin-bottom:20px;}
+  .callout-amber{background:var(--amber-bg);border-color:#F0DFB8;color:var(--amber);}
+  .callout-red{background:var(--red-bg);border-color:#F0C7C7;color:var(--red);}
+
+  table.clean{width:100%;border-collapse:collapse;font-size:13px;}
+  table.clean th{text-align:left;font-weight:500;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.03em;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  table.clean td{padding:11px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
+  table.clean tr:last-child td{border-bottom:none;}
+
+  .avatar{width:34px;height:34px;border-radius:9px;background:var(--purple-bg);color:var(--purple);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0;}
+  .avatar.teal{background:var(--accent-bg);color:var(--accent);} .avatar.gray{background:#EFEFEC;color:var(--text-3);}
+  .row-flex{display:flex;align-items:center;gap:9px;}
+
+  .filters{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center;}
+  .chip{border:1px solid var(--border);background:#fff;font-size:12.5px;padding:6px 12px;border-radius:20px;cursor:pointer;color:var(--text-2);}
+  .chip.active{background:var(--sidebar-bg);color:#fff;border-color:var(--sidebar-bg);}
+  select,input[type=text],input[type=date],input[type=email]{border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12.5px;background:#fff;color:var(--text);}
+
+  .backlink{font-size:13px;color:var(--text-2);cursor:pointer;margin-bottom:10px;display:inline-block;}
+
+  .toggle{width:38px;height:22px;border-radius:20px;background:#DADAD5;position:relative;cursor:pointer;display:inline-block;flex-shrink:0;transition:background .15s;}
+  .toggle::after{content:'';width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  .toggle.on{background:var(--sidebar-bg);}
+  .toggle.on::after{left:18px;}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,17,19,.45);z-index:100;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:#fff;border-radius:14px;width:100%;max-width:600px;padding:26px 28px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .modal-box.wide{max-width:820px;}
+  .modal-box.narrow{max-width:420px;}
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+  .modal-head h2{font-size:18px;font-weight:600;margin:0;}
+  .modal-close{cursor:pointer;color:var(--text-3);font-size:20px;line-height:1;background:none;border:none;}
+  .modal-sub{font-size:12.5px;color:var(--text-2);margin:0 0 20px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:6px;}
+  .field input, .field textarea, .field select{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;}
+  .field textarea{resize:vertical;min-height:64px;}
+  .field-row{display:flex;gap:12px;} .field-row .field{flex:1;}
+  .field-hint{font-size:11.5px;color:var(--text-3);margin-top:5px;}
+  .field-check{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;border-top:1px solid var(--border);padding-top:18px;}
+  .section-label{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--text-3);text-transform:uppercase;margin:22px 0 10px;border-top:1px solid var(--border);padding-top:18px;}
+  .section-label:first-of-type{margin-top:0;border-top:none;padding-top:0;}
+
+  /* type-picker cards */
+  .pick-card{border:1px solid var(--border);border-radius:12px;padding:18px;flex:1;cursor:pointer;text-align:center;}
+  .pick-card:hover{border-color:var(--accent);background:var(--accent-bg);}
+  .pick-card .pc-icon{font-size:24px;margin-bottom:8px;}
+
+  /* accounts tabs */
+  .subtabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border);}
+  .subtabs button{all:unset;padding:9px 16px;font-size:13.5px;color:var(--text-2);cursor:pointer;border-bottom:2px solid transparent;}
+  .subtabs button.active{color:var(--text);font-weight:600;border-bottom-color:var(--sidebar-bg);}
+  .subpanel{display:none;} .subpanel.active{display:block;}
+  .bizpanel{display:none;} .bizpanel.active{display:block;}
+  .orgpanel{display:none;} .orgpanel.active{display:block;}
+
+  /* roles */
+  .role-card{border:1px solid var(--border);border-radius:12px;padding:16px 18px;background:#fff;margin-bottom:12px;}
+  .perm-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;}
+  .perm-table th{text-align:center;font-weight:500;color:var(--text-3);font-size:11px;padding-bottom:6px;}
+  .perm-table td{padding:6px 0;border-top:1px solid var(--border);}
+  .perm-table td:first-child{color:var(--text-2);}
+  .perm-table td:not(:first-child){text-align:center;}
+
+  /* question template builder */
+  .builder-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;align-items:start;}
+  .qrow{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;background:#FAFAF8;}
+  .qrow-top{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+  .qrow-top .drag{color:var(--text-3);cursor:grab;}
+  .qrow-opts{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .qrow-opts select{flex:1;min-width:130px;}
+  .type-icon{width:22px;height:22px;border-radius:6px;background:var(--accent-bg);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+  .tag-input{display:flex;gap:6px;flex-wrap:wrap;border:1px solid var(--border);border-radius:8px;padding:8px;}
+  .tag-chip{background:var(--accent-bg);color:var(--accent);font-size:12px;padding:3px 9px;border-radius:20px;display:flex;align-items:center;gap:5px;}
+  .tag-chip .x{cursor:pointer;font-weight:700;}
+  .tag-add{border:1px dashed var(--border);background:none;font-size:12px;color:var(--text-2);padding:3px 9px;border-radius:20px;cursor:pointer;}
+
+  .phone-frame{background:#fff;border:1px solid var(--border);border-radius:20px;padding:0;overflow:hidden;position:sticky;top:20px;}
+  .phone-toolbar{background:#F6F6F4;border-bottom:1px solid var(--border);padding:10px 16px;font-size:12px;color:var(--text-3);text-align:center;}
+  .phone-body{padding:22px 20px;max-height:640px;overflow-y:auto;}
+  .preview-q{margin-bottom:22px;}
+  .preview-q .pq-text{font-size:13.5px;font-weight:500;margin-bottom:10px;}
+  .stars-preview{font-size:20px;color:#E6E5E1;}
+  .stars-preview span.filled{color:#EF9F27;}
+  .nps-preview{display:flex;gap:4px;flex-wrap:wrap;}
+  .nps-preview span{width:26px;height:26px;border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-2);}
+  .yn-preview{display:flex;gap:8px;}
+  .yn-preview span{border:1px solid var(--border);border-radius:8px;padding:6px 16px;font-size:12.5px;}
+  .text-preview{border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12.5px;color:var(--text-3);}
+
+  /* email / cms reused patterns */
+  .editor-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;align-items:start;}
+  .var-chip{display:inline-block;background:#F1F0EC;color:var(--text-2);font-size:11.5px;font-family:monospace;padding:4px 9px;border-radius:6px;margin:0 6px 6px 0;cursor:pointer;}
+  .var-chip:hover{background:var(--accent-bg);color:var(--accent);}
+  .preview-pane{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;position:sticky;top:20px;}
+  .preview-toolbar{background:#F6F6F4;border-bottom:1px solid var(--border);padding:10px 16px;font-size:12px;color:var(--text-3);}
+  .preview-body{padding:24px;}
+  .preview-body .p-from{font-size:11.5px;color:var(--text-3);margin-bottom:10px;}
+  .preview-body .p-subject{font-size:15px;font-weight:600;margin-bottom:16px;}
+  .preview-body .p-text{font-size:13.5px;line-height:1.7;color:var(--text);}
+  .preview-body .p-btn{display:inline-block;background:var(--sidebar-bg);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;margin:12px 0;text-decoration:none;}
+  .delivery-stats{display:flex;gap:22px;font-size:12px;color:var(--text-2);margin-bottom:16px;}
+  .delivery-stats b{color:var(--text);}
+
+  .cms-tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border);}
+  .cms-tabs button{all:unset;padding:10px 16px;font-size:13px;color:var(--text-2);cursor:pointer;border-bottom:2px solid transparent;}
+  .cms-tabs button.active{color:var(--text);font-weight:600;border-bottom-color:var(--sidebar-bg);}
+  .nav-item-row{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff;}
+  .nav-item-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .reorder-arrows{display:flex;flex-direction:column;gap:0;color:var(--text-3);}
+  .reorder-arrows span{cursor:pointer;font-size:10px;line-height:1;padding:1px;}
+  .reorder-arrows span:hover{color:var(--text);}
+  .section-toggle-row{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fff;}
+
+  #toast{position:fixed;top:20px;right:20px;background:var(--sidebar-bg);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:999;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="app">
+  <div class="sidebar">
+    <div>
+      <div class="sidebar-top">
+        <img src="data:image/png;base64,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" alt="Oodel Score">
+        <div class="brand-sub">ADMIN PORTAL</div>
+      </div>
+      <div class="nav-group-label">Platform</div><div class="nav" id="nav0"></div>
+      <div class="nav-group-label">Accounts</div><div class="nav" id="nav1"></div>
+      <div class="nav-group-label">Survey setup</div><div class="nav" id="nav2"></div>
+      <div class="nav-group-label">Content</div><div class="nav" id="nav3"></div>
+      <div class="nav-group-label">Oversight</div><div class="nav" id="nav4"></div>
+    </div>
+    <div class="sidebar-bottom"><div class="biz">Oodel Score Admin</div><div class="email">oodelscore@gmail.com</div></div>
+  </div>
+
+  <div class="main">
+
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <h1>Platform overview</h1>
+      <p class="subtitle">Your command center — every number here is where you go to act on it.</p>
+      <div class="grid grid-4" style="margin-bottom:16px;">
+        <div class="card" style="cursor:pointer;" onclick="showPage('accounts');switchAccountTab('businesses')"><div class="metric-label">Total accounts</div><div class="metric-val">47</div><div class="metric-note">32 businesses · 15 parent orgs →</div></div>
+        <div class="card"><div class="metric-label">Businesses under management</div><div class="metric-val">1,058</div></div>
+        <div class="card" style="cursor:pointer;" onclick="showPage('billing-oversight')"><div class="metric-label">Platform MRR</div><div class="metric-val">£142,300</div><div class="metric-note">View subscriptions →</div></div>
+        <div class="card" style="background:var(--amber-bg);cursor:pointer;" onclick="showPage('ai-queue')"><div class="metric-label" style="color:var(--amber);">AI reports pending</div><div class="metric-val" style="color:var(--amber);">18</div><div class="metric-note" style="color:var(--amber);">Review queue →</div></div>
+      </div>
+      <div class="section-title">Needs your attention</div>
+      <p class="section-sub">Click any row to go straight to it.</p>
+      <table class="clean" style="margin-bottom:26px;">
+        <tr><th>Item</th><th>Issue</th><th></th></tr>
+        <tr style="cursor:pointer;" onclick="showPage('accounts');switchAccountTab('businesses')"><td>The Riverside Bistro</td><td><span class="pill pill-red">Invite expired</span></td><td style="text-align:right;color:var(--accent);">Open →</td></tr>
+        <tr style="cursor:pointer;" onclick="showPage('billing-oversight')"><td>2 billing records</td><td><span class="pill pill-amber">Unlinked account name</span></td><td style="text-align:right;color:var(--accent);">Open →</td></tr>
+        <tr style="cursor:pointer;" onclick="showPage('feedback-responses')"><td>Feedback Responses</td><td><span class="pill pill-red">Scores above 5.0 on a 1–5 scale</span></td><td style="text-align:right;color:var(--accent);">Open →</td></tr>
+        <tr style="cursor:pointer;" onclick="showPage('alert-rules')"><td>Low rating alert</td><td><span class="pill pill-amber">Suspicious duplicate recipient</span></td><td style="text-align:right;color:var(--accent);">Open →</td></tr>
+      </table>
+      <div class="section-title">Jump to</div>
+      <div class="grid grid-4">
+        <button class="btn" onclick="openModal('modal-pick-type')" style="text-align:left;padding:14px;">+ New account</button>
+        <button class="btn" onclick="showPage('question-templates')" style="text-align:left;padding:14px;">+ New Question Template</button>
+        <button class="btn" onclick="showPage('email-templates')" style="text-align:left;padding:14px;">Edit an email template</button>
+        <button class="btn" onclick="showPage('accounts');switchAccountTab('roles')" style="text-align:left;padding:14px;">Manage roles &amp; permissions</button>
+      </div>
+    </div>
+
+    <!-- ===================== ACCOUNTS (consolidated) ===================== -->
+    <div class="page" id="page-accounts">
+      <div class="page-head">
+        <div><h1>Accounts</h1><p class="subtitle" style="margin:0;">Every business, parent organization, and staff member — and who's allowed to see what.</p></div>
+        <button class="btn btn-dark" id="accounts-cta" onclick="openBusinessDetail('new')">+ New Business</button>
+      </div>
+      <div class="subtabs" id="accounts-subtabs"></div>
+
+      <!-- Businesses -->
+      <div class="subpanel active" data-panel="businesses">
+        <div class="filters"><input type="text" placeholder="Search businesses…"></div>
+        <table class="clean">
+          <tr><th>Name</th><th>Industry</th><th>Parent Org</th><th>Account</th><th>Active</th><th>Actions</th></tr>
+          <tr>
+            <td>Greenfield Primary School</td><td><span class="pill pill-gray">Education</span></td><td>Greenfield Education Trust</td>
+            <td><span class="pill pill-red">Invite Expired</span> <span class="icon-btn" onclick="resendInvite('Greenfield Primary School')" title="Resend invite">✉</span></td>
+            <td><span class="toggle on" onclick="toggleSwitch(this)"></span></td>
+            <td><span class="btn btn-sm" onclick="openBusinessDetail('existing')">Manage →</span> <span class="icon-btn btn-danger" onclick="confirmAction('Delete Greenfield Primary School? This cannot be undone.', ()=>toast('Deleted (mock)'))">🗑</span></td>
+          </tr>
+          <tr>
+            <td>Greenfield Secondary School</td><td><span class="pill pill-gray">Education</span></td><td>Greenfield Education Trust</td>
+            <td><span class="pill pill-red">Invite Expired</span> <span class="icon-btn" onclick="resendInvite('Greenfield Secondary School')" title="Resend invite">✉</span></td>
+            <td><span class="toggle on" onclick="toggleSwitch(this)"></span></td>
+            <td><span class="btn btn-sm">Manage →</span> <span class="icon-btn btn-danger" onclick="confirmAction('Delete Greenfield Secondary School?', ()=>toast('Deleted (mock)'))">🗑</span></td>
+          </tr>
+          <tr>
+            <td>The Riverside Bistro</td><td><span class="pill pill-gray">Restaurant</span></td><td>Standalone</td>
+            <td><span class="pill pill-red">Invite Expired</span> <span class="icon-btn" onclick="resendInvite('The Riverside Bistro')" title="Resend invite">✉</span></td>
+            <td><span class="toggle on" onclick="toggleSwitch(this)"></span></td>
+            <td><span class="btn btn-sm" onclick="openBusinessDetail('existing')">Manage →</span> <span class="icon-btn btn-danger" onclick="confirmAction('Delete The Riverside Bistro?', ()=>toast('Deleted (mock)'))">🗑</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Parent Organizations -->
+      <div class="subpanel" data-panel="orgs">
+        <div class="filters"><input type="text" placeholder="Search organizations…"></div>
+        <table class="clean">
+          <tr><th>Name</th><th>Businesses</th><th>Account</th><th>Active</th><th>Actions</th></tr>
+          <tr>
+            <td>Greenfield Education Trust</td><td><span class="pill pill-gray">2</span></td>
+            <td><span class="pill pill-red">Invite Expired</span> <span class="icon-btn" onclick="resendInvite('Greenfield Education Trust')" title="Resend invite">✉</span></td>
+            <td><span class="toggle on" onclick="toggleSwitch(this)"></span></td>
+            <td><span class="btn btn-sm" onclick="openOrgDetail('existing')">Manage →</span> <span class="icon-btn btn-danger" onclick="confirmAction('Delete Greenfield Education Trust? This also removes its 2 businesses from the platform.', ()=>toast('Deleted (mock)'))">🗑</span></td>
+          </tr>
+        </table>
+        <p style="font-size:12px;color:var(--text-3);margin-top:12px;">Both businesses under this trust also show "Invite Expired" — worth checking whether invite emails are actually being delivered via Resend.</p>
+      </div>
+
+      <!-- Staff -->
+      <div class="subpanel" data-panel="staff">
+        <table class="clean">
+          <tr><th>Person</th><th>Role</th><th>Assigned accounts</th><th>Status</th><th></th></tr>
+          <tr>
+            <td><div class="row-flex"><div class="avatar teal">JT</div>Jordan Tate</div></td>
+            <td><span class="pill pill-blue">Account manager</span> <span style="font-size:12px;color:var(--accent);cursor:pointer;" onclick="showPage('accounts');switchAccountTab('roles')">what can they see? →</span></td>
+            <td>18</td><td><span class="pill pill-green">Active</span></td>
+            <td style="text-align:right;"><span class="icon-btn btn-danger" onclick="confirmAction('Remove Jordan Tate\'s access?', ()=>toast('Removed (mock)'))">🗑</span></td>
+          </tr>
+          <tr>
+            <td><div class="row-flex"><div class="avatar gray">DM</div>Dan Marsh</div></td>
+            <td><span class="pill pill-purple">Admin</span> <span style="font-size:12px;color:var(--accent);cursor:pointer;" onclick="showPage('accounts');switchAccountTab('roles')">what can they see? →</span></td>
+            <td>All</td><td><span class="pill pill-amber">Invite pending</span></td>
+            <td style="text-align:right;"><span class="icon-btn" onclick="resendInvite('Dan Marsh')">✉</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Roles & Permissions -->
+      <div class="subpanel" data-panel="roles">
+        <p class="section-sub" style="margin-top:0;">This is where a role's access is actually defined — the Role dropdown when inviting staff reads from exactly this.</p>
+
+        <div class="role-card">
+          <div class="page-head" style="margin-bottom:0;">
+            <div><h3 style="margin:0;">Admin <span class="pill pill-purple" style="margin-left:6px;">2 people</span></h3><p class="card-sub" style="margin:2px 0 0;">Full platform access, including billing, staff, and content.</p></div>
+            <button class="btn btn-sm" onclick="openModal('modal-edit-role')">Edit permissions</button>
+          </div>
+          <table class="perm-table">
+            <tr><th style="text-align:left;">Area</th><th>View</th><th>Edit</th><th>Delete</th></tr>
+            <tr><td>Businesses &amp; Parent Orgs</td><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><td>Staff &amp; Roles</td><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><td>Billing Oversight</td><td>✓</td><td>✓</td><td>—</td></tr>
+            <tr><td>Question Templates &amp; Categories</td><td>✓</td><td>✓</td><td>✓</td></tr>
+            <tr><td>Email Templates &amp; Site Content</td><td>✓</td><td>✓</td><td>—</td></tr>
+            <tr><td>AI Insights Queue</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          </table>
+        </div>
+
+        <div class="role-card">
+          <div class="page-head" style="margin-bottom:0;">
+            <div><h3 style="margin:0;">Account manager <span class="pill pill-blue" style="margin-left:6px;">1 person</span></h3><p class="card-sub" style="margin:2px 0 0;">Manages their assigned businesses and orgs day to day. No billing or platform-wide settings.</p></div>
+            <button class="btn btn-sm" onclick="openModal('modal-edit-role')">Edit permissions</button>
+          </div>
+          <table class="perm-table">
+            <tr><th style="text-align:left;">Area</th><th>View</th><th>Edit</th><th>Delete</th></tr>
+            <tr><td>Businesses &amp; Parent Orgs</td><td>✓ (assigned only)</td><td>✓ (assigned only)</td><td>—</td></tr>
+            <tr><td>Staff &amp; Roles</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Billing Oversight</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Question Templates &amp; Categories</td><td>✓</td><td>—</td><td>—</td></tr>
+            <tr><td>Email Templates &amp; Site Content</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>AI Insights Queue</td><td>✓ (assigned only)</td><td>✓ (assigned only)</td><td>—</td></tr>
+          </table>
+        </div>
+
+        <div class="role-card">
+          <div class="page-head" style="margin-bottom:0;">
+            <div><h3 style="margin:0;">Finance <span class="pill pill-green" style="margin-left:6px;">0 people</span></h3><p class="card-sub" style="margin:2px 0 0;">For a CEO, CFO, or accounts manager who needs full financial visibility without access to customer data, staff, or platform content.</p></div>
+            <button class="btn btn-sm" onclick="openModal('modal-edit-role')">Edit permissions</button>
+          </div>
+          <table class="perm-table">
+            <tr><th style="text-align:left;">Area</th><th>View</th><th>Edit</th><th>Delete</th></tr>
+            <tr><td>Businesses &amp; Parent Orgs</td><td>✓ (names only)</td><td>—</td><td>—</td></tr>
+            <tr><td>Staff &amp; Roles</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Billing Oversight</td><td>✓</td><td>✓</td><td>—</td></tr>
+            <tr><td>Question Templates &amp; Categories</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Email Templates &amp; Site Content</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>AI Insights Queue</td><td>—</td><td>—</td><td>—</td></tr>
+          </table>
+        </div>
+
+        <button class="btn btn-dark" onclick="openModal('modal-new-role')">+ New role</button>
+      </div>
+    </div>
+
+    <!-- ORG DETAIL -->
+    <div class="page" id="page-org-detail">
+      <span class="backlink" onclick="showPage('accounts');switchAccountTab('orgs')">← Back to Accounts</span>
+      <div class="page-head">
+        <div><h1 id="org-detail-title">Greenfield Education Trust</h1><p class="subtitle" id="org-detail-subtitle" style="margin:0;">2 businesses</p></div>
+      </div>
+
+      <div class="callout" id="org-create-banner" style="display:none;">Creating a new Parent Organization. Fill in the General tab, click <b>Create organization</b> below to save it — Businesses &amp; Billing unlocks once it exists.</div>
+
+      <div class="subtabs" id="org-subtabs"></div>
+
+      <!-- GENERAL -->
+      <div class="orgpanel active" data-opanel="general">
+        <div class="card" style="max-width:640px;">
+          <div class="field"><label>Organization name</label><input type="text" id="org-name-input" value="Greenfield Education Trust"></div>
+          <div class="field"><label>Default billing mode</label><select><option>School Pays (each business pays its own)</option><option selected>Trust Pays (one invoice covers every business)</option></select><div class="field-hint">Just the default for new businesses added later — override any individual one on the Businesses &amp; Billing tab.</div></div>
+          <button class="btn btn-dark" id="org-general-save-btn" onclick="toast('Saved')">Save</button>
+        </div>
+      </div>
+
+      <!-- ADDRESS & BILLING -->
+      <div class="orgpanel" data-opanel="address">
+        <div class="card" style="max-width:640px;">
+          <div class="field"><label>Address (UK format)</label><input type="text" placeholder="Street address" style="margin-bottom:8px;"><div class="field-row"><input type="text" placeholder="Town / City"><input type="text" placeholder="Postcode"></div></div>
+          <div class="field-check"><input type="checkbox" checked> Billing address same as above</div>
+          <button class="btn btn-dark" onclick="toast('Saved')">Save</button>
+        </div>
+      </div>
+
+      <!-- CONTACT -->
+      <div class="orgpanel" data-opanel="contact">
+        <div class="card" style="max-width:640px;">
+          <div class="field"><label>Contact name</label><input type="text"></div>
+          <div class="field-row"><div class="field"><label>Contact email</label><input type="email"></div><div class="field"><label>Contact phone</label><input type="text"></div></div>
+          <button class="btn btn-dark" onclick="toast('Saved')">Save</button>
+        </div>
+      </div>
+
+      <!-- BUSINESSES & BILLING -->
+      <div class="orgpanel" data-opanel="businesses">
+        <div class="page-head">
+          <h3 style="margin:0;">Businesses in this organization</h3>
+          <button class="btn" onclick="openBusinessDetail('new', 'Greenfield Education Trust')">+ Add business to this org</button>
+        </div>
+        <table class="clean" style="margin-bottom:26px;">
+          <tr><th>Name</th><th>Industry</th><th>Account</th><th>Billed to</th><th></th></tr>
+          <tr><td>Greenfield Primary School</td><td>Education</td><td><span class="pill pill-red">Invite Expired</span></td><td><span class="pill pill-blue">Trust</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openBusinessDetail('existing')">Manage →</span></td></tr>
+          <tr><td>Greenfield Secondary School</td><td>Education</td><td><span class="pill pill-red">Invite Expired</span></td><td><span class="pill pill-gray">Self</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openBusinessDetail('existing')">Manage →</span></td></tr>
+        </table>
+        <h3>Per-business billing override</h3>
+        <p class="section-sub">Change any individual business's billing here, any time — independent of the org's default above.</p>
+        <table class="clean">
+          <tr><th>Business</th><th>Billed to</th><th>Change to</th></tr>
+          <tr><td>Greenfield Primary School</td><td><span class="pill pill-blue">Trust</span></td><td><select onchange="toast('Billing updated (mock)')"><option selected>Trust pays</option><option>School pays</option></select></td></tr>
+          <tr><td>Greenfield Secondary School</td><td><span class="pill pill-gray">Self</span></td><td><select onchange="toast('Billing updated (mock)')"><option selected>School pays</option><option>Trust pays</option></select></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- BUSINESS DETAIL -->
+    <div class="page" id="page-business-detail">
+      <span class="backlink" onclick="showPage('accounts');switchAccountTab('businesses')">← Back to Accounts</span>
+      <div class="page-head">
+        <div>
+          <h1 id="biz-detail-title">Greenfield Primary School</h1>
+          <p class="subtitle" id="biz-detail-subtitle" style="margin:0;">groupbusiness@oodelscore.com · part of <span style="color:var(--accent);cursor:pointer;" onclick="openOrgDetail('existing')">Greenfield Education Trust</span> <span class="pill pill-red" style="margin-left:6px;">Invite Expired</span> <span class="icon-btn btn-sm" style="width:24px;height:24px;font-size:12px;" onclick="resendInvite('Greenfield Primary School')">✉</span></p>
+        </div>
+      </div>
+
+      <div class="callout" id="biz-create-banner" style="display:none;">Creating a new business. Fill in the General tab, click <b>Create business</b> below to save it — Feedback Points &amp; QR and Group unlock once it exists.</div>
+
+      <div class="subtabs" id="biz-subtabs"></div>
+
+      <!-- GENERAL -->
+      <div class="bizpanel active" data-bpanel="general">
+        <div class="card" style="max-width:640px;">
+          <div class="field"><label>Business name</label><input type="text" id="biz-name-input" value="Greenfield Primary School"></div>
+          <div class="field"><label>Industry</label><select id="biz-industry-select"></select></div>
+          <div class="field"><label>Parent Organization (optional)</label><select id="biz-parentorg-select"><option>Standalone</option><option>Greenfield Education Trust</option></select></div>
+          <div class="field" style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:8px;padding:12px 14px;"><span style="font-size:13px;">Account active</span><span class="toggle on" onclick="toggleSwitch(this)"></span></div>
+          <button class="btn btn-dark" id="biz-general-save-btn" onclick="toast('Saved')">Save</button>
+        </div>
+      </div>
+
+      <!-- ADDRESS & BILLING -->
+      <div class="bizpanel" data-bpanel="address">
+        <div class="card" style="max-width:640px;margin-bottom:16px;">
+          <h3>Address</h3>
+          <div class="field"><input type="text" placeholder="Street address"></div>
+          <div class="field-row"><input type="text" placeholder="Town / City"><input type="text" placeholder="Postcode"></div>
+          <div class="field-check"><input type="checkbox" checked> Billing address same as above</div>
+          <button class="btn btn-dark" onclick="toast('Saved')">Save</button>
+        </div>
+        <div class="callout">Billing assignment (Trust pays / School pays) is managed on the <span style="cursor:pointer;text-decoration:underline;" onclick="openOrgDetail('existing')">Greenfield Education Trust</span> page, alongside every other school in the org.</div>
+      </div>
+
+      <!-- CONTACT -->
+      <div class="bizpanel" data-bpanel="contact">
+        <div class="card" style="max-width:640px;">
+          <div class="field"><label>Contact name</label><input type="text"></div>
+          <div class="field-row"><div class="field"><label>Contact email</label><input type="email"></div><div class="field"><label>Contact phone</label><input type="text"></div></div>
+          <button class="btn btn-dark" onclick="toast('Saved')">Save</button>
+        </div>
+      </div>
+
+      <!-- FEEDBACK POINTS & QR -->
+      <div class="bizpanel" data-bpanel="feedback">
+        <div class="page-head">
+          <div style="font-size:13.5px;color:var(--text-2);">2 feedback points (no limit set)</div>
+          <button class="btn btn-dark" onclick="openModal('modal-new-feedbackpoint')">+ New Feedback Point</button>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="page-head" style="margin-bottom:6px;"><h3 style="margin:0;">Main Campus Feedback</h3><span class="toggle on" onclick="toggleSwitch(this)"></span></div>
+            <p class="card-sub">Ongoing campus feedback · 128 scans · 85 responses</p>
+            <div class="field-row">
+              <div class="field"><label>Question template</label><select><option>Use business default</option><option>School Feedback Template</option></select></div>
+              <div class="field"><label>Form layout</label><select><option>Use business default</option><option>All questions on one screen</option><option>One question per screen</option></select></div>
+            </div>
+            <div style="font-size:12.5px;color:var(--accent);cursor:pointer;margin-bottom:12px;">▸ Respondent fields for this QR (using business default)</div>
+            <div class="btn-group"><button class="btn" style="flex:1;" onclick="openQrModal('Main Campus Feedback')">📱 View QR</button><span class="icon-btn" onclick="confirmAction('Regenerate the QR code for Main Campus Feedback? The old code stops working immediately — any printed posters using it will show an error.', ()=>toast('QR regenerated'))" title="Regenerate">↻</span></div>
+          </div>
+          <div class="card">
+            <div class="page-head" style="margin-bottom:6px;"><h3 style="margin:0;">Sports Day 2026</h3><span class="toggle on" onclick="toggleSwitch(this)"></span></div>
+            <p class="card-sub">Annual sports day event · 134 scans · 88 responses</p>
+            <div class="field-row">
+              <div class="field"><label>Question template</label><select><option>Use business default</option><option>School Feedback Template</option></select></div>
+              <div class="field"><label>Form layout</label><select><option selected>One question per screen</option><option>Use business default</option><option>All questions on one screen</option></select></div>
+            </div>
+            <div class="field-hint" style="margin:-8px 0 12px;">Overridden — a quick event-day survey works better one question at a time than the campus default.</div>
+            <div class="btn-group"><button class="btn" style="flex:1;" onclick="openQrModal('Sports Day 2026')">📱 View QR</button><span class="icon-btn" onclick="confirmAction('Regenerate the QR code for Sports Day 2026? The old code stops working immediately.', ()=>toast('QR regenerated'))" title="Regenerate">↻</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="bizpanel" data-bpanel="settings">
+        <div class="card" style="max-width:820px;">
+          <div class="field-row">
+            <div class="field">
+              <label>Form layout (business default)</label>
+              <select><option>All questions on one screen</option><option selected>One question per screen</option></select>
+              <div class="field-hint">Used by any feedback point set to "Use business default." Override per QR on the Feedback Points &amp; QR tab.</div>
+            </div>
+            <div class="field"><label>Assigned staff (account manager)</label><select><option>Unassigned</option><option>Jordan Tate</option><option>Rhea Lin</option></select></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Max feedback points (QR limit)</label><input type="text" placeholder="No limit"></div>
+            <div class="field" style="display:flex;align-items:flex-end;">
+              <div style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:8px;padding:12px 14px;width:100%;"><span style="font-size:13px;">Show embeddable feedback badge</span><span class="toggle on" onclick="toggleSwitch(this)"></span></div>
+            </div>
+          </div>
+          <div class="section-label">Default respondent fields <span style="text-transform:none;font-weight:400;color:var(--text-3);">— used by new QR codes unless overridden</span></div>
+          <div class="field-row">
+            <div class="field"><label>Full name</label><select><option selected>Off</option><option>Optional</option><option>Mandatory</option></select></div>
+            <div class="field"><label>Email</label><select><option selected>Optional</option><option>Off</option><option>Mandatory</option></select></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Phone</label><select><option selected>Off</option><option>Optional</option><option>Mandatory</option></select></div>
+            <div class="field"><label>Age group</label><select><option selected>Optional</option><option>Off</option><option>Mandatory</option></select></div>
+          </div>
+          <div class="field" style="max-width:260px;"><label>Gender</label><select><option selected>Optional</option><option>Off</option><option>Mandatory</option></select></div>
+          <button class="btn btn-dark" onclick="toast('Settings saved')">Save Settings</button>
+        </div>
+
+        <div class="card" style="max-width:820px;margin-top:20px;border-color:#F0C7C7;">
+          <h3 style="color:var(--red);">Danger zone</h3>
+          <p class="card-sub">Permanently delete this business, its feedback points, responses, and insights. This cannot be undone — use "Account active" on the General tab instead if you just want to disable it.</p>
+          <button class="btn btn-danger" onclick="confirmAction('Permanently delete Greenfield Primary School? This deletes all its feedback points, responses, and insight history. This cannot be undone.', ()=>toast('Deleted (mock)'))">Delete this business</button>
+        </div>
+      </div>
+
+      <!-- GROUP -->
+      <div class="bizpanel" data-bpanel="group">
+        <div class="card" style="max-width:640px;">
+          <h3>Greenfield Education Trust</h3>
+          <p class="card-sub">This business belongs to a Parent Organization.</p>
+          <div class="field"><label>Billed to</label><select onchange="toast('Billing updated (mock)')"><option selected>Trust pays</option><option>School pays</option></select></div>
+          <div class="field"><label>Act ownership</label><select><option>Shared — local day-to-day, escalate bigger issues to the Trust</option><option>Group-managed — Trust's Action Board handles everything</option><option>Branch-managed — this school runs its own Action Board</option></select><div class="field-hint">Controls whether this school gets its own Action Board or defers to the Trust's.</div></div>
+          <button class="btn btn-dark" onclick="toast('Saved')">Save</button>
+          <button class="btn" style="margin-left:8px;" onclick="openOrgDetail('existing')">View Greenfield Education Trust →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUESTION TEMPLATES (list) -->
+    <div class="page" id="page-question-templates">
+      <div class="page-head"><div><h1>Question Templates</h1><p class="subtitle" style="margin:0;">Reusable question sets assigned to businesses or individual feedback points.</p></div><button class="btn btn-dark" onclick="openBuilder('new')">+ New Template</button></div>
+      <div class="grid grid-2" id="templates-grid"></div>
+    </div>
+
+    <!-- ===================== QUESTION TEMPLATE BUILDER (full page, not a modal) ===================== -->
+    <div class="page" id="page-template-builder">
+      <span class="backlink" onclick="showPage('question-templates')">← Back to Question Templates</span>
+      <div class="page-head">
+        <div>
+          <input type="text" id="builder-name" value="School Feedback Template" style="font-size:22px;font-weight:600;border:none;background:none;padding:0;margin-bottom:4px;width:100%;">
+          <p class="subtitle" id="builder-usage" style="margin:0;">Used by 34 businesses — <span style="color:var(--accent);cursor:pointer;" onclick="showPage('accounts');switchAccountTab('businesses')">see which ones →</span></p>
+        </div>
+        <div class="btn-group"><button class="btn" onclick="showPage('question-templates')">Cancel</button><button class="btn btn-dark" onclick="saveTemplate()">Save Template</button></div>
+      </div>
+
+      <div class="field" style="max-width:520px;margin-bottom:24px;">
+        <label>Suggested for industries</label>
+        <div class="tag-input" id="industry-tags">
+          <span class="tag-chip">Education <span class="x" onclick="this.parentElement.remove()">×</span></span>
+          <button class="tag-add" onclick="addIndustryTag()">+ add</button>
+        </div>
+        <div class="field-hint">When admin creates a business in one of these industries, this template is suggested first.</div>
+      </div>
+
+      <div class="builder-grid">
+        <div>
+          <div class="section-title" style="margin-top:0;">Questions</div>
+          <div id="question-rows">
+            <div class="qrow">
+              <div class="qrow-top"><span class="drag">⠿</span><span class="type-icon">★</span><input type="text" class="q-text" value="How would you rate the school's facilities?" style="flex:1;" oninput="renderPreview()"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove();renderPreview()">🗑</span></div>
+              <div class="qrow-opts">
+                <select class="q-type" onchange="renderPreview()"><option>Star Rating (1–5)</option><option>NPS (0–10)</option><option>Open-ended / Free text</option><option>Yes / No</option><option>Emoji / Smiley scale</option><option>Multiple choice</option><option>Multi-select / Checkbox</option><option>Slider / Numeric scale</option><option>Dropdown select</option></select>
+                <select class="q-cat">
+                  <option>Facilities</option><option>Service</option><option>Cleanliness</option><option>Value</option><option>Staff</option><option>Communication</option>
+                  <option value="__new__">+ New category…</option>
+                </select>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" checked> Required</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox"> Tracker</label>
+              </div>
+            </div>
+            <div class="qrow">
+              <div class="qrow-top"><span class="drag">⠿</span><span class="type-icon">%</span><input type="text" class="q-text" value="How likely are you to recommend our school to other parents?" style="flex:1;" oninput="renderPreview()"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove();renderPreview()">🗑</span></div>
+              <div class="qrow-opts">
+                <select class="q-type" onchange="renderPreview()"><option selected>NPS (0–10)</option><option>Star Rating (1–5)</option><option>Open-ended / Free text</option><option>Yes / No</option><option>Emoji / Smiley scale</option><option>Multiple choice</option><option>Multi-select / Checkbox</option><option>Slider / Numeric scale</option><option>Dropdown select</option></select>
+                <select class="q-cat"><option selected>Value</option><option>Facilities</option><option>Service</option><option>Cleanliness</option><option>Staff</option><option>Communication</option><option value="__new__">+ New category…</option></select>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" checked> Required</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox"> Tracker</label>
+              </div>
+            </div>
+            <div class="qrow">
+              <div class="qrow-top"><span class="drag">⠿</span><span class="type-icon">✎</span><input type="text" class="q-text" value="Anything else you'd like us to know?" style="flex:1;" oninput="renderPreview()"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove();renderPreview()">🗑</span></div>
+              <div class="qrow-opts">
+                <select class="q-type" onchange="renderPreview()"><option selected>Open-ended / Free text</option><option>Star Rating (1–5)</option><option>NPS (0–10)</option><option>Yes / No</option><option>Emoji / Smiley scale</option><option>Multiple choice</option><option>Multi-select / Checkbox</option><option>Slider / Numeric scale</option><option>Dropdown select</option></select>
+                <select class="q-cat"><option>Communication</option><option>Facilities</option><option>Service</option><option>Cleanliness</option><option>Value</option><option>Staff</option><option value="__new__">+ New category…</option></select>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox"> Required</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox"> Tracker</label>
+              </div>
+            </div>
+          </div>
+          <button class="btn" style="width:100%;" onclick="addQuestionRow()">+ Add Question</button>
+        </div>
+
+        <div class="phone-frame">
+          <div class="phone-toolbar">Live preview — exactly what a customer sees when they scan the QR</div>
+          <div class="phone-body" id="preview-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div class="page" id="page-categories">
+      <div class="page-head"><div><h1>Question Categories</h1><p class="subtitle" style="margin:0;">Used to tag questions across all templates (e.g. Service, Cleanliness).</p></div><button class="btn btn-dark" onclick="openModal('modal-new-category')">+ New Category</button></div>
+      <table class="clean">
+        <tr><th>Name</th><th>Used in</th><th>Actions</th></tr>
+        <tr><td>Service</td><td>12 questions across 2 templates</td><td style="text-align:right;"><span class="icon-btn" onclick="openModal('modal-edit-category')">✏</span> <span class="icon-btn btn-danger" onclick="confirmAction('\'Service\' is used in 12 questions across 2 templates. Deleting it removes the tag from all of them — the questions themselves stay. Continue?', ()=>toast('Deleted (mock)'))">🗑</span></td></tr>
+        <tr><td>Cleanliness</td><td>9 questions across 2 templates</td><td style="text-align:right;"><span class="icon-btn" onclick="openModal('modal-edit-category')">✏</span> <span class="icon-btn btn-danger" onclick="confirmAction('\'Cleanliness\' is used in 9 questions across 2 templates. Continue?', ()=>toast('Deleted (mock)'))">🗑</span></td></tr>
+        <tr><td>Value</td><td>14 questions across 2 templates</td><td style="text-align:right;"><span class="icon-btn" onclick="openModal('modal-edit-category')">✏</span> <span class="icon-btn btn-danger" onclick="confirmAction('\'Value\' is used in 14 questions across 2 templates. Continue?', ()=>toast('Deleted (mock)'))">🗑</span></td></tr>
+        <tr><td>Facilities</td><td>6 questions across 1 template</td><td style="text-align:right;"><span class="icon-btn" onclick="openModal('modal-edit-category')">✏</span> <span class="icon-btn btn-danger" onclick="confirmAction('\'Facilities\' is used in 6 questions across 1 template. Continue?', ()=>toast('Deleted (mock)'))">🗑</span></td></tr>
+        <tr><td>Communication</td><td style="color:var(--text-3);">Not currently used</td><td style="text-align:right;"><span class="icon-btn" onclick="openModal('modal-edit-category')">✏</span> <span class="icon-btn btn-danger" onclick="confirmAction('Delete \'Communication\'? It isn\'t used in any template.', ()=>toast('Deleted (mock)'))">🗑</span></td></tr>
+      </table>
+    </div>
+
+    <!-- INDUSTRIES -->
+    <div class="page" id="page-industries">
+      <div class="page-head"><div><h1>Industries</h1><p class="subtitle" style="margin:0;">The list every "Industry" dropdown in the app draws from — add one here, it appears everywhere immediately, no code change needed.</p></div><button class="btn btn-dark" onclick="openModal('modal-new-industry')">+ New Industry</button></div>
+      <table class="clean" id="industries-table"></table>
+    </div>
+
+    <!-- EMAIL TEMPLATES (list) -->
+    <div class="page" id="page-email-templates">
+      <h1>Email Templates</h1>
+      <p class="subtitle">Sent live via Resend. Respondents who fill out a feedback form never receive an email — these are account-side only.</p>
+      <div class="filters"><input type="text" placeholder="Search templates…"><div class="chip active">All</div><div class="chip">Account</div><div class="chip">Alerts &amp; reports</div><div class="chip">Billing</div></div>
+      <table class="clean">
+        <tr><th>Template</th><th>Triggered by</th><th>Last edited</th><th>Delivery</th><th></th></tr>
+        <tr><td>Welcome</td><td>Admin creates a business, org, or staff account</td><td>2 weeks ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('welcome')">Edit →</span></td></tr>
+        <tr><td>Email Changed</td><td>User's login email is updated</td><td>3 months ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('emailchanged')">Edit →</span></td></tr>
+        <tr><td>Password Reset</td><td>User requests a reset link</td><td>3 months ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('reset')">Edit →</span></td></tr>
+        <tr><td>Invite to Team</td><td>Someone invites a staff or org member</td><td>1 month ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('invite')">Edit →</span></td></tr>
+        <tr><td>Alert Notification</td><td>An Alert Rule fires on a business</td><td>5 days ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('alert')">Edit →</span></td></tr>
+        <tr><td>Report Ready</td><td>An AI Insights report is approved</td><td>5 days ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('report')">Edit →</span></td></tr>
+        <tr><td>Action Assigned <span class="pill pill-accent" style="margin-left:6px;">New</span></td><td>Someone is assigned an item on a group's Action Board</td><td>2 days ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('action')">Edit →</span></td></tr>
+        <tr><td>Invoice Receipt</td><td>A payment succeeds</td><td>6 months ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('invoice')">Edit →</span></td></tr>
+        <tr><td>Payment Failed</td><td>A payment fails or goes overdue</td><td>6 months ago</td><td><span class="pill pill-resend">Resend</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="openEmailEditor('failed')">Edit →</span></td></tr>
+      </table>
+    </div>
+
+    <!-- EMAIL TEMPLATE EDITOR -->
+    <div class="page" id="page-email-editor">
+      <span class="backlink" onclick="showPage('email-templates')">← Back to Email Templates</span>
+      <div class="page-head">
+        <div><h1 id="editor-title">Welcome</h1><p class="subtitle" id="editor-trigger" style="margin:0;">Sent when a business, org, or staff account is created.</p></div>
+        <div class="btn-group"><span style="font-size:12px;color:var(--accent);cursor:pointer;align-self:center;" onclick="toast('Reset to default (mock)')">↺ Reset to default</span><button class="btn" onclick="openModal('modal-send-test')">Send test email</button><button class="btn btn-dark" onclick="toast('Published — live via Resend')">Publish</button></div>
+      </div>
+      <div class="delivery-stats"><div>Sent <b>1,204</b> times / 30d</div><div><b>99.2%</b> delivered</div><div><b>64%</b> open rate</div></div>
+      <div class="editor-grid">
+        <div>
+          <div class="field"><label>Subject</label><input type="text" id="editor-subject" value="Welcome to Oodel Score, {{name}}!" oninput="updatePreview()"></div>
+          <div class="field"><label>Body</label><textarea id="editor-body" style="min-height:180px;" oninput="updatePreview()">Hi {{name}},
+
+Your Oodel Score account has been created. Login email: {{email}}.
+
+Start collecting feedback via your QR codes today: {{set_password_link}}</textarea></div>
+          <div class="field">
+            <label>Merge variables — click to insert</label>
+            <span class="var-chip" onclick="insertVar('{{name}}')">{{name}}</span>
+            <span class="var-chip" onclick="insertVar('{{email}}')">{{email}}</span>
+            <span class="var-chip" onclick="insertVar('{{set_password_link}}')">{{set_password_link}}</span>
+          </div>
+          <button class="btn btn-dark" onclick="toast('Saved — live via Resend')">Save</button>
+        </div>
+        <div class="preview-pane">
+          <div class="preview-toolbar">Live preview · rendered with example data</div>
+          <div class="preview-body">
+            <div class="p-from">From: Oodel Score &lt;hello@oodelscore.com&gt;</div>
+            <div class="p-subject" id="preview-subject">Welcome to Oodel Score, Amara!</div>
+            <div class="p-text" id="preview-email-body">Hi Amara,<br><br>Your Oodel Score account has been created. Login email: amara@meridianretail.com.<br><br>Start collecting feedback via your QR codes today: <a class="p-btn" href="#">Set your password</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SITE CONTENT -->
+    <div class="page" id="page-site-content">
+      <h1>Site Content</h1>
+      <p class="subtitle">Every section on the live marketing site is generated from what's edited here — nothing on oodelscore.com is hard-coded copy.</p>
+      <div class="cms-tabs" id="cms-tabs"></div>
+      <div id="cms-panels">
+
+        <!-- MENU & FOOTER -->
+        <div class="cms-panel" data-panel="menu">
+          <div class="grid grid-2">
+            <div class="card">
+              <h3>Navigation</h3>
+              <p class="card-sub">Reorder, rename, or hide. Matches the live nav exactly.</p>
+              <div id="nav-items-list">
+                <div class="nav-item-row"><div class="nav-item-top"><div class="reorder-arrows"><span onclick="moveItem(this,-1)">▲</span><span onclick="moveItem(this,1)">▼</span></div><input type="text" value="Product" style="flex:1;border:none;background:none;padding:0;font-weight:500;"><span class="toggle on" onclick="toggleSwitch(this)"></span></div></div>
+                <div class="nav-item-row"><div class="nav-item-top"><div class="reorder-arrows"><span onclick="moveItem(this,-1)">▲</span><span onclick="moveItem(this,1)">▼</span></div><input type="text" value="Solutions" style="flex:1;border:none;background:none;padding:0;font-weight:500;"><span class="toggle on" onclick="toggleSwitch(this)"></span></div></div>
+                <div class="nav-item-row"><div class="nav-item-top"><div class="reorder-arrows"><span onclick="moveItem(this,-1)">▲</span><span onclick="moveItem(this,1)">▼</span></div><input type="text" value="Pricing" style="flex:1;border:none;background:none;padding:0;font-weight:500;"><span class="toggle on" onclick="toggleSwitch(this)"></span></div></div>
+                <div class="nav-item-row"><div class="nav-item-top"><div class="reorder-arrows"><span onclick="moveItem(this,-1)">▲</span><span onclick="moveItem(this,1)">▼</span></div><input type="text" value="Company" style="flex:1;border:none;background:none;padding:0;font-weight:500;"><span class="toggle on" onclick="toggleSwitch(this)"></span></div></div>
+              </div>
+              <button class="btn btn-sm" onclick="addSimpleRow('nav-items-list','New link')">+ Add link</button>
+              <button class="btn btn-dark" style="margin-top:6px;float:right;" onclick="toast('Navigation saved — live on oodelscore.com')">Save</button>
+            </div>
+            <div class="card">
+              <h3>Footer columns</h3>
+              <p class="card-sub">Each column's links, matching the live footer.</p>
+              <div style="margin-bottom:14px;">
+                <b style="font-size:12.5px;">Product</b>
+                <div id="foot-product"><div class="nav-item-row" style="padding:8px 12px;"><input type="text" value="How it works" style="border:none;background:none;padding:0;flex:1;"></div><div class="nav-item-row" style="padding:8px 12px;"><input type="text" value="CX Pulse" style="border:none;background:none;padding:0;flex:1;"></div></div>
+                <button class="btn btn-sm" onclick="addSimpleRow('foot-product','New link')">+ Add link</button>
+              </div>
+              <button class="btn btn-dark" onclick="toast('Footer saved — live on oodelscore.com')">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- HOME PAGE -->
+        <div class="cms-panel" data-panel="home" style="display:none;">
+
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Hero</h3>
+            <p class="card-sub">The first thing every visitor sees.</p>
+            <div class="field"><label>Headline</label><input type="text" value="Feedback is easy to collect. Acting on it is the hard part."></div>
+            <div class="field"><label>Subheadline</label><textarea>Oodel Score turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.</textarea></div>
+            <div class="field-row">
+              <div class="field"><label>Primary button label</label><input type="text" value="Book a demo"></div>
+              <div class="field"><label>Secondary button label</label><input type="text" value="See how it works"></div>
+            </div>
+            <div class="field"><label>"Built for" line</label><input type="text" value="restaurants, retail chains, school trusts, and healthcare groups"></div>
+            <button class="btn btn-dark" onclick="toast('Hero saved — live on oodelscore.com')">Save</button>
+          </div>
+
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Narrative — Listen / Act / Measure</h3>
+            <p class="card-sub">A genuine 3-step sequence. Add, remove, or reorder steps the same way you build a question template.</p>
+            <div class="field-row">
+              <div class="field"><label>Section headline</label><input type="text" value="Most tools stop at collecting. We built the other two thirds."></div>
+            </div>
+            <div class="field"><label>Section subhead</label><input type="text" value="A score with nowhere to go is just a number."></div>
+            <div id="flow-steps-list">
+              <div class="qrow">
+                <div class="qrow-top"><span class="drag">⠿</span><input type="text" value="Listen" style="width:110px;font-weight:600;"><input type="text" value="Collect feedback in under a minute" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div>
+                <textarea style="min-height:44px;">A QR code, a short mobile survey, no app or login. Star ratings, NPS, and open comments arrive instantly in one dashboard.</textarea>
+              </div>
+              <div class="qrow">
+                <div class="qrow-top"><span class="drag">⠿</span><input type="text" value="Act" style="width:110px;font-weight:600;"><input type="text" value="Turn a complaint into an owned task" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div>
+                <textarea style="min-height:44px;">Flagged feedback becomes a tracked item with an owner and a due date. Bigger patterns become logged decisions with a measured outcome.</textarea>
+              </div>
+              <div class="qrow">
+                <div class="qrow-top"><span class="drag">⠿</span><input type="text" value="Measure" style="width:110px;font-weight:600;"><input type="text" value="Know if it's actually working" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div>
+                <textarea style="min-height:44px;">CX Pulse scores whether your team is closing the loop — not just whether customers are happy, but whether that's changing anything.</textarea>
+              </div>
+            </div>
+            <button class="btn" onclick="addFlowStep()">+ Add step</button>
+            <button class="btn btn-dark" style="float:right;" onclick="toast('Narrative saved — live on oodelscore.com')">Save</button>
+          </div>
+
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Scale split</h3>
+            <div class="field-row">
+              <div class="field"><label>Section headline</label><input type="text" value="One location or a thousand — same clarity."></div>
+              <div class="field"><label>Section subhead</label><input type="text" value="The dashboard scales with you, without becoming a different product."></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Panel 1 tag</label><input type="text" value="Single business"></div>
+              <div class="field"><label>Panel 2 tag</label><input type="text" value="Multi-location groups"></div>
+            </div>
+            <button class="btn btn-dark" onclick="toast('Scale section saved — live on oodelscore.com')">Save</button>
+          </div>
+
+          <div class="card" style="margin-bottom:20px;">
+            <h3>CX Pulse feature</h3>
+            <p class="card-sub">The 5 levels shown on the site — must match the CX Pulse framework in <span style="color:var(--accent);cursor:pointer;" onclick="showPage('question-templates')">Configuration</span>, or the marketing site will describe a different scale than the product actually uses.</p>
+            <div class="field"><label>Headline</label><input type="text" value="Are you improving, or just watching a number?"></div>
+            <div id="cx-levels-list">
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="1" style="width:40px;"><input type="text" value="Collecting" style="width:140px;font-weight:600;"><input type="text" value="Gathering feedback, no consistent follow-up" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div></div>
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="2" style="width:40px;"><input type="text" value="Reacting" style="width:140px;font-weight:600;"><input type="text" value="Occasional responses, no clear ownership" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div></div>
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="3" style="width:40px;"><input type="text" value="Responding" style="width:140px;font-weight:600;"><input type="text" value="Most flagged feedback gets a timely reply" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div></div>
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="4" style="width:40px;"><input type="text" value="Improving" style="width:140px;font-weight:600;"><input type="text" value="Feedback drives visible operational change" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div></div>
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="5" style="width:40px;"><input type="text" value="Embedded" style="width:140px;font-weight:600;"><input type="text" value="Outcomes are measured, culture is customer-led" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div></div>
+            </div>
+            <button class="btn btn-dark" style="float:right;" onclick="toast('CX Pulse section saved — live on oodelscore.com')">Save</button>
+          </div>
+
+          <div class="card">
+            <h3>Why teams choose us</h3>
+            <div id="why-items-list">
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="Nothing reaches a dashboard unchecked" style="flex:1;font-weight:600;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><textarea style="min-height:44px;">Every AI-written report is reviewed by a person before it publishes.</textarea></div>
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="Built for the org chart you actually have" style="flex:1;font-weight:600;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><textarea style="min-height:44px;">Role-based access and per-branch billing control that doesn't force every location to look identical.</textarea></div>
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="A QR code, not a project" style="flex:1;font-weight:600;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><textarea style="min-height:44px;">No app to install, no account for your customers to create.</textarea></div>
+            </div>
+            <button class="btn" onclick="addWhyItem()">+ Add item</button>
+            <button class="btn btn-dark" style="float:right;" onclick="toast('Why section saved — live on oodelscore.com')">Save</button>
+          </div>
+        </div>
+
+        <!-- PRICING PAGE -->
+        <div class="cms-panel" data-panel="pricing" style="display:none;">
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Pricing hero</h3>
+            <div class="field"><label>Headline</label><input type="text" value="Straightforward pricing, whatever your size."></div>
+            <div class="field"><label>Subhead</label><input type="text" value="Every plan includes AI-reviewed insights and unlimited responses."></div>
+          </div>
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Plans</h3>
+            <p class="card-sub">Reorder, edit, or add a plan. "Featured" highlights one plan visually — only one should be on at a time.</p>
+            <div id="plans-list">
+              <div class="qrow">
+                <div class="qrow-top"><span class="drag">⠿</span><input type="text" value="Business" style="width:140px;font-weight:600;"><input type="text" value="£79" style="width:80px;"><input type="text" value="per month, one location" style="flex:1;"><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap;"><input type="checkbox"> Featured</label><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div>
+                <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;">Features (one per line)</div>
+                <textarea style="min-height:80px;">Up to 3 feedback points
+Weekly & monthly AI insights
+Action board & alert rules
+Email support</textarea>
+              </div>
+              <div class="qrow">
+                <div class="qrow-top"><span class="drag">⠿</span><input type="text" value="Group" style="width:140px;font-weight:600;"><input type="text" value="From £249" style="width:80px;"><input type="text" value="per month, per branch billing available" style="flex:1;"><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap;"><input type="checkbox" checked> Featured</label><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div>
+                <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;">Features (one per line)</div>
+                <textarea style="min-height:100px;">Unlimited branches
+Regional comparison & benchmarking
+Shared playbooks & decision log
+Per-branch or group-wide billing
+CX Pulse across every branch</textarea>
+              </div>
+              <div class="qrow">
+                <div class="qrow-top"><span class="drag">⠿</span><input type="text" value="Enterprise" style="width:140px;font-weight:600;"><input type="text" value="Custom" style="width:80px;"><input type="text" value="for networks of 100+ branches" style="flex:1;"><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap;"><input type="checkbox"> Featured</label><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div>
+                <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;">Features (one per line)</div>
+                <textarea style="min-height:80px;">Dedicated account manager
+Custom roles & permissions
+SSO & custom data retention
+Quarterly business reviews</textarea>
+              </div>
+            </div>
+            <button class="btn" onclick="addPlan()">+ Add plan</button>
+            <button class="btn btn-dark" style="float:right;" onclick="toast('Pricing saved — live on oodelscore.com')">Save</button>
+          </div>
+          <div class="card">
+            <h3>Enterprise note</h3>
+            <div class="field"><input type="text" value="Onboarding a school trust, healthcare group, or retail chain? Talk to us about volume pricing."></div>
+            <button class="btn btn-dark" onclick="toast('Saved — live on oodelscore.com')">Save</button>
+          </div>
+        </div>
+
+        <div class="cms-panel" data-panel="product" style="display:none;">
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Hero</h3>
+            <div class="field"><label>Headline</label><input type="text" value="Everything from a QR scan to a resolved decision."></div>
+            <div class="field"><label>Subheadline</label><textarea>One platform for the whole loop — collecting feedback, turning it into owned work, and proving whether that work is actually changing anything.</textarea></div>
+            <button class="btn btn-dark" onclick="toast('Saved — live on oodelscore.com')">Save</button>
+          </div>
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Listen section</h3>
+            <div class="field"><label>Headline</label><input type="text" value="Feedback in under a minute, no app required"></div>
+            <div class="field"><textarea>A QR code at the table, till point, or exit. Customers answer on their own phone — no login, no download.</textarea></div>
+          </div>
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Act section</h3>
+            <div class="field"><label>Headline</label><input type="text" value="A place for the work to actually happen"></div>
+            <div class="field"><textarea>Flagged feedback becomes a tracked item with an owner and a due date — not a comment that gets read once and forgotten.</textarea></div>
+          </div>
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Measure section</h3>
+            <div class="field"><label>Headline</label><input type="text" value="CX Pulse: the score that tracks whether you're improving"></div>
+            <div class="field"><textarea>Five dimensions — awareness, response speed, ownership, culture, and measured outcomes — rolled into one number your whole team can rally around.</textarea></div>
+          </div>
+          <div class="card">
+            <h3>AI Insights section</h3>
+            <div class="field"><label>Headline</label><input type="text" value="Written for you, checked by a person"></div>
+            <div class="field"><textarea>Weekly and monthly reports summarize what changed and why — but nothing reaches your dashboard until a human at Oodel Score has reviewed it.</textarea></div>
+            <button class="btn btn-dark" style="float:right;" onclick="toast('Saved — live on oodelscore.com')">Save</button>
+          </div>
+        </div>
+
+        <div class="cms-panel" data-panel="solutions" style="display:none;">
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Hero</h3>
+            <div class="field"><label>Headline</label><input type="text" value="Built for how your organization actually works."></div>
+            <div class="field"><textarea>Single location, growing chain, or thousand-branch network — the same clarity, without forcing every business to look identical.</textarea></div>
+            <button class="btn btn-dark" onclick="toast('Saved — live on oodelscore.com')">Save</button>
+          </div>
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Single business panel</h3>
+            <div class="field"><label>Title</label><input type="text" value="Everything in one view"></div>
+            <div id="sol-single-list">
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Your own feedback points, question set, and alert rules" style="border:none;background:none;padding:0;flex:1;"></div>
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Weekly and monthly AI-written reports" style="border:none;background:none;padding:0;flex:1;"></div>
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Your own Action Board, Decision Log, and Playbooks" style="border:none;background:none;padding:0;flex:1;"></div>
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Your own CX Pulse score, tracked over time" style="border:none;background:none;padding:0;flex:1;"></div>
+            </div>
+            <button class="btn btn-sm" onclick="addSimpleRow('sol-single-list','New point')">+ Add point</button>
+          </div>
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Multi-location groups panel</h3>
+            <div class="field"><label>Title</label><input type="text" value="Compare every branch, act across all of them"></div>
+            <div id="sol-group-list">
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Regional benchmarking — see who's ahead and who needs support" style="border:none;background:none;padding:0;flex:1;"></div>
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Per-branch billing: your group can pay for some branches, others pay their own way" style="border:none;background:none;padding:0;flex:1;"></div>
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Per-branch Act ownership — shared, group-managed, or fully local" style="border:none;background:none;padding:0;flex:1;"></div>
+            </div>
+            <button class="btn btn-sm" onclick="addSimpleRow('sol-group-list','New point')">+ Add point</button>
+          </div>
+          <div class="card">
+            <h3>Enterprise panel</h3>
+            <div class="field"><label>Title</label><input type="text" value="Built for the org chart you actually have"></div>
+            <div id="sol-ent-list">
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Custom roles and permissions — a CFO sees billing, not customer feedback" style="border:none;background:none;padding:0;flex:1;"></div>
+              <div class="nav-item-row" style="padding:9px 12px;"><input type="text" value="Dedicated account manager and quarterly business reviews" style="border:none;background:none;padding:0;flex:1;"></div>
+            </div>
+            <button class="btn btn-sm" onclick="addSimpleRow('sol-ent-list','New point')">+ Add point</button>
+            <button class="btn btn-dark" style="float:right;" onclick="toast('Saved — live on oodelscore.com')">Save</button>
+          </div>
+        </div>
+
+        <div class="cms-panel" data-panel="company" style="display:none;">
+          <div class="card" style="margin-bottom:20px;">
+            <h3>Hero &amp; mission</h3>
+            <div class="field"><label>Headline</label><input type="text" value="We think feedback tools stopped too early."></div>
+            <div class="field"><label>Mission statement</label><textarea style="min-height:100px;">Most platforms treat "collect feedback" as the whole job. We think that's the easy third. Oodel Score exists because the harder, more valuable work — turning what customers say into something a team actually does, and knowing whether it worked — was left to spreadsheets and good intentions. We built the other two thirds.</textarea></div>
+            <button class="btn btn-dark" onclick="toast('Saved — live on oodelscore.com')">Save</button>
+          </div>
+          <div class="card">
+            <h3>"How we work" items</h3>
+            <div id="company-items-list">
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="We review the AI, not just ship it" style="flex:1;font-weight:600;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><textarea style="min-height:44px;">Every automated report is checked by a person before a customer ever sees it.</textarea></div>
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="We design for the org chart, not the demo" style="flex:1;font-weight:600;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><textarea style="min-height:44px;">A single café and a thousand-branch retailer both use Oodel Score.</textarea></div>
+              <div class="qrow"><div class="qrow-top"><span class="drag">⠿</span><input type="text" value="We stay small and direct" style="flex:1;font-weight:600;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><textarea style="min-height:44px;">When you email us, a person who understands the product answers.</textarea></div>
+            </div>
+            <button class="btn" onclick="addWhyItem('company-items-list')">+ Add item</button>
+            <button class="btn btn-dark" style="float:right;" onclick="toast('Saved — live on oodelscore.com')">Save</button>
+          </div>
+          <div class="card" style="margin-top:20px;">
+            <h3>Contact</h3>
+            <div class="field"><label>Contact email shown on page</label><input type="text" value="hello@oodelscore.com"></div>
+            <button class="btn btn-dark" onclick="toast('Saved — live on oodelscore.com')">Save</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- FEEDBACK RESPONSES -->
+    <div class="page" id="page-feedback-responses">
+      <div class="page-head"><div><h1>Feedback Responses</h1><p class="subtitle" style="margin:0;">Every response submitted across the platform.</p></div><div class="btn-group"><input type="text" placeholder="Search by respondent or business…"><input type="date"><input type="date"></div></div>
+      <div class="filters"><div class="chip active" onclick="filterResponses('all',this)">All</div><div class="chip" onclick="filterResponses('anomaly',this)">Anomalies only (score &gt; 5.0)</div><div class="chip" onclick="filterResponses('comment',this)">Has comment</div></div>
+      <div class="callout-red" style="padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:18px;">Several rows below show an Avg Score above 5.0 on a 1–5 scale — this is the NPS-blending bug: a 0–10 recommend question is being averaged in with 1–5 star questions instead of kept separate. Click "Anomalies only" to isolate them.</div>
+      <table class="clean" id="responses-table">
+        <tr><th>Submitted</th><th>Avg Score</th><th>Respondent</th><th>Comment</th><th>Actions</th></tr>
+        <tr data-anomaly="true"><td>09/09/2026, 21:33:00</td><td style="color:var(--red);font-weight:600;">5.6</td><td>respondent60@example.com</td><td>-</td><td style="text-align:right;"><span class="icon-btn btn-danger" onclick="confirmAction('Delete this response permanently?', ()=>toast('Deleted (mock)'))">🗑</span></td></tr>
+        <tr data-anomaly="true"><td>09/09/2026, 20:50:00</td><td style="color:var(--red);font-weight:600;">5.5</td><td>respondent72@example.com</td><td>-</td><td style="text-align:right;"><span class="icon-btn btn-danger" onclick="confirmAction('Delete this response permanently?', ()=>toast('Deleted (mock)'))">🗑</span></td></tr>
+        <tr data-anomaly="false"><td>09/09/2026, 20:34:00</td><td>4.2</td><td>respondent258@example.com</td><td>-</td><td style="text-align:right;"><span class="icon-btn btn-danger" onclick="confirmAction('Delete this response permanently?', ()=>toast('Deleted (mock)'))">🗑</span></td></tr>
+      </table>
+    </div>
+
+    <!-- AI INSIGHTS QUEUE -->
+    <div class="page" id="page-ai-queue">
+      <div class="page-head"><div><h1>AI Insights Review Queue</h1><p class="subtitle" style="margin:0;">Nothing reaches a dashboard without your approval.</p></div><button class="btn btn-dark" onclick="toast('Rebuilding all pending reports (mock)')">✨ Rebuild All Reports</button></div>
+      <div class="filters"><div class="chip active">Pending</div><div class="chip">Approved</div><div class="chip">Rejected</div><div class="chip">All</div></div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="page-head" style="margin-bottom:10px;">
+          <div class="btn-group"><span class="pill pill-purple">Trust Monthly</span><span class="pill pill-amber">pending</span><span style="font-size:12px;color:var(--text-3);align-self:center;">2026-08-01 → 2026-08-31</span></div>
+          <div class="btn-group">
+            <span class="icon-btn" onclick="toast('Regenerating this report (mock)')" title="Regenerate">↻</span>
+            <span class="icon-btn" style="color:var(--green);" onclick="toast('Approved and published')" title="Approve">✓</span>
+            <span class="icon-btn" style="color:var(--red);" onclick="toast('Rejected')" title="Reject">✕</span>
+            <span class="icon-btn btn-danger" onclick="confirmAction('Delete this report?', ()=>toast('Deleted (mock)'))" title="Delete">🗑</span>
+          </div>
+        </div>
+        <textarea style="width:100%;min-height:90px;">**Greenfield Education Trust — Monthly Performance Report**
+
+This month, Greenfield Education Trust achieved a trust-wide average satisfaction score of 4.86/5 across 186 responses, representing a strong 6.1% improvement on last month's average of 4.58/5, though it is worth noting that last month's figure was based on only 3 responses and should be treated with caution.</textarea>
+        <div class="page-head" style="margin-top:10px;margin-bottom:0;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="toggle on" onclick="toggleSwitch(this)"></span> Show chart on dashboard</label>
+          <button class="btn" onclick="toast('Edits saved')">Save Edits</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERT RULES OVERSIGHT -->
+    <div class="page" id="page-alert-rules">
+      <h1>Alert Rules Oversight</h1>
+      <p class="subtitle">Every alert rule configured by any business, platform-wide.</p>
+      <table class="clean">
+        <tr><th>Rule</th><th>Metric</th><th>Threshold</th><th>Business</th><th>Recipient</th><th>Active</th></tr>
+        <tr><td>Low rating alert</td><td><span class="pill pill-gray">star_rating Below</span></td><td>3</td><td><span style="color:var(--accent);cursor:pointer;" onclick="openBusinessDetail('existing')">The Riverside Bistro →</span></td><td>owner@riversidebistro.com</td><td><span class="toggle on" onclick="toggleSwitch(this)"></span></td></tr>
+        <tr><td>Low rating alert</td><td><span class="pill pill-gray">star_rating Below</span></td><td>3</td><td><span style="color:var(--accent);cursor:pointer;" onclick="openBusinessDetail('existing')">The Riverside Bistro →</span></td><td>business@oodelscore.com</td><td><span class="toggle on" onclick="toggleSwitch(this)"></span></td></tr>
+      </table>
+      <p style="font-size:12px;color:var(--text-3);margin-top:12px;">The second row's recipient looks like a placeholder address rather than a real business contact — worth confirming it's not a leftover default that's quietly CC'd on every alert.</p>
+    </div>
+
+    <!-- BILLING OVERSIGHT -->
+    <div class="page" id="page-billing-oversight">
+      <div class="page-head">
+        <div><h1>Billing Oversight</h1><p class="subtitle" style="margin:0;">Every subscription and invoice on the platform. Visible to Admin and Finance roles.</p></div>
+        <button class="btn" onclick="toast('Exporting ledger.csv for your accounting system')">⬇ Export for accounting</button>
+      </div>
+
+      <div class="grid grid-4" style="margin-bottom:20px;">
+        <div class="card"><div class="metric-label">Total MRR</div><div class="metric-val">£142,300</div><div class="metric-note" style="color:var(--green);">↑ 4.2% vs last month</div></div>
+        <div class="card"><div class="metric-label">New MRR this month</div><div class="metric-val">£8,900</div><div class="metric-note">6 new subscriptions</div></div>
+        <div class="card" style="background:var(--red-bg);"><div class="metric-label" style="color:var(--red);">Churned MRR this month</div><div class="metric-val" style="color:var(--red);">£2,100</div><div class="metric-note" style="color:var(--red);">2 cancellations</div></div>
+        <div class="card" style="background:var(--amber-bg);"><div class="metric-label" style="color:var(--amber);">Failed / overdue</div><div class="metric-val" style="color:var(--amber);">3 accounts</div><div class="metric-note" style="color:var(--amber);">£1,340 at risk</div></div>
+      </div>
+
+      <div class="grid grid-2" style="margin-bottom:24px;">
+        <div class="card">
+          <h3>MRR by plan</h3>
+          <div class="bars">
+            <div class="bar-row"><div class="bar-label">trust_monthly</div><div class="bar-track"><div class="bar-fill" style="width:92%;background:#0F6E56;"></div></div><div class="bar-val">£61.2k</div></div>
+            <div class="bar-row"><div class="bar-label">business_monthly</div><div class="bar-track"><div class="bar-fill" style="width:70%;background:#7F77DD;"></div></div><div class="bar-val">£46.8k</div></div>
+            <div class="bar-row"><div class="bar-label">business_yearly</div><div class="bar-track"><div class="bar-fill" style="width:40%;background:#EF9F27;"></div></div><div class="bar-val">£26.4k</div></div>
+            <div class="bar-row"><div class="bar-label">comp (non-revenue)</div><div class="bar-track"><div class="bar-fill" style="width:12%;background:#DADAD5;"></div></div><div class="bar-val">£7.9k</div></div>
+          </div>
+        </div>
+        <div class="card" style="border-color:#F0DFB8;">
+          <h3 style="color:var(--amber);">Needs attention</h3>
+          <p class="card-sub">Overdue payments and data issues that need a human decision.</p>
+          <table class="clean">
+            <tr><td><span style="color:var(--accent);cursor:pointer;" onclick="openBusinessDetail('existing')">Croydon High St</span></td><td><span class="pill pill-red">Overdue 12 days</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="toast('Reminder sent via Resend')">Send reminder</span></td></tr>
+            <tr><td>2 unlinked records</td><td><span class="pill pill-amber">Orphaned data</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="toast('Flagged for engineering review')">Investigate</span></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-title">Subscriptions</div>
+      <div class="filters">
+        <input type="text" placeholder="Search by account name…">
+        <select><option>All types</option><option>Business</option><option>Parent Org</option></select>
+        <select><option>All statuses</option><option>Active</option><option>Overdue</option><option>Canceled</option></select>
+      </div>
+      <table class="clean" style="margin-bottom:28px;">
+        <tr><th>Account</th><th>Type</th><th>Plan</th><th>MRR</th><th>Next payment</th><th>Status</th><th>Actions</th></tr>
+        <tr>
+          <td style="color:var(--amber);">Unknown</td><td>Parent Org</td><td>trust_monthly <span class="pill pill-gray">comp</span></td><td>£0</td><td>—</td><td><span class="pill pill-green">active</span></td>
+          <td style="text-align:right;"><span class="btn btn-sm btn-danger" onclick="confirmAction('Revoke access for this unlinked account?', ()=>toast('Access revoked (mock)'))">Revoke</span></td>
+        </tr>
+        <tr>
+          <td style="color:var(--amber);">Unknown</td><td>Business</td><td>business_monthly <span class="pill pill-gray">comp</span></td><td>£0</td><td>—</td><td><span class="pill pill-green">active</span></td>
+          <td style="text-align:right;"><span class="btn btn-sm btn-danger" onclick="confirmAction('Revoke access for this unlinked account?', ()=>toast('Access revoked (mock)'))">Revoke</span></td>
+        </tr>
+        <tr>
+          <td><span style="color:var(--accent);cursor:pointer;" onclick="openOrgDetail('existing')">Greenfield Education Trust</span></td><td>Parent Org</td><td>trust_monthly <span class="pill pill-gray">comp</span></td><td>£0</td><td>1 Oct 2026</td><td><span class="pill pill-green">active</span></td>
+          <td style="text-align:right;"><div class="btn-group" style="justify-content:flex-end;"><span class="btn btn-sm" onclick="openInvoicesModal('Greenfield Education Trust')">Invoices</span><span class="btn btn-sm btn-danger" onclick="confirmAction('Revoke access for Greenfield Education Trust?', ()=>toast('Access revoked (mock)'))">Revoke</span></div></td>
+        </tr>
+        <tr>
+          <td><span style="color:var(--accent);cursor:pointer;" onclick="openBusinessDetail('existing')">The Riverside Bistro</span></td><td>Business</td><td>business_monthly <span class="pill pill-gray">comp</span></td><td>£0</td><td>1 Oct 2026</td><td><span class="pill pill-green">active</span></td>
+          <td style="text-align:right;"><div class="btn-group" style="justify-content:flex-end;"><span class="btn btn-sm" onclick="openInvoicesModal('The Riverside Bistro')">Invoices</span><span class="btn btn-sm btn-danger" onclick="confirmAction('Revoke access for The Riverside Bistro?', ()=>toast('Access revoked (mock)'))">Revoke</span></div></td>
+        </tr>
+        <tr>
+          <td><span style="color:var(--accent);cursor:pointer;">Croydon High St</span></td><td>Business</td><td>business_monthly</td><td>£79</td><td style="color:var(--red);">Overdue</td><td><span class="pill pill-red">overdue</span></td>
+          <td style="text-align:right;"><div class="btn-group" style="justify-content:flex-end;"><span class="btn btn-sm" onclick="openInvoicesModal('Croydon High St')">Invoices</span><span class="btn btn-sm" onclick="openModal('modal-issue-credit')">Credit</span></div></td>
+        </tr>
+      </table>
+      <p style="font-size:12px;color:var(--text-3);margin-top:-16px;margin-bottom:28px;">The two "Unknown" rows are subscription records with no linked business or org name — likely orphaned from a deleted account or a broken foreign key. Worth a database check before this reaches production.</p>
+
+      <div class="section-title">Invoice ledger</div>
+      <p class="section-sub">Every individual payment across the platform, for reconciliation and accounting exports.</p>
+      <div class="filters">
+        <input type="date"><input type="date">
+        <select><option>All statuses</option><option>Paid</option><option>Failed</option><option>Refunded</option></select>
+      </div>
+      <table class="clean">
+        <tr><th>Date</th><th>Account</th><th>Amount</th><th>Status</th><th></th></tr>
+        <tr><td>1 Sept 2026</td><td>Greenfield Education Trust</td><td>£0.00 (comp)</td><td><span class="pill pill-gray">Comp</span></td><td style="text-align:right;color:var(--accent);cursor:pointer;">Receipt</td></tr>
+        <tr><td>1 Sept 2026</td><td>Croydon High St</td><td>£79.00</td><td><span class="pill pill-red">Failed</span></td><td style="text-align:right;color:var(--accent);cursor:pointer;">Details</td></tr>
+        <tr><td>1 Aug 2026</td><td>Croydon High St</td><td>£79.00</td><td><span class="pill pill-green">Paid</span></td><td style="text-align:right;color:var(--accent);cursor:pointer;">Receipt</td></tr>
+      </table>
+    </div>
+
+
+    <!-- CX PULSE -->
+    <div class="page" id="page-pulse">
+      <h1>CX Pulse <span class="pill pill-accent" style="margin-left:8px;">New</span></h1>
+      <p class="subtitle">Not in your current app yet — which clients are actually acting on their data, not just collecting it.</p>
+      <div class="grid grid-4" style="margin-bottom:18px;">
+        <div class="card"><div class="metric-label">Avg. score</div><div class="metric-val">54/100</div></div>
+        <div class="card" style="background:var(--red-bg);"><div class="metric-label" style="color:var(--red);">At risk</div><div class="metric-val" style="color:var(--red);">6</div></div>
+        <div class="card" style="background:var(--green-bg);"><div class="metric-label" style="color:var(--green);">Expansion ready</div><div class="metric-val" style="color:var(--green);">4</div></div>
+        <div class="card"><div class="metric-label">Avg. action rate</div><div class="metric-val">61%</div></div>
+      </div>
+      <table class="clean">
+        <tr><th>Account</th><th>Level</th><th>Flag</th><th></th></tr>
+        <tr><td>Greenfield Education Trust</td><td>Level 4 · Improving</td><td><span class="pill pill-green">Expansion ready</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="toast('Case study request sent (mock)')">Suggest case study</span></td></tr>
+        <tr><td>The Riverside Bistro</td><td>Level 3 · Responding</td><td><span class="pill pill-gray">Stable</span></td><td style="text-align:right;">—</td></tr>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+
+<div class="modal-overlay" id="modal-new-feedbackpoint">
+  <div class="modal-box">
+    <div class="modal-head"><h2>Create Feedback Point</h2><button class="modal-close" onclick="closeModal('modal-new-feedbackpoint')">×</button></div>
+    <div class="field"><label>Name / purpose</label><input type="text" id="new-fp-name" placeholder="e.g. Main Campus Feedback, Autumn Fair Event"></div>
+    <div class="field"><label>Description (optional)</label><input type="text"></div>
+    <div class="field-row">
+      <div class="field"><label>Question template</label><select><option>Use business default</option><option>School Feedback Template</option><option>Restaurant Feedback Template</option></select></div>
+      <div class="field"><label>Form layout</label><select><option>Use business default</option><option>All questions on one screen</option><option>One question per screen</option></select><div class="field-hint">Override when this QR's context calls for something different — e.g. a quick event survey works better one question at a time.</div></div>
+    </div>
+    <div class="field-check"><input type="checkbox" onchange="document.getElementById('fp-fields-override').style.display=this.checked?'block':'none'"> Use different respondent fields for this QR (otherwise uses business default)</div>
+    <div id="fp-fields-override" style="display:none;background:#FAFAF8;border-radius:8px;padding:12px 14px;margin-bottom:16px;">
+      <div class="field-row"><div class="field"><label>Email</label><select><option>Off</option><option>Optional</option><option>Mandatory</option></select></div><div class="field"><label>Age group</label><select><option>Off</option><option>Optional</option><option>Mandatory</option></select></div></div>
+    </div>
+    <div class="field-hint" style="margin-bottom:16px;">The QR code is generated the moment you click Create — there's no separate "generate" step. You can download it immediately on the next screen.</div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-new-feedbackpoint')">Cancel</button><button class="btn btn-dark" onclick="createFeedbackPoint()">Create — generates the QR instantly</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-qr-view">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="qr-modal-title">Main Campus Feedback</h2><button class="modal-close" onclick="closeModal('modal-qr-view')">×</button></div>
+    <p class="modal-sub" id="qr-modal-url" style="font-family:monospace;">oodelsco.re/main-campus-feedback</p>
+    <div style="display:flex;gap:24px;">
+      <div style="width:150px;height:150px;background:#fff;border:1px solid var(--border);border-radius:10px;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);padding:10px;flex-shrink:0;">
+        <div style="grid-column:1/4;grid-row:1/4;background:var(--ink);border-radius:2px;"></div>
+        <div style="grid-column:7/10;grid-row:1/4;background:var(--ink);border-radius:2px;"></div>
+        <div style="grid-column:1/4;grid-row:7/10;background:var(--ink);border-radius:2px;"></div>
+        <div style="grid-column:5/6;grid-row:5/6;background:var(--ink);"></div>
+        <div style="grid-column:6/7;grid-row:3/4;background:var(--ink);"></div>
+        <div style="grid-column:4/5;grid-row:6/8;background:var(--ink);"></div>
+        <div style="grid-column:7/9;grid-row:6/7;background:var(--ink);"></div>
+      </div>
+      <div style="flex:1;">
+        <p style="font-size:12.5px;color:var(--text-2);margin:0 0 14px;">Print the poster and place it where customers finish their visit — table, till point, or exit.</p>
+        <div class="btn-group" style="flex-direction:column;align-items:stretch;">
+          <button class="btn btn-dark" onclick="toast('Downloading QR code (PNG)')">⬇ Download QR code (PNG)</button>
+          <button class="btn" onclick="toast('Downloading branded poster (PDF)')">⬇ Download poster (PDF)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-invoices">
+  <div class="modal-box wide">
+    <div class="modal-head"><h2 id="invoices-modal-title">Invoices — Croydon High St</h2><button class="modal-close" onclick="closeModal('modal-invoices')">×</button></div>
+    <table class="clean">
+      <tr><th>Date</th><th>Amount</th><th>Payment method</th><th>Status</th><th></th></tr>
+      <tr><td>1 Sept 2026</td><td>£79.00</td><td>Visa •••• 4242</td><td><span class="pill pill-red">Failed</span></td><td style="text-align:right;"><span class="btn btn-sm" onclick="toast('Retrying charge via Stripe')">Retry charge</span></td></tr>
+      <tr><td>1 Aug 2026</td><td>£79.00</td><td>Visa •••• 4242</td><td><span class="pill pill-green">Paid</span></td><td style="text-align:right;color:var(--accent);cursor:pointer;">Download</td></tr>
+      <tr><td>1 Jul 2026</td><td>£79.00</td><td>Visa •••• 4242</td><td><span class="pill pill-green">Paid</span></td><td style="text-align:right;color:var(--accent);cursor:pointer;">Download</td></tr>
+    </table>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-invoices')">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-issue-credit">
+  <div class="modal-box narrow">
+    <div class="modal-head"><h2>Issue credit or refund</h2><button class="modal-close" onclick="closeModal('modal-issue-credit')">×</button></div>
+    <div class="field"><label>Type</label><select><option>Account credit (applies to next invoice)</option><option>Refund (returns money via Stripe)</option></select></div>
+    <div class="field"><label>Amount</label><input type="text" placeholder="£0.00"></div>
+    <div class="field"><label>Reason (kept for the audit log)</label><textarea placeholder="e.g. Service outage on 4 Sept, one month credited as goodwill"></textarea></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-issue-credit')">Cancel</button><button class="btn btn-dark" onclick="closeModal('modal-issue-credit');toast('Credit issued and logged')">Issue</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pick-type">
+  <div class="modal-box">
+    <div class="modal-head"><h2>What are you creating?</h2><button class="modal-close" onclick="closeModal('modal-pick-type')">×</button></div>
+    <div style="display:flex;gap:12px;">
+      <div class="pick-card" onclick="closeModal('modal-pick-type');openBusinessDetail('new')"><div class="pc-icon">🏪</div><b>Business</b><div style="font-size:12px;color:var(--text-2);margin-top:4px;">A single location</div></div>
+      <div class="pick-card" onclick="closeModal('modal-pick-type');openOrgDetail('new')"><div class="pc-icon">🏢</div><b>Parent Organization</b><div style="font-size:12px;color:var(--text-2);margin-top:4px;">A group with multiple businesses</div></div>
+      <div class="pick-card" onclick="closeModal('modal-pick-type');openModal('modal-invite-staff')"><div class="pc-icon">👤</div><b>Staff</b><div style="font-size:12px;color:var(--text-2);margin-top:4px;">An Oodel Score team member</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-invite-staff">
+  <div class="modal-box">
+    <div class="modal-head"><h2>Invite staff</h2><button class="modal-close" onclick="closeModal('modal-invite-staff')">×</button></div>
+    <div class="field-row"><div class="field"><label>Name</label><input type="text"></div><div class="field"><label>Email</label><input type="email"></div></div>
+    <div class="field">
+      <label>Role</label>
+      <select id="invite-role-select" onchange="updateRolePreview()"><option value="am">Account manager</option><option value="admin">Admin</option><option value="finance">Finance</option></select>
+    </div>
+    <div class="card" id="role-preview" style="background:#FAFAF8;margin-bottom:16px;padding:14px 16px;">
+      <b style="font-size:13px;">What this role can see</b>
+      <ul id="role-preview-list" style="margin:8px 0 0;padding-left:18px;font-size:12.5px;color:var(--text-2);line-height:1.6;"></ul>
+      <span style="font-size:12px;color:var(--accent);cursor:pointer;" onclick="closeModal('modal-invite-staff');showPage('accounts');switchAccountTab('roles')">Manage roles →</span>
+    </div>
+    <div class="field"><label>Assign accounts (optional)</label><select><option>Assign later</option><option>Meridian Retail Group</option><option>The Riverside Bistro</option></select></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-invite-staff')">Cancel</button><button class="btn btn-dark" onclick="closeModal('modal-invite-staff');toast('Invite sent via Resend')">Send invite</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-new-role">
+  <div class="modal-box wide">
+    <div class="modal-head"><h2>New role</h2><button class="modal-close" onclick="closeModal('modal-new-role')">×</button></div>
+    <div class="field-row"><div class="field"><label>Role name</label><input type="text" placeholder="e.g. Regional Support"></div><div class="field"><label>Description</label><input type="text" placeholder="Shown when assigning this role"></div></div>
+    <table class="perm-table">
+      <tr><th style="text-align:left;">Area</th><th>View</th><th>Edit</th><th>Delete</th></tr>
+      <tr><td>Businesses &amp; Parent Orgs</td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+      <tr><td>Staff &amp; Roles</td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+      <tr><td>Billing Oversight</td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+      <tr><td>Question Templates &amp; Categories</td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+      <tr><td>Email Templates &amp; Site Content</td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+      <tr><td>AI Insights Queue</td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+    </table>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-new-role')">Cancel</button><button class="btn btn-dark" onclick="closeModal('modal-new-role');toast('Role created')">Create role</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-role">
+  <div class="modal-box wide">
+    <div class="modal-head"><h2>Edit permissions — Admin</h2><button class="modal-close" onclick="closeModal('modal-edit-role')">×</button></div>
+    <table class="perm-table">
+      <tr><th style="text-align:left;">Area</th><th>View</th><th>Edit</th><th>Delete</th></tr>
+      <tr><td>Businesses &amp; Parent Orgs</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr>
+      <tr><td>Staff &amp; Roles</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr>
+      <tr><td>Billing Oversight</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td></tr>
+      <tr><td>Question Templates &amp; Categories</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr>
+      <tr><td>Email Templates &amp; Site Content</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td></tr>
+      <tr><td>AI Insights Queue</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr>
+    </table>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-edit-role')">Cancel</button><button class="btn btn-dark" onclick="closeModal('modal-edit-role');toast('Permissions updated')">Save</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-new-category">
+  <div class="modal-box narrow">
+    <div class="modal-head"><h2>Create Category</h2><button class="modal-close" onclick="closeModal('modal-new-category')">×</button></div>
+    <div class="field"><input type="text" placeholder="Category name"></div>
+    <div class="modal-actions"><button class="btn btn-dark" onclick="closeModal('modal-new-category');toast('Category created')">Create</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-new-industry">
+  <div class="modal-box narrow">
+    <div class="modal-head"><h2>Create Industry</h2><button class="modal-close" onclick="closeModal('modal-new-industry')">×</button></div>
+    <div class="field"><input type="text" id="new-industry-name" placeholder="e.g. Fitness &amp; Wellness"></div>
+    <div class="modal-actions"><button class="btn btn-dark" onclick="createIndustry()">Create</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-category">
+  <div class="modal-box narrow">
+    <div class="modal-head"><h2>Edit Category</h2><button class="modal-close" onclick="closeModal('modal-edit-category')">×</button></div>
+    <div class="field"><input type="text" value="Service"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-edit-category')">Cancel</button><button class="btn btn-dark" onclick="closeModal('modal-edit-category');toast('Category renamed')">Save</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-send-test">
+  <div class="modal-box narrow">
+    <div class="modal-head"><h2>Send test email</h2><button class="modal-close" onclick="closeModal('modal-send-test')">×</button></div>
+    <p class="modal-sub">Sends via Resend using the current draft and example data.</p>
+    <div class="field"><label>Send to</label><input type="email" value="oodelscore@gmail.com"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-send-test')">Cancel</button><button class="btn btn-dark" onclick="closeModal('modal-send-test');toast('Test email sent via Resend')">Send</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-box narrow">
+    <div class="modal-head"><h2>Please confirm</h2><button class="modal-close" onclick="closeModal('modal-confirm')">×</button></div>
+    <p class="modal-sub" id="confirm-text">Are you sure?</p>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-confirm')">Cancel</button><button class="btn btn-dark" id="confirm-btn">Confirm</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-resend">
+  <div class="modal-box narrow">
+    <div class="modal-head"><h2>Resend invite</h2><button class="modal-close" onclick="closeModal('modal-resend')">×</button></div>
+    <p class="modal-sub" id="resend-text">Send a new invite email via Resend?</p>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('modal-resend')">Cancel</button><button class="btn btn-dark" id="resend-btn">Send via Resend</button></div>
+  </div>
+</div>
+
+<script>
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(ov=>{
+  ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('open'); });
+});
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>{ t.style.display='none'; }, 2400);
+}
+function toggleSwitch(el){ el.classList.toggle('on'); toast(el.classList.contains('on') ? 'Turned on' : 'Turned off'); }
+
+function confirmAction(text, onConfirm){
+  document.getElementById('confirm-text').textContent = text;
+  const btn = document.getElementById('confirm-btn');
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.onclick = ()=>{ closeModal('modal-confirm'); onConfirm(); };
+  openModal('modal-confirm');
+}
+function resendInvite(name){
+  document.getElementById('resend-text').textContent = `Send a new invite email to ${name} via Resend? The previous link will stop working.`;
+  const btn = document.getElementById('resend-btn');
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.onclick = ()=>{ closeModal('modal-resend'); toast(`Invite resent to ${name} via Resend`); };
+  openModal('modal-resend');
+}
+
+// ---- Industries: single source of truth for every "Industry" dropdown in the app ----
+let industriesList = [
+  { name: 'Restaurant', usedBy: 212 },
+  { name: 'Education', usedBy: 34 },
+  { name: 'Retail', usedBy: 1042 },
+  { name: 'Healthcare', usedBy: 0 }
+];
+function renderIndustries(){
+  const table = document.getElementById('industries-table');
+  let html = '<tr><th>Name</th><th>Used by</th><th>Actions</th></tr>';
+  industriesList.forEach((ind, i)=>{
+    const usageText = ind.usedBy > 0 ? `${ind.usedBy} businesses` : `<span style="color:var(--text-3);">Not currently used</span>`;
+    html += `<tr><td>${ind.name}</td><td>${usageText}</td><td style="text-align:right;">
+      <span class="icon-btn" onclick="editIndustry(${i})">✏</span>
+      <span class="icon-btn btn-danger" onclick="deleteIndustry(${i})">🗑</span>
+    </td></tr>`;
+  });
+  table.innerHTML = html;
+
+  const select = document.getElementById('biz-industry-select');
+  if(select){
+    const current = select.value;
+    select.innerHTML = industriesList.map(ind=>`<option>${ind.name}</option>`).join('');
+    if(industriesList.find(i=>i.name===current)) select.value = current;
+  }
+}
+function createIndustry(){
+  const name = document.getElementById('new-industry-name').value.trim();
+  if(!name){ toast('Enter a name first'); return; }
+  industriesList.push({ name, usedBy: 0 });
+  renderIndustries();
+  closeModal('modal-new-industry');
+  toast(`"${name}" added — it now appears in every Industry dropdown`);
+}
+function editIndustry(i){
+  const ind = industriesList[i];
+  const name = prompt('Rename industry:', ind.name);
+  if(name && name.trim()){ ind.name = name.trim(); renderIndustries(); toast('Saved'); }
+}
+function deleteIndustry(i){
+  const ind = industriesList[i];
+  const msg = ind.usedBy > 0
+    ? `"${ind.name}" is currently set on ${ind.usedBy} business${ind.usedBy===1?'':'es'}. They'll keep their data, but this option disappears from the dropdown. Continue?`
+    : `Delete "${ind.name}"? It isn't used by any business.`;
+  confirmAction(msg, ()=>{ industriesList.splice(i,1); renderIndustries(); toast('Deleted'); });
+}
+renderIndustries();
+document.getElementById('biz-industry-select').value = 'Education';
+
+function filterResponses(mode, chipEl){
+  document.querySelectorAll('#page-feedback-responses .chip').forEach(c=>c.classList.remove('active'));
+  chipEl.classList.add('active');
+  document.querySelectorAll('#responses-table tr[data-anomaly]').forEach(row=>{
+    if(mode==='all') row.style.display='';
+    else if(mode==='anomaly') row.style.display = row.dataset.anomaly==='true' ? '' : 'none';
+    else if(mode==='comment') row.style.display='none';
+  });
+}
+
+// ---- Business Detail tabs (isolated from Accounts tabs) ----
+const bizTabs = [['general','General'],['address','Address & Billing'],['contact','Contact'],['feedback','Feedback Points & QR'],['settings','Settings'],['group','Group']];
+const bizTabWrap = document.getElementById('biz-subtabs');
+bizTabs.forEach(([id,label],i)=>{
+  const b=document.createElement('button');
+  b.textContent=label; if(i===0) b.classList.add('active');
+  b.onclick=()=>switchBizTab(id);
+  bizTabWrap.appendChild(b);
+});
+function switchBizTab(id){
+  const btn = [...document.querySelectorAll('#biz-subtabs button')].find(b=>bizTabs.find(t=>t[0]===id)[1]===b.textContent);
+  if(btn && btn.disabled) return;
+  document.querySelectorAll('#biz-subtabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.bizpanel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.bizpanel[data-bpanel="${id}"]`).classList.add('active');
+}
+function openBusinessDetail(mode, presetOrg){
+  const banner = document.getElementById('biz-create-banner');
+  const saveBtn = document.getElementById('biz-general-save-btn');
+  const lockedTabs = ['feedback','group'];
+  if(mode === 'new'){
+    banner.style.display = 'block';
+    document.getElementById('biz-detail-title').textContent = 'New business';
+    document.getElementById('biz-detail-subtitle').innerHTML = 'Not yet created';
+    document.getElementById('biz-name-input').value = '';
+    document.getElementById('biz-industry-select').selectedIndex = 0;
+    if(presetOrg){ document.getElementById('biz-parentorg-select').value = presetOrg; }
+    saveBtn.textContent = 'Create business';
+    saveBtn.onclick = ()=>{
+      const name = document.getElementById('biz-name-input').value || 'New business';
+      toast('Business created — welcome email sent via Resend');
+      banner.style.display = 'none';
+      document.getElementById('biz-detail-title').textContent = name;
+      document.getElementById('biz-detail-subtitle').innerHTML = 'Active';
+      saveBtn.textContent = 'Save';
+      saveBtn.onclick = ()=>toast('Saved');
+      setTabLock(false);
+    };
+    setTabLock(true);
+  } else {
+    banner.style.display = 'none';
+    saveBtn.textContent = 'Save';
+    saveBtn.onclick = ()=>toast('Saved');
+    setTabLock(false);
+  }
+  switchBizTab('general');
+  showPage('business-detail');
+  function setTabLock(lock){
+    lockedTabs.forEach(id=>{
+      const btn = [...document.querySelectorAll('#biz-subtabs button')].find(b=>bizTabs.find(t=>t[0]===id)[1]===b.textContent);
+      btn.disabled = lock;
+      btn.style.opacity = lock ? .4 : 1;
+      btn.style.cursor = lock ? 'not-allowed' : 'pointer';
+    });
+  }
+}
+
+// ---- Org Detail tabs (isolated) ----
+const orgTabs = [['general','General'],['address','Address & Billing'],['contact','Contact'],['businesses','Businesses & Billing']];
+const orgTabWrap = document.getElementById('org-subtabs');
+orgTabs.forEach(([id,label],i)=>{
+  const b=document.createElement('button');
+  b.textContent=label; if(i===0) b.classList.add('active');
+  b.onclick=()=>switchOrgTab(id);
+  orgTabWrap.appendChild(b);
+});
+function switchOrgTab(id){
+  const btn = [...document.querySelectorAll('#org-subtabs button')].find(b=>orgTabs.find(t=>t[0]===id)[1]===b.textContent);
+  if(btn && btn.disabled) return;
+  document.querySelectorAll('#org-subtabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.orgpanel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.orgpanel[data-opanel="${id}"]`).classList.add('active');
+}
+function openOrgDetail(mode){
+  const banner = document.getElementById('org-create-banner');
+  const saveBtn = document.getElementById('org-general-save-btn');
+  if(mode === 'new'){
+    banner.style.display = 'block';
+    document.getElementById('org-detail-title').textContent = 'New organization';
+    document.getElementById('org-detail-subtitle').textContent = 'Not yet created';
+    document.getElementById('org-name-input').value = '';
+    saveBtn.textContent = 'Create organization';
+    saveBtn.onclick = ()=>{
+      const name = document.getElementById('org-name-input').value || 'New organization';
+      toast('Organization created — welcome email sent via Resend');
+      banner.style.display = 'none';
+      document.getElementById('org-detail-title').textContent = name;
+      document.getElementById('org-detail-subtitle').textContent = '0 businesses';
+      saveBtn.textContent = 'Save';
+      saveBtn.onclick = ()=>toast('Saved');
+      setOrgTabLock(false);
+    };
+    setOrgTabLock(true);
+  } else {
+    banner.style.display = 'none';
+    saveBtn.textContent = 'Save';
+    saveBtn.onclick = ()=>toast('Saved');
+    setOrgTabLock(false);
+  }
+  switchOrgTab('general');
+  showPage('org-detail');
+  function setOrgTabLock(lock){
+    const btn = [...document.querySelectorAll('#org-subtabs button')].find(b=>b.textContent==='Businesses & Billing');
+    btn.disabled = lock;
+    btn.style.opacity = lock ? .4 : 1;
+    btn.style.cursor = lock ? 'not-allowed' : 'pointer';
+  }
+}
+function createFeedbackPoint(){
+  const name = document.getElementById('new-fp-name').value || 'New feedback point';
+  closeModal('modal-new-feedbackpoint');
+  toast('Feedback point created — welcome to its QR code');
+  openQrModal(name);
+}
+function openInvoicesModal(name){
+  document.getElementById('invoices-modal-title').textContent = 'Invoices — ' + name;
+  openModal('modal-invoices');
+}
+function openQrModal(name){
+  document.getElementById('qr-modal-title').textContent = name;
+  document.getElementById('qr-modal-url').textContent = 'oodelsco.re/' + name.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  openModal('modal-qr-view');
+}
+
+// ---- Accounts tabs ----
+const accountTabs = [['businesses','Businesses'],['orgs','Parent Organizations'],['staff','Staff'],['roles','Roles & Permissions']];
+const accountCTA = { businesses:['+ New Business',()=>openBusinessDetail('new')], orgs:['+ New Parent Organization',()=>openOrgDetail('new')], staff:['+ Invite Staff',()=>openModal('modal-invite-staff')], roles:['+ New Role',()=>openModal('modal-new-role')] };
+const subtabWrap = document.getElementById('accounts-subtabs');
+accountTabs.forEach(([id,label],i)=>{
+  const b=document.createElement('button');
+  b.textContent=label; if(i===0) b.classList.add('active');
+  b.onclick=()=>switchAccountTab(id);
+  subtabWrap.appendChild(b);
+});
+function switchAccountTab(id){
+  document.querySelectorAll('#accounts-subtabs button').forEach(b=>b.classList.remove('active'));
+  [...document.querySelectorAll('#accounts-subtabs button')].find(b=>accountTabs.find(t=>t[0]===id)[1]===b.textContent).classList.add('active');
+  document.querySelectorAll('.subpanel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.subpanel[data-panel="${id}"]`).classList.add('active');
+  const cta = accountCTA[id];
+  const ctaBtn = document.getElementById('accounts-cta');
+  ctaBtn.textContent = cta[0];
+  ctaBtn.onclick = cta[1];
+}
+
+// ---- Role preview in invite modal ----
+const rolePermissions = {
+  am: ['View and edit their assigned businesses and orgs', 'View Question Templates (read-only)', 'View and act on AI reports for assigned accounts', 'No access to billing, staff, or platform content'],
+  admin: ['Full access to every business and organization', 'Manage staff and roles', 'Manage billing, email templates, and site content', 'Approve or reject any AI report'],
+  finance: ['Full view and edit access to Billing Oversight — MRR, invoices, credits, revoked access', 'Sees business and org names only, not their feedback data or settings', 'No access to staff, roles, templates, or site content']
+};
+function updateRolePreview(){
+  const role = document.getElementById('invite-role-select').value;
+  const list = document.getElementById('role-preview-list');
+  list.innerHTML = rolePermissions[role].map(p=>`<li>${p}</li>`).join('');
+}
+updateRolePreview();
+
+// ---- Question Template Builder ----
+let templatesList = [
+  { id:'school', name:'School Feedback Template', industries:['Education'], usedBy:34, questionCount:6 },
+  { id:'restaurant', name:'Restaurant Feedback Template', industries:['Restaurant'], usedBy:212, questionCount:7 }
+];
+let editingTemplateId = null;
+
+function renderTemplatesList(){
+  const grid = document.getElementById('templates-grid');
+  grid.innerHTML = templatesList.map(t => `
+    <div class="card">
+      <h3>${t.name}</h3>
+      <p class="card-sub">${t.questionCount} question${t.questionCount===1?'':'s'} · suggested for ${t.industries.map(i=>`<span class="pill pill-gray">${i}</span>`).join(' ')} · used by ${t.usedBy} business${t.usedBy===1?'':'es'}</p>
+      <div class="btn-group">
+        <button class="btn" style="flex:1;" onclick="openBuilder('${t.id}')">Edit</button>
+        <span class="icon-btn" onclick="duplicateTemplate('${t.id}')">⧉</span>
+        <span class="icon-btn btn-danger" onclick="confirmAction('Delete ${t.name}? Businesses using it keep their current questions.', ()=>deleteTemplate('${t.id}'))">🗑</span>
+      </div>
+    </div>`).join('');
+}
+function duplicateTemplate(id){
+  const t = templatesList.find(x=>x.id===id);
+  const copy = { ...t, id: id+'-copy-'+Date.now(), name: t.name+' (copy)', usedBy: 0 };
+  templatesList.push(copy);
+  renderTemplatesList();
+  toast('Template duplicated');
+}
+function deleteTemplate(id){
+  templatesList = templatesList.filter(t=>t.id!==id);
+  renderTemplatesList();
+  toast('Deleted');
+}
+function openBuilder(key){
+  if(key === 'new'){
+    editingTemplateId = null;
+    document.getElementById('builder-name').value = '';
+    document.getElementById('builder-usage').textContent = 'Not assigned to any business yet.';
+    document.getElementById('question-rows').innerHTML = '';
+  } else {
+    editingTemplateId = key;
+    const t = templatesList.find(x=>x.id===key);
+    document.getElementById('builder-name').value = t.name;
+    document.getElementById('builder-usage').innerHTML = `Used by ${t.usedBy} businesses — <span style="color:var(--accent);cursor:pointer;" onclick="showPage('accounts');switchAccountTab('businesses')">see which ones →</span>`;
+    // question-rows keeps whatever example rows are already in the markup for school/restaurant demo templates
+  }
+  showPage('template-builder');
+  renderPreview();
+}
+function saveTemplate(){
+  const name = document.getElementById('builder-name').value.trim() || 'Untitled template';
+  const questionCount = document.querySelectorAll('#question-rows .qrow').length;
+  const industryTags = [...document.querySelectorAll('#industry-tags .tag-chip')].map(c=>c.textContent.replace('×','').trim());
+
+  if(editingTemplateId){
+    const t = templatesList.find(x=>x.id===editingTemplateId);
+    t.name = name;
+    t.questionCount = questionCount;
+    t.industries = industryTags.length ? industryTags : t.industries;
+  } else {
+    templatesList.push({ id:'tpl-'+Date.now(), name, industries: industryTags.length?industryTags:['General'], usedBy:0, questionCount });
+  }
+  renderTemplatesList();
+  toast(`"${name}" saved`);
+  showPage('question-templates');
+}
+renderTemplatesList();
+
+function addIndustryTag(){
+  const name = prompt('Industry name (e.g. Retail)');
+  if(!name) return;
+  const wrap = document.getElementById('industry-tags');
+  const addBtn = wrap.querySelector('.tag-add');
+  const chip = document.createElement('span');
+  chip.className = 'tag-chip';
+  chip.innerHTML = `${name} <span class="x" onclick="this.parentElement.remove()">×</span>`;
+  wrap.insertBefore(chip, addBtn);
+}
+function addQuestionRow(){
+  const wrap = document.getElementById('question-rows');
+  const row = document.createElement('div');
+  row.className = 'qrow';
+  row.innerHTML = `<div class="qrow-top"><span class="drag">⠿</span><span class="type-icon">★</span><input type="text" class="q-text" placeholder="Question text" style="flex:1;" oninput="renderPreview()"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove();renderPreview()">🗑</span></div>
+    <div class="qrow-opts">
+      <select class="q-type" onchange="renderPreview()"><option>Star Rating (1–5)</option><option>NPS (0–10)</option><option>Open-ended / Free text</option><option>Yes / No</option><option>Emoji / Smiley scale</option><option>Multiple choice</option><option>Multi-select / Checkbox</option><option>Slider / Numeric scale</option><option>Dropdown select</option></select>
+      <select class="q-cat"><option>Service</option><option>Cleanliness</option><option>Value</option><option>Facilities</option><option>Staff</option><option>Communication</option><option value="__new__">+ New category…</option></select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" checked> Required</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox"> Tracker</label>
+    </div>`;
+  wrap.appendChild(row);
+  renderPreview();
+}
+function renderPreview(){
+  const rows = document.querySelectorAll('#question-rows .qrow');
+  const body = document.getElementById('preview-body');
+  body.innerHTML = '';
+  rows.forEach(row=>{
+    const text = row.querySelector('.q-text').value || '(question text)';
+    const type = row.querySelector('.q-type').value;
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-q';
+    let inner = `<div class="pq-text">${text}</div>`;
+    if(type.includes('Star')) inner += `<div class="stars-preview">${'★'.repeat(5).split('').map((s,i)=>`<span class="${i<4?'filled':''}">★</span>`).join('')}</div>`;
+    else if(type.includes('NPS')) inner += `<div class="nps-preview">${[...Array(11).keys()].map(n=>`<span>${n}</span>`).join('')}</div>`;
+    else if(type.includes('Yes')) inner += `<div class="yn-preview"><span>Yes</span><span>No</span></div>`;
+    else if(type.includes('Open')) inner += `<div class="text-preview">Type your answer…</div>`;
+    else inner += `<div class="text-preview">${type}</div>`;
+    wrap.innerHTML = inner;
+    body.appendChild(wrap);
+  });
+  if(rows.length===0) body.innerHTML = '<p style="font-size:12.5px;color:var(--text-3);">Add a question to see the preview.</p>';
+}
+
+// ---- Email editor ----
+const emailTemplateData = {
+  welcome: { title:'Welcome', trigger:"Sent when a business, org, or staff account is created.", subject:'Welcome to Oodel Score, {{name}}!', body:'Hi {{name}},\n\nYour Oodel Score account has been created. Login email: {{email}}.\n\nStart collecting feedback via your QR codes today: {{set_password_link}}' },
+  emailchanged: { title:'Email Changed', trigger:"Sent when a user's login email is updated.", subject:'Your Oodel Score email was updated', body:'Hi {{name}},\n\nYour account email was changed to {{email}}. If you did not request this, contact support immediately.\n\nThe Oodel Score Team' },
+  reset: { title:'Password Reset', trigger:'Sent when a user requests a password reset link.', subject:'Reset your Oodel Score password', body:'Hi {{name}},\n\nClick below to reset your password. This link expires in 1 hour.\n\n{{reset_link}}' },
+  invite: { title:'Invite to Team', trigger:'Sent when someone invites a staff or org member.', subject:"You've been invited to Oodel Score", body:'Hi {{name}},\n\n{{inviter_name}} has invited you to join {{business_name}} on Oodel Score.\n\n{{set_password_link}}' },
+  alert: { title:'Alert Notification', trigger:'Sent when an Alert Rule fires on a business.', subject:'Alert: {{alert_condition}} on {{business_name}}', body:'Hi {{name}},\n\n{{business_name}} just triggered your "{{alert_condition}}" alert.\n\nView details: {{alert_link}}' },
+  report: { title:'Report Ready', trigger:'Sent when an AI Insights report is approved and published.', subject:'Your {{report_period}} report is ready', body:'Hi {{name}},\n\nYour {{report_period}} performance report for {{business_name}} is ready to view.\n\n{{report_link}}' },
+  action: { title:'Action Assigned', trigger:"Sent when someone is assigned an item on a group's Action Board.", subject:"You've been assigned: {{action_title}}", body:'Hi {{name}},\n\nYou\'ve been assigned an action: {{action_title}}, due {{due_date}}.\n\nView it here: {{action_link}}' },
+  invoice: { title:'Invoice Receipt', trigger:'Sent when a payment succeeds.', subject:'Your Oodel Score receipt', body:'Hi {{name}},\n\nWe\'ve received your payment of {{invoice_amount}}. Your receipt is attached.\n\nThanks for using Oodel Score.' },
+  failed: { title:'Payment Failed', trigger:'Sent when a payment fails or an account goes overdue.', subject:'Payment failed for {{business_name}}', body:'Hi {{name}},\n\nWe couldn\'t process your latest payment for {{business_name}}. Please update your payment method to avoid interruption.\n\n{{billing_link}}' }
+};
+function openEmailEditor(key){
+  const d = emailTemplateData[key];
+  document.getElementById('editor-title').textContent = d.title;
+  document.getElementById('editor-trigger').textContent = d.trigger;
+  document.getElementById('editor-subject').value = d.subject;
+  document.getElementById('editor-body').value = d.body;
+  updatePreview();
+  showPage('email-editor');
+}
+function insertVar(v){
+  const ta = document.getElementById('editor-body');
+  ta.value += v;
+  updatePreview();
+}
+function updatePreview(){
+  document.getElementById('preview-subject').textContent = document.getElementById('editor-subject').value.replace('{{name}}','Amara');
+  document.getElementById('preview-email-body').innerHTML = document.getElementById('editor-body').value
+    .replace(/\n/g,'<br>').replace('{{name}}','Amara').replace('{{email}}','amara@meridianretail.com')
+    .replace('{{set_password_link}}','<a class="p-btn" href="#">Set your password</a>');
+}
+
+function moveItem(arrowEl, dir){
+  const row = arrowEl.closest('.nav-item-row');
+  if(dir === -1 && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
+  if(dir === 1 && row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row);
+  toast('Order updated — click Save to publish');
+}
+function addSimpleRow(listId, placeholder){
+  const wrap = document.getElementById(listId);
+  const row = document.createElement('div');
+  row.className = 'nav-item-row';
+  row.innerHTML = `<div class="nav-item-top"><div class="reorder-arrows"><span onclick="moveItem(this,-1)">▲</span><span onclick="moveItem(this,1)">▼</span></div><input type="text" placeholder="${placeholder}" style="flex:1;border:none;background:none;padding:0;font-weight:500;"><span class="toggle on" onclick="toggleSwitch(this)"></span></div>`;
+  wrap.appendChild(row);
+}
+function addFlowStep(){
+  const wrap = document.getElementById('flow-steps-list');
+  const row = document.createElement('div');
+  row.className = 'qrow';
+  row.innerHTML = `<div class="qrow-top"><span class="drag">⠿</span><input type="text" placeholder="Label (e.g. Listen)" style="width:110px;font-weight:600;"><input type="text" placeholder="Step title" style="flex:1;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><textarea style="min-height:44px;" placeholder="Step description"></textarea>`;
+  wrap.appendChild(row);
+}
+function addWhyItem(listId){
+  const wrap = document.getElementById(listId || 'why-items-list');
+  const row = document.createElement('div');
+  row.className = 'qrow';
+  row.innerHTML = `<div class="qrow-top"><span class="drag">⠿</span><input type="text" placeholder="Title" style="flex:1;font-weight:600;"><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><textarea style="min-height:44px;" placeholder="Description"></textarea>`;
+  wrap.appendChild(row);
+}
+function addPlan(){
+  const wrap = document.getElementById('plans-list');
+  const row = document.createElement('div');
+  row.className = 'qrow';
+  row.innerHTML = `<div class="qrow-top"><span class="drag">⠿</span><input type="text" placeholder="Plan name" style="width:140px;font-weight:600;"><input type="text" placeholder="Price" style="width:80px;"><input type="text" placeholder="Unit / description" style="flex:1;"><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap;"><input type="checkbox"> Featured</label><span class="icon-btn btn-danger" onclick="this.closest('.qrow').remove()">🗑</span></div><div style="font-size:12px;color:var(--text-3);margin-bottom:6px;">Features (one per line)</div><textarea style="min-height:80px;" placeholder="One feature per line"></textarea>`;
+  wrap.appendChild(row);
+}
+
+// ---- nav build ----
+const n0=[['overview','Overview']];
+const n1=[['accounts','Accounts']];
+const n2=[['question-templates','Question Templates'],['categories','Categories'],['industries','Industries']];
+const n3=[['email-templates','Email Templates'],['site-content','Site Content']];
+const n4=[['feedback-responses','Feedback Responses'],['ai-queue','AI Insights Queue',18],['alert-rules','Alert Rules'],['billing-oversight','Billing Oversight'],['pulse','CX Pulse']];
+function build(list, el){
+  list.forEach(([id,label,badge])=>{
+    const b=document.createElement('button');
+    b.textContent=label; b.dataset.id=id;
+    if(badge){ const s=document.createElement('span'); s.className='badge'; s.textContent=badge; b.appendChild(s); }
+    b.onclick=()=>showPage(id);
+    el.appendChild(b);
+  });
+}
+build(n0, document.getElementById('nav0'));
+build(n1, document.getElementById('nav1'));
+build(n2, document.getElementById('nav2'));
+build(n3, document.getElementById('nav3'));
+build(n4, document.getElementById('nav4'));
+document.querySelector('#nav0 button').classList.add('active');
+
+const navMap = { 'org-detail':'accounts', 'business-detail':'accounts', 'email-editor':'email-templates', 'template-builder':'question-templates' };
+function showPage(id){
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+  const navId = navMap[id] || id;
+  const navBtn = document.querySelector(`.nav button[data-id="${navId}"]`);
+  if(navBtn) navBtn.classList.add('active');
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ---- Site content CMS tabs ----
+const cmsTabs = [['menu','Menu & Footer'],['home','Home Page'],['pricing','Pricing Page'],['product','Product'],['solutions','Solutions'],['company','Company']];
+const tabWrap = document.getElementById('cms-tabs');
+cmsTabs.forEach(([id,label],i)=>{
+  const b=document.createElement('button');
+  b.textContent=label; if(i===0) b.classList.add('active');
+  b.onclick=()=>{
+    document.querySelectorAll('#cms-tabs button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.cms-panel').forEach(p=>p.style.display='none');
+    document.querySelector(`.cms-panel[data-panel="${id}"]`).style.display='block';
+  };
+  tabWrap.appendChild(b);
+});
+</script>
+</body>
+</html>

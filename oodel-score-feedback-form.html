@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oodel Score — respondent feedback form</title>
+<style>
+  :root{
+    --ink:#17171A; --bg:#F6F6F4; --card:#FFFFFF; --border:#E6E5E1;
+    --text-2:#68686A; --text-3:#9A9A97;
+    --accent:#0F6E56; --accent-bg:#E1F5EE;
+    --amber:#EF9F27; --red:#E24B4A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);}
+
+  /* ===== demo switcher chrome (not part of the actual form) ===== */
+  .demo-bar{background:#15181B;color:#fff;padding:14px 20px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;font-size:13px;position:sticky;top:0;z-index:50;}
+  .demo-bar b{font-weight:600;}
+  .demo-group{display:flex;gap:6px;align-items:center;}
+  .demo-group button{all:unset;padding:6px 12px;border-radius:20px;font-size:12.5px;cursor:pointer;color:#A9AEB4;border:1px solid #33362f;}
+  .demo-group button.active{background:#fff;color:#15181B;font-weight:600;border-color:#fff;}
+  .demo-note{color:#8B9096;font-size:12px;}
+
+  .phone-stage{display:flex;justify-content:center;padding:40px 20px 80px;}
+  .phone{width:390px;max-width:100%;background:#fff;border-radius:28px;box-shadow:0 30px 70px -20px rgba(0,0,0,.35);overflow:hidden;min-height:720px;display:flex;flex-direction:column;}
+
+  /* ===== form chrome ===== */
+  .form-header{padding:26px 24px 18px;text-align:center;border-bottom:1px solid var(--border);}
+  .biz-name{font-size:17px;font-weight:700;letter-spacing:-0.01em;}
+  .group-tag{font-size:11.5px;color:var(--text-3);margin-top:3px;}
+  .form-body{flex:1;padding:24px;overflow-y:auto;}
+  .form-footer{padding:16px 24px 22px;border-top:1px solid var(--border);}
+  .powered{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--text-3);margin-top:14px;}
+  .powered b{color:var(--text-2);font-weight:600;}
+  .powered .dot{color:var(--accent);}
+
+  .btn-submit{width:100%;background:var(--ink);color:#fff;border:none;border-radius:10px;padding:14px;font-size:14.5px;font-weight:600;cursor:pointer;}
+  .btn-submit:hover{background:var(--accent);}
+  .btn-row{display:flex;gap:10px;}
+  .btn-back{flex-shrink:0;background:none;border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:14px;color:var(--text-2);cursor:pointer;}
+
+  /* ===== single-screen (all questions) layout ===== */
+  .q-block{margin-bottom:26px;padding-bottom:26px;border-bottom:1px solid var(--border);}
+  .q-block:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+  .q-text{font-size:14.5px;font-weight:600;margin-bottom:14px;line-height:1.4;}
+  .q-required{color:var(--red);}
+  .q-optional-tag{font-size:11px;color:var(--text-3);font-weight:400;}
+
+  .stars{display:flex;gap:8px;font-size:26px;color:#E6E5E1;cursor:pointer;}
+  .stars span.filled{color:var(--amber);}
+  .nps-row{display:flex;gap:5px;flex-wrap:wrap;}
+  .nps-row button{all:unset;width:30px;height:30px;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12.5px;cursor:pointer;color:var(--text-2);}
+  .nps-row button.sel{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .nps-labels{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-3);margin-top:6px;}
+  .yn-row{display:flex;gap:10px;}
+  .yn-row button{all:unset;flex:1;text-align:center;border:1px solid var(--border);border-radius:10px;padding:11px;font-size:13.5px;color:var(--text-2);cursor:pointer;}
+  .yn-row button.sel{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .open-text{width:100%;border:1px solid var(--border);border-radius:10px;padding:11px;font-size:13.5px;font-family:inherit;min-height:72px;resize:vertical;}
+  .field-input{width:100%;border:1px solid var(--border);border-radius:10px;padding:11px;font-size:13.5px;font-family:inherit;}
+  .demo-section-tag{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin:30px 0 16px;}
+
+  /* ===== one-per-screen layout ===== */
+  .progress-track{height:4px;background:var(--border);border-radius:4px;overflow:hidden;margin:0 24px 0;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s ease;}
+  .step-count{font-size:11.5px;color:var(--text-3);text-align:center;margin:10px 0 0;}
+  .step-q{display:flex;flex-direction:column;justify-content:center;flex:1;min-height:400px;}
+  .step-q .q-text{font-size:18px;line-height:1.35;margin-bottom:26px;}
+  .step-q .stars{font-size:34px;gap:10px;}
+  .step-q .nps-row button{width:34px;height:34px;font-size:13px;}
+
+  .thankyou{text-align:center;padding:60px 24px;}
+  .thankyou .check{width:56px;height:56px;border-radius:50%;background:var(--accent-bg);color:var(--accent);font-size:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+  .thankyou h2{font-size:19px;margin:0 0 8px;}
+  .thankyou p{font-size:13.5px;color:var(--text-2);margin:0;}
+</style>
+</head>
+<body>
+
+<div class="demo-bar">
+  <b>Respondent form preview</b>
+  <div class="demo-group" id="biz-switch"></div>
+  <div class="demo-group" id="layout-switch"></div>
+  <span class="demo-note" id="demo-note"></span>
+</div>
+
+<div class="phone-stage">
+  <div class="phone" id="phone-content"></div>
+</div>
+
+<script>
+const businesses = {
+  riverside: {
+    name: 'The Riverside Bistro',
+    groupTag: null,
+    demographics: { name:'off', email:'optional', phone:'off', age:'mandatory', gender:'optional' },
+    questions: [
+      { text:'How would you rate your overall experience?', type:'star' },
+      { text:'How would you rate the food quality?', type:'star' },
+      { text:'How clean was our venue?', type:'star' },
+      { text:'How did our staff make you feel?', type:'star' },
+      { text:'How likely are you to recommend us to a friend?', type:'nps' },
+      { text:'Did you dine in today?', type:'yesno' },
+      { text:'Anything else you\'d like to share?', type:'open', optional:true }
+    ]
+  },
+  greenfield: {
+    name: 'Greenfield Primary School',
+    groupTag: 'Part of Greenfield Education Trust',
+    demographics: { name:'off', email:'optional', phone:'off', age:'optional', gender:'optional' },
+    questions: [
+      { text:'How would you rate the school\'s facilities?', type:'star' },
+      { text:'How would you rate communication from staff?', type:'star' },
+      { text:'How likely are you to recommend our school to other parents?', type:'nps' },
+      { text:'Anything else you\'d like us to know?', type:'open', optional:true }
+    ]
+  }
+};
+
+let currentBiz = 'riverside';
+let currentLayout = 'single';
+let stepIndex = 0;
+
+function switchBiz(key){ currentBiz = key; stepIndex = 0; render(); }
+function switchLayout(key){ currentLayout = key; stepIndex = 0; render(); }
+
+function buildQuestionInput(q, big){
+  const starSize = big ? 'font-size:34px;gap:10px;' : '';
+  if(q.type === 'star'){
+    return `<div class="stars" style="${starSize}">${[1,2,3,4,5].map(n=>`<span class="${n<=4?'filled':''}" onclick="this.parentElement.querySelectorAll('span').forEach((s,i)=>s.classList.toggle('filled', i<${n}))">★</span>`).join('')}</div>`;
+  }
+  if(q.type === 'nps'){
+    return `<div class="nps-row">${[...Array(11).keys()].map(n=>`<button class="${n===8?'sel':''}" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));this.classList.add('sel')">${n}</button>`).join('')}</div><div class="nps-labels"><span>Not likely</span><span>Very likely</span></div>`;
+  }
+  if(q.type === 'yesno'){
+    return `<div class="yn-row"><button class="sel" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));this.classList.add('sel')">Yes</button><button onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));this.classList.add('sel')">No</button></div>`;
+  }
+  return `<textarea class="open-text" placeholder="Type your answer…"></textarea>`;
+}
+
+function demoFieldRow(label, level){
+  if(level === 'off') return '';
+  const req = level === 'mandatory' ? '<span class="q-required">*</span>' : '<span class="q-optional-tag">(optional)</span>';
+  return `<div class="q-block"><div class="q-text">${label} ${req}</div><input class="field-input" type="text" placeholder="${label}"></div>`;
+}
+
+function renderSingle(biz){
+  let html = biz.questions.map((q,i)=>`
+    <div class="q-block">
+      <div class="q-text">${q.text} ${q.optional ? '<span class="q-optional-tag">(optional)</span>' : '<span class="q-required">*</span>'}</div>
+      ${buildQuestionInput(q,false)}
+    </div>`).join('');
+
+  const d = biz.demographics;
+  const demoFields = demoFieldRow('Your name', d.name) + demoFieldRow('Email address', d.email) + demoFieldRow('Phone number', d.phone) + demoFieldRow('Age group', d.age) + demoFieldRow('Gender', d.gender);
+  if(demoFields){
+    html += `<div class="demo-section-tag">A little about you</div>${demoFields}`;
+  }
+
+  return `
+    <div class="form-header">
+      <div class="biz-name">${biz.name}</div>
+      ${biz.groupTag ? `<div class="group-tag">${biz.groupTag}</div>` : ''}
+    </div>
+    <div class="form-body">${html}</div>
+    <div class="form-footer">
+      <button class="btn-submit" onclick="showThankYou()">Submit feedback</button>
+      <div class="powered">Powered by <b>oodel<span class="dot">.</span>score</b></div>
+    </div>`;
+}
+
+function renderStep(biz){
+  const d = biz.demographics;
+  const demoSteps = [];
+  if(d.name!=='off') demoSteps.push({ text:'Your name', type:'text-field', optional: d.name==='optional' });
+  if(d.email!=='off') demoSteps.push({ text:'Email address', type:'text-field', optional: d.email==='optional' });
+  if(d.phone!=='off') demoSteps.push({ text:'Phone number', type:'text-field', optional: d.phone==='optional' });
+  if(d.age!=='off') demoSteps.push({ text:'Age group', type:'text-field', optional: d.age==='optional' });
+  if(d.gender!=='off') demoSteps.push({ text:'Gender', type:'text-field', optional: d.gender==='optional' });
+
+  const allSteps = [...biz.questions, ...demoSteps];
+  if(stepIndex >= allSteps.length){ return renderThankYou(biz); }
+  const q = allSteps[stepIndex];
+  const isLast = stepIndex === allSteps.length - 1;
+  const pct = Math.round(((stepIndex+1)/allSteps.length)*100);
+
+  const input = q.type === 'text-field'
+    ? `<input class="field-input" type="text" placeholder="${q.text}">`
+    : buildQuestionInput(q, true);
+
+  return `
+    <div class="form-header">
+      <div class="biz-name">${biz.name}</div>
+      ${biz.groupTag ? `<div class="group-tag">${biz.groupTag}</div>` : ''}
+    </div>
+    <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
+    <div class="step-count">${stepIndex+1} of ${allSteps.length}</div>
+    <div class="form-body">
+      <div class="step-q">
+        <div class="q-text">${q.text} ${q.optional ? '<span class="q-optional-tag">(optional)</span>' : (q.type!=='text-field' ? '<span class="q-required">*</span>' : '')}</div>
+        ${input}
+      </div>
+    </div>
+    <div class="form-footer">
+      <div class="btn-row">
+        ${stepIndex>0 ? `<button class="btn-back" onclick="stepIndex--;render()">←</button>` : ''}
+        <button class="btn-submit" onclick="${isLast ? 'showThankYou()' : 'stepIndex++;render()'}">${isLast ? 'Submit feedback' : 'Next'}</button>
+      </div>
+      <div class="powered">Powered by <b>oodel<span class="dot">.</span>score</b></div>
+    </div>`;
+}
+
+function renderThankYou(biz){
+  return `
+    <div class="thankyou">
+      <div class="check">✓</div>
+      <h2>Thanks for your feedback!</h2>
+      <p>${biz.name} received it — no account, no follow-up emails unless you asked for one.</p>
+      <div class="powered" style="margin-top:30px;">Powered by <b>oodel<span class="dot">.</span>score</b></div>
+    </div>`;
+}
+function showThankYou(){
+  document.getElementById('phone-content').innerHTML = renderThankYou(businesses[currentBiz]);
+}
+
+function render(){
+  const biz = businesses[currentBiz];
+  const el = document.getElementById('phone-content');
+  el.innerHTML = currentLayout === 'single' ? renderSingle(biz) : renderStep(biz);
+
+  document.querySelectorAll('#biz-switch button').forEach(b=>b.classList.toggle('active', b.dataset.key===currentBiz));
+  document.querySelectorAll('#layout-switch button').forEach(b=>b.classList.toggle('active', b.dataset.key===currentLayout));
+
+  const d = biz.demographics;
+  const demoDesc = Object.entries(d).filter(([k,v])=>v!=='off').map(([k,v])=>`${k}: ${v}`).join(', ') || 'no demographic fields collected';
+  document.getElementById('demo-note').textContent = `This business's demographic config — ${demoDesc}`;
+}
+
+const bizWrap = document.getElementById('biz-switch');
+[['riverside','Riverside Bistro (standalone)'],['greenfield','Greenfield Primary (branch of a group)']].forEach(([key,label])=>{
+  const b = document.createElement('button');
+  b.textContent = label; b.dataset.key = key;
+  b.onclick = ()=>switchBiz(key);
+  bizWrap.appendChild(b);
+});
+const layoutWrap = document.getElementById('layout-switch');
+[['single','All questions, one screen'],['step','One question per screen']].forEach(([key,label])=>{
+  const b = document.createElement('button');
+  b.textContent = label; b.dataset.key = key;
+  b.onclick = ()=>switchLayout(key);
+  layoutWrap.appendChild(b);
+});
+
+render();
+</script>
+</body>
+</html>

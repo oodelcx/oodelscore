@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oodel Score — Feedback that turns into action</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<style>
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap');
+
+:root{
+  --ink:#12140F0;
+  --ink:#111412;
+  --paper:#FFFFFF;
+  --paper-alt:#F5F4F0;
+  --signal:#127C57;
+  --signal-deep:#0A4A34;
+  --signal-bright:#3FBE8B;
+  --amber:#C87A2E;
+  --line:#E4E2DC;
+  --text-2:#5B5D58;
+  --text-3:#8B8D87;
+  --blue:#3F5FD1;
+  --purple:#6B4FD6;
+  --red:#C24A3F;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;font-family:'General Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;}
+.page{display:none;} .page.active{display:block;}
+img,svg{max-width:100%;}
+a{color:inherit;text-decoration:none;}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+@media(max-width:640px){.wrap{padding:0 20px;}}
+
+/* ===== NAV ===== */
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+.nav-inner{max-width:1180px;margin:0 auto;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{font-size:19px;font-weight:600;letter-spacing:-0.01em;}
+.nav-logo span{color:var(--signal);}
+.nav-links{display:flex;gap:34px;font-size:14.5px;color:var(--text-2);}
+.nav-links a:hover{color:var(--ink);}
+.nav-right{display:flex;align-items:center;gap:20px;font-size:14.5px;}
+.btn-primary{background:var(--ink);color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;display:inline-block;}
+.btn-primary:hover{background:var(--signal-deep);}
+@media(max-width:860px){.nav-links{display:none;}}
+
+/* ===== HERO ===== */
+.hero{padding:96px 0 60px;position:relative;overflow:hidden;}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;}
+@media(max-width:960px){.hero-grid{grid-template-columns:1fr;}}
+.hero h1{font-size:clamp(38px,5.2vw,64px);line-height:0.98;letter-spacing:-0.025em;font-weight:600;margin:0 0 26px;max-width:11.5ch;}
+.hero p{font-size:18px;line-height:1.55;color:var(--text-2);max-width:46ch;margin:0 0 34px;}
+.hero-ctas{display:flex;gap:14px;align-items:center;margin-bottom:36px;}
+.btn-ghost{border:1px solid var(--line);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;}
+.btn-ghost:hover{border-color:var(--ink);}
+.built-for{font-size:13px;color:var(--text-3);}
+.built-for b{color:var(--text-2);font-weight:500;}
+
+/* hero product visual */
+.hero-visual{position:relative;height:460px;}
+.hv-card{position:absolute;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 60px -20px rgba(17,20,18,.18);}
+.hv-main{width:340px;padding:22px 24px;top:10px;left:40px;z-index:3;}
+.hv-eyebrow{font-size:11.5px;color:var(--text-3);margin-bottom:2px;}
+.hv-title{font-size:15px;font-weight:600;margin-bottom:18px;}
+.hv-score{font-size:44px;font-weight:600;letter-spacing:-0.02em;}
+.hv-score-label{font-size:12px;color:var(--text-3);margin-top:2px;}
+.hv-spark{margin-top:16px;}
+.hv-pulse{position:absolute;top:36px;right:-10px;z-index:4;background:#fff;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;}
+.hv-dot{width:8px;height:8px;border-radius:50%;background:var(--signal-bright);}
+.hv-action{width:260px;padding:16px 18px;left:110px;bottom:0px;z-index:2;}
+.hv-action .pill{display:inline-block;font-size:10.5px;font-weight:500;padding:2px 8px;border-radius:20px;background:#FBEFE3;color:var(--amber);margin-bottom:8px;}
+.hv-action-title{font-size:13px;font-weight:500;line-height:1.4;}
+.hv-action-meta{font-size:11.5px;color:var(--text-3);margin-top:6px;}
+@media(max-width:960px){.hero-visual{height:360px;transform:scale(.88);transform-origin:top left;}}
+
+/* ===== NARRATIVE (Listen / Act / Measure) ===== */
+.narrative{padding:100px 0;background:var(--paper-alt);}
+.narrative-head{max-width:600px;margin-bottom:64px;}
+.narrative-head h2{font-size:clamp(28px,3.4vw,40px);letter-spacing:-0.02em;line-height:1.1;font-weight:600;margin:0 0 16px;}
+.narrative-head p{font-size:16.5px;color:var(--text-2);line-height:1.6;margin:0;}
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:0;position:relative;}
+@media(max-width:860px){.flow{grid-template-columns:1fr;gap:40px;}}
+.flow-step{position:relative;padding:0 32px 0 0;}
+.flow-step:first-child{padding-left:0;}
+.flow-num{font-size:13px;color:var(--signal);font-weight:600;margin-bottom:14px;}
+.flow-step h3{font-size:20px;font-weight:600;letter-spacing:-0.01em;margin:0 0 10px;}
+.flow-step p{font-size:14.5px;color:var(--text-2);line-height:1.6;margin:0;}
+.flow-line{position:absolute;top:9px;left:0;right:0;height:1px;background:var(--line);z-index:0;}
+.flow-step:not(:last-child)::after{content:'';position:absolute;top:9px;right:-1px;width:1px;height:1px;}
+
+/* ===== SCALE SPLIT ===== */
+.scale{padding:100px 0;}
+.scale-head{max-width:560px;margin:0 auto 56px;text-align:center;}
+.scale-head h2{font-size:clamp(28px,3.4vw,40px);letter-spacing:-0.02em;font-weight:600;margin:0 0 16px;}
+.scale-head p{font-size:16.5px;color:var(--text-2);line-height:1.6;}
+.scale-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--line);border-radius:16px;overflow:hidden;}
+@media(max-width:860px){.scale-grid{grid-template-columns:1fr;}}
+.scale-panel{background:#fff;padding:40px 36px;}
+.scale-panel.dark{background:var(--ink);color:#fff;}
+.scale-tag{font-size:13px;color:var(--signal);font-weight:600;margin-bottom:14px;}
+.scale-panel.dark .scale-tag{color:var(--signal-bright);}
+.scale-panel h3{font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0 0 10px;}
+.scale-panel p{font-size:14.5px;line-height:1.6;color:var(--text-2);margin:0 0 22px;}
+.scale-panel.dark p{color:#B9BDB8;}
+.scale-mini{display:flex;gap:10px;flex-wrap:wrap;}
+.scale-mini span{font-size:12px;border:1px solid var(--line);border-radius:20px;padding:5px 12px;color:var(--text-2);}
+.scale-panel.dark .scale-mini span{border-color:#33362f;color:#C9CCC6;}
+
+/* ===== CX PULSE FEATURE ===== */
+.pulse-section{padding:100px 0;background:var(--ink);color:#fff;}
+.pulse-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+@media(max-width:960px){.pulse-grid{grid-template-columns:1fr;}}
+.pulse-tag{font-size:13px;color:var(--signal-bright);font-weight:600;margin-bottom:16px;}
+.pulse-section h2{font-size:clamp(28px,3.6vw,42px);letter-spacing:-0.02em;line-height:1.1;font-weight:600;margin:0 0 20px;}
+.pulse-section p{font-size:16px;line-height:1.6;color:#B9BDB8;max-width:44ch;margin:0 0 28px;}
+.levels{display:flex;flex-direction:column;gap:2px;}
+.level-row{display:flex;align-items:center;gap:16px;padding:13px 0;border-top:1px solid #262922;}
+.level-row:first-child{border-top:none;}
+.level-num{width:26px;height:26px;border-radius:50%;border:1px solid #3A3D35;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.level-row.active .level-num{background:var(--signal-bright);border-color:var(--signal-bright);color:#0A2E20;font-weight:600;}
+.level-name{font-size:14.5px;font-weight:500;}
+.level-row.active .level-name{color:#fff;}
+.level-row:not(.active) .level-name{color:#7D8078;}
+.level-desc{font-size:12.5px;color:#6F726A;margin-left:auto;text-align:right;max-width:220px;}
+
+/* ===== WHY ===== */
+.why{padding:100px 0;}
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:48px;}
+@media(max-width:860px){.why-grid{grid-template-columns:1fr;}}
+.why-item h3{font-size:18px;font-weight:600;letter-spacing:-0.01em;margin:0 0 10px;}
+.why-item p{font-size:14.5px;color:var(--text-2);line-height:1.65;margin:0;}
+
+/* ===== FINAL CTA ===== */
+.final-cta{padding:110px 0;text-align:center;background:linear-gradient(180deg,#0F4230,var(--ink));color:#fff;}
+.final-cta h2{font-size:clamp(30px,4vw,46px);letter-spacing:-0.025em;line-height:1.05;font-weight:600;margin:0 0 20px;}
+.final-cta p{font-size:16px;color:#B9BDB8;margin:0 0 34px;}
+.final-cta .btn-primary{background:var(--signal-bright);color:#0A2E20;font-weight:600;}
+.final-cta .btn-ghost{border-color:#3A3D35;color:#E4E6E1;}
+
+/* ===== FOOTER ===== */
+footer{padding:56px 0 40px;border-top:1px solid var(--line);}
+.foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px;}
+@media(max-width:700px){.foot-grid{grid-template-columns:1fr 1fr;}}
+.foot-logo{font-size:17px;font-weight:600;margin-bottom:10px;}
+.foot-logo span{color:var(--signal);}
+.foot-desc{font-size:13px;color:var(--text-3);line-height:1.6;max-width:32ch;}
+.foot-col h4{font-size:12.5px;font-weight:600;color:var(--text-2);margin:0 0 14px;}
+.foot-col a{display:block;font-size:13.5px;color:var(--text-3);margin-bottom:10px;}
+.foot-col a:hover{color:var(--ink);}
+.foot-bottom{margin-top:44px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--text-3);}
+
+/* ===== PRICING PAGE ===== */
+.pricing-hero{padding:80px 0 20px;text-align:center;}
+.pricing-hero h1{font-size:clamp(34px,4.6vw,52px);letter-spacing:-0.025em;font-weight:600;margin:0 0 18px;}
+.pricing-hero p{font-size:16.5px;color:var(--text-2);max-width:46ch;margin:0 auto;}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding:60px 0 40px;}
+@media(max-width:900px){.pricing-grid{grid-template-columns:1fr;}}
+.plan{border:1px solid var(--line);border-radius:16px;padding:32px 28px;}
+.plan.featured{border-color:var(--ink);background:var(--ink);color:#fff;position:relative;}
+.plan-name{font-size:13px;font-weight:600;color:var(--signal);margin-bottom:14px;}
+.plan.featured .plan-name{color:var(--signal-bright);}
+.plan-price{font-size:38px;font-weight:600;letter-spacing:-0.02em;margin-bottom:4px;}
+.plan-unit{font-size:13px;color:var(--text-3);margin-bottom:22px;}
+.plan.featured .plan-unit{color:#9FA39A;}
+.plan-cta{display:block;text-align:center;padding:11px;border-radius:8px;border:1px solid var(--line);font-size:14px;font-weight:500;margin-bottom:26px;}
+.plan.featured .plan-cta{background:var(--signal-bright);color:#0A2E20;border-color:var(--signal-bright);font-weight:600;}
+.plan-feat{font-size:13.5px;padding:9px 0;border-top:1px solid var(--line);color:var(--text-2);}
+.plan.featured .plan-feat{border-top-color:#2C2F28;color:#D5D8D1;}
+.plan-feat:first-of-type{border-top:none;}
+.enterprise-note{text-align:center;font-size:14.5px;color:var(--text-2);padding:20px 0 80px;}
+.enterprise-note a{color:var(--signal);font-weight:500;}
+
+/* ===== INNER PAGE HERO (Product / Solutions / Company) ===== */
+.inner-hero{padding:80px 0 30px;text-align:center;}
+.inner-hero h1{font-size:clamp(32px,4.4vw,50px);letter-spacing:-0.025em;font-weight:600;margin:0 0 16px;}
+.inner-hero p{font-size:16.5px;color:var(--text-2);max-width:52ch;margin:0 auto;}
+
+/* ===== FEATURE ROW (text + fragment visual, alternating) ===== */
+.feature-row{padding:70px 0;border-top:1px solid var(--line);}
+.feature-row .wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
+.feature-row.reverse .wrap{direction:rtl;}
+.feature-row.reverse .wrap > *{direction:ltr;}
+@media(max-width:900px){.feature-row .wrap{grid-template-columns:1fr;}.feature-row.reverse .wrap{direction:ltr;}}
+.feature-tag{font-size:13px;color:var(--signal);font-weight:600;margin-bottom:14px;}
+.feature-row h2{font-size:clamp(24px,3vw,32px);letter-spacing:-0.02em;line-height:1.15;font-weight:600;margin:0 0 14px;}
+.feature-row p{font-size:15.5px;color:var(--text-2);line-height:1.65;max-width:42ch;margin:0 0 18px;}
+.feature-list{list-style:none;padding:0;margin:0;font-size:14px;color:var(--text-2);}
+.feature-list li{padding:7px 0;border-top:1px solid var(--line);}
+.feature-list li:first-child{border-top:none;}
+
+/* small mock UI fragments reused across inner pages */
+.mock-card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px -20px rgba(17,20,18,.18);padding:18px 20px;}
+.mock-action-card .pill{display:inline-block;font-size:10.5px;font-weight:500;padding:2px 8px;border-radius:20px;background:#FBEFE3;color:var(--amber);margin-bottom:8px;}
+.mock-action-title{font-size:13.5px;font-weight:500;line-height:1.4;margin-bottom:4px;}
+.mock-action-meta{font-size:11.5px;color:var(--text-3);}
+.mock-qtype-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:13px;}
+.mock-qtype-row:first-child{border-top:none;}
+.mock-qtype-row .tag{font-size:11px;color:var(--text-3);border:1px solid var(--line);border-radius:20px;padding:2px 9px;}
+
+/* solution split panels reused from homepage, extra variants */
+.sol-grid{display:grid;grid-template-columns:1fr;gap:2px;background:var(--line);border-radius:16px;overflow:hidden;margin:60px 0;}
+.sol-panel{background:#fff;padding:44px 40px;display:grid;grid-template-columns:1fr 1.4fr;gap:40px;align-items:center;}
+.sol-panel.dark{background:var(--ink);color:#fff;}
+@media(max-width:800px){.sol-panel{grid-template-columns:1fr;}}
+.sol-tag{font-size:13px;color:var(--signal);font-weight:600;margin-bottom:10px;}
+.sol-panel.dark .sol-tag{color:var(--signal-bright);}
+.sol-panel h3{font-size:24px;font-weight:600;letter-spacing:-0.01em;margin:0 0 10px;}
+.sol-panel p{font-size:14.5px;color:var(--text-2);line-height:1.6;margin:0;}
+.sol-panel.dark p{color:#B9BDB8;}
+.sol-panel ul{list-style:none;padding:0;margin:0;font-size:13.5px;}
+.sol-panel ul li{padding:7px 0;border-top:1px solid var(--line);color:var(--text-2);}
+.sol-panel.dark ul li{border-top-color:#2C2F28;color:#D5D8D1;}
+.sol-panel ul li:first-child{border-top:none;}
+
+.mission-block{max-width:640px;margin:0 auto;text-align:center;padding:20px 0 70px;}
+.mission-block p{font-size:18px;line-height:1.6;color:var(--text);font-weight:400;}
+</style>
+</head>
+<body>
+
+<!-- ============ HOME ============ -->
+<div class="page active" id="page-home">
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-logo">oodel<span>.score</span></div>
+      <div class="nav-links">
+        <a href="javascript:void(0)" onclick="showPage('product')">Product</a>
+        <a href="javascript:void(0)" onclick="showPage('solutions')">Solutions</a>
+        <a href="javascript:void(0)" onclick="showPage('pricing')">Pricing</a>
+        <a href="javascript:void(0)" onclick="showPage('company')">Company</a>
+      </div>
+      <div class="nav-right">
+        <a href="#">Sign in</a>
+        <a class="btn-primary" href="#demo">Book a demo</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Feedback is easy to collect. Acting on it is the hard part.</h1>
+        <p>Oodel Score turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.</p>
+        <div class="hero-ctas">
+          <a class="btn-primary" href="#demo">Book a demo</a>
+          <a class="btn-ghost" href="#product">See how it works</a>
+        </div>
+        <div class="built-for"><b>Built for</b> restaurants, retail chains, school trusts, and healthcare groups</div>
+      </div>
+      <div class="hero-visual">
+        <div class="hv-card hv-main">
+          <div class="hv-eyebrow">The Riverside Bistro</div>
+          <div class="hv-title">This month</div>
+          <div class="hv-score" id="hv-score-num">0.00</div>
+          <div class="hv-score-label">average score, 141 responses</div>
+          <svg class="hv-spark" width="100%" height="46" viewBox="0 0 280 46">
+            <polyline id="hv-line" fill="none" stroke="#127C57" stroke-width="2.4" points="0,30 30,26 60,32 90,20 120,24 150,14 180,18 210,10 240,14 270,6" stroke-dasharray="400" stroke-dashoffset="400"/>
+          </svg>
+        </div>
+        <div class="hv-card hv-pulse"><span class="hv-dot"></span> CX Pulse — Improving</div>
+        <div class="hv-card hv-action">
+          <span class="pill">Action assigned</span>
+          <div class="hv-action-title">Cleanliness dip, morning shift — Sam K.</div>
+          <div class="hv-action-meta">Due in 2 days</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="narrative" id="product">
+    <div class="wrap">
+      <div class="narrative-head">
+        <h2>Most tools stop at collecting. We built the other two thirds.</h2>
+        <p>A score with nowhere to go is just a number. Oodel Score connects what customers say to what your team actually does about it.</p>
+      </div>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">Listen</div>
+          <h3>Collect feedback in under a minute</h3>
+          <p>A QR code, a short mobile survey, no app or login. Star ratings, NPS, and open comments arrive instantly in one dashboard.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">Act</div>
+          <h3>Turn a complaint into an owned task</h3>
+          <p>Flagged feedback becomes a tracked item with an owner and a due date. Bigger patterns become logged decisions with a measured outcome.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">Measure</div>
+          <h3>Know if it's actually working</h3>
+          <p>CX Pulse scores whether your team is closing the loop — not just whether customers are happy, but whether that's changing anything.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scale" id="solutions">
+    <div class="wrap">
+      <div class="scale-head">
+        <h2>One location or a thousand — same clarity.</h2>
+        <p>The dashboard scales with you, without becoming a different product.</p>
+      </div>
+      <div class="scale-grid">
+        <div class="scale-panel">
+          <div class="scale-tag">Single business</div>
+          <h3>Everything in one view</h3>
+          <p>Every response, every trend, every flagged issue — one dashboard, no setup required beyond your QR code.</p>
+          <div class="scale-mini"><span>Feedback points</span><span>AI insights</span><span>Alert rules</span></div>
+        </div>
+        <div class="scale-panel dark">
+          <div class="scale-tag">Multi-location groups</div>
+          <h3>Compare every branch, act across all of them</h3>
+          <p>Regional rollups, branch-vs-branch comparison, and a shared Action Board so nothing falls through the cracks between locations.</p>
+          <div class="scale-mini"><span>Regional benchmarks</span><span>Shared playbooks</span><span>Role-based access</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pulse-section">
+    <div class="wrap pulse-grid">
+      <div>
+        <div class="pulse-tag">CX Pulse</div>
+        <h2>Are you improving, or just watching a number?</h2>
+        <p>CX Pulse measures whether feedback is actually shaping decisions — awareness, response speed, ownership, culture, and measured outcomes, rolled into one score your whole team can rally around.</p>
+        <a class="btn-ghost" href="#demo" style="border-color:#3A3D35;color:#fff;">See CX Pulse in a demo</a>
+      </div>
+      <div class="levels">
+        <div class="level-row"><div class="level-num">1</div><div class="level-name">Collecting</div><div class="level-desc">Gathering feedback, no consistent follow-up</div></div>
+        <div class="level-row"><div class="level-num">2</div><div class="level-name">Reacting</div><div class="level-desc">Occasional responses, no clear ownership</div></div>
+        <div class="level-row active"><div class="level-num">3</div><div class="level-name">Responding</div><div class="level-desc">Most flagged feedback gets a timely reply</div></div>
+        <div class="level-row"><div class="level-num">4</div><div class="level-name">Improving</div><div class="level-desc">Feedback drives visible operational change</div></div>
+        <div class="level-row"><div class="level-num">5</div><div class="level-name">Embedded</div><div class="level-desc">Outcomes are measured, culture is customer-led</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" id="company">
+    <div class="wrap">
+      <div class="narrative-head">
+        <h2>Why teams choose Oodel Score</h2>
+      </div>
+      <div class="why-grid">
+        <div class="why-item">
+          <h3>Nothing reaches a dashboard unchecked</h3>
+          <p>Every AI-written report is reviewed by a person before it publishes — so what you read is something a human stands behind, not a raw model output.</p>
+        </div>
+        <div class="why-item">
+          <h3>Built for the org chart you actually have</h3>
+          <p>Role-based access, per-branch billing control, and group-wide oversight that doesn't force every location to look identical.</p>
+        </div>
+        <div class="why-item">
+          <h3>A QR code, not a project</h3>
+          <p>No app to install, no account for your customers to create. Feedback collection that takes under a minute, every time.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta" id="demo">
+    <div class="wrap">
+      <h2>See what your customers are already telling you.</h2>
+      <p>Twenty minutes, your own data — no generic demo script.</p>
+      <div class="hero-ctas" style="justify-content:center;">
+        <a class="btn-primary" href="#">Book a demo</a>
+        <a class="btn-ghost" href="#">Sign in</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-grid">
+        <div>
+          <div class="foot-logo">oodel<span>.score</span></div>
+          <div class="foot-desc">Feedback collection, AI-written reports, and the tools to actually act on both — for one location or a thousand.</div>
+        </div>
+        <div class="foot-col">
+          <h4>Product</h4>
+          <a href="javascript:void(0)" onclick="showPage('product')">How it works</a>
+          <a href="#">CX Pulse</a>
+          <a href="javascript:void(0)" onclick="showPage('pricing')">Pricing</a>
+        </div>
+        <div class="foot-col">
+          <h4>Solutions</h4>
+          <a href="javascript:void(0)" onclick="showPage('solutions')">Single business</a>
+          <a href="javascript:void(0)" onclick="showPage('solutions')">Multi-location groups</a>
+          <a href="#">Enterprise</a>
+        </div>
+        <div class="foot-col">
+          <h4>Company</h4>
+          <a href="javascript:void(0)" onclick="showPage('company')">About</a>
+          <a href="#">Privacy policy</a>
+          <a href="#">Terms</a>
+        </div>
+      </div>
+      <div class="foot-bottom">© 2026 Oodel Score.</div>
+    </div>
+  </footer>
+</div>
+
+<!-- ============ PRICING ============ -->
+<div class="page" id="page-pricing">
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-logo" style="cursor:pointer;" onclick="showPage('home')">oodel<span>.score</span></div>
+      <div class="nav-links">
+        <a href="javascript:void(0)" onclick="showPage('home')">Product</a>
+        <a href="javascript:void(0)" onclick="showPage('home')">Solutions</a>
+        <a href="javascript:void(0)" style="color:var(--ink);">Pricing</a>
+        <a href="javascript:void(0)" onclick="showPage('home')">Company</a>
+      </div>
+      <div class="nav-right">
+        <a href="#">Sign in</a>
+        <a class="btn-primary" href="#">Book a demo</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="pricing-hero">
+    <div class="wrap">
+      <h1>Straightforward pricing, whatever your size.</h1>
+      <p>Every plan includes AI-reviewed insights and unlimited responses. Pay for feedback points, not per response.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="pricing-grid">
+      <div class="plan">
+        <div class="plan-name">Business</div>
+        <div class="plan-price">£79</div>
+        <div class="plan-unit">per month, one location</div>
+        <a class="plan-cta" href="#">Start free trial</a>
+        <div class="plan-feat">Up to 3 feedback points</div>
+        <div class="plan-feat">Weekly &amp; monthly AI insights</div>
+        <div class="plan-feat">Action board &amp; alert rules</div>
+        <div class="plan-feat">Email support</div>
+      </div>
+      <div class="plan featured">
+        <div class="plan-name">Group</div>
+        <div class="plan-price">From £249</div>
+        <div class="plan-unit">per month, per branch billing available</div>
+        <a class="plan-cta" href="#">Book a demo</a>
+        <div class="plan-feat">Unlimited branches</div>
+        <div class="plan-feat">Regional comparison &amp; benchmarking</div>
+        <div class="plan-feat">Shared playbooks &amp; decision log</div>
+        <div class="plan-feat">Per-branch or group-wide billing</div>
+        <div class="plan-feat">CX Pulse across every branch</div>
+      </div>
+      <div class="plan">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price">Custom</div>
+        <div class="plan-unit">for networks of 100+ branches</div>
+        <a class="plan-cta" href="#">Talk to sales</a>
+        <div class="plan-feat">Dedicated account manager</div>
+        <div class="plan-feat">Custom roles &amp; permissions</div>
+        <div class="plan-feat">SSO &amp; custom data retention</div>
+        <div class="plan-feat">Quarterly business reviews</div>
+      </div>
+    </div>
+    <div class="enterprise-note">Onboarding a school trust, healthcare group, or retail chain? <a href="#">Talk to us about volume pricing →</a></div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-bottom">© 2026 Oodel Score.</div>
+    </div>
+  </footer>
+</div>
+
+<!-- ============ PRODUCT ============ -->
+<div class="page" id="page-product">
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-logo" style="cursor:pointer;" onclick="showPage('home')">oodel<span>.score</span></div>
+      <div class="nav-links">
+        <a href="javascript:void(0)" style="color:var(--ink);">Product</a>
+        <a href="javascript:void(0)" onclick="showPage('solutions')">Solutions</a>
+        <a href="javascript:void(0)" onclick="showPage('pricing')">Pricing</a>
+        <a href="javascript:void(0)" onclick="showPage('company')">Company</a>
+      </div>
+      <div class="nav-right"><a href="#">Sign in</a><a class="btn-primary" href="#">Book a demo</a></div>
+    </div>
+  </nav>
+
+  <section class="inner-hero">
+    <div class="wrap">
+      <h1>Everything from a QR scan to a resolved decision.</h1>
+      <p>One platform for the whole loop — collecting feedback, turning it into owned work, and proving whether that work is actually changing anything.</p>
+    </div>
+  </section>
+
+  <section class="feature-row">
+    <div class="wrap">
+      <div>
+        <div class="feature-tag">Listen</div>
+        <h2>Feedback in under a minute, no app required</h2>
+        <p>A QR code at the table, till point, or exit. Customers answer on their own phone — no login, no download.</p>
+        <ul class="feature-list">
+          <li>9 question types: star rating, NPS, open text, yes/no, emoji scale, multiple choice, multi-select, slider, dropdown</li>
+          <li>Demographic fields (name, email, phone, age, gender) — each independently off, optional, or required</li>
+          <li>Choose one question per screen, or all questions on one page, per QR code</li>
+        </ul>
+      </div>
+      <div class="mock-card">
+        <div class="mock-qtype-row"><span>How would you rate today's visit?</span><span class="tag">Star rating</span></div>
+        <div class="mock-qtype-row"><span>How likely are you to recommend us?</span><span class="tag">NPS 0–10</span></div>
+        <div class="mock-qtype-row"><span>Anything else you'd like us to know?</span><span class="tag">Open text</span></div>
+        <div class="mock-qtype-row"><span>Did a staff member greet you?</span><span class="tag">Yes / No</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="feature-row reverse" style="background:var(--paper-alt);">
+    <div class="wrap">
+      <div>
+        <div class="feature-tag">Act</div>
+        <h2>A place for the work to actually happen</h2>
+        <p>Flagged feedback becomes a tracked item with an owner and a due date — not a comment that gets read once and forgotten.</p>
+        <ul class="feature-list">
+          <li><b>Action Board</b> — every flagged response, assigned, tracked to resolution</li>
+          <li><b>Decision Log</b> — bigger changes, with the trigger that caused them and a measured before/after outcome</li>
+          <li><b>Playbooks</b> — standard guidance for recurring issues, so a manager isn't improvising</li>
+        </ul>
+      </div>
+      <div class="mock-card mock-action-card">
+        <span class="pill">Action assigned</span>
+        <div class="mock-action-title">Cleanliness dip, morning shift — Sam K.</div>
+        <div class="mock-action-meta">Due in 2 days · sourced from 3 flagged responses</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="feature-row">
+    <div class="wrap">
+      <div>
+        <div class="feature-tag">Measure</div>
+        <h2>CX Pulse: the score that tracks whether you're improving</h2>
+        <p>Five dimensions — awareness, response speed, ownership, culture, and measured outcomes — rolled into one number your whole team can rally around.</p>
+        <a class="btn-ghost" href="javascript:void(0)" onclick="showPage('home')">See the CX Pulse levels →</a>
+      </div>
+      <div class="mock-card">
+        <div class="mock-qtype-row"><span>Response</span><span class="tag">38 / 100</span></div>
+        <div class="mock-qtype-row"><span>Ownership</span><span class="tag">44 / 100</span></div>
+        <div class="mock-qtype-row"><span>Culture</span><span class="tag">52 / 100</span></div>
+        <div class="mock-qtype-row"><span>Outcome</span><span class="tag">49 / 100</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="feature-row reverse" style="background:var(--paper-alt);">
+    <div class="wrap">
+      <div>
+        <div class="feature-tag">AI Insights</div>
+        <h2>Written for you, checked by a person</h2>
+        <p>Weekly and monthly reports summarize what changed and why — but nothing reaches your dashboard until a human at Oodel Score has reviewed it.</p>
+      </div>
+      <div class="mock-card">
+        <div class="mock-action-title" style="margin-bottom:10px;">September weekly report</div>
+        <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin:0;">Average score up 2.7% this week. Cleanliness remains the category most mentioned in comments — three flagged responses now have an owner assigned.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <div class="wrap">
+      <h2>See the whole loop in your own data.</h2>
+      <p>Twenty minutes, no generic demo script.</p>
+      <div class="hero-ctas" style="justify-content:center;"><a class="btn-primary" href="#">Book a demo</a><a class="btn-ghost" href="#">Sign in</a></div>
+    </div>
+  </section>
+
+  <footer><div class="wrap"><div class="foot-bottom">© 2026 Oodel Score.</div></div></footer>
+</div>
+
+<!-- ============ SOLUTIONS ============ -->
+<div class="page" id="page-solutions">
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-logo" style="cursor:pointer;" onclick="showPage('home')">oodel<span>.score</span></div>
+      <div class="nav-links">
+        <a href="javascript:void(0)" onclick="showPage('product')">Product</a>
+        <a href="javascript:void(0)" style="color:var(--ink);">Solutions</a>
+        <a href="javascript:void(0)" onclick="showPage('pricing')">Pricing</a>
+        <a href="javascript:void(0)" onclick="showPage('company')">Company</a>
+      </div>
+      <div class="nav-right"><a href="#">Sign in</a><a class="btn-primary" href="#">Book a demo</a></div>
+    </div>
+  </nav>
+
+  <section class="inner-hero">
+    <div class="wrap">
+      <h1>Built for how your organization actually works.</h1>
+      <p>Single location, growing chain, or thousand-branch network — the same clarity, without forcing every business to look identical.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="sol-grid">
+      <div class="sol-panel">
+        <div>
+          <div class="sol-tag">Single business</div>
+          <h3>Everything in one view</h3>
+          <p>No setup beyond your QR code. See every response, trend, and flagged issue in one dashboard from day one.</p>
+        </div>
+        <ul>
+          <li>Your own feedback points, question set, and alert rules</li>
+          <li>Weekly and monthly AI-written reports</li>
+          <li>Your own Action Board, Decision Log, and Playbooks</li>
+          <li>Your own CX Pulse score, tracked over time</li>
+        </ul>
+      </div>
+      <div class="sol-panel dark">
+        <div>
+          <div class="sol-tag">Multi-location groups</div>
+          <h3>Compare every branch, act across all of them</h3>
+          <p>A parent organization sees every branch at once — and decides, branch by branch, how much runs centrally versus locally.</p>
+        </div>
+        <ul>
+          <li>Regional benchmarking — see who's ahead and who needs support</li>
+          <li>Per-branch billing: your group can pay for some branches and let others pay their own way</li>
+          <li>Per-branch "Act ownership" — shared, group-managed, or fully local, your call for each location</li>
+          <li>One shared Playbook library, usable and extendable by every branch</li>
+        </ul>
+      </div>
+      <div class="sol-panel">
+        <div>
+          <div class="sol-tag">Enterprise</div>
+          <h3>Built for the org chart you actually have</h3>
+          <p>Networks of 100+ branches get dedicated support and finance-grade billing controls.</p>
+        </div>
+        <ul>
+          <li>Custom roles and permissions — a CFO sees billing, not customer feedback</li>
+          <li>Dedicated account manager and quarterly business reviews</li>
+          <li>SSO and custom data retention policies</li>
+          <li>Full invoice ledger and export for your accounting system</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <section class="final-cta">
+    <div class="wrap">
+      <h2>Tell us how your organization is structured.</h2>
+      <p>We'll show you exactly how it maps onto Oodel Score.</p>
+      <div class="hero-ctas" style="justify-content:center;"><a class="btn-primary" href="#">Book a demo</a><a class="btn-ghost" href="javascript:void(0)" onclick="showPage('pricing')">See pricing</a></div>
+    </div>
+  </section>
+
+  <footer><div class="wrap"><div class="foot-bottom">© 2026 Oodel Score.</div></div></footer>
+</div>
+
+<!-- ============ COMPANY ============ -->
+<div class="page" id="page-company">
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-logo" style="cursor:pointer;" onclick="showPage('home')">oodel<span>.score</span></div>
+      <div class="nav-links">
+        <a href="javascript:void(0)" onclick="showPage('product')">Product</a>
+        <a href="javascript:void(0)" onclick="showPage('solutions')">Solutions</a>
+        <a href="javascript:void(0)" onclick="showPage('pricing')">Pricing</a>
+        <a href="javascript:void(0)" style="color:var(--ink);">Company</a>
+      </div>
+      <div class="nav-right"><a href="#">Sign in</a><a class="btn-primary" href="#">Book a demo</a></div>
+    </div>
+  </nav>
+
+  <section class="inner-hero">
+    <div class="wrap">
+      <h1>We think feedback tools stopped too early.</h1>
+    </div>
+  </section>
+
+  <div class="mission-block">
+    <p>Most platforms treat "collect feedback" as the whole job. We think that's the easy third. Oodel Score exists because the harder, more valuable work — turning what customers say into something a team actually does, and knowing whether it worked — was left to spreadsheets and good intentions. We built the other two thirds.</p>
+  </div>
+
+  <section class="why" style="padding-top:0;">
+    <div class="wrap">
+      <div class="narrative-head">
+        <h2>How we work</h2>
+      </div>
+      <div class="why-grid">
+        <div class="why-item">
+          <h3>We review the AI, not just ship it</h3>
+          <p>Every automated report is checked by a person before a customer ever sees it. We'd rather be slightly slower than wrong.</p>
+        </div>
+        <div class="why-item">
+          <h3>We design for the org chart, not the demo</h3>
+          <p>A single café and a thousand-branch retailer both use Oodel Score. We build for both, in the same product.</p>
+        </div>
+        <div class="why-item">
+          <h3>We stay small and direct</h3>
+          <p>A small, focused team building one thing well. When you email us, a person who understands the product answers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <div class="wrap">
+      <h2>Want to talk to us directly?</h2>
+      <p>hello@oodelscore.com</p>
+      <div class="hero-ctas" style="justify-content:center;"><a class="btn-primary" href="#">Book a demo</a></div>
+    </div>
+  </section>
+
+  <footer><div class="wrap"><div class="foot-bottom">© 2026 Oodel Score.</div></div></footer>
+</div>
+
+<script>
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+// single orchestrated hero reveal: score count-up + sparkline draw-in
+window.addEventListener('load', ()=>{
+  const el = document.getElementById('hv-score-num');
+  const target = 4.89;
+  let cur = 0;
+  const step = ()=>{
+    cur += (target-cur)*0.12;
+    if(target-cur < 0.01){ el.textContent = target.toFixed(2); return; }
+    el.textContent = cur.toFixed(2);
+    requestAnimationFrame(step);
+  };
+  setTimeout(step, 300);
+  const line = document.getElementById('hv-line');
+  line.style.transition = 'stroke-dashoffset 1.1s ease';
+  setTimeout(()=>{ line.style.strokeDashoffset = '0'; }, 350);
+});
+</script>
+</body>
+</html>
