@@ -64,6 +64,15 @@ export default function BusinessDetailPage() {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<{
+    status: string;
+    isComp: boolean;
+    plan: string;
+    mrrValue: number;
+    stripeCustomerId: string;
+  } | null>(null);
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/industries")
@@ -104,6 +113,56 @@ export default function BusinessDetailPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
   }, [isNew, params.id]);
+
+  useEffect(() => {
+    if (isNew) return;
+    fetch(`/api/admin/businesses/${params.id}/billing`)
+      .then((r) => r.json())
+      .then((d) => setSubscription(d.subscription ?? null));
+  }, [isNew, params.id]);
+
+  async function startCheckout(plan: "business_monthly" | "business_yearly") {
+    setBillingBusy(true);
+    setBillingError(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}/billing/checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to start checkout");
+      return;
+    }
+    window.location.href = data.url;
+  }
+
+  async function markComp() {
+    setBillingBusy(true);
+    setBillingError(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}/billing/comp`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to mark comp");
+      return;
+    }
+    setSubscription(data.subscription);
+  }
+
+  async function openBillingPortal() {
+    setBillingBusy(true);
+    setBillingError(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}/billing/portal`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to open billing portal");
+      return;
+    }
+    window.location.href = data.url;
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -279,6 +338,56 @@ export default function BusinessDetailPage() {
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : isNew ? "Create business" : "Save"}
           </button>
+        </div>
+      )}
+
+      {tab === "address" && !isNew && form.billingAssignment === "branch_pays" && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
+          <h3>Subscription</h3>
+          {billingError && <p className="error-text">{billingError}</p>}
+          {subscription ? (
+            <>
+              <p className="card-sub">
+                {subscription.isComp ? (
+                  <span className="pill pill-purple">Comp</span>
+                ) : (
+                  <>
+                    <span className="pill pill-green">{subscription.status}</span> — {subscription.plan} — $
+                    {subscription.mrrValue.toFixed(2)}/mo
+                  </>
+                )}
+              </p>
+              {subscription.stripeCustomerId && (
+                <button className="btn" disabled={billingBusy} onClick={openBillingPortal}>
+                  Manage in Stripe
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="card-sub">No subscription yet.</p>
+              <div className="btn-group">
+                <button className="btn btn-dark" disabled={billingBusy} onClick={() => startCheckout("business_monthly")}>
+                  Start monthly checkout
+                </button>
+                <button className="btn btn-dark" disabled={billingBusy} onClick={() => startCheckout("business_yearly")}>
+                  Start yearly checkout
+                </button>
+                <button className="btn" disabled={billingBusy} onClick={markComp}>
+                  Mark as Comp
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === "address" && !isNew && form.billingAssignment === "group_pays" && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
+          <h3>Subscription</h3>
+          <p className="card-sub">
+            This business is billed via its parent organization — manage its subscription from the org's own detail page.
+          </p>
         </div>
       )}
 

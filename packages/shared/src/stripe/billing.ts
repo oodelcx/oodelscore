@@ -1,0 +1,306 @@
+import type Stripe from "stripe";
+import { Types } from "mongoose";
+import { getStripeClient } from "./client";
+import { BillingSubscription, BILLING_OWNER_TYPES, type BillingOwnerType, type IBillingSubscription } from "../models/BillingSubscription";
+import { Invoice } from "../models/Invoice";
+import { Business } from "../models/Business";
+import { ParentOrganization } from "../models/ParentOrganization";
+import { User } from "../models/User";
+import { sendTemplatedEmail } from "../email/resend";
+
+export const CHECKOUT_PLANS = ["business_monthly", "business_yearly"] as const;
+export type CheckoutPlan = (typeof CHECKOUT_PLANS)[number];
+
+const PRICE_ENV_VARS: Record<CheckoutPlan, string> = {
+  business_monthly: "STRIPE_PRICE_ID_MONTHLY",
+  business_yearly: "STRIPE_PRICE_ID_YEARLY",
+};
+
+export class BillingError extends Error {}
+
+/**
+ * Enforces spec Section 5 / bug #4: a business with billingAssignment
+ * "group_pays" must never get its own billingSubscriptions row — its cost
+ * rolls into the parent org's single subscription instead. Call before
+ * creating any business-level subscription (checkout or comp).
+ */
+export async function assertBusinessCanHaveOwnSubscription(businessId: string): Promise<void> {
+  const business = await Business.findById(businessId);
+  if (!business) throw new BillingError("Business not found");
+  if (business.billingAssignment === "group_pays") {
+    throw new BillingError(
+      'This business is billed via its parent organization ("group_pays") — it cannot have its own subscription. Change its billing assignment first.'
+    );
+  }
+}
+
+async function resolveOwnerNameEmail(ownerType: BillingOwnerType, ownerId: string): Promise<{ name: string; email: string }> {
+  if (ownerType === "business") {
+    const business = await Business.findById(ownerId);
+    if (!business) throw new BillingError("Business not found");
+    return { name: business.name, email: business.contactEmail || "" };
+  }
+  const org = await ParentOrganization.findById(ownerId);
+  if (!org) throw new BillingError("Parent organization not found");
+  return { name: org.name, email: org.contactEmail || "" };
+}
+
+/** The account-side user to notify for billing emails (owner's login, not Admin). */
+async function findBillingContactUser(ownerType: BillingOwnerType, ownerId: Types.ObjectId | string) {
+  const accountType = ownerType === "business" ? "business" : "parent_org";
+  return User.findOne({ accountType, parentId: ownerId });
+}
+
+async function getOrCreateStripeCustomer(params: {
+  ownerType: BillingOwnerType;
+  ownerId: string;
+  email: string;
+  name: string;
+}): Promise<string> {
+  const existing = await BillingSubscription.findOne({ ownerType: params.ownerType, ownerId: params.ownerId });
+  if (existing?.stripeCustomerId) return existing.stripeCustomerId;
+
+  const stripe = getStripeClient();
+  const customer = await stripe.customers.create({
+    email: params.email || undefined,
+    name: params.name,
+    metadata: { ownerType: params.ownerType, ownerId: params.ownerId },
+  });
+  return customer.id;
+}
+
+/**
+ * Creates a Stripe Checkout Session (hosted, redirect-based — no Stripe.js
+ * or publishable key needed) for a business or parent org to subscribe to
+ * a plan. The webhook (checkout.session.completed) is what actually
+ * persists the resulting subscription — this only starts the flow.
+ */
+export async function createCheckoutSessionForOwner(params: {
+  ownerType: BillingOwnerType;
+  ownerId: string;
+  plan: CheckoutPlan;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<string> {
+  if (params.ownerType === "business") {
+    await assertBusinessCanHaveOwnSubscription(params.ownerId);
+  }
+
+  const priceId = process.env[PRICE_ENV_VARS[params.plan]];
+  if (!priceId) {
+    throw new BillingError(`No Stripe Price configured for plan "${params.plan}" — set ${PRICE_ENV_VARS[params.plan]}`);
+  }
+
+  const { name, email } = await resolveOwnerNameEmail(params.ownerType, params.ownerId);
+  const customerId = await getOrCreateStripeCustomer({ ownerType: params.ownerType, ownerId: params.ownerId, email, name });
+
+  const stripe = getStripeClient();
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: customerId,
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
+    metadata: { ownerType: params.ownerType, ownerId: params.ownerId, plan: params.plan },
+    subscription_data: { metadata: { ownerType: params.ownerType, ownerId: params.ownerId, plan: params.plan } },
+  });
+
+  if (!session.url) throw new BillingError("Stripe did not return a checkout URL");
+  return session.url;
+}
+
+/** Stripe's hosted "manage my subscription/payment method" page. */
+export async function createBillingPortalSession(stripeCustomerId: string, returnUrl: string): Promise<string> {
+  const stripe = getStripeClient();
+  const session = await stripe.billingPortal.sessions.create({ customer: stripeCustomerId, return_url: returnUrl });
+  return session.url;
+}
+
+/**
+ * Marks an owner as comp (spec Section 5: "bypasses Stripe charge but
+ * should still be visible in Billing Oversight with a comp badge"). No
+ * Stripe API calls — this is a direct DB write.
+ */
+export async function markOwnerComp(params: { ownerType: BillingOwnerType; ownerId: string }): Promise<IBillingSubscription> {
+  if (params.ownerType === "business") {
+    await assertBusinessCanHaveOwnSubscription(params.ownerId);
+  }
+  const subscription = await BillingSubscription.findOneAndUpdate(
+    { ownerType: params.ownerType, ownerId: params.ownerId },
+    {
+      $set: {
+        ownerType: params.ownerType,
+        ownerId: params.ownerId,
+        isComp: true,
+        mrrValue: 0,
+        status: "active",
+        plan: "comp",
+      },
+    },
+    { upsert: true, new: true }
+  );
+  return subscription;
+}
+
+function mapStripeSubscriptionStatus(status: Stripe.Subscription.Status): "active" | "overdue" | "canceled" {
+  if (status === "canceled" || status === "unpaid" || status === "incomplete_expired") return "canceled";
+  if (status === "past_due") return "overdue";
+  return "active";
+}
+
+function formatCurrency(amount: number, currency: string): string {
+  return `${amount.toFixed(2)} ${currency.toUpperCase()}`;
+}
+
+async function recordInvoiceAndNotify(invoice: Stripe.Invoice, status: "paid" | "failed"): Promise<void> {
+  const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+  if (!customerId) return;
+
+  const subscription = await BillingSubscription.findOne({ stripeCustomerId: customerId });
+  if (!subscription) return; // no matching local subscription (yet) — nothing to record against
+
+  const amount = (status === "paid" ? invoice.amount_paid : invoice.amount_due) ?? 0;
+
+  await Invoice.findOneAndUpdate(
+    { stripeInvoiceId: invoice.id },
+    {
+      $set: {
+        subscriptionId: subscription._id,
+        ownerType: subscription.ownerType,
+        ownerId: subscription.ownerId,
+        amount: amount / 100,
+        currency: invoice.currency,
+        status,
+        stripeInvoiceId: invoice.id ?? "",
+        paymentMethodLast4: subscription.paymentMethodLast4,
+        issuedAt: invoice.created ? new Date(invoice.created * 1000) : new Date(),
+      },
+    },
+    { upsert: true }
+  );
+
+  if (status === "failed") {
+    subscription.status = "overdue";
+    await subscription.save();
+  }
+
+  const recipient = await findBillingContactUser(subscription.ownerType, subscription.ownerId);
+  if (!recipient) return;
+
+  if (status === "paid") {
+    await sendTemplatedEmail("invoice_receipt", recipient.email, {
+      name: recipient.email,
+      invoice_amount: formatCurrency(amount / 100, invoice.currency),
+    });
+  } else {
+    const { name } = await resolveOwnerNameEmail(subscription.ownerType, subscription.ownerId.toString());
+    await sendTemplatedEmail("payment_failed", recipient.email, {
+      name: recipient.email,
+      business_name: name,
+      billing_link: process.env.APP_URL ? `${process.env.APP_URL}/admin/billing` : "",
+    });
+  }
+}
+
+/**
+ * Processes a verified Stripe webhook event. The route handler's only job
+ * is verifying the signature and calling this — keeps that logic testable
+ * independent of the HTTP layer.
+ */
+export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<void> {
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const ownerType = session.metadata?.ownerType as BillingOwnerType | undefined;
+      const ownerId = session.metadata?.ownerId;
+      const plan = session.metadata?.plan ?? "";
+      if (!ownerType || !ownerId) break;
+
+      const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+      const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+
+      await BillingSubscription.findOneAndUpdate(
+        { ownerType, ownerId },
+        {
+          $set: {
+            ownerType,
+            ownerId,
+            stripeCustomerId: customerId ?? "",
+            stripeSubscriptionId: subscriptionId ?? "",
+            plan,
+            isComp: false,
+            status: "active",
+          },
+        },
+        { upsert: true }
+      );
+      break;
+    }
+
+    case "invoice.payment_succeeded": {
+      await recordInvoiceAndNotify(event.data.object as Stripe.Invoice, "paid");
+      break;
+    }
+
+    case "invoice.payment_failed": {
+      await recordInvoiceAndNotify(event.data.object as Stripe.Invoice, "failed");
+      break;
+    }
+
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      const ownerType = subscription.metadata?.ownerType as BillingOwnerType | undefined;
+      const ownerId = subscription.metadata?.ownerId;
+      if (!ownerType || !ownerId) break;
+
+      const status = event.type === "customer.subscription.deleted" ? "canceled" : mapStripeSubscriptionStatus(subscription.status);
+      const periodEnd = subscription.items.data[0]?.current_period_end;
+      const nextPaymentDate = periodEnd ? new Date(periodEnd * 1000) : null;
+
+      await BillingSubscription.findOneAndUpdate({ ownerType, ownerId }, { $set: { status, nextPaymentDate } });
+      break;
+    }
+
+    default:
+      break;
+  }
+}
+
+export interface BillingIntegrityIssues {
+  /** billingSubscriptions rows whose ownerId no longer resolves to a real Business/ParentOrganization (bug #4's "Account: Unknown"). */
+  orphanedSubscriptionIds: string[];
+  /** businesses with billingAssignment "group_pays" that still have their own subscription row — should never happen given the guards above, but this is the safety-net check spec Section 5 asks for. */
+  groupPaysWithOwnSubscriptionIds: string[];
+}
+
+/**
+ * Spec Section 5's "DB-level safeguard... or a nightly integrity check
+ * job" for bug #4. Read-only — reports issues, doesn't fix them (fixing
+ * means a human decides whether to delete the row or reassign the owner).
+ */
+export async function findBillingIntegrityIssues(): Promise<BillingIntegrityIssues> {
+  const orphanedSubscriptionIds: string[] = [];
+  const groupPaysWithOwnSubscriptionIds: string[] = [];
+
+  const subscriptions = await BillingSubscription.find();
+  for (const sub of subscriptions) {
+    if (!BILLING_OWNER_TYPES.includes(sub.ownerType)) continue;
+
+    if (sub.ownerType === "business") {
+      const business = await Business.findById(sub.ownerId);
+      if (!business) {
+        orphanedSubscriptionIds.push(sub._id.toString());
+        continue;
+      }
+      if (business.billingAssignment === "group_pays") {
+        groupPaysWithOwnSubscriptionIds.push(sub._id.toString());
+      }
+    } else {
+      const org = await ParentOrganization.findById(sub.ownerId);
+      if (!org) orphanedSubscriptionIds.push(sub._id.toString());
+    }
+  }
+
+  return { orphanedSubscriptionIds, groupPaysWithOwnSubscriptionIds };
+}

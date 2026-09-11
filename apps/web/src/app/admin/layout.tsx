@@ -19,6 +19,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <nav className="admin-nav">
             <a href="/admin/accounts">Accounts</a>
             <a href="/admin/question-templates">Question Templates</a>
+            <a href="/admin/billing">Billing Oversight</a>
           </nav>
         </div>
         <div className="admin-sidebar-bottom">
