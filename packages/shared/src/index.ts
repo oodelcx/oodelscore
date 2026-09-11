@@ -6,3 +6,4 @@ export * from "./auth/jwt";
 export * from "./auth/permissions";
 export * from "./email/resend";
 export * from "./seedData/demoAccounts";
+export * from "./seedData/platformDefaults";
