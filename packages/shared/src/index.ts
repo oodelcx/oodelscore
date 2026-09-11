@@ -5,3 +5,4 @@ export * from "./auth/tokens";
 export * from "./auth/jwt";
 export * from "./auth/permissions";
 export * from "./email/resend";
+export * from "./seedData/demoAccounts";
