@@ -162,6 +162,9 @@ export default function ParentOrgDetailPage() {
     }
 
     if (isNew) {
+      if (data.ownerInviteError) {
+        alert(`Organization created, but its login couldn't be created: ${data.ownerInviteError}`);
+      }
       router.push(`/admin/parent-orgs/${data.parentOrg._id}`);
     }
   }

@@ -1,15 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  connectToDatabase,
-  User,
-  Role,
-  ACCOUNT_TYPES,
-  type AccountType,
-  generateSetPasswordToken,
-  hashPassword,
-  sendTemplatedEmail,
-  hasStaffPermission,
-} from "@oodelscore/shared";
+import { connectToDatabase, Role, ACCOUNT_TYPES, type AccountType, createInviteUser, hasStaffPermission } from "@oodelscore/shared";
 import { getCurrentUser } from "@/lib/session";
 
 const ACCOUNT_TYPE_SET: readonly string[] = ACCOUNT_TYPES;
@@ -34,7 +24,6 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : null;
   const accountType = typeof body?.accountType === "string" ? body.accountType : null;
-  const name = typeof body?.name === "string" ? body.name : "";
   const parentId = typeof body?.parentId === "string" ? body.parentId : null;
   const roleId = typeof body?.roleId === "string" ? body.roleId : null;
 
@@ -45,33 +34,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const existing = await User.findOne({ email });
-  if (existing) {
-    return NextResponse.json({ status: "error", message: "A user with this email already exists" }, { status: 409 });
+  try {
+    const user = await createInviteUser({
+      email,
+      accountType: accountType as AccountType,
+      parentId,
+      roleId,
+      appUrl: process.env.APP_URL ?? "",
+    });
+    return NextResponse.json({ status: "ok", userId: user._id.toString() }, { status: 201 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to create invite";
+    return NextResponse.json({ status: "error", message }, { status: 409 });
   }
-
-  const { token, hash, expiresAt } = generateSetPasswordToken();
-  // Placeholder — never a valid login until set-password overwrites it.
-  const placeholderHash = await hashPassword(token);
-
-  const user = await User.create({
-    email,
-    passwordHash: placeholderHash,
-    accountType: accountType as AccountType,
-    parentId,
-    roleId: accountType === "admin_staff" ? roleId : null,
-    inviteStatus: "invite_pending",
-    inviteTokenHash: hash,
-    inviteExpiresAt: expiresAt,
-  });
-
-  const setPasswordLink = `${process.env.APP_URL ?? ""}/set-password?uid=${user._id.toString()}&token=${token}`;
-
-  await sendTemplatedEmail("welcome", email, {
-    name: name || email,
-    email,
-    set_password_link: setPasswordLink,
-  });
-
-  return NextResponse.json({ status: "ok", userId: user._id.toString() }, { status: 201 });
 }

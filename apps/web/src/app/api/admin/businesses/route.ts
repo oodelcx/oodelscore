@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import {
   connectToDatabase,
   Business,
+  User,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
+  createInviteUser,
+  expireStaleInvites,
   type BillingAssignment,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
@@ -21,10 +24,20 @@ export async function GET() {
   if (!permission.view) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
+  await expireStaleInvites();
   const filter = permission.scope === "assigned" ? { accountManagerId: user._id } : {};
   const businesses = await Business.find(filter).sort({ name: 1 });
 
-  return NextResponse.json({ status: "ok", businesses });
+  const owners = await User.find({ accountType: "business", parentId: { $in: businesses.map((b) => b._id) } }).select(
+    "_id parentId inviteStatus"
+  );
+  const ownerByBusinessId = new Map(owners.map((o) => [o.parentId?.toString(), o]));
+  const businessesWithOwner = businesses.map((b) => {
+    const owner = ownerByBusinessId.get(b._id.toString());
+    return { ...b.toObject(), ownerUserId: owner?._id ?? null, ownerInviteStatus: owner?.inviteStatus ?? null };
+  });
+
+  return NextResponse.json({ status: "ok", businesses: businessesWithOwner });
 }
 
 export async function POST(request: Request) {
@@ -39,6 +52,13 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body.name !== "string" || !body.name.trim()) {
     return NextResponse.json({ status: "error", message: "name is required" }, { status: 400 });
+  }
+  const contactEmail = typeof body.contactEmail === "string" ? body.contactEmail.trim().toLowerCase() : "";
+  if (!contactEmail) {
+    return NextResponse.json(
+      { status: "error", message: "Contact email is required — it becomes this business's login" },
+      { status: 400 }
+    );
   }
 
   try {
@@ -70,7 +90,7 @@ export async function POST(request: Request) {
     parentOrgId: body.parentOrgId || null,
     region: typeof body.region === "string" ? body.region : "",
     contactName: typeof body.contactName === "string" ? body.contactName : "",
-    contactEmail: typeof body.contactEmail === "string" ? body.contactEmail : "",
+    contactEmail,
     contactPhone: typeof body.contactPhone === "string" ? body.contactPhone : "",
     address: body.address ?? undefined,
     billingAddressSameAsAddress: body.billingAddressSameAsAddress ?? true,
@@ -83,5 +103,20 @@ export async function POST(request: Request) {
     active: true,
   });
 
-  return NextResponse.json({ status: "ok", business }, { status: 201 });
+  // Spec Section 3: creating a business/org account creates its owner
+  // login too — never a blank record with nowhere for anyone to log in.
+  let ownerInviteError: string | null = null;
+  try {
+    await createInviteUser({
+      email: contactEmail,
+      accountType: "business",
+      parentId: business._id,
+      appUrl: process.env.APP_URL ?? "",
+    });
+  } catch (err) {
+    ownerInviteError = err instanceof Error ? err.message : "Failed to create the business login";
+    console.error("[businesses] failed to create/invite owner login", err);
+  }
+
+  return NextResponse.json({ status: "ok", business, ownerInviteError }, { status: 201 });
 }

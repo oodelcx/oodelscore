@@ -198,6 +198,9 @@ export default function BusinessDetailPage() {
     }
 
     if (isNew) {
+      if (data.ownerInviteError) {
+        alert(`Business created, but its login couldn't be created: ${data.ownerInviteError}`);
+      }
       router.push(`/admin/businesses/${data.business._id}`);
     }
   }
