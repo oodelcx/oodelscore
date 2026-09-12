@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
 import "../admin/admin.css";
 import "../business/business.css";
+import LogoutLink from "./logout-link";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -63,12 +64,18 @@ export default async function GroupLayout({ children }: { children: ReactNode })
           )}
         </div>
         <div className="admin-sidebar-bottom">
-          {isOrgTeamMember && (
+          {isLimitedTeamMember && (
+            <div style={{ fontSize: 11.5, color: "#8b9096", marginBottom: 3 }}>
+              👤 Team member{user.teamRole ? ` — ${user.teamRole}` : ""}
+            </div>
+          )}
+          {isOrgTeamMember && !isLimitedTeamMember && (
             <div style={{ fontSize: 11.5, color: "#8b9096", marginBottom: 3 }}>
               👤 Team member{user.teamRole ? ` — ${user.teamRole}` : ""}
             </div>
           )}
           <div>{user.email}</div>
+          <LogoutLink />
         </div>
       </aside>
       <main className="admin-main">{children}</main>
