@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, createBillingPortalSession, BillingSubscription } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+import { billingErrorResponse } from "@/lib/billingErrorResponse";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "No Stripe customer on file yet" }, { status: 404 });
   }
 
-  const appUrl = process.env.APP_URL ?? "";
-  const url = await createBillingPortalSession(subscription.stripeCustomerId, `${appUrl}/admin/businesses/${id}`);
-  return NextResponse.json({ status: "ok", url });
+  try {
+    const appUrl = process.env.APP_URL ?? "";
+    const url = await createBillingPortalSession(subscription.stripeCustomerId, `${appUrl}/admin/businesses/${id}`);
+    return NextResponse.json({ status: "ok", url });
+  } catch (err) {
+    return billingErrorResponse(err);
+  }
 }

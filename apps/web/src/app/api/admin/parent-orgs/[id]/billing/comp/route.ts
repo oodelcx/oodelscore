@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, markOwnerComp, BillingError } from "@oodelscore/shared";
+import { connectToDatabase, markOwnerComp } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+import { billingErrorResponse } from "@/lib/billingErrorResponse";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -18,9 +19,6 @@ export async function POST(_request: Request, { params }: RouteParams) {
     const subscription = await markOwnerComp({ ownerType: "parentOrg", ownerId: id });
     return NextResponse.json({ status: "ok", subscription });
   } catch (err) {
-    if (err instanceof BillingError) {
-      return NextResponse.json({ status: "error", message: err.message }, { status: 400 });
-    }
-    throw err;
+    return billingErrorResponse(err);
   }
 }

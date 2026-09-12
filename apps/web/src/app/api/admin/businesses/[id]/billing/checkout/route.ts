@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, createCheckoutSessionForOwner, BillingError, CHECKOUT_PLANS } from "@oodelscore/shared";
+import { connectToDatabase, createCheckoutSessionForOwner, CHECKOUT_PLANS } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+import { billingErrorResponse } from "@/lib/billingErrorResponse";
 
 const CHECKOUT_PLAN_SET: readonly string[] = CHECKOUT_PLANS;
 
@@ -38,9 +39,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
     return NextResponse.json({ status: "ok", url });
   } catch (err) {
-    if (err instanceof BillingError) {
-      return NextResponse.json({ status: "error", message: err.message }, { status: 400 });
-    }
-    throw err;
+    return billingErrorResponse(err);
   }
 }
