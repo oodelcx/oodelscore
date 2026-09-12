@@ -30,40 +30,53 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             <div className="admin-brand">Oodel Score</div>
             <div className="admin-brand-sub">BUSINESS PORTAL</div>
           </div>
-          <nav className="admin-nav">
-            {isLimitedTeamMember ? (
+          {isLimitedTeamMember ? (
+            <nav className="admin-nav">
               <a href="/business/action-board">My Action Items</a>
-            ) : (
-              <>
+            </nav>
+          ) : (
+            <>
+              <nav className="admin-nav">
                 <a href="/business">Dashboard</a>
-                {isBranch ? (
-                  <>
+              </nav>
+
+              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Setup</div>
+              <nav className="admin-nav">
+                <a href="/business/feedback-points">Feedback Points</a>
+                <a href="/business/survey-settings">Survey Settings</a>
+                {!isBusinessTeamMember && <a href="/business/category-owners">Category Owners</a>}
+              </nav>
+
+              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Listen</div>
+              <nav className="admin-nav">
+                <a href="/business/insights">Insights</a>
+                <a href="/business/analytics">Analytics</a>
+                <a href="/business/responses">Raw Feedback</a>
+                <a href="/business/alert-rules">Alert Rules</a>
+              </nav>
+
+              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Act</div>
+              <nav className="admin-nav">
+                <a href="/business/action-board">Action Board</a>
+              </nav>
+
+              {isBranch && (
+                <>
+                  <div className="section-label" style={{ margin: "14px 14px 4px" }}>Measure</div>
+                  <nav className="admin-nav">
                     <a href="/business/cx-pulse">CX Pulse</a>
-                    <a href="/business/alert-rules">Alert Rules</a>
-                    <a href="/business/messages">Messages</a>
-                  </>
-                ) : (
-                  <>
-                    <a href="/business/feedback-points">Feedback Points</a>
-                    <a href="/business/survey-settings">Survey Settings</a>
-                    <a href="/business/insights">Insights</a>
-                    <a href="/business/analytics">Analytics</a>
-                    <a href="/business/responses">Raw Feedback</a>
-                    <a href="/business/action-board">Action Board</a>
-                    <a href="/business/alert-rules">Alert Rules</a>
-                    <a href="/business/messages">Messages</a>
-                  </>
-                )}
-                {!isBusinessTeamMember && (
-                  <>
-                    <a href="/business/team-members">Team Members</a>
-                    {!isBranch && <a href="/business/category-owners">Category Owners</a>}
-                    <a href="/business/billing">Billing</a>
-                  </>
-                )}
-              </>
-            )}
-          </nav>
+                  </nav>
+                </>
+              )}
+
+              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Admin</div>
+              <nav className="admin-nav">
+                {!isBusinessTeamMember && <a href="/business/team-members">Team Members</a>}
+                <a href="/business/messages">Messages</a>
+                {!isBusinessTeamMember && <a href="/business/billing">Billing</a>}
+              </nav>
+            </>
+          )}
         </div>
         <div className="admin-sidebar-bottom">
           <div style={{ color: "#fff", fontWeight: 500 }}>{business.name}</div>
