@@ -1,5 +1,6 @@
+import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import { connectToDatabase, FeedbackPoint, Business, ParentOrganization, QuestionTemplate } from "@oodelscore/shared";
+import { connectToDatabase, FeedbackPoint, Business, ParentOrganization, QuestionTemplate, ScanToken } from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
 
@@ -30,12 +31,20 @@ export async function GET(_request: Request, { params }: RouteParams) {
     console.error("[feedback] failed to increment scan count", err)
   );
 
+  // One-time scan token: the submit route consumes this exactly once, so a
+  // double-tapped submit button or a retried request can't create a second
+  // response (and re-fire an alert) from the same page load. A fresh
+  // scan/reload gets its own token and can still submit its own response.
+  const scanToken = randomBytes(24).toString("hex");
+  await ScanToken.create({ token: scanToken, feedbackPointId: feedbackPoint._id });
+
   const groupTag = business.parentOrgId ? (await ParentOrganization.findById(business.parentOrgId))?.name ?? null : null;
   const demographicConfig = feedbackPoint.demographicOverride ?? business.demographicConfig;
   const formLayout = feedbackPoint.formLayoutOverride ?? "single_page";
 
   return NextResponse.json({
     status: "ok",
+    scanToken,
     businessName: business.name,
     groupTag: groupTag ? `Part of ${groupTag}` : null,
     formLayout,
