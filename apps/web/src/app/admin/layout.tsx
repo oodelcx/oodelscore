@@ -1,12 +1,36 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
+import { requireStaffSession } from "@/lib/adminAuth";
+import { connectToDatabase, AiInsightReport, Business } from "@oodelscore/shared";
+import LogoutLink from "./logout-link";
 import "./admin.css";
+
+/**
+ * Pending-AI-reports badge for the sidebar nav, scoped the same way the
+ * queue page itself is scoped (spec Section 4: account managers only see
+ * "assigned" businesses' reports).
+ */
+async function getPendingAiCount(): Promise<number> {
+  const session = await requireStaffSession();
+  if (!session) return 0;
+  const { role, user } = session;
+  if (!role.permissions.aiInsightsQueue.view) return 0;
+
+  await connectToDatabase();
+  if (role.permissions.aiInsightsQueue.scope === "all") {
+    return AiInsightReport.countDocuments({ status: "pending" });
+  }
+  const businessIds = await Business.find({ accountManagerId: user._id }).distinct("_id");
+  return AiInsightReport.countDocuments({ status: "pending", ownerType: "business", ownerId: { $in: businessIds } });
+}
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.accountType !== "admin_staff") redirect("/dashboard");
+
+  const pendingAiCount = await getPendingAiCount();
 
   return (
     <div className="admin-app">
@@ -14,20 +38,48 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <div>
           <div className="admin-sidebar-top">
             <div className="admin-brand">Oodel Score</div>
-            <div className="admin-brand-sub">ADMIN</div>
+            <div className="admin-brand-sub">ADMIN PORTAL</div>
           </div>
+
+          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Platform</div>
+          <nav className="admin-nav">
+            <a href="/admin">Overview</a>
+          </nav>
+
+          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Accounts</div>
           <nav className="admin-nav">
             <a href="/admin/accounts">Accounts</a>
-            <a href="/admin/industries">Industries</a>
+          </nav>
+
+          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Survey setup</div>
+          <nav className="admin-nav">
             <a href="/admin/question-templates">Question Templates</a>
-            <a href="/admin/cx-pulse">CX Pulse</a>
+            <a href="/admin/categories">Categories</a>
+            <a href="/admin/industries">Industries</a>
+          </nav>
+
+          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Content</div>
+          <nav className="admin-nav">
             <a href="/admin/email-templates">Email Templates</a>
             <a href="/admin/site-content">Site Content</a>
+          </nav>
+
+          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Oversight</div>
+          <nav className="admin-nav">
+            <a href="/admin/feedback-responses">Feedback Responses</a>
+            <a href="/admin/ai-queue" style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>AI Insights Queue</span>
+              {pendingAiCount > 0 && <span className="nav-badge">{pendingAiCount}</span>}
+            </a>
+            <a href="/admin/alert-rules">Alert Rules</a>
             <a href="/admin/billing">Billing Oversight</a>
+            <a href="/admin/cx-pulse">CX Pulse</a>
           </nav>
         </div>
         <div className="admin-sidebar-bottom">
-          <div>{user.email}</div>
+          <div className="biz">Oodel Score Admin</div>
+          <div className="email">{user.email}</div>
+          <LogoutLink />
         </div>
       </aside>
       <main className="admin-main">{children}</main>
