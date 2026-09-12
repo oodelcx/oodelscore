@@ -103,6 +103,12 @@ export async function createCheckoutSessionForOwner(params: {
     cancel_url: params.cancelUrl,
     metadata: { ownerType: params.ownerType, ownerId: params.ownerId, plan: params.plan },
     subscription_data: { metadata: { ownerType: params.ownerType, ownerId: params.ownerId, plan: params.plan } },
+    // Stripe's newer "Managed Payments" (merchant-of-record) mode is
+    // enabled by default on new accounts and requires every product to
+    // carry a tax_code, which ours don't. We don't need Managed Payments
+    // for a straightforward B2B subscription — disable it per-session so
+    // checkout works regardless of the account's default setting.
+    managed_payments: { enabled: false },
   });
 
   if (!session.url) throw new BillingError("Stripe did not return a checkout URL");
