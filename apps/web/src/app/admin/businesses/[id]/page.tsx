@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { QrModal } from "@/components/qr-modal";
 
 type TabId = "general" | "address" | "contact" | "settings" | "feedback-points";
 
@@ -89,6 +90,7 @@ export default function BusinessDetailPage() {
   const [fpDescription, setFpDescription] = useState("");
   const [fpCreating, setFpCreating] = useState(false);
   const [fpError, setFpError] = useState<string | null>(null);
+  const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
 
   function loadFeedbackPoints() {
     if (isNew) return;
@@ -120,6 +122,7 @@ export default function BusinessDetailPage() {
     setFpName("");
     setFpDescription("");
     loadFeedbackPoints();
+    if (data?.feedbackPoint) setQrPoint(data.feedbackPoint);
   }
 
   async function toggleFeedbackPointActive(fp: FeedbackPointRow) {
@@ -620,6 +623,9 @@ export default function BusinessDetailPage() {
                     <span className={`pill ${fp.active ? "pill-green" : "pill-gray"}`}>{fp.active ? "Active" : "Inactive"}</span>
                   </td>
                   <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => setQrPoint(fp)}>
+                      View QR
+                    </button>
                     <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleFeedbackPointActive(fp)}>
                       {fp.active ? "Deactivate" : "Activate"}
                     </button>
@@ -639,6 +645,15 @@ export default function BusinessDetailPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {qrPoint && (
+        <QrModal
+          name={qrPoint.name}
+          qrToken={qrPoint.qrToken}
+          posterHref={`/print/admin-feedback-point/${qrPoint._id}`}
+          onClose={() => setQrPoint(null)}
+        />
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
+import { BookDemoButton } from "../demo-modal";
 
 // Otherwise Next statically prerenders this at build time and a Site
 // Content edit would never show up without a redeploy.
@@ -73,9 +74,7 @@ export default async function SolutionsPage() {
           <h2>Tell us how your organization is structured.</h2>
           <p>We&rsquo;ll show you exactly how it maps onto Oodel Score.</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <a className="btn-primary" href="#">
-              Book a demo
-            </a>
+            <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
             <a className="btn-ghost" href="/pricing">
               See pricing
             </a>

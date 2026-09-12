@@ -1,5 +1,6 @@
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
+import { BookDemoButton } from "../demo-modal";
 
 interface TitleBodyItem {
   title: string;
@@ -54,9 +55,7 @@ export default async function CompanyPage() {
           <h2>Want to talk to us directly?</h2>
           <p>{f.contactEmail}</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <a className="btn-primary" href="#">
-              Book a demo
-            </a>
+            <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
           </div>
         </div>
       </section>

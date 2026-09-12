@@ -2,6 +2,8 @@
 
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import "../admin/admin.css";
+import "../auth.css";
 
 /** Completes either flow that hands out a set-password link (spec Section
  * 11): the initial invite, or a password reset — both land here with
@@ -46,40 +48,26 @@ function SetPasswordForm() {
   }
 
   if (!uid || !token) {
-    return <p>This link is missing its invite/reset details. Ask an admin to resend it.</p>;
+    return <p className="auth-success">This link is missing its invite/reset details. Ask an admin to resend it.</p>;
   }
 
   if (success) {
-    return <p>Password set — redirecting to sign in…</p>;
+    return <p className="auth-success">Password set — redirecting to sign in…</p>;
   }
 
   return (
     <form onSubmit={handleSubmit}>
-      <label style={{ display: "block", marginBottom: 12 }}>
-        New password
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          style={{ display: "block", width: "100%", marginTop: 4 }}
-        />
-      </label>
-      <label style={{ display: "block", marginBottom: 12 }}>
-        Confirm password
-        <input
-          type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-          minLength={8}
-          style={{ display: "block", width: "100%", marginTop: 4 }}
-        />
-      </label>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-      <button type="submit" disabled={loading}>
-        {loading ? "Saving..." : "Set password"}
+      <div className="field">
+        <label>New password</label>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoFocus />
+      </div>
+      <div className="field">
+        <label>Confirm password</label>
+        <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} />
+      </div>
+      {error && <p className="error-text">{error}</p>}
+      <button type="submit" className="btn btn-dark" disabled={loading}>
+        {loading ? "Saving…" : "Set password"}
       </button>
     </form>
   );
@@ -87,11 +75,14 @@ function SetPasswordForm() {
 
 export default function SetPasswordPage() {
   return (
-    <main style={{ maxWidth: 360, margin: "80px auto", fontFamily: "sans-serif" }}>
-      <h1>Set your password</h1>
-      <Suspense fallback={<p>Loading…</p>}>
-        <SetPasswordForm />
-      </Suspense>
-    </main>
+    <div className="auth-shell">
+      <div className="auth-card">
+        <div className="auth-brand">Oodel Score</div>
+        <p className="auth-subtitle">Set your password.</p>
+        <Suspense fallback={<p className="auth-success">Loading…</p>}>
+          <SetPasswordForm />
+        </Suspense>
+      </div>
+    </div>
   );
 }

@@ -10,6 +10,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "action_assigned",
   "invoice_receipt",
   "payment_failed",
+  "demo_request",
 ] as const;
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
 

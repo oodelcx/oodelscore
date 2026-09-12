@@ -1,6 +1,7 @@
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "./nav-footer";
 import { HeroVisual } from "./hero-visual";
+import { BookDemoButton } from "./demo-modal";
 
 interface NarrativeStep {
   label: string;
@@ -42,9 +43,7 @@ export default async function MarketingHomePage() {
             <h1>{f.heroHeadline}</h1>
             <p>{f.heroSubheadline}</p>
             <div className="hero-ctas">
-              <a className="btn-primary" href="#demo">
-                {f.heroPrimaryButton}
-              </a>
+              <BookDemoButton className="btn-primary">{f.heroPrimaryButton}</BookDemoButton>
               <a className="btn-ghost" href="#product">
                 {f.heroSecondaryButton}
               </a>
@@ -115,9 +114,9 @@ export default async function MarketingHomePage() {
               CX Pulse measures whether feedback is actually shaping decisions — awareness, response speed, ownership, culture, and
               measured outcomes, rolled into one score your whole team can rally around.
             </p>
-            <a className="btn-ghost" href="#demo" style={{ borderColor: "#3A3D35", color: "#fff" }}>
+            <BookDemoButton className="btn-ghost" style={{ borderColor: "#3A3D35", color: "#fff" }}>
               See CX Pulse in a demo
-            </a>
+            </BookDemoButton>
           </div>
           <div className="levels">
             {levels.map((lvl, i) => (
@@ -152,9 +151,7 @@ export default async function MarketingHomePage() {
           <h2>See what your customers are already telling you.</h2>
           <p>Twenty minutes, your own data — no generic demo script.</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <a className="btn-primary" href="#">
-              Book a demo
-            </a>
+            <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
             <a className="btn-ghost" href="/login">
               Sign in
             </a>

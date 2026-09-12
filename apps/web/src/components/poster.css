@@ -1,0 +1,83 @@
+/* Standalone printable poster — deliberately outside admin.css/business.css
+ * since it renders with no app chrome (sidebar, nav) at all. */
+.poster-page {
+  min-height: 100vh;
+  background: #f0efe9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.poster-toolbar {
+  margin-bottom: 20px;
+}
+.poster-print-btn {
+  background: #17171a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.poster-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.25);
+  padding: 56px 40px;
+  text-align: center;
+}
+.poster-eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f6e56;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+}
+.poster-business {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+.poster-point {
+  font-size: 15px;
+  color: #68686a;
+  margin: 0 0 32px;
+}
+.poster-qr {
+  width: 260px;
+  height: 260px;
+  margin: 0 auto;
+  display: block;
+}
+.poster-instructions {
+  font-size: 14px;
+  color: #17171a;
+  font-weight: 500;
+  margin: 28px 0 0;
+}
+.poster-footer {
+  font-size: 11.5px;
+  color: #9a9a97;
+  margin-top: 36px;
+}
+
+@media print {
+  .poster-page {
+    background: #fff;
+    padding: 0;
+  }
+  .poster-toolbar {
+    display: none;
+  }
+  .poster-sheet {
+    box-shadow: none;
+    max-width: 100%;
+  }
+}

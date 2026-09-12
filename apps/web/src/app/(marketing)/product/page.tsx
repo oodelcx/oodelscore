@@ -1,5 +1,6 @@
 import { getSiteContent } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
+import { BookDemoButton } from "../demo-modal";
 
 // Otherwise Next statically prerenders this at build time and a Site
 // Content edit would never show up without a redeploy.
@@ -138,9 +139,7 @@ export default async function ProductPage() {
           <h2>See the whole loop in your own data.</h2>
           <p>Twenty minutes, no generic demo script.</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <a className="btn-primary" href="#">
-              Book a demo
-            </a>
+            <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
             <a className="btn-ghost" href="/login">
               Sign in
             </a>

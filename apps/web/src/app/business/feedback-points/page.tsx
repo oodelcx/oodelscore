@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { QrModal } from "@/components/qr-modal";
 
 interface FeedbackPointRow {
   _id: string;
   name: string;
   description: string;
+  qrToken: string;
   scans: number;
   active: boolean;
 }
@@ -15,6 +17,7 @@ export default function FeedbackPointsPage() {
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [requestSent, setRequestSent] = useState(false);
+  const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -77,6 +80,9 @@ export default function FeedbackPointsPage() {
                   <span className={`pill ${p.active ? "pill-accent" : "pill-gray"}`}>{p.active ? "Active" : "Inactive"}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                  <button className="btn" style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
+                    View QR
+                  </button>
                   <button className="btn" style={{ flex: 1 }} onClick={requestChange}>
                     Request changes
                   </button>
@@ -86,6 +92,15 @@ export default function FeedbackPointsPage() {
           })}
           {points.length === 0 && <p className="subtitle">No feedback points yet — request one above.</p>}
         </div>
+      )}
+
+      {qrPoint && (
+        <QrModal
+          name={qrPoint.name}
+          qrToken={qrPoint.qrToken}
+          posterHref={`/print/business-feedback-point/${qrPoint._id}`}
+          onClose={() => setQrPoint(null)}
+        />
       )}
     </div>
   );

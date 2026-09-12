@@ -21,6 +21,7 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string }>
   action_assigned: { label: "Action Assigned", trigger: "Someone is assigned an item on a group's Action Board" },
   invoice_receipt: { label: "Invoice Receipt", trigger: "A payment succeeds" },
   payment_failed: { label: "Payment Failed", trigger: "A payment fails or goes overdue" },
+  demo_request: { label: "Demo Request", trigger: "A visitor submits \"Book a demo\" on the marketing site" },
 };
 
 function timeAgo(iso: string | null): string {
@@ -53,6 +54,10 @@ function renderPreview(text: string, availableVars: string[]): string {
     action_link: "https://oodelscore.com/group/action-board",
     invoice_amount: "£249.00",
     billing_link: "https://oodelscore.com/business/billing",
+    requester_name: "Priya Shah",
+    requester_email: "priya@northgateretail.com",
+    requester_company: "Northgate Retail",
+    requester_message: "We run 40 locations and want to see the Group dashboard.",
   };
   let out = text;
   for (const v of availableVars) {
