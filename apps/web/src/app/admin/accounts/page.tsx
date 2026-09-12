@@ -26,13 +26,37 @@ interface StaffRow {
   roleId: { _id: string; name: string } | null;
   inviteStatus: string;
 }
+interface PermissionValue {
+  view: boolean;
+  edit: boolean;
+  delete: boolean;
+  scope?: "all" | "assigned";
+}
 interface RoleRow {
   _id: string;
   name: string;
   description: string;
   isSystemRole: boolean;
   peopleCount: number;
-  permissions: Record<string, { view: boolean; edit: boolean; delete: boolean }>;
+  permissions: Record<string, PermissionValue>;
+}
+
+const PERMISSION_AREAS: { key: string; label: string; scoped: boolean }[] = [
+  { key: "businesses", label: "Businesses", scoped: true },
+  { key: "parentOrgs", label: "Parent Organizations", scoped: true },
+  { key: "staffAndRoles", label: "Staff & Roles", scoped: false },
+  { key: "billingOversight", label: "Billing Oversight", scoped: false },
+  { key: "questionTemplates", label: "Question Templates", scoped: false },
+  { key: "emailAndSiteContent", label: "Email Templates & Site Content", scoped: false },
+  { key: "aiInsightsQueue", label: "AI Insights Queue", scoped: true },
+];
+
+function blankPermissions(): Record<string, PermissionValue> {
+  const perms: Record<string, PermissionValue> = {};
+  for (const area of PERMISSION_AREAS) {
+    perms[area.key] = { view: false, edit: false, delete: false, ...(area.scoped ? { scope: "assigned" as const } : {}) };
+  }
+  return perms;
 }
 
 const TABS: { id: TabId; label: string }[] = [
@@ -131,6 +155,94 @@ export default function AccountsPage() {
     setInviteRoleId(roles[0]?._id ?? "");
     setInviteError(null);
     setShowInviteModal(true);
+  }
+
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editPermissions, setEditPermissions] = useState<Record<string, PermissionValue>>({});
+  const [savingRole, setSavingRole] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  const [showNewRoleModal, setShowNewRoleModal] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDescription, setNewRoleDescription] = useState("");
+  const [newRolePermissions, setNewRolePermissions] = useState<Record<string, PermissionValue>>(blankPermissions());
+  const [creatingRole, setCreatingRole] = useState(false);
+
+  function startEditRole(role: RoleRow) {
+    setEditingRoleId(role._id);
+    setEditPermissions(JSON.parse(JSON.stringify(role.permissions)));
+    setRoleError(null);
+  }
+
+  function cancelEditRole() {
+    setEditingRoleId(null);
+    setRoleError(null);
+  }
+
+  function updatePermCell(
+    target: Record<string, PermissionValue>,
+    setTarget: (next: Record<string, PermissionValue>) => void,
+    area: string,
+    field: "view" | "edit" | "delete" | "scope",
+    value: boolean | "all" | "assigned"
+  ) {
+    setTarget({ ...target, [area]: { ...target[area], [field]: value } });
+  }
+
+  async function saveRole(roleId: string) {
+    setSavingRole(true);
+    setRoleError(null);
+    const res = await fetch(`/api/admin/roles/${roleId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions: editPermissions }),
+    });
+    const data = await res.json().catch(() => null);
+    setSavingRole(false);
+    if (!res.ok) {
+      setRoleError(data?.message ?? "Failed to save role");
+      return;
+    }
+    setEditingRoleId(null);
+    loadAll();
+  }
+
+  async function deleteRole(roleId: string, name: string) {
+    if (!confirm(`Delete the "${name}" role? Anyone assigned to it will need a new role.`)) return;
+    const res = await fetch(`/api/admin/roles/${roleId}`, { method: "DELETE" });
+    if (res.ok) {
+      loadAll();
+    } else {
+      const data = await res.json().catch(() => null);
+      setRoleError(data?.message ?? "Failed to delete role");
+    }
+  }
+
+  function openNewRoleModal() {
+    setNewRoleName("");
+    setNewRoleDescription("");
+    setNewRolePermissions(blankPermissions());
+    setRoleError(null);
+    setShowNewRoleModal(true);
+  }
+
+  async function createRole() {
+    if (!newRoleName.trim()) return;
+    setCreatingRole(true);
+    setRoleError(null);
+    const res = await fetch("/api/admin/roles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newRoleName, description: newRoleDescription, permissions: newRolePermissions }),
+    });
+    const data = await res.json().catch(() => null);
+    setCreatingRole(false);
+    if (!res.ok) {
+      setRoleError(data?.message ?? "Failed to create role");
+      return;
+    }
+    setShowNewRoleModal(false);
+    loadAll();
   }
 
   async function submitInvite() {
@@ -348,43 +460,183 @@ export default function AccountsPage() {
 
       {!loading && tab === "roles" && (
         <div>
-          <p className="section-sub" style={{ marginTop: 0 }}>
-            This is where a role's access is actually defined.
-          </p>
-          {roles.map((role) => (
-            <div className="role-card" key={role._id}>
-              <div className="page-head" style={{ marginBottom: 0 }}>
-                <div>
-                  <h3 style={{ margin: 0 }}>
-                    {role.name} <span className="pill pill-purple" style={{ marginLeft: 6 }}>{role.peopleCount} people</span>
-                  </h3>
-                  <p className="card-sub" style={{ margin: "2px 0 0" }}>
-                    {role.description}
-                  </p>
+          <div className="page-head">
+            <p className="section-sub" style={{ margin: 0 }}>
+              This is where a role's access is actually defined.
+            </p>
+            <button className="btn btn-dark" onClick={openNewRoleModal}>
+              + New role
+            </button>
+          </div>
+          {roleError && <p className="error-text">{roleError}</p>}
+          {roles.map((role) => {
+            const isEditing = editingRoleId === role._id;
+            const perms = isEditing ? editPermissions : role.permissions;
+            return (
+              <div className="role-card" key={role._id}>
+                <div className="page-head" style={{ marginBottom: 0 }}>
+                  <div>
+                    <h3 style={{ margin: 0 }}>
+                      {role.name} <span className="pill pill-purple" style={{ marginLeft: 6 }}>{role.peopleCount} people</span>
+                    </h3>
+                    <p className="card-sub" style={{ margin: "2px 0 0" }}>
+                      {role.description}
+                    </p>
+                  </div>
+                  <div className="btn-group">
+                    {isEditing ? (
+                      <>
+                        <button className="btn btn-sm" onClick={cancelEditRole} disabled={savingRole}>
+                          Cancel
+                        </button>
+                        <button className="btn btn-dark btn-sm" onClick={() => saveRole(role._id)} disabled={savingRole}>
+                          {savingRole ? "Saving…" : "Save"}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn btn-sm" onClick={() => startEditRole(role)}>
+                          Edit permissions
+                        </button>
+                        {!role.isSystemRole && (
+                          <button className="icon-btn btn-danger" onClick={() => deleteRole(role._id, role.name)}>
+                            🗑
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <table className="perm-table">
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: "left" }}>Area</th>
-                    <th>View</th>
-                    <th>Edit</th>
-                    <th>Delete</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(role.permissions).map(([area, perm]) => (
-                    <tr key={area}>
-                      <td>{area}</td>
-                      <td>{perm.view ? "✓" : "—"}</td>
-                      <td>{perm.edit ? "✓" : "—"}</td>
-                      <td>{perm.delete ? "✓" : "—"}</td>
+                <table className="perm-table">
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left" }}>Area</th>
+                      <th>View</th>
+                      <th>Edit</th>
+                      <th>Delete</th>
+                      <th>Scope</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {PERMISSION_AREAS.map((area) => {
+                      const perm = perms[area.key] ?? { view: false, edit: false, delete: false };
+                      return (
+                        <tr key={area.key}>
+                          <td>{area.label}</td>
+                          {(["view", "edit", "delete"] as const).map((field) => (
+                            <td key={field} style={{ textAlign: "center" }}>
+                              {isEditing ? (
+                                <input
+                                  type="checkbox"
+                                  checked={perm[field]}
+                                  onChange={(e) => updatePermCell(editPermissions, setEditPermissions, area.key, field, e.target.checked)}
+                                />
+                              ) : perm[field] ? (
+                                "✓"
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          ))}
+                          <td style={{ textAlign: "center" }}>
+                            {!area.scoped ? (
+                              "—"
+                            ) : isEditing ? (
+                              <select
+                                value={perm.scope ?? "assigned"}
+                                onChange={(e) =>
+                                  updatePermCell(editPermissions, setEditPermissions, area.key, "scope", e.target.value as "all" | "assigned")
+                                }
+                              >
+                                <option value="assigned">Assigned</option>
+                                <option value="all">All</option>
+                              </select>
+                            ) : (
+                              perm.scope ?? "assigned"
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showNewRoleModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowNewRoleModal(false)}>
+          <div className="modal-box" style={{ maxWidth: 640 }}>
+            <div className="modal-head">
+              <h2>New role</h2>
+              <button className="modal-close" onClick={() => setShowNewRoleModal(false)}>
+                ×
+              </button>
             </div>
-          ))}
+            <div className="field-row">
+              <div className="field">
+                <label>Name</label>
+                <input type="text" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Description</label>
+                <input type="text" value={newRoleDescription} onChange={(e) => setNewRoleDescription(e.target.value)} />
+              </div>
+            </div>
+            <table className="perm-table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left" }}>Area</th>
+                  <th>View</th>
+                  <th>Edit</th>
+                  <th>Delete</th>
+                  <th>Scope</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PERMISSION_AREAS.map((area) => {
+                  const perm = newRolePermissions[area.key];
+                  return (
+                    <tr key={area.key}>
+                      <td>{area.label}</td>
+                      {(["view", "edit", "delete"] as const).map((field) => (
+                        <td key={field} style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={perm[field]}
+                            onChange={(e) =>
+                              updatePermCell(newRolePermissions, setNewRolePermissions, area.key, field, e.target.checked)
+                            }
+                          />
+                        </td>
+                      ))}
+                      <td style={{ textAlign: "center" }}>
+                        {!area.scoped ? (
+                          "—"
+                        ) : (
+                          <select
+                            value={perm.scope ?? "assigned"}
+                            onChange={(e) =>
+                              updatePermCell(newRolePermissions, setNewRolePermissions, area.key, "scope", e.target.value as "all" | "assigned")
+                            }
+                          >
+                            <option value="assigned">Assigned</option>
+                            <option value="all">All</option>
+                          </select>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {roleError && <p className="error-text">{roleError}</p>}
+            <button className="btn btn-dark" disabled={creatingRole} onClick={createRole} style={{ marginTop: 12 }}>
+              {creatingRole ? "Creating…" : "+ Create role"}
+            </button>
+          </div>
         </div>
       )}
 
