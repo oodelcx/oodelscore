@@ -82,6 +82,7 @@ export default function BusinessDetailPage() {
     qrToken: string;
     scans: number;
     active: boolean;
+    formLayoutOverride: string | null;
   }
   const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPointRow[]>([]);
   const [fpName, setFpName] = useState("");
@@ -126,6 +127,15 @@ export default function BusinessDetailPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !fp.active }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function updateFeedbackPointLayout(fpId: string, formLayoutOverride: string) {
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ formLayoutOverride }),
     });
     loadFeedbackPoints();
   }
@@ -587,6 +597,7 @@ export default function BusinessDetailPage() {
               <tr>
                 <th>Name</th>
                 <th>Scans</th>
+                <th>Layout</th>
                 <th>Status</th>
                 <th></th>
               </tr>
@@ -596,6 +607,15 @@ export default function BusinessDetailPage() {
                 <tr key={fp._id}>
                   <td>{fp.name}</td>
                   <td>{fp.scans}</td>
+                  <td>
+                    <select
+                      value={fp.formLayoutOverride ?? "single_page"}
+                      onChange={(e) => updateFeedbackPointLayout(fp._id, e.target.value)}
+                    >
+                      <option value="single_page">All questions, one screen</option>
+                      <option value="one_per_screen">One question per screen</option>
+                    </select>
+                  </td>
                   <td>
                     <span className={`pill ${fp.active ? "pill-green" : "pill-gray"}`}>{fp.active ? "Active" : "Inactive"}</span>
                   </td>
@@ -611,7 +631,7 @@ export default function BusinessDetailPage() {
               ))}
               {feedbackPoints.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="subtitle">
+                  <td colSpan={5} className="subtitle">
                     No feedback points yet.
                   </td>
                 </tr>

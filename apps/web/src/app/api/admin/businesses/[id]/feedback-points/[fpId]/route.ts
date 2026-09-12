@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, FeedbackPoint } from "@oodelscore/shared";
+import { connectToDatabase, FeedbackPoint, FORM_LAYOUTS } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 type RouteParams = { params: Promise<{ id: string; fpId: string }> };
@@ -22,6 +22,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (typeof body?.active === "boolean") feedbackPoint.active = body.active;
   if (typeof body?.questionTemplateOverride === "string" || body?.questionTemplateOverride === null) {
     feedbackPoint.questionTemplateOverride = body.questionTemplateOverride;
+  }
+  if (body?.formLayoutOverride === null || (FORM_LAYOUTS as readonly string[]).includes(body?.formLayoutOverride)) {
+    feedbackPoint.formLayoutOverride = body.formLayoutOverride;
   }
   await feedbackPoint.save();
 

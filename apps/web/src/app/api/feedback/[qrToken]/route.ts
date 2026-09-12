@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, FeedbackPoint, Business, QuestionTemplate } from "@oodelscore/shared";
+import { connectToDatabase, FeedbackPoint, Business, ParentOrganization, QuestionTemplate } from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
 
@@ -30,9 +30,16 @@ export async function GET(_request: Request, { params }: RouteParams) {
     console.error("[feedback] failed to increment scan count", err)
   );
 
+  const groupTag = business.parentOrgId ? (await ParentOrganization.findById(business.parentOrgId))?.name ?? null : null;
+  const demographicConfig = feedbackPoint.demographicOverride ?? business.demographicConfig;
+  const formLayout = feedbackPoint.formLayoutOverride ?? "single_page";
+
   return NextResponse.json({
     status: "ok",
     businessName: business.name,
+    groupTag: groupTag ? `Part of ${groupTag}` : null,
+    formLayout,
+    demographicConfig,
     questions: template.questions.map((q, index) => ({
       index,
       text: q.text,
