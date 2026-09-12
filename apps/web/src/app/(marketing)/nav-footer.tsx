@@ -52,53 +52,57 @@ function parseList(value: string | undefined): string[] {
   }
 }
 
-export function MarketingFooter({ full, fields }: { full?: boolean; fields?: MenuFields }) {
-  if (!full || !fields) {
-    return (
-      <footer>
-        <div className="wrap">
-          <div className="foot-bottom">{fields?.copyrightText ?? "© Oodel Score. All rights reserved."}</div>
-        </div>
-      </footer>
-    );
-  }
+// Every footer link routes to a real page — nothing here is a dead anchor.
+const FOOTER_LINK_HREF: Record<string, string> = {
+  "How it works": "/product",
+  "CX Pulse": "/#cx-pulse",
+  Pricing: "/pricing",
+  "Single business": "/solutions",
+  "Multi-location groups": "/solutions",
+  Enterprise: "/solutions",
+  About: "/company",
+  "Privacy policy": "/privacy",
+  Terms: "/terms",
+};
 
+function FooterLink({ label, fallback }: { label: string; fallback: string }) {
+  if (label.includes("@")) return <a href={`mailto:${label}`}>{label}</a>;
+  return <Link href={FOOTER_LINK_HREF[label] ?? fallback}>{label}</Link>;
+}
+
+/** Same full 4-column footer on every marketing page — this is the site's
+ * one standard footer, not something that varies page to page. */
+export function MarketingFooter({ fields }: { fields?: MenuFields }) {
   return (
     <footer>
       <div className="wrap">
         <div className="foot-grid">
           <div>
-            <div className="foot-logo">
+            <Link href="/" className="foot-logo">
               oodel<span>.score</span>
-            </div>
-            <div className="foot-desc">{fields.footerDescription}</div>
+            </Link>
+            <div className="foot-desc">{fields?.footerDescription}</div>
           </div>
           <div className="foot-col">
             <h4>Product</h4>
-            {parseList(fields.footerProductLinks).map((label, i) => (
-              <Link key={i} href="/product">
-                {label}
-              </Link>
+            {parseList(fields?.footerProductLinks).map((label, i) => (
+              <FooterLink key={i} label={label} fallback="/product" />
             ))}
           </div>
           <div className="foot-col">
             <h4>Solutions</h4>
-            {parseList(fields.footerSolutionsLinks).map((label, i) => (
-              <Link key={i} href="/solutions">
-                {label}
-              </Link>
+            {parseList(fields?.footerSolutionsLinks).map((label, i) => (
+              <FooterLink key={i} label={label} fallback="/solutions" />
             ))}
           </div>
           <div className="foot-col">
             <h4>Company</h4>
-            {parseList(fields.footerCompanyLinks).map((label, i) => (
-              <Link key={i} href="/company">
-                {label}
-              </Link>
+            {parseList(fields?.footerCompanyLinks).map((label, i) => (
+              <FooterLink key={i} label={label} fallback="/company" />
             ))}
           </div>
         </div>
-        <div className="foot-bottom">{fields.copyrightText}</div>
+        <div className="foot-bottom">{fields?.copyrightText ?? "© Oodel Score. All rights reserved."}</div>
       </div>
     </footer>
   );

@@ -1,10 +1,9 @@
 /*
  * Ported directly from oodel-score-marketing-site.html — a distinct visual
  * system from the app dashboards (admin.css/business.css), so this page
- * group gets its own stylesheet and its own font import instead of sharing.
+ * group gets its own color palette, but the font is the one global font
+ * (next/font in the root layout) rather than a separate webfont.
  */
-@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap");
-
 .mkt {
   --ink: #111412;
   --paper: #ffffff;
@@ -19,7 +18,6 @@
   --blue: #3f5fd1;
   --purple: #6b4fd6;
   --red: #c24a3f;
-  font-family: "General Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--paper);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -912,6 +910,35 @@
   font-weight: 400;
 }
 
+/* ===== LEGAL PAGES (Privacy / Terms) ===== */
+.mkt .legal-body {
+  max-width: 720px;
+  padding-bottom: 90px;
+}
+.mkt .legal-section {
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+}
+.mkt .legal-section:first-child {
+  border-top: none;
+}
+.mkt .legal-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 10px;
+}
+.mkt .legal-section p {
+  font-size: 14.5px;
+  color: var(--text-2);
+  line-height: 1.65;
+  margin: 0;
+}
+.mkt .inner-hero .last-updated {
+  color: var(--text-3);
+  font-size: 13.5px;
+}
+
 /* ===== BOOK A DEMO MODAL ===== */
 .mkt .demo-modal-overlay {
   position: fixed;
@@ -930,7 +957,6 @@
   background: #fff;
   border-radius: 16px;
   padding: 32px 30px;
-  font-family: "General Sans", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 .mkt .demo-modal h3 {
   font-size: 22px;

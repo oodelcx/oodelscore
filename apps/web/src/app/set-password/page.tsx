@@ -4,6 +4,7 @@ import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import "../admin/admin.css";
 import "../auth.css";
+import { AuthShell } from "@/components/auth-shell";
 
 /** Completes either flow that hands out a set-password link (spec Section
  * 11): the initial invite, or a password reset — both land here with
@@ -56,7 +57,7 @@ function SetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="auth-form" onSubmit={handleSubmit}>
       <div className="field">
         <label>New password</label>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoFocus />
@@ -75,14 +76,12 @@ function SetPasswordForm() {
 
 export default function SetPasswordPage() {
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-brand">Oodel Score</div>
-        <p className="auth-subtitle">Set your password.</p>
-        <Suspense fallback={<p className="auth-success">Loading…</p>}>
-          <SetPasswordForm />
-        </Suspense>
-      </div>
-    </div>
+    <AuthShell>
+      <div className="auth-brand">Set your password</div>
+      <p className="auth-subtitle">Choose a password to finish setting up your account.</p>
+      <Suspense fallback={<p className="auth-success">Loading…</p>}>
+        <SetPasswordForm />
+      </Suspense>
+    </AuthShell>
   );
 }

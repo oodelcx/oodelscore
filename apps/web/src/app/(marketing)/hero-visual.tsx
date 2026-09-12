@@ -32,10 +32,10 @@ export function HeroVisual() {
   return (
     <div className="hero-visual">
       <div className="hv-card hv-main">
-        <div className="hv-eyebrow">The Riverside Bistro</div>
+        <div className="hv-eyebrow">Kestrel Bank — City Centre Branch</div>
         <div className="hv-title">This month</div>
         <div className="hv-score">{score}</div>
-        <div className="hv-score-label">average score, 141 responses</div>
+        <div className="hv-score-label">average score, 486 responses</div>
         <svg className="hv-spark" width="100%" height="46" viewBox="0 0 280 46">
           <polyline
             fill="none"
@@ -53,7 +53,7 @@ export function HeroVisual() {
       </div>
       <div className="hv-card hv-action">
         <span className="pill">Action assigned</span>
-        <div className="hv-action-title">Cleanliness dip, morning shift — Sam K.</div>
+        <div className="hv-action-title">Wait-time complaint, teller queue — Priya S.</div>
         <div className="hv-action-meta">Due in 2 days</div>
       </div>
     </div>

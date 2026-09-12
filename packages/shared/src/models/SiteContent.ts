@@ -1,6 +1,6 @@
 import mongoose, { Schema, model, type Model } from "mongoose";
 
-export const SITE_CONTENT_PAGES = ["menu", "home", "pricing", "product", "solutions", "company"] as const;
+export const SITE_CONTENT_PAGES = ["menu", "home", "pricing", "product", "solutions", "company", "privacy", "terms"] as const;
 export type SiteContentPage = (typeof SITE_CONTENT_PAGES)[number];
 
 export interface INavItem {
