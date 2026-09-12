@@ -165,6 +165,17 @@ export default function BusinessDetailPage() {
   }
 
   async function handleSave() {
+    if (isNew && !form.name.trim()) {
+      setTab("general");
+      setError("Business name is required.");
+      return;
+    }
+    if (isNew && !form.contactEmail.trim()) {
+      setTab("contact");
+      setError("Contact email is required — it becomes this business's login.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -225,7 +236,8 @@ export default function BusinessDetailPage() {
 
       {isNew && (
         <div className="callout">
-          Creating a new business. Fill in the General tab, then click <b>Create business</b> below to save it.
+          Creating a new business. Fill in <b>General</b> and <b>Contact</b> (the contact email becomes its login)
+          before clicking <b>Create business</b>.
         </div>
       )}
 
@@ -402,12 +414,13 @@ export default function BusinessDetailPage() {
           </div>
           <div className="field-row">
             <div className="field">
-              <label>Contact email</label>
+              <label>Contact email {isNew && <span style={{ color: "crimson" }}>*</span>}</label>
               <input
                 type="email"
                 value={form.contactEmail}
                 onChange={(e) => setForm((f) => ({ ...f, contactEmail: e.target.value }))}
               />
+              {isNew && <p className="field-hint">This becomes the business&apos;s login — required to create it.</p>}
             </div>
             <div className="field">
               <label>Contact phone</label>

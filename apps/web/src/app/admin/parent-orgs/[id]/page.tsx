@@ -135,6 +135,17 @@ export default function ParentOrgDetailPage() {
   }
 
   async function handleSave() {
+    if (isNew && !form.name.trim()) {
+      setTab("general");
+      setError("Organization name is required.");
+      return;
+    }
+    if (isNew && !form.contactEmail.trim()) {
+      setTab("contact");
+      setError("Contact email is required — it becomes this organization's login.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -196,8 +207,8 @@ export default function ParentOrgDetailPage() {
 
       {isNew && (
         <div className="callout">
-          Creating a new Parent Organization. Fill in the General tab, then click <b>Create organization</b> below —
-          Businesses &amp; Billing unlocks once it exists.
+          Creating a new Parent Organization. Fill in <b>General</b> and <b>Contact</b> (the contact email becomes its
+          login) before clicking <b>Create organization</b> — Businesses &amp; Billing unlocks once it exists.
         </div>
       )}
 
@@ -329,12 +340,13 @@ export default function ParentOrgDetailPage() {
           </div>
           <div className="field-row">
             <div className="field">
-              <label>Contact email</label>
+              <label>Contact email {isNew && <span style={{ color: "crimson" }}>*</span>}</label>
               <input
                 type="email"
                 value={form.contactEmail}
                 onChange={(e) => setForm((f) => ({ ...f, contactEmail: e.target.value }))}
               />
+              {isNew && <p className="field-hint">This becomes the organization&apos;s login — required to create it.</p>}
             </div>
             <div className="field">
               <label>Contact phone</label>
