@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-type TabId = "general" | "address" | "contact" | "settings";
+type TabId = "general" | "address" | "contact" | "settings" | "feedback-points";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "general", label: "General" },
   { id: "address", label: "Address & Billing" },
   { id: "contact", label: "Contact" },
   { id: "settings", label: "Settings" },
+  { id: "feedback-points", label: "Feedback Points" },
 ];
 
 const DEMOGRAPHIC_FIELDS = ["name", "email", "phone", "ageGroup", "gender"] as const;
@@ -73,6 +74,67 @@ export default function BusinessDetailPage() {
   } | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+
+  interface FeedbackPointRow {
+    _id: string;
+    name: string;
+    description: string;
+    qrToken: string;
+    scans: number;
+    active: boolean;
+  }
+  const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPointRow[]>([]);
+  const [fpName, setFpName] = useState("");
+  const [fpDescription, setFpDescription] = useState("");
+  const [fpCreating, setFpCreating] = useState(false);
+  const [fpError, setFpError] = useState<string | null>(null);
+
+  function loadFeedbackPoints() {
+    if (isNew) return;
+    fetch(`/api/admin/businesses/${params.id}/feedback-points`)
+      .then((r) => r.json())
+      .then((d) => setFeedbackPoints(d.feedbackPoints ?? []));
+  }
+
+  useEffect(() => {
+    loadFeedbackPoints();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, params.id]);
+
+  async function createFeedbackPoint() {
+    if (!fpName.trim()) return;
+    setFpCreating(true);
+    setFpError(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}/feedback-points`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: fpName, description: fpDescription }),
+    });
+    const data = await res.json().catch(() => null);
+    setFpCreating(false);
+    if (!res.ok) {
+      setFpError(data?.message ?? "Failed to create feedback point");
+      return;
+    }
+    setFpName("");
+    setFpDescription("");
+    loadFeedbackPoints();
+  }
+
+  async function toggleFeedbackPointActive(fp: FeedbackPointRow) {
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fp._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !fp.active }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function removeFeedbackPoint(fpId: string) {
+    if (!confirm("Delete this feedback point? Its QR link will stop working.")) return;
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, { method: "DELETE" });
+    loadFeedbackPoints();
+  }
 
   useEffect(() => {
     fetch("/api/admin/industries")
@@ -243,7 +305,12 @@ export default function BusinessDetailPage() {
 
       <div className="subtabs">
         {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => setTab(t.id)}>
+          <button
+            key={t.id}
+            className={tab === t.id ? "active" : ""}
+            disabled={isNew && t.id === "feedback-points"}
+            onClick={() => setTab(t.id)}
+          >
             {t.label}
           </button>
         ))}
@@ -492,6 +559,65 @@ export default function BusinessDetailPage() {
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : isNew ? "Create business" : "Save Settings"}
           </button>
+        </div>
+      )}
+
+      {tab === "feedback-points" && (
+        <div>
+          <div className="card" style={{ marginBottom: 20 }}>
+            <h3>New feedback point</h3>
+            <div className="field-row">
+              <div className="field">
+                <label>Name</label>
+                <input value={fpName} onChange={(e) => setFpName(e.target.value)} placeholder="e.g. Front counter" />
+              </div>
+              <div className="field">
+                <label>Description</label>
+                <input value={fpDescription} onChange={(e) => setFpDescription(e.target.value)} />
+              </div>
+            </div>
+            {fpError && <p className="error-text">{fpError}</p>}
+            <button className="btn btn-dark" disabled={fpCreating} onClick={createFeedbackPoint}>
+              {fpCreating ? "Creating…" : "+ Create feedback point"}
+            </button>
+          </div>
+
+          <table className="clean">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Scans</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {feedbackPoints.map((fp) => (
+                <tr key={fp._id}>
+                  <td>{fp.name}</td>
+                  <td>{fp.scans}</td>
+                  <td>
+                    <span className={`pill ${fp.active ? "pill-green" : "pill-gray"}`}>{fp.active ? "Active" : "Inactive"}</span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleFeedbackPointActive(fp)}>
+                      {fp.active ? "Deactivate" : "Activate"}
+                    </button>
+                    <button className="icon-btn btn-danger" onClick={() => removeFeedbackPoint(fp._id)}>
+                      🗑
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {feedbackPoints.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="subtitle">
+                    No feedback points yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

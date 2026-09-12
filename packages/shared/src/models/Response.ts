@@ -28,6 +28,7 @@ export interface IResponse {
   respondentEmail: string | null; // null if not collected
   demographics: IDemographics;
   submittedAt: Date;
+  flagged: boolean; // Business/Group "Flag" action on Raw Feedback
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +59,7 @@ const ResponseSchema = new Schema<IResponse>(
     respondentEmail: { type: String, default: null },
     demographics: { type: DemographicsSchema, default: () => ({}) },
     submittedAt: { type: Date, required: true, default: Date.now },
+    flagged: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

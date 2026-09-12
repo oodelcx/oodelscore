@@ -20,6 +20,7 @@ export interface IFeedbackPoint {
   questionTemplateOverride: Types.ObjectId | null; // null = use business's default template
   formLayoutOverride: FormLayout | null; // null = use business default
   demographicOverride: IDemographicOverride | null; // null = use business default demographicConfig
+  scans: number; // incremented each time the public feedback page loads — powers conversion rate (responses / scans)
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -45,6 +46,7 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     questionTemplateOverride: { type: Schema.Types.ObjectId, ref: "QuestionTemplate", default: null },
     formLayoutOverride: { type: String, enum: FORM_LAYOUTS, default: null },
     demographicOverride: { type: DemographicOverrideSchema, default: null },
+    scans: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

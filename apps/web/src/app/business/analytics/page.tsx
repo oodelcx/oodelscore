@@ -1,0 +1,180 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface AnalyticsData {
+  trend: { date: string; starAverage: number | null }[];
+  npsBreakdown: { promoters: number; passives: number; detractors: number };
+  categoryBreakdown: { name: string; average: number }[];
+  commentTags: { word: string; count: number; negative: boolean }[];
+  demographics: { ageGroups: { label: string; count: number }[]; genders: { label: string; count: number }[] };
+}
+
+const CATEGORY_COLORS = ["#639922", "#7F77DD", "#EF9F27", "#E24B4A", "#5DCAA5", "#185FA5"];
+
+function trendSvgPoints(trend: { starAverage: number | null }[]): string {
+  const known = trend.map((t) => t.starAverage).filter((v): v is number => v !== null);
+  if (known.length === 0) return "";
+  const width = 340;
+  const height = 100;
+  const step = width / Math.max(trend.length - 1, 1);
+  return trend
+    .map((point, i) => {
+      const v = point.starAverage ?? known[known.length - 1];
+      const y = height - (v / 5) * height;
+      return `${(i * step + 20).toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+export default function AnalyticsPage() {
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/business/analytics")
+      .then((res) => res.json())
+      .then(setData)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p className="subtitle">Loading…</p>;
+  if (!data) return <p className="error-text">Couldn&apos;t load analytics.</p>;
+
+  const npsTotal = data.npsBreakdown.promoters + data.npsBreakdown.passives + data.npsBreakdown.detractors;
+  const maxCategory = Math.max(...data.categoryBreakdown.map((c) => c.average), 5);
+
+  return (
+    <div>
+      <div className="page-head">
+        <div>
+          <h1>Analytics</h1>
+          <p className="subtitle" style={{ margin: 0 }}>
+            Deep dive into your feedback data.
+          </p>
+        </div>
+        <a className="btn" href="/api/business/analytics/export">
+          ⬇ Export CSV
+        </a>
+      </div>
+
+      <div className="grid grid-2">
+        <div className="card">
+          <h3>Trend over time</h3>
+          <svg viewBox="0 0 380 120" width="100%" height="120">
+            <line x1="16" y1="8" x2="16" y2="100" stroke="#E6E5E1" />
+            <line x1="16" y1="100" x2="360" y2="100" stroke="#E6E5E1" />
+            {trendSvgPoints(data.trend) && (
+              <polyline fill="none" stroke="#0F6E56" strokeWidth="2" points={trendSvgPoints(data.trend)} />
+            )}
+          </svg>
+        </div>
+        <div className="card">
+          <h3>NPS breakdown</h3>
+          <div className="bars">
+            <div className="bar-row">
+              <div className="bar-label">Promoters</div>
+              <div className="bar-track">
+                <div
+                  className="bar-fill"
+                  style={{ width: `${npsTotal ? (data.npsBreakdown.promoters / npsTotal) * 100 : 0}%`, background: "#639922" }}
+                />
+              </div>
+              <div className="bar-val">{data.npsBreakdown.promoters}</div>
+            </div>
+            <div className="bar-row">
+              <div className="bar-label">Passives</div>
+              <div className="bar-track">
+                <div
+                  className="bar-fill"
+                  style={{ width: `${npsTotal ? (data.npsBreakdown.passives / npsTotal) * 100 : 0}%`, background: "#EF9F27" }}
+                />
+              </div>
+              <div className="bar-val">{data.npsBreakdown.passives}</div>
+            </div>
+            <div className="bar-row">
+              <div className="bar-label">Detractors</div>
+              <div className="bar-track">
+                <div
+                  className="bar-fill"
+                  style={{ width: `${npsTotal ? (data.npsBreakdown.detractors / npsTotal) * 100 : 0}%`, background: "#E24B4A" }}
+                />
+              </div>
+              <div className="bar-val">{data.npsBreakdown.detractors}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <div className="card">
+          <h3>Category breakdown</h3>
+          <div className="bars">
+            {data.categoryBreakdown.map((c, i) => (
+              <div className="bar-row" key={c.name}>
+                <div className="bar-label">{c.name}</div>
+                <div className="bar-track">
+                  <div
+                    className="bar-fill"
+                    style={{ width: `${(c.average / maxCategory) * 100}%`, background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }}
+                  />
+                </div>
+                <div className="bar-val">{c.average}</div>
+              </div>
+            ))}
+            {data.categoryBreakdown.length === 0 && <p className="subtitle">No categorized questions yet.</p>}
+          </div>
+        </div>
+        <div className="card">
+          <h3>Comment themes</h3>
+          <p className="card-sub">Auto-grouped from open-ended answers.</p>
+          <div className="tag-cloud">
+            {data.commentTags.map((t) => (
+              <span key={t.word} className={t.count >= 5 ? "big" : t.negative ? "neg" : ""}>
+                {t.word} ({t.count})
+              </span>
+            ))}
+            {data.commentTags.length === 0 && <p className="subtitle">No comments yet.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <h3>Respondent age &amp; gender</h3>
+        <p className="card-sub">Based on respondents who chose to share this.</p>
+        <div className="grid grid-2">
+          <table className="clean">
+            <tbody>
+              {data.demographics.ageGroups.map((g) => (
+                <tr key={g.label}>
+                  <td>{g.label}</td>
+                  <td style={{ textAlign: "right" }}>{g.count}</td>
+                </tr>
+              ))}
+              {data.demographics.ageGroups.length === 0 && (
+                <tr>
+                  <td className="subtitle">No age data collected.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <table className="clean">
+            <tbody>
+              {data.demographics.genders.map((g) => (
+                <tr key={g.label}>
+                  <td>{g.label}</td>
+                  <td style={{ textAlign: "right" }}>{g.count}</td>
+                </tr>
+              ))}
+              {data.demographics.genders.length === 0 && (
+                <tr>
+                  <td className="subtitle">No gender data collected.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

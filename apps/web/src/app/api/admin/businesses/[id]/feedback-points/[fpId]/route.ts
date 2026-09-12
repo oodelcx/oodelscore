@@ -1,36 +1,43 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, FeedbackPoint } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireStaffSession } from "@/lib/adminAuth";
 
-type RouteParams = { params: Promise<{ id: string }> };
+type RouteParams = { params: Promise<{ id: string; fpId: string }> };
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner();
+  const session = await requireStaffSession();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!session.role.permissions.questionTemplates.edit) {
+    return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  }
 
+  const { id, fpId } = await params;
   await connectToDatabase();
-
-  const { id } = await params;
-  const feedbackPoint = await FeedbackPoint.findOne({ _id: id, businessId: session.business._id });
+  const feedbackPoint = await FeedbackPoint.findOne({ _id: fpId, businessId: id });
   if (!feedbackPoint) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => null);
   if (typeof body?.name === "string") feedbackPoint.name = body.name;
   if (typeof body?.description === "string") feedbackPoint.description = body.description;
   if (typeof body?.active === "boolean") feedbackPoint.active = body.active;
+  if (typeof body?.questionTemplateOverride === "string" || body?.questionTemplateOverride === null) {
+    feedbackPoint.questionTemplateOverride = body.questionTemplateOverride;
+  }
   await feedbackPoint.save();
 
   return NextResponse.json({ status: "ok", feedbackPoint });
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner();
+  const session = await requireStaffSession();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!session.role.permissions.questionTemplates.edit) {
+    return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  }
 
+  const { id, fpId } = await params;
   await connectToDatabase();
-
-  const { id } = await params;
-  const removed = await FeedbackPoint.findOneAndDelete({ _id: id, businessId: session.business._id });
+  const removed = await FeedbackPoint.findOneAndDelete({ _id: fpId, businessId: id });
   if (!removed) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   return NextResponse.json({ status: "ok" });

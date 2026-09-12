@@ -24,6 +24,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "No survey is configured for this link yet" }, { status: 404 });
   }
 
+  // Fire-and-forget: powers the conversion-rate metric (responses / scans).
+  // Not awaited on the response — a slow scan counter shouldn't delay the form.
+  FeedbackPoint.updateOne({ _id: feedbackPoint._id }, { $inc: { scans: 1 } }).catch((err) =>
+    console.error("[feedback] failed to increment scan count", err)
+  );
+
   return NextResponse.json({
     status: "ok",
     businessName: business.name,
