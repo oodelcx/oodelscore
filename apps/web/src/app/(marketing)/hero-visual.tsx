@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-// Ports the mockup's orchestrated hero reveal: score count-up + sparkline draw-in.
+// A single, explicitly-labeled sample card — no real business, no attributed
+// quote. The score count-up + sparkline draw-in match the mockup's original
+// motion, just without pretending any of it came from a real customer.
 export function HeroVisual() {
   const [score, setScore] = useState("0.00");
   const [dashOffset, setDashOffset] = useState(400);
@@ -31,15 +33,14 @@ export function HeroVisual() {
 
   return (
     <div className="hero-visual">
-      <div className="hv-card hv-main">
-        <div className="hv-eyebrow">Kestrel Bank — City Centre Branch</div>
-        <div className="hv-title">This month</div>
-        <div className="hv-score">{score}</div>
-        <div className="hv-score-label">average score, 486 responses</div>
+      <div className="hv-example">
+        <span className="hv-example-badge">Example dashboard</span>
+        <div className="hv-example-score">{score}</div>
+        <div className="hv-example-label">average score, 141 responses</div>
         <svg className="hv-spark" width="100%" height="46" viewBox="0 0 280 46">
           <polyline
             fill="none"
-            stroke="#127C57"
+            stroke="#3fbe8b"
             strokeWidth="2.4"
             points="0,30 30,26 60,32 90,20 120,24 150,14 180,18 210,10 240,14 270,6"
             strokeDasharray="400"
@@ -47,14 +48,6 @@ export function HeroVisual() {
             style={{ transition: "stroke-dashoffset 1.1s ease" }}
           />
         </svg>
-      </div>
-      <div className="hv-card hv-pulse">
-        <span className="hv-dot" /> CX Pulse — Improving
-      </div>
-      <div className="hv-card hv-action">
-        <span className="pill">Action assigned</span>
-        <div className="hv-action-title">Wait-time complaint, teller queue — Priya S.</div>
-        <div className="hv-action-meta">Due in 2 days</div>
       </div>
     </div>
   );
