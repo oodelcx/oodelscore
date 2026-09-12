@@ -8,4 +8,9 @@ html,
 body {
   overflow-x: hidden;
   max-width: 100%;
+  /* Browsers default body to margin:8px. A full-bleed min-height:100vh
+     shell (auth-shell, etc.) plus that margin adds up to just over 100vh,
+     which is what was producing the stray vertical scrollbar. */
+  margin: 0;
+  padding: 0;
 }
