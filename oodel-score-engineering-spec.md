@@ -36,20 +36,24 @@ Product philosophy established during design (build to this, don't deviate witho
 All IDs are ObjectId unless noted. Timestamps (`createdAt`, `updatedAt`) implied on every collection.
 
 ### `users`
-Covers Admin/staff, Group logins, and Business logins in one collection, differentiated by `accountType` and `parentType`/`parentId`.
+Covers Admin/staff, Group logins, Business logins, and Team Member logins in one collection, differentiated by `accountType` and `parentType`/`parentId`.
 ```
 {
   email: String (unique, used for login),
   passwordHash: String,
-  accountType: enum["admin_staff", "parent_org", "business"],
+  accountType: enum["admin_staff", "parent_org", "business", "team_member"],
   parentId: ObjectId,          // -> parentOrganizations._id or businesses._id, null for admin_staff
   roleId: ObjectId,            // -> roles._id (admin_staff only; parent_org/business use implicit owner role)
+  teamRole: String,            // team_member only — free text (e.g. "Shift Lead"), cosmetic, no permission effect
+  tier: enum["full", "limited"],  // team_member only — see Section 16
+  teamOfType: enum["business", "parentOrg"],  // team_member only — since parentId is polymorphic, this says which collection it points at
   inviteStatus: enum["active", "invite_pending", "invite_expired"],
   inviteTokenHash: String,
   inviteExpiresAt: Date,       // 7 days from send, per original spec
   lastLoginAt: Date
 }
 ```
+`team_member.parentId` points at the same Business or Parent Org the inviting primary account belongs to (never at another `team_member`) — invited via the exact same invite-email mechanism as everything else in this collection, no new invite pattern. See Section 16 for the full permission split and seat-limit rules.
 
 ### `roles`  (Admin/staff RBAC — see Section 4)
 ```
@@ -78,7 +82,9 @@ Seed three system roles on launch: **Admin** (all true, scope "all"); **Account 
   address: { street, city, postcode },
   billingAddressSameAsAddress: Boolean,
   defaultBillingMode: enum["group_pays", "branch_pays"],  // default only — see billingAssignment on businesses
-  accountManagerId: ObjectId  // -> users._id (staff)
+  accountManagerId: ObjectId,  // -> users._id (staff)
+  branchSeatLimit: Number | null,      // ADMIN-EDITABLE ONLY. null = unlimited. See Section 16.
+  teamMemberSeatLimit: Number | null   // ADMIN-EDITABLE ONLY. The Group's own staff pool — independent of any branch's. See Section 16.
 }
 ```
 
@@ -103,10 +109,11 @@ Seed three system roles on launch: **Admin** (all true, scope "all"); **Account 
     gender: enum["off","optional","mandatory"]
   },
   accountManagerId: ObjectId,
+  teamMemberSeatLimit: Number | null,  // ADMIN-EDITABLE ONLY. null = unlimited. See Section 16.
   active: Boolean
 }
 ```
-**Rule to enforce in code:** `billingAssignment` and `demographicConfig`/`questionTemplateId` are writable only by `accountType: "admin_staff"`. Group/Business API routes must reject writes to these fields even if the request body includes them.
+**Rule to enforce in code:** `billingAssignment`, `demographicConfig`/`questionTemplateId`, and both seat-limit fields on this collection and `parentOrganizations` are writable only by `accountType: "admin_staff"`. Group/Business API routes must reject writes to these fields even if the request body includes them.
 
 ### `feedbackPoints`
 ```
@@ -259,14 +266,27 @@ Full trigger table in Section 11 — seed this collection with the defaults from
 ### `actionBoardItems`
 ```
 {
-  parentOrgId: ObjectId,           // Action Board is a Group-level feature
+  parentOrgId: ObjectId | null,     // null when businessId is a standalone business — see correction below
   title: String, description: String,
   businessId: ObjectId, categoryId: ObjectId,
   priority: enum["low","medium","high","critical"],
   status: enum["open","in_progress","resolved"],
   ownerId: ObjectId, dueDate: Date,
   sourceResponseIds: [ObjectId],   // linked feedback that generated this item
-  resolutionNote: String, resolvedAt: Date
+  resolutionNote: String, resolvedAt: Date,
+  source: enum["manual", "auto_suggested", "auto_assigned", "escalated"]  // see Section 16
+}
+```
+**Correction (Section 16):** the Act layer was originally scoped Group-only (`parentOrgId` required). AI-assisted triage (Section 16) fires an Action Board item whenever an Alert Rule fires — including for a standalone business with no parent org — so `parentOrgId` is now nullable, `businessId` is always present, and a standalone business gets its own single-business Action Board (same UI/API shape, scoped by `businessId` instead of `parentOrgId`).
+
+### `categoryOwnerMappings`  (Section 16 — feeds AI-assisted triage's default owner)
+```
+{
+  ownerScope: enum["business", "parentOrg"],
+  ownerScopeId: ObjectId,          // -> businesses._id or parentOrganizations._id
+  categoryId: ObjectId,
+  defaultOwnerId: ObjectId,        // -> users._id — who a new item in this category is suggested/assigned to
+  autoAssignWithoutConfirmation: Boolean  // per-business/org toggle, default false — see Section 16
 }
 ```
 
@@ -343,6 +363,8 @@ Full trigger table in Section 11 — seed this collection with the defaults from
 | CX Pulse | portfolio view, framework config | portfolio (assigned) | — | own score | own + all child businesses |
 
 Custom roles (created via Admin's "+ New role") use the same shape as the `roles.permissions` object — any new admin-side feature must be added as a new key to that object and to this table, not left ungoverned.
+
+**Deletion correction (Section 16):** only `accountType: "admin_staff"` can ever delete a Business or Parent Org record, enforced server-side regardless of any UI state. There is no delete option anywhere in the Business or Group-facing frontend, for the primary account or any Team Member at any tier — this isn't hidden behind a permission toggle, the button/route simply doesn't exist outside Admin. Deletion only happens via Admin's Danger Zone. This reads as stricter than the "own record only, read-mostly" language above for Business/Parent Org owners — the correction is intentional and takes precedence over that row.
 
 ---
 
@@ -506,3 +528,43 @@ These were found live in the current app during the design phase — fix before 
 - Should quarterly CX Pulse self-assessment questions go to every account automatically, or only to accounts below a certain maturity level?
 - Should "Compare branches" (Group portal) support more than pairwise comparison for very large networks, or is region-level rollup the intended path for that?
 - Confirm whether the current "Invite Expired" pattern across all seeded accounts is dummy data or a real delivery issue before treating it as either.
+
+---
+
+## 16. Team Members, seat limits, deletion correction & AI-assisted Action Board triage
+
+One connected feature covering four things, added together so the schema stays consistent. See also the `users`, `parentOrganizations`, `businesses`, `actionBoardItems`, and `categoryOwnerMappings` schema changes in Section 2, and the deletion correction in Section 4.
+
+### 16.1 Team Members — a new account type
+
+`accountType: "team_member"` (see `users` in Section 2). Invited via the exact same invite-email mechanism already built for Admin staff (Section 3) — no new invite pattern. Two tiers, permission split enforced server-side:
+
+- **Full** — same as the primary account's dashboard access (Dashboard, Insights, Analytics, Raw Feedback, full Act layer, Alert Rules, CX Pulse, read-only Survey Settings) — **except** Billing (any kind) and Team Members management (inviting/removing others), which only the primary account can see or do.
+- **Limited** — only a narrow view of Action Board items assigned to them, with a status field and a note. No Analytics, no Raw Feedback, no visibility into other people's items, nothing else.
+
+`teamRole` (e.g. "Shift Lead") is free text, purely cosmetic — it has no effect on permissions.
+
+### 16.2 Two independent seat limits
+
+Both Admin-set, both read-only to the customer, with a "Request more" link to Messages (same visual pattern as other Admin-only-config callouts in the app):
+
+- **`branchSeatLimit`** on `parentOrganizations` — caps how many active businesses that org can have. `null` renders as "Unlimited," not a number. Enforce against the **currently-active** business count, not total-ever-created, so deactivating one branch frees a slot for a new one. Block lowering the limit below the current active count.
+- **`teamMemberSeatLimit`** on `businesses` and separately on `parentOrganizations` (a Group's own staff pool is independent from any branch's pool) — same active-count-based enforcement logic as `branchSeatLimit`, reused rather than reimplemented.
+
+Show usage plainly wherever relevant ("3 of 5 branches used," "2 of 5 team seats used").
+
+### 16.3 Deletion rule correction
+
+See Section 4's correction. Only `admin_staff` can delete a Business or Parent Org, enforced server-side; no delete UI exists outside Admin for any Business/Group account or Team Member at any tier.
+
+### 16.4 AI-assisted Action Board triage on alert firing
+
+When an Alert Rule fires (Section 9), automatically create an Action Board item — don't wait for a manual "Log action taken." Use Claude Haiku 4.5 to read the triggering response's open-text comment (if any) and generate: a real descriptive title (not "Low rating alert"), a severity level, and the best-matching category from the business's existing categories. The AI does not choose the owner — that comes from `categoryOwnerMappings` (Section 2), a simple human-configured category → default-owner mapping per business/org.
+
+Default behavior: create the item as a suggestion, notify the mapped owner with Accept/Reassign, don't silently assign. A per-business toggle, "Auto-assign without confirmation" (`categoryOwnerMappings.autoAssignWithoutConfirmation`, off by default), switches to silent auto-assignment once a business trusts the mapping. `actionBoardItems.source` (`manual` | `auto_suggested` | `auto_assigned` | `escalated`) makes this reportable later.
+
+This requires the Section 2 correction making `actionBoardItems.parentOrgId` nullable — a standalone business's own Alert Rule firing needs somewhere to put the auto-created item too, so a standalone business now gets its own single-business Action Board.
+
+### 16.5 CX Pulse portfolio addition
+
+Admin's CX Pulse portfolio view shows branch-seat usage next to CX Pulse level per account (e.g. "5 of 5 branches used · Level 4 · Improving") — this pairing is the actual expansion-ready signal for account managers, so surface it directly rather than making them cross-reference two pages.

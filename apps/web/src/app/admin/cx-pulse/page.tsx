@@ -15,7 +15,11 @@ interface Signal {
   name: string;
   level: number;
   signal: "at_risk" | "expansion_ready";
+  branchSeatLimit?: number | null;
+  activeBranchCount?: number;
 }
+
+const LEVEL_NAMES = ["Collecting", "Reacting", "Responding", "Improving", "Embedded"];
 
 const DIMENSION_LABELS: { key: keyof Weights; label: string }[] = [
   { key: "awareness", label: "Awareness" },
@@ -126,7 +130,14 @@ export default function CxPulseAdminPage() {
             <tr key={`${s.ownerType}-${s.ownerId}`}>
               <td>{s.name}</td>
               <td>{s.ownerType === "business" ? "Business" : "Parent Org"}</td>
-              <td>Level {s.level}</td>
+              <td>
+                {s.ownerType === "parentOrg" && (
+                  <>
+                    {s.activeBranchCount ?? 0} of {s.branchSeatLimit ?? "∞"} branches used ·{" "}
+                  </>
+                )}
+                Level {s.level} · {LEVEL_NAMES[s.level - 1] ?? ""}
+              </td>
               <td>
                 <span className={`pill ${s.signal === "at_risk" ? "pill-red" : "pill-green"}`}>
                   {s.signal === "at_risk" ? "At risk" : "Expansion ready"}

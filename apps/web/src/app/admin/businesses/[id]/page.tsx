@@ -30,6 +30,7 @@ interface FormState {
   contactPhone: string;
   questionTemplateId: string;
   maxFeedbackPoints: string;
+  teamMemberSeatLimit: string;
   demographicConfig: Record<string, string>;
 }
 
@@ -46,6 +47,7 @@ const EMPTY_FORM: FormState = {
   contactPhone: "",
   questionTemplateId: "",
   maxFeedbackPoints: "",
+  teamMemberSeatLimit: "",
   demographicConfig: { name: "off", email: "off", phone: "off", ageGroup: "off", gender: "off" },
 };
 
@@ -182,6 +184,7 @@ export default function BusinessDetailPage() {
           contactPhone: b.contactPhone ?? "",
           questionTemplateId: b.questionTemplateId ?? "",
           maxFeedbackPoints: b.maxFeedbackPoints != null ? String(b.maxFeedbackPoints) : "",
+          teamMemberSeatLimit: b.teamMemberSeatLimit != null ? String(b.teamMemberSeatLimit) : "",
           demographicConfig: b.demographicConfig ?? EMPTY_FORM.demographicConfig,
         });
       })
@@ -267,6 +270,7 @@ export default function BusinessDetailPage() {
       contactPhone: form.contactPhone,
       questionTemplateId: form.questionTemplateId || null,
       maxFeedbackPoints: form.maxFeedbackPoints ? Number(form.maxFeedbackPoints) : 1,
+      teamMemberSeatLimit: form.teamMemberSeatLimit.trim() ? Number(form.teamMemberSeatLimit) : null,
       demographicConfig: form.demographicConfig,
     };
 
@@ -542,6 +546,16 @@ export default function BusinessDetailPage() {
                 value={form.maxFeedbackPoints}
                 onChange={(e) => setForm((f) => ({ ...f, maxFeedbackPoints: e.target.value }))}
               />
+            </div>
+            <div className="field">
+              <label>Team seat limit</label>
+              <input
+                type="text"
+                placeholder="Unlimited"
+                value={form.teamMemberSeatLimit}
+                onChange={(e) => setForm((f) => ({ ...f, teamMemberSeatLimit: e.target.value }))}
+              />
+              <div className="field-hint">Blank = unlimited. Enforced against currently-active team members.</div>
             </div>
           </div>
           <div className="section-label">Respondent fields (Admin-only)</div>

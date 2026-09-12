@@ -13,6 +13,8 @@ export interface IParentOrganization {
   billingAddressSameAsAddress: boolean;
   defaultBillingMode: BillingMode; // default only for newly created businesses under this org
   accountManagerId: Types.ObjectId | null; // -> users._id (staff)
+  branchSeatLimit: number | null; // ADMIN-EDITABLE ONLY. null = unlimited. Enforced against active business count.
+  teamMemberSeatLimit: number | null; // ADMIN-EDITABLE ONLY. The Group's own staff pool, independent of any branch's.
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +29,8 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     billingAddressSameAsAddress: { type: Boolean, default: true },
     defaultBillingMode: { type: String, enum: BILLING_MODES, default: "branch_pays" },
     accountManagerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    branchSeatLimit: { type: Number, default: null },
+    teamMemberSeatLimit: { type: Number, default: null },
   },
   { timestamps: true }
 );

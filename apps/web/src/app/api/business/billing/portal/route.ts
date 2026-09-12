@@ -6,6 +6,7 @@ import { billingErrorResponse } from "@/lib/billingErrorResponse";
 export async function POST() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   if (session.business.billingAssignment === "group_pays") {
     return NextResponse.json(

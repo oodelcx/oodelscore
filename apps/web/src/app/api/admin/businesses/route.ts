@@ -3,6 +3,7 @@ import {
   connectToDatabase,
   Business,
   User,
+  ParentOrganization,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
   createInviteUser,
@@ -78,6 +79,23 @@ export async function POST(request: Request) {
   }
 
   await connectToDatabase();
+
+  // Spec Section 16: branchSeatLimit caps active businesses under an org,
+  // enforced against the currently-active count so deactivating a branch
+  // frees a slot — never against total-ever-created.
+  const parentOrgId = body.parentOrgId || null;
+  if (parentOrgId) {
+    const org = await ParentOrganization.findById(parentOrgId);
+    if (org?.branchSeatLimit !== null && org?.branchSeatLimit !== undefined) {
+      const activeCount = await Business.countDocuments({ parentOrgId, active: true });
+      if (activeCount >= org.branchSeatLimit) {
+        return NextResponse.json(
+          { status: "error", message: `Branch seat limit reached (${activeCount} of ${org.branchSeatLimit} used).` },
+          { status: 409 }
+        );
+      }
+    }
+  }
 
   // Account managers scoped to "assigned" can only create businesses
   // assigned to themselves.

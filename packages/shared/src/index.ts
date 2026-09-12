@@ -17,6 +17,7 @@ export * from "./scoring/periods";
 export * from "./scoring/network";
 export * from "./scoring/device";
 export * from "./alerts/evaluate";
+export * from "./ai/triage";
 export * from "./cxpulse/compute";
 export * from "./cxpulse/portfolio";
 export * from "./qr/generate";

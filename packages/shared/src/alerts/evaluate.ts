@@ -1,9 +1,14 @@
-import { Types } from "mongoose";
+import { Types, type HydratedDocument } from "mongoose";
 import { AlertRule, type IAlertRule } from "../models/AlertRule";
 import { AlertActivity } from "../models/AlertActivity";
-import { Business } from "../models/Business";
+import { Business, type IBusiness } from "../models/Business";
+import { Category } from "../models/Category";
+import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
+import { ActionBoardItem } from "../models/ActionBoardItem";
+import { User } from "../models/User";
 import { computeBusinessMetrics } from "../scoring/aggregate";
 import { sendTemplatedEmail } from "../email/resend";
+import { generateTriageSuggestion } from "../ai/triage";
 
 const METRIC_WINDOW_DAYS = 30;
 
@@ -24,7 +29,69 @@ function metricValue(metric: string, metrics: { starAverage: number | null; npsS
   return metrics.starAverage; // default metric is the star average
 }
 
-async function recordFiringAndNotify(rule: IAlertRule & { _id: Types.ObjectId }, businessId: Types.ObjectId, value: number) {
+/**
+ * Spec Section 16.4: AI-assisted Action Board triage. Creates the item
+ * automatically instead of waiting for a manual "Log action taken" — the AI
+ * only picks title/severity/category; the owner always comes from the
+ * human-configured categoryOwnerMappings, never from the AI.
+ */
+async function autoTriageAndCreateActionItem(
+  business: HydratedDocument<IBusiness>,
+  ruleDescription: string,
+  triggeringComment: string | null
+) {
+  const categories = await Category.find();
+  const suggestion = await generateTriageSuggestion({
+    comment: triggeringComment,
+    ruleDescription,
+    categories: categories.map((c) => ({ id: c._id.toString(), name: c.name })),
+  });
+
+  const scope = business.parentOrgId
+    ? { ownerScope: "parentOrg" as const, ownerScopeId: business.parentOrgId }
+    : { ownerScope: "business" as const, ownerScopeId: business._id };
+
+  const mapping = suggestion.categoryId
+    ? await CategoryOwnerMapping.findOne({ ...scope, categoryId: suggestion.categoryId })
+    : null;
+
+  const willAutoAssign = !!mapping?.autoAssignWithoutConfirmation;
+  const ownerId = willAutoAssign ? mapping!.defaultOwnerId : null;
+
+  const item = await ActionBoardItem.create({
+    parentOrgId: business.parentOrgId ?? null,
+    businessId: business._id,
+    title: suggestion.title,
+    description: triggeringComment ? `Respondent comment: "${triggeringComment}"` : "",
+    categoryId: suggestion.categoryId,
+    priority: suggestion.priority,
+    ownerId,
+    source: willAutoAssign ? "auto_assigned" : "auto_suggested",
+  });
+
+  // Notify the mapped owner either way — silently for auto-assign, with an
+  // Accept/Reassign prompt otherwise (the item stays unassigned until they
+  // act on it from the Action Board, which is the "confirmation" step).
+  const notifyUserId = mapping?.defaultOwnerId;
+  if (notifyUserId) {
+    const owner = await User.findById(notifyUserId);
+    if (owner) {
+      await sendTemplatedEmail("action_assigned", owner.email, {
+        name: owner.email,
+        action_title: item.title,
+        due_date: "no due date",
+        action_link: `${process.env.APP_URL ?? ""}/business`,
+      }).catch((err) => console.error("[alerts] failed to send action_assigned for AI triage", err));
+    }
+  }
+}
+
+async function recordFiringAndNotify(
+  rule: IAlertRule & { _id: Types.ObjectId },
+  businessId: Types.ObjectId,
+  value: number,
+  triggeringComment: string | null = null
+) {
   if (await isInCooldown(rule._id, businessId)) return;
 
   await AlertActivity.create({ alertRuleId: rule._id, businessId, triggeredAt: new Date(), snapshotValue: value });
@@ -32,23 +99,35 @@ async function recordFiringAndNotify(rule: IAlertRule & { _id: Types.ObjectId },
   const business = await Business.findById(businessId);
   const businessName = business?.name ?? "A business";
   const alertLink = `${process.env.APP_URL ?? ""}/business`;
+  const ruleDescription = `${rule.ruleType.replace(/_/g, " ")}: ${value}`;
 
   for (const recipient of rule.recipients) {
     await sendTemplatedEmail("alert_notification", recipient, {
       name: recipient,
       business_name: businessName,
-      alert_condition: `${rule.ruleType.replace(/_/g, " ")}: ${value}`,
+      alert_condition: ruleDescription,
       alert_link: alertLink,
     }).catch((err) => console.error("[alerts] failed to send alert_notification", err));
+  }
+
+  if (business) {
+    await autoTriageAndCreateActionItem(business, ruleDescription, triggeringComment).catch((err) =>
+      console.error("[alerts] AI-assisted triage failed", err)
+    );
   }
 }
 
 /**
  * Real-time check, run right after a new response is written: fixed_threshold
  * and nps_floor are single-data-point comparisons, so there's no need to
- * wait for the hourly sweep (spec Section 10a).
+ * wait for the hourly sweep (spec Section 10a). `triggeringComment` (the new
+ * response's open-text answer, if any) feeds AI-assisted triage — spec
+ * Section 16.4.
  */
-export async function evaluateRealTimeAlertsForBusiness(businessId: Types.ObjectId | string): Promise<void> {
+export async function evaluateRealTimeAlertsForBusiness(
+  businessId: Types.ObjectId | string,
+  triggeringComment: string | null = null
+): Promise<void> {
   const business = await Business.findById(businessId);
   if (!business) return;
 
@@ -75,7 +154,7 @@ export async function evaluateRealTimeAlertsForBusiness(businessId: Types.Object
     const value = rule.ruleType === "nps_floor" ? metrics.npsScore : metricValue(rule.metric, metrics);
     if (value === null || rule.threshold === null) continue;
     if (value < rule.threshold) {
-      await recordFiringAndNotify(rule, business._id, value);
+      await recordFiringAndNotify(rule, business._id, value, triggeringComment);
     }
   }
 }
@@ -84,7 +163,8 @@ export async function evaluateRealTimeAlertsForBusiness(businessId: Types.Object
  * Hourly sweep (spec Section 10a): regional_outlier and sudden_drop both
  * need a rolling baseline across more than one data point, so they can't be
  * evaluated inline on a single new response the way fixed_threshold/nps_floor
- * are above.
+ * are above. No single triggering response exists for these, so AI triage
+ * runs without a comment (title falls back to describing the rule).
  */
 export async function evaluateBaselineAlerts(): Promise<void> {
   const rules = await AlertRule.find({ active: true, ruleType: { $in: ["regional_outlier", "sudden_drop"] } });

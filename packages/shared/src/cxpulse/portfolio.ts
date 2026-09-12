@@ -11,6 +11,11 @@ export interface PortfolioSignal {
   name: string;
   level: CxPulseLevel;
   signal: "at_risk" | "expansion_ready";
+  // Spec Section 16.5: branch-seat usage is the actual expansion-ready
+  // signal for account managers, shown paired with the level rather than
+  // requiring a separate page. parentOrg owners only.
+  branchSeatLimit?: number | null;
+  activeBranchCount?: number;
 }
 
 /**
@@ -22,12 +27,23 @@ export interface PortfolioSignal {
 export async function findPortfolioSignals(): Promise<PortfolioSignal[]> {
   const [businesses, parentOrgs] = await Promise.all([
     Business.find({ active: true }).select("_id name"),
-    ParentOrganization.find().select("_id name"),
+    ParentOrganization.find().select("_id name branchSeatLimit"),
   ]);
 
-  const owners: { ownerType: BillingOwnerType; ownerId: string; name: string }[] = [
+  const activeBranchCounts = new Map<string, number>();
+  for (const org of parentOrgs) {
+    activeBranchCounts.set(org._id.toString(), await Business.countDocuments({ parentOrgId: org._id, active: true }));
+  }
+
+  const owners: { ownerType: BillingOwnerType; ownerId: string; name: string; branchSeatLimit?: number | null; activeBranchCount?: number }[] = [
     ...businesses.map((b) => ({ ownerType: "business" as const, ownerId: b._id.toString(), name: b.name })),
-    ...parentOrgs.map((o) => ({ ownerType: "parentOrg" as const, ownerId: o._id.toString(), name: o.name })),
+    ...parentOrgs.map((o) => ({
+      ownerType: "parentOrg" as const,
+      ownerId: o._id.toString(),
+      name: o.name,
+      branchSeatLimit: o.branchSeatLimit,
+      activeBranchCount: activeBranchCounts.get(o._id.toString()) ?? 0,
+    })),
   ];
 
   const signals: PortfolioSignal[] = [];

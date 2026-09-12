@@ -5,6 +5,7 @@ import { requireParentOrgOwner } from "@/lib/ownerAuth";
 export async function GET() {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
   const [subscription, invoices, groupPaysBranchCount] = await Promise.all([

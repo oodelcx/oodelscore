@@ -57,6 +57,32 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "Invalid defaultBillingMode" }, { status: 400 });
   }
 
+  // Spec Section 16: never let a seat limit drop below the currently-active
+  // count — that would strand active seats with no way to have been chosen.
+  if (body.branchSeatLimit !== undefined && body.branchSeatLimit !== null) {
+    const activeBranches = await Business.countDocuments({ parentOrgId: parentOrg._id, active: true });
+    if (body.branchSeatLimit < activeBranches) {
+      return NextResponse.json(
+        { status: "error", message: `Can't set branch seat limit below the ${activeBranches} currently-active branches.` },
+        { status: 400 }
+      );
+    }
+  }
+  if (body.teamMemberSeatLimit !== undefined && body.teamMemberSeatLimit !== null) {
+    const activeMembers = await User.countDocuments({
+      accountType: "team_member",
+      teamOfType: "parentOrg",
+      parentId: parentOrg._id,
+      inviteStatus: { $ne: "invite_expired" },
+    });
+    if (body.teamMemberSeatLimit < activeMembers) {
+      return NextResponse.json(
+        { status: "error", message: `Can't set team seat limit below the ${activeMembers} currently-active team members.` },
+        { status: 400 }
+      );
+    }
+  }
+
   const editableFields = [
     "name",
     "contactName",
@@ -66,6 +92,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "billingAddressSameAsAddress",
     "defaultBillingMode",
     "accountManagerId",
+    "branchSeatLimit",
+    "teamMemberSeatLimit",
   ] as const;
 
   for (const field of editableFields) {
