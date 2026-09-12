@@ -25,7 +25,9 @@ export interface IResponse {
   feedbackPointId: Types.ObjectId;
   businessId: Types.ObjectId;
   answers: IAnswer[];
+  respondentName: string | null; // null if not collected
   respondentEmail: string | null; // null if not collected
+  respondentPhone: string | null; // null if not collected
   demographics: IDemographics;
   submittedAt: Date;
   flagged: boolean; // Business/Group "Flag" action on Raw Feedback
@@ -56,7 +58,9 @@ const ResponseSchema = new Schema<IResponse>(
     feedbackPointId: { type: Schema.Types.ObjectId, ref: "FeedbackPoint", required: true },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
     answers: { type: [AnswerSchema], default: [] },
+    respondentName: { type: String, default: null },
     respondentEmail: { type: String, default: null },
+    respondentPhone: { type: String, default: null },
     demographics: { type: DemographicsSchema, default: () => ({}) },
     submittedAt: { type: Date, required: true, default: Date.now },
     flagged: { type: Boolean, default: false },

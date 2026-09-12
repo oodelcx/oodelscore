@@ -1,0 +1,351 @@
+/*
+ * Ported directly from oodel-score-feedback-form.html (minus the demo-only
+ * chrome — biz/layout switchers, phone-stage wrapper). Same design tokens
+ * as admin.css/business.css but this page stands alone (no sidebar app
+ * shell), so it's a separate small stylesheet.
+ */
+:root {
+  --ink: #17171a;
+  --bg: #f6f6f4;
+  --card: #ffffff;
+  --border: #e6e5e1;
+  --text-2: #68686a;
+  --text-3: #9a9a97;
+  --accent: #0f6e56;
+  --accent-bg: #e1f5ee;
+  --amber: #ef9f27;
+  --red: #e24b4a;
+}
+
+.ff-body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px 60px;
+}
+
+.ff-phone {
+  width: 420px;
+  max-width: 100%;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ff-header {
+  padding: 26px 24px 18px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.ff-biz-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.ff-group-tag {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+.ff-form-body {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+.ff-footer {
+  padding: 16px 24px 22px;
+  border-top: 1px solid var(--border);
+}
+.ff-powered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 14px;
+}
+.ff-powered b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+.ff-powered .dot {
+  color: var(--accent);
+}
+
+.ff-btn-submit {
+  width: 100%;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ff-btn-submit:hover {
+  background: var(--accent);
+}
+.ff-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.ff-btn-row {
+  display: flex;
+  gap: 10px;
+}
+.ff-btn-back {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.ff-q-block {
+  margin-bottom: 26px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+.ff-q-block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.ff-q-text {
+  font-size: 14.5px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+.ff-q-required {
+  color: var(--red);
+}
+.ff-q-optional-tag {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.ff-stars {
+  display: flex;
+  gap: 8px;
+  font-size: 26px;
+  color: var(--border);
+}
+.ff-stars span {
+  cursor: pointer;
+}
+.ff-stars span.filled {
+  color: var(--amber);
+}
+.ff-nps-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.ff-nps-row button {
+  all: unset;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: var(--text-2);
+}
+.ff-nps-row button.sel {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.ff-nps-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-3);
+  margin-top: 6px;
+}
+.ff-yn-row {
+  display: flex;
+  gap: 10px;
+}
+.ff-yn-row button {
+  all: unset;
+  flex: 1;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ff-yn-row button.sel {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.ff-emoji-row {
+  display: flex;
+  gap: 10px;
+  font-size: 28px;
+}
+.ff-emoji-row span {
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.ff-emoji-row span.sel {
+  opacity: 1;
+}
+.ff-choice-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ff-choice-row button {
+  all: unset;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ff-choice-row button.sel {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.ff-slider {
+  width: 100%;
+}
+.ff-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+.ff-open-text {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 13.5px;
+  font-family: inherit;
+  min-height: 72px;
+  resize: vertical;
+}
+.ff-field-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 13.5px;
+  font-family: inherit;
+}
+select.ff-field-input {
+  background: #fff;
+}
+.ff-demo-section-tag {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 30px 0 16px;
+}
+
+.ff-progress-track {
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 24px;
+}
+.ff-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.ff-step-count {
+  font-size: 11.5px;
+  color: var(--text-3);
+  text-align: center;
+  margin: 10px 0 0;
+}
+.ff-step-q {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-height: 360px;
+}
+.ff-step-q .ff-q-text {
+  font-size: 18px;
+  line-height: 1.35;
+  margin-bottom: 26px;
+}
+.ff-step-q .ff-stars {
+  font-size: 34px;
+  gap: 10px;
+}
+.ff-step-q .ff-nps-row button {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.ff-thankyou {
+  text-align: center;
+  padding: 60px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.ff-thankyou .ff-check {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+.ff-thankyou h2 {
+  font-size: 19px;
+  margin: 0 0 8px;
+}
+.ff-thankyou p {
+  font-size: 13.5px;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.ff-error {
+  color: var(--red);
+  font-size: 13px;
+  margin: 0 0 12px;
+}

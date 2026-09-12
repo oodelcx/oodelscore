@@ -8,6 +8,7 @@ import {
   Response,
   evaluateRealTimeAlertsForBusiness,
   type QuestionType,
+  type DemographicMode,
 } from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
@@ -45,7 +46,9 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const body = await request.json().catch(() => null);
   const answers: SubmittedAnswer[] = Array.isArray(body?.answers) ? body.answers : [];
+  const respondentName = typeof body?.respondentName === "string" ? body.respondentName.trim() || null : null;
   const respondentEmail = typeof body?.respondentEmail === "string" ? body.respondentEmail.trim() || null : null;
+  const respondentPhone = typeof body?.respondentPhone === "string" ? body.respondentPhone.trim() || null : null;
   const ageGroup = typeof body?.ageGroup === "string" ? body.ageGroup : "";
   const gender = typeof body?.gender === "string" ? body.gender : "";
 
@@ -59,8 +62,17 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const demographicConfig = feedbackPoint.demographicOverride ?? business.demographicConfig;
-  if (demographicConfig.email === "mandatory" && !respondentEmail) {
-    return NextResponse.json({ status: "error", message: "Email is required" }, { status: 400 });
+  const demographicChecks: [string, DemographicMode, unknown][] = [
+    ["Name", demographicConfig.name, respondentName],
+    ["Email", demographicConfig.email, respondentEmail],
+    ["Phone number", demographicConfig.phone, respondentPhone],
+    ["Age group", demographicConfig.ageGroup, ageGroup || null],
+    ["Gender", demographicConfig.gender, gender || null],
+  ];
+  for (const [label, mode, value] of demographicChecks) {
+    if (mode === "mandatory" && !value) {
+      return NextResponse.json({ status: "error", message: `${label} is required` }, { status: 400 });
+    }
   }
 
   const responseAnswers = template.questions.map((question, index) => {
@@ -79,7 +91,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     feedbackPointId: feedbackPoint._id,
     businessId: business._id,
     answers: responseAnswers,
+    respondentName,
     respondentEmail,
+    respondentPhone,
     demographics: { ageGroup, gender },
     submittedAt: new Date(),
   });
