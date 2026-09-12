@@ -13,6 +13,50 @@ async function usageStats(categoryId: string) {
   return { questionCount, templateCount: templates.length };
 }
 
+export async function GET(_request: Request, { params }: RouteParams) {
+  const session = await requireStaffSession();
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!session.role.permissions.questionTemplates.view) {
+    return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  await connectToDatabase();
+  const category = await Category.findById(id);
+  if (!category) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+
+  const usage = await usageStats(id);
+  return NextResponse.json({ status: "ok", category, usage });
+}
+
+export async function PATCH(request: Request, { params }: RouteParams) {
+  const session = await requireStaffSession();
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!session.role.permissions.questionTemplates.edit) {
+    return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body.name !== "string" || !body.name.trim()) {
+    return NextResponse.json({ status: "error", message: "name is required" }, { status: 400 });
+  }
+
+  await connectToDatabase();
+  const category = await Category.findById(id);
+  if (!category) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+
+  const name = body.name.trim();
+  const duplicate = await Category.findOne({ name, _id: { $ne: id } });
+  if (duplicate) {
+    return NextResponse.json({ status: "error", message: "A category with this name already exists" }, { status: 409 });
+  }
+
+  category.name = name;
+  await category.save();
+  return NextResponse.json({ status: "ok", category });
+}
+
 /**
  * Deleting is never a blind "are you sure?" — mirrors the mockup's rule
  * ("used in N questions across M templates"). Without ?force=true, a
