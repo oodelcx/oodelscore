@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, markOwnerComp, BillingError, Business } from "@oodelscore/shared";
+import { connectToDatabase, markOwnerComp, Business } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+import { billingErrorResponse } from "@/lib/billingErrorResponse";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -19,9 +20,6 @@ export async function POST(_request: Request, { params }: RouteParams) {
     await Business.findByIdAndUpdate(id, { plan: "comp" });
     return NextResponse.json({ status: "ok", subscription });
   } catch (err) {
-    if (err instanceof BillingError) {
-      return NextResponse.json({ status: "error", message: err.message }, { status: 400 });
-    }
-    throw err;
+    return billingErrorResponse(err);
   }
 }
