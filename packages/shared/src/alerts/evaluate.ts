@@ -7,12 +7,26 @@ import { sendTemplatedEmail } from "../email/resend";
 
 const METRIC_WINDOW_DAYS = 30;
 
+// A rule evaluates a rolling average, not a single new data point — without
+// a cooldown, every subsequent submission while that average stays under
+// threshold re-fires and re-emails every recipient again. One notification
+// per rule per business per cooldown window is enough to act on.
+const ALERT_COOLDOWN_MINUTES = 60;
+
+async function isInCooldown(ruleId: Types.ObjectId, businessId: Types.ObjectId): Promise<boolean> {
+  const cutoff = new Date(Date.now() - ALERT_COOLDOWN_MINUTES * 60 * 1000);
+  const recent = await AlertActivity.findOne({ alertRuleId: ruleId, businessId, triggeredAt: { $gte: cutoff } });
+  return !!recent;
+}
+
 function metricValue(metric: string, metrics: { starAverage: number | null; npsScore: number | null }): number | null {
   if (metric === "nps") return metrics.npsScore;
   return metrics.starAverage; // default metric is the star average
 }
 
 async function recordFiringAndNotify(rule: IAlertRule & { _id: Types.ObjectId }, businessId: Types.ObjectId, value: number) {
+  if (await isInCooldown(rule._id, businessId)) return;
+
   await AlertActivity.create({ alertRuleId: rule._id, businessId, triggeredAt: new Date(), snapshotValue: value });
 
   const business = await Business.findById(businessId);

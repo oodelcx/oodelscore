@@ -8,7 +8,11 @@ interface AnalyticsData {
   categoryBreakdown: { name: string; average: number }[];
   commentTags: { word: string; count: number; negative: boolean }[];
   demographics: { ageGroups: { label: string; count: number }[]; genders: { label: string; count: number }[] };
+  scanPatterns: { deviceBreakdown: { label: string; count: number }[]; dayHourCounts: number[][] };
 }
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DEVICE_LABELS: Record<string, string> = { mobile: "📱 Mobile", tablet: "📲 Tablet", desktop: "🖥 Desktop", unknown: "❓ Unknown" };
 
 const CATEGORY_COLORS = ["#639922", "#7F77DD", "#EF9F27", "#E24B4A", "#5DCAA5", "#185FA5"];
 
@@ -175,6 +179,61 @@ export default function AnalyticsPage() {
           </table>
         </div>
       </div>
+
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <div className="card">
+          <h3>When feedback is submitted</h3>
+          <p className="card-sub">Day of week × hour — darker means more responses.</p>
+          <ScanHeatmap dayHourCounts={data.scanPatterns.dayHourCounts} />
+        </div>
+        <div className="card">
+          <h3>Devices used</h3>
+          <p className="card-sub">What respondents are scanning with.</p>
+          <div className="bars">
+            {data.scanPatterns.deviceBreakdown.map((d) => {
+              const total = data.scanPatterns.deviceBreakdown.reduce((sum, x) => sum + x.count, 0);
+              return (
+                <div className="bar-row" key={d.label}>
+                  <div className="bar-label">{DEVICE_LABELS[d.label] ?? d.label}</div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ width: `${total ? (d.count / total) * 100 : 0}%`, background: "#185FA5" }} />
+                  </div>
+                  <div className="bar-val">{d.count}</div>
+                </div>
+              );
+            })}
+            {data.scanPatterns.deviceBreakdown.length === 0 && <p className="subtitle">No responses yet.</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScanHeatmap({ dayHourCounts }: { dayHourCounts: number[][] }) {
+  const max = Math.max(1, ...dayHourCounts.flat());
+  return (
+    <div className="heatmap">
+      <div className="heatmap-hours">
+        {[0, 6, 12, 18].map((h) => (
+          <span key={h}>{h}:00</span>
+        ))}
+      </div>
+      {dayHourCounts.map((hours, day) => (
+        <div className="heatmap-row" key={day}>
+          <div className="heatmap-day">{DAY_LABELS[day]}</div>
+          <div className="heatmap-cells">
+            {hours.map((count, hour) => (
+              <div
+                key={hour}
+                className="heatmap-cell"
+                title={`${DAY_LABELS[day]} ${hour}:00 — ${count} response${count === 1 ? "" : "s"}`}
+                style={{ background: count === 0 ? "var(--border)" : `rgba(15, 110, 86, ${0.15 + (count / max) * 0.85})` }}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

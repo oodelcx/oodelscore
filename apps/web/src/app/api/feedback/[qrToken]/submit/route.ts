@@ -6,7 +6,9 @@ import {
   Business,
   QuestionTemplate,
   Response,
+  ScanToken,
   evaluateRealTimeAlertsForBusiness,
+  classifyDevice,
   type QuestionType,
   type DemographicMode,
 } from "@oodelscore/shared";
@@ -45,6 +47,21 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const body = await request.json().catch(() => null);
+
+  const scanToken = typeof body?.scanToken === "string" ? body.scanToken : "";
+  const consumedToken = scanToken
+    ? await ScanToken.findOneAndUpdate(
+        { token: scanToken, feedbackPointId: feedbackPoint._id, usedAt: null },
+        { $set: { usedAt: new Date() } }
+      )
+    : null;
+  if (!consumedToken) {
+    return NextResponse.json(
+      { status: "error", message: "This feedback session has already been submitted or expired — please rescan the QR code." },
+      { status: 409 }
+    );
+  }
+
   const answers: SubmittedAnswer[] = Array.isArray(body?.answers) ? body.answers : [];
   const respondentName = typeof body?.respondentName === "string" ? body.respondentName.trim() || null : null;
   const respondentEmail = typeof body?.respondentEmail === "string" ? body.respondentEmail.trim() || null : null;
@@ -96,6 +113,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     respondentPhone,
     demographics: { ageGroup, gender },
     submittedAt: new Date(),
+    deviceType: classifyDevice(request.headers.get("user-agent")),
   });
 
   await evaluateRealTimeAlertsForBusiness(business._id).catch((err) =>
