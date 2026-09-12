@@ -10,3 +10,5 @@ export * from "./seedData/demoAccounts";
 export * from "./seedData/platformDefaults";
 export * from "./stripe/client";
 export * from "./stripe/billing";
+export * from "./scoring/aggregate";
+export * from "./alerts/evaluate";

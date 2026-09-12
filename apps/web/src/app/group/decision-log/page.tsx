@@ -1,0 +1,115 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface EntryRow {
+  _id: string;
+  title: string;
+  trigger: string;
+  status: string;
+  outcomeBefore: number | null;
+  outcomeAfter: number | null;
+}
+
+export default function DecisionLogPage() {
+  const [entries, setEntries] = useState<EntryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [trigger, setTrigger] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  function load() {
+    setLoading(true);
+    fetch("/api/group/decision-log")
+      .then((res) => res.json())
+      .then((data) => setEntries(data.entries ?? []))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function createEntry() {
+    if (!title.trim()) return;
+    setCreating(true);
+    setError(null);
+    const res = await fetch("/api/group/decision-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, trigger }),
+    });
+    const data = await res.json();
+    setCreating(false);
+    if (!res.ok) {
+      setError(data.message);
+      return;
+    }
+    setTitle("");
+    setTrigger("");
+    load();
+  }
+
+  return (
+    <div>
+      <div className="page-head">
+        <div>
+          <h1>Decision Log</h1>
+          <p className="subtitle">Track changes that affect multiple businesses, and measure the outcome.</p>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>New entry</h3>
+        <div className="field-row">
+          <div className="field">
+            <label>Title</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Trigger</label>
+            <input value={trigger} onChange={(e) => setTrigger(e.target.value)} />
+          </div>
+        </div>
+        {error && <p className="error-text">{error}</p>}
+        <button className="btn btn-dark" disabled={creating} onClick={createEntry}>
+          {creating ? "Creating…" : "+ Log decision"}
+        </button>
+      </div>
+
+      {loading && <p className="subtitle">Loading…</p>}
+      {!loading && (
+        <table className="clean">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Trigger</th>
+              <th>Status</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((e) => (
+              <tr key={e._id}>
+                <td>{e.title}</td>
+                <td>{e.trigger || "—"}</td>
+                <td>
+                  <span className="pill pill-blue">{e.status}</span>
+                </td>
+                <td>{e.outcomeBefore !== null && e.outcomeAfter !== null ? `${e.outcomeBefore} → ${e.outcomeAfter}` : "not measured yet"}</td>
+              </tr>
+            ))}
+            {entries.length === 0 && (
+              <tr>
+                <td colSpan={4} className="subtitle">
+                  No decisions logged yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}

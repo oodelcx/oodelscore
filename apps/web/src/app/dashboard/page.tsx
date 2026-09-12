@@ -21,10 +21,11 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  // Admin has a real portal now (Milestone 3) — send admin_staff straight
-  // there instead of the placeholder below. Group/Business accounts still
-  // land here since their portals don't exist yet.
+  // Admin, Business, and Group each have a real portal now — route
+  // straight there instead of showing the placeholder below.
   if (user.accountType === "admin_staff") redirect("/admin/accounts");
+  if (user.accountType === "business") redirect("/business");
+  if (user.accountType === "parent_org") redirect("/group");
 
   const parentName = await resolveParentName(user.accountType, user.parentId);
 
