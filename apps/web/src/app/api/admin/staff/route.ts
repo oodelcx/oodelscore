@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, User } from "@oodelscore/shared";
+import { connectToDatabase, User, expireStaleInvites } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 export async function GET() {
@@ -11,6 +11,7 @@ export async function GET() {
   }
 
   await connectToDatabase();
+  await expireStaleInvites();
   const staff = await User.find({ accountType: "admin_staff" })
     .select("-passwordHash -inviteTokenHash")
     .populate("roleId", "name")
