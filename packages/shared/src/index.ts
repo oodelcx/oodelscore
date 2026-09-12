@@ -13,3 +13,5 @@ export * from "./stripe/client";
 export * from "./stripe/billing";
 export * from "./scoring/aggregate";
 export * from "./alerts/evaluate";
+export * from "./cxpulse/compute";
+export * from "./cxpulse/portfolio";
