@@ -13,6 +13,7 @@ export * from "./stripe/client";
 export * from "./stripe/billing";
 export * from "./scoring/aggregate";
 export * from "./scoring/periods";
+export * from "./scoring/network";
 export * from "./alerts/evaluate";
 export * from "./cxpulse/compute";
 export * from "./cxpulse/portfolio";
