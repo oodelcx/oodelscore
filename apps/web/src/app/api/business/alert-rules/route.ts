@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AlertRule, ALERT_RULE_TYPES, ALERT_DELIVERY_MODES } from "@oodelscore/shared";
+import { connectToDatabase, AlertRule, AlertActivity, ALERT_RULE_TYPES, ALERT_DELIVERY_MODES } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
@@ -13,6 +13,13 @@ export async function GET() {
   await connectToDatabase();
 
   const own = await AlertRule.find({ scope: "business", ownerId: session.business._id }).sort({ createdAt: 1 });
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const activityByRuleId = new Map<string, { count: number; lastFiredAt: Date }>();
+  for (const rule of own) {
+    const activity = await AlertActivity.find({ alertRuleId: rule._id, triggeredAt: { $gte: thirtyDaysAgo } }).sort({ triggeredAt: -1 });
+    if (activity.length > 0) activityByRuleId.set(rule._id.toString(), { count: activity.length, lastFiredAt: activity[0].triggeredAt });
+  }
+  const ownWithActivity = own.map((rule) => ({ ...rule.toObject(), activity: activityByRuleId.get(rule._id.toString()) ?? null }));
 
   let inherited: unknown[] = [];
   if (session.business.parentOrgId) {
@@ -24,7 +31,7 @@ export async function GET() {
     });
   }
 
-  return NextResponse.json({ status: "ok", ownRules: own, inheritedRules: inherited });
+  return NextResponse.json({ status: "ok", ownRules: ownWithActivity, inheritedRules: inherited });
 }
 
 export async function POST(request: Request) {

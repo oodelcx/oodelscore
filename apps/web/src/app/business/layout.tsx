@@ -1,12 +1,22 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
+import { connectToDatabase, Business, ParentOrganization } from "@oodelscore/shared";
+import LogoutLink from "./logout-link";
 import "../admin/admin.css";
+import "./business.css";
 
 export default async function BusinessLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.accountType !== "business") redirect("/dashboard");
+
+  await connectToDatabase();
+  const business = await Business.findById(user.parentId);
+  if (!business) redirect("/login");
+
+  const parentOrg = business.parentOrgId ? await ParentOrganization.findById(business.parentOrgId) : null;
+  const isBranch = !!parentOrg;
 
   return (
     <div className="admin-app">
@@ -14,17 +24,38 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         <div>
           <div className="admin-sidebar-top">
             <div className="admin-brand">Oodel Score</div>
-            <div className="admin-brand-sub">BUSINESS</div>
+            <div className="admin-brand-sub">BUSINESS PORTAL</div>
           </div>
           <nav className="admin-nav">
-            <a href="/business">Overview</a>
-            <a href="/business/feedback-points">Feedback Points</a>
-            <a href="/business/responses">Raw Feedback</a>
-            <a href="/business/alert-rules">Alert Rules</a>
+            <a href="/business">Dashboard</a>
+            {isBranch ? (
+              <>
+                <a href="/business/cx-pulse">CX Pulse</a>
+                <a href="/business/alert-rules">Alert Rules</a>
+                <a href="/business/messages">Messages</a>
+                <a href="/business/billing">Billing</a>
+              </>
+            ) : (
+              <>
+                <a href="/business/feedback-points">Feedback Points</a>
+                <a href="/business/survey-settings">Survey Settings</a>
+                <a href="/business/insights">Insights</a>
+                <a href="/business/analytics">Analytics</a>
+                <a href="/business/responses">Raw Feedback</a>
+                <a href="/business/alert-rules">Alert Rules</a>
+                <a href="/business/messages">Messages</a>
+                <a href="/business/billing">Billing</a>
+              </>
+            )}
           </nav>
         </div>
         <div className="admin-sidebar-bottom">
-          <div>{user.email}</div>
+          <div style={{ color: "#fff", fontWeight: 500 }}>{business.name}</div>
+          {isBranch && (
+            <div style={{ fontSize: 11.5, color: "#8b9096", marginTop: 3 }}>🏢 Part of {parentOrg!.name}</div>
+          )}
+          <div style={{ color: "#787d82", fontSize: 12, marginTop: 6 }}>{user.email}</div>
+          <LogoutLink />
         </div>
       </aside>
       <main className="admin-main">{children}</main>

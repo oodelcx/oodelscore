@@ -10,7 +10,11 @@ interface RuleRow {
   recipients: string[];
   active: boolean;
   isInherited?: boolean;
+  activity: { count: number; lastFiredAt: string } | null;
 }
+
+const RULE_TYPE_LABELS: Record<string, string> = { fixed_threshold: "Low rating alert", nps_floor: "Detractor alert" };
+const METRIC_LABELS: Record<string, string> = { star_average: "Star rating", nps: "NPS score" };
 
 export default function BusinessAlertRulesPage() {
   const [ownRules, setOwnRules] = useState<RuleRow[]>([]);
@@ -124,23 +128,29 @@ export default function BusinessAlertRulesPage() {
           <table className="clean">
             <thead>
               <tr>
-                <th>Type</th>
-                <th>Metric</th>
-                <th>Threshold</th>
-                <th>Recipients</th>
-                <th>Status</th>
+                <th>Rule</th>
+                <th>Condition</th>
+                <th>Channel</th>
+                <th>Activity</th>
+                <th>Active</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {ownRules.map((r) => (
                 <tr key={r._id}>
-                  <td>{r.ruleType}</td>
-                  <td>{r.metric}</td>
-                  <td>{r.threshold ?? "—"}</td>
-                  <td>{r.recipients.join(", ") || "—"}</td>
+                  <td>{RULE_TYPE_LABELS[r.ruleType] ?? r.ruleType}</td>
                   <td>
-                    <span className={`pill ${r.active ? "pill-green" : "pill-gray"}`}>{r.active ? "Active" : "Paused"}</span>
+                    {METRIC_LABELS[r.metric] ?? r.metric} {r.ruleType === "nps_floor" ? "below" : "below"} {r.threshold ?? "—"}
+                  </td>
+                  <td>Email · {r.recipients.join(", ") || "—"}</td>
+                  <td>
+                    {r.activity
+                      ? `Fired ${r.activity.count} time${r.activity.count === 1 ? "" : "s"} in last 30 days · last: ${new Date(r.activity.lastFiredAt).toLocaleDateString()}`
+                      : "Not fired in last 30 days"}
+                  </td>
+                  <td>
+                    <span className={`pill ${r.active ? "pill-green" : "pill-gray"}`}>{r.active ? "On" : "Off"}</span>
                   </td>
                   <td style={{ textAlign: "right" }}>
                     <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleActive(r)}>
