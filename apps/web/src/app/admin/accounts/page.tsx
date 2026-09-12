@@ -82,6 +82,28 @@ export default function AccountsPage() {
     if (res.ok) setStaff((s) => s.filter((row) => row._id !== id));
   }
 
+  async function removeBusiness(id: string, name: string) {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    const res = await fetch(`/api/admin/businesses/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setBusinesses((rows) => rows.filter((row) => row._id !== id));
+    } else {
+      const data = await res.json().catch(() => null);
+      setError(data?.message ?? "Failed to delete business");
+    }
+  }
+
+  async function removeParentOrg(id: string, name: string) {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    const res = await fetch(`/api/admin/parent-orgs/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setParentOrgs((rows) => rows.filter((row) => row._id !== id));
+    } else {
+      const data = await res.json().catch(() => null);
+      setError(data?.message ?? "Failed to delete organization");
+    }
+  }
+
   const [resendingId, setResendingId] = useState<string | null>(null);
 
   async function resendInvite(id: string) {
@@ -215,10 +237,13 @@ export default function AccountsPage() {
                   <span className={`pill ${b.active ? "pill-green" : "pill-gray"}`}>{b.active ? "Active" : "Inactive"}</span>
                 </td>
                 <td>{loginStatusCell(b.ownerUserId, b.ownerInviteStatus)}</td>
-                <td>
-                  <Link className="btn btn-sm" href={`/admin/businesses/${b._id}`}>
+                <td style={{ textAlign: "right" }}>
+                  <Link className="btn btn-sm" style={{ marginRight: 8 }} href={`/admin/businesses/${b._id}`}>
                     Manage →
                   </Link>
+                  <button className="icon-btn btn-danger" onClick={() => removeBusiness(b._id, b.name)}>
+                    🗑
+                  </button>
                 </td>
               </tr>
             ))}
@@ -247,10 +272,13 @@ export default function AccountsPage() {
               <tr key={o._id}>
                 <td>{o.name}</td>
                 <td>{loginStatusCell(o.ownerUserId, o.ownerInviteStatus)}</td>
-                <td>
-                  <Link className="btn btn-sm" href={`/admin/parent-orgs/${o._id}`}>
+                <td style={{ textAlign: "right" }}>
+                  <Link className="btn btn-sm" style={{ marginRight: 8 }} href={`/admin/parent-orgs/${o._id}`}>
                     Manage →
                   </Link>
+                  <button className="icon-btn btn-danger" onClick={() => removeParentOrg(o._id, o.name)}>
+                    🗑
+                  </button>
                 </td>
               </tr>
             ))}

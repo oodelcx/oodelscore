@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ParentOrganization, Business, BILLING_MODES, canAccessScopedResource } from "@oodelscore/shared";
+import { connectToDatabase, ParentOrganization, Business, User, BILLING_MODES, canAccessScopedResource } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const BILLING_MODE_SET: readonly string[] = BILLING_MODES;
@@ -102,6 +102,8 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
   const parentOrg = await ParentOrganization.findByIdAndDelete(id);
   if (!parentOrg) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+
+  await User.deleteOne({ accountType: "parent_org", parentId: id });
 
   return NextResponse.json({ status: "ok" });
 }

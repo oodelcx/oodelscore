@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   connectToDatabase,
   Business,
+  User,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
   assertStaffCanEditBusinessAdminFields,
@@ -118,6 +119,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   await connectToDatabase();
   const business = await Business.findByIdAndDelete(id);
   if (!business) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+
+  // Never leave an orphaned login behind — spec Section 13's orphaned-record
+  // bug class applies here just as much as it did to billing subscriptions.
+  await User.deleteOne({ accountType: "business", parentId: id });
 
   return NextResponse.json({ status: "ok" });
 }
