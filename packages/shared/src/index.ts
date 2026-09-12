@@ -9,6 +9,7 @@ export * from "./auth/permissions";
 export * from "./email/resend";
 export * from "./seedData/demoAccounts";
 export * from "./seedData/platformDefaults";
+export * from "./seedData/siteContent";
 export * from "./stripe/client";
 export * from "./stripe/billing";
 export * from "./scoring/aggregate";
