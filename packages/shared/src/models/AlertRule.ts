@@ -12,6 +12,7 @@ export type AlertDeliveryMode = (typeof ALERT_DELIVERY_MODES)[number];
 export interface IAlertRule {
   scope: AlertScope;
   ownerId: Types.ObjectId; // business or parentOrg that owns this rule
+  region: string; // only meaningful when scope is "parentOrg_region" — matches businesses.region
   ruleType: AlertRuleType;
   metric: string;
   threshold: number | null; // for fixed_threshold / nps_floor
@@ -30,6 +31,7 @@ const AlertRuleSchema = new Schema<IAlertRule>(
   {
     scope: { type: String, enum: ALERT_SCOPES, required: true },
     ownerId: { type: Schema.Types.ObjectId, required: true },
+    region: { type: String, default: "" },
     ruleType: { type: String, enum: ALERT_RULE_TYPES, required: true },
     metric: { type: String, default: "" },
     threshold: { type: Number, default: null },
