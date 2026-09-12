@@ -6,6 +6,7 @@ import Link from "next/link";
 import "../admin/admin.css";
 import "../auth.css";
 import { AuthShell } from "@/components/auth-shell";
+import { PasswordField } from "@/components/password-field";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function LoginPage() {
         </div>
         <div className="field">
           <label>Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
         {error && <p className="error-text">{error}</p>}
         <button type="submit" className="btn btn-dark" disabled={loading}>

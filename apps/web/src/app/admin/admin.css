@@ -74,6 +74,10 @@
   align-items: center;
   gap: 9px;
   width: 100%;
+  /* Without this, `width: 100%` + `padding` under the browser's default
+     content-box model makes each link ~24px wider than its container,
+     spilling its background/text past the sidebar's right edge. */
+  box-sizing: border-box;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13.5px;
@@ -81,6 +85,9 @@
   color: var(--sidebar-text);
   margin-bottom: 1px;
   text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .admin-nav a:hover {
   background: var(--sidebar-hover);
