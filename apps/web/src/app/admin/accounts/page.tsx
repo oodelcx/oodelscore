@@ -87,6 +87,48 @@ export default function AccountsPage() {
     }
   }
 
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRoleId, setInviteRoleId] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  function openInviteModal() {
+    setInviteName("");
+    setInviteEmail("");
+    setInviteRoleId(roles[0]?._id ?? "");
+    setInviteError(null);
+    setShowInviteModal(true);
+  }
+
+  async function submitInvite() {
+    setInviting(true);
+    setInviteError(null);
+    const res = await fetch("/api/admin/users/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: inviteEmail, name: inviteName, accountType: "admin_staff", roleId: inviteRoleId }),
+    });
+    const data = await res.json().catch(() => null);
+    setInviting(false);
+    if (!res.ok) {
+      setInviteError(data?.message ?? "Failed to send invite");
+      return;
+    }
+    setShowInviteModal(false);
+    const role = roles.find((r) => r._id === inviteRoleId) ?? null;
+    setStaff((s) => [
+      ...s,
+      {
+        _id: data.userId,
+        email: inviteEmail,
+        roleId: role ? { _id: role._id, name: role.name } : null,
+        inviteStatus: "invite_pending",
+      },
+    ]);
+  }
+
   const cta =
     tab === "businesses" ? (
       <Link className="btn btn-dark" href="/admin/businesses/new">
@@ -96,6 +138,10 @@ export default function AccountsPage() {
       <Link className="btn btn-dark" href="/admin/parent-orgs/new">
         + New Parent Organization
       </Link>
+    ) : tab === "staff" ? (
+      <button className="btn btn-dark" onClick={openInviteModal}>
+        + Invite Staff
+      </button>
     ) : null;
 
   return (
@@ -279,6 +325,48 @@ export default function AccountsPage() {
               </table>
             </div>
           ))}
+        </div>
+      )}
+
+      {showInviteModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowInviteModal(false)}>
+          <div className="modal-box">
+            <div className="modal-head">
+              <h2>Invite staff</h2>
+              <button className="modal-close" onClick={() => setShowInviteModal(false)}>
+                ×
+              </button>
+            </div>
+            <div className="field-row">
+              <div className="field">
+                <label>Name</label>
+                <input type="text" value={inviteName} onChange={(e) => setInviteName(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Email</label>
+                <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+              </div>
+            </div>
+            <div className="field">
+              <label>Role</label>
+              <select value={inviteRoleId} onChange={(e) => setInviteRoleId(e.target.value)}>
+                {roles.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {inviteError && <p className="error-text">{inviteError}</p>}
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowInviteModal(false)}>
+                Cancel
+              </button>
+              <button className="btn btn-dark" disabled={inviting || !inviteEmail || !inviteRoleId} onClick={submitInvite}>
+                {inviting ? "Sending…" : "Send invite"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
