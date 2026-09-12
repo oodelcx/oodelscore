@@ -5,6 +5,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
   const [subscription, invoices, feedbackPointCount, responseCount] = await Promise.all([

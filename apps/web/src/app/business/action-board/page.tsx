@@ -6,12 +6,16 @@ interface ItemRow {
   _id: string;
   title: string;
   description: string;
-  businessId: string;
   ownerId: string | null;
   priority: string;
   status: string;
   dueDate: string | null;
+  resolutionNote: string;
   source: string;
+}
+interface TeamRow {
+  userId: string;
+  label: string;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -20,57 +24,41 @@ const SOURCE_LABELS: Record<string, string> = {
   auto_assigned: "AI auto-assigned",
   escalated: "Escalated",
 };
-interface BusinessRow {
-  _id: string;
-  name: string;
-}
-interface TeamRow {
-  userId: string;
-  label: string;
-}
 
-export default function ActionBoardPage() {
+export default function BusinessActionBoardPage() {
   const [items, setItems] = useState<ItemRow[]>([]);
-  const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [team, setTeam] = useState<TeamRow[]>([]);
+  const [tier, setTier] = useState<"full" | "limited" | null>(null);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
-  const [businessId, setBusinessId] = useState("");
   const [priority, setPriority] = useState("medium");
   const [ownerId, setOwnerId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [tier, setTier] = useState<"full" | "limited" | null>(null);
 
   function load() {
     setLoading(true);
-    Promise.all([
-      fetch("/api/group/action-board").then((r) => r.json()),
-      fetch("/api/group/businesses").then((r) => r.json()),
-      fetch("/api/group/team").then((r) => r.json()),
-    ]).then(([itemsData, businessesData, teamData]) => {
-      setItems(itemsData.items ?? []);
-      setTier(itemsData.tier ?? null);
-      setBusinesses(businessesData.businesses ?? []);
-      setTeam(teamData.team ?? []);
-      setBusinessId((current) => current || businessesData.businesses?.[0]?._id || "");
-      setLoading(false);
-    });
+    Promise.all([fetch("/api/business/action-board").then((r) => r.json()), fetch("/api/business/team").then((r) => r.json())]).then(
+      ([itemsData, teamData]) => {
+        setItems(itemsData.items ?? []);
+        setTier(itemsData.tier ?? null);
+        setTeam(teamData.team ?? []);
+        setLoading(false);
+      }
+    );
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(load, []);
 
   async function createItem() {
-    if (!title.trim() || !businessId) return;
+    if (!title.trim()) return;
     setCreating(true);
     setError(null);
-    const res = await fetch("/api/group/action-board", {
+    const res = await fetch("/api/business/action-board", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, businessId, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
+      body: JSON.stringify({ title, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
     });
     const data = await res.json();
     setCreating(false);
@@ -85,16 +73,12 @@ export default function ActionBoardPage() {
   }
 
   async function updateItem(id: string, patch: Record<string, unknown>) {
-    await fetch(`/api/group/action-board/${id}`, {
+    await fetch(`/api/business/action-board/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
     load();
-  }
-
-  function businessName(id: string) {
-    return businesses.find((b) => b._id === id)?.name ?? "—";
   }
 
   const isLimited = tier === "limited";
@@ -107,61 +91,49 @@ export default function ActionBoardPage() {
           <p className="subtitle">
             {isLimited
               ? "Items assigned to you — update their status as you work through them."
-              : "Work items spawned from flagged feedback across your businesses, including AI-suggested ones from Alert Rules."}
+              : "Work items spawned from flagged feedback, including AI-suggested ones from Alert Rules."}
           </p>
         </div>
       </div>
 
       {!isLimited && (
-      <div className="card">
-        <h3>New action item</h3>
-        <div className="field-row">
-          <div className="field">
-            <label>Title</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} />
+        <div className="card">
+          <h3>New action item</h3>
+          <div className="field-row">
+            <div className="field">
+              <label>Title</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Priority</label>
+              <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Owner (optional)</label>
+              <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+                <option value="">Unassigned</option>
+                {team.map((t) => (
+                  <option key={t.userId} value={t.userId}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Due date (optional)</label>
+              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
           </div>
-          <div className="field">
-            <label>Business</label>
-            <select value={businessId} onChange={(e) => setBusinessId(e.target.value)}>
-              {businesses.map((b) => (
-                <option key={b._id} value={b._id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Priority</label>
-            <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
+          {error && <p className="error-text">{error}</p>}
+          <button className="btn btn-dark" disabled={creating} onClick={createItem}>
+            {creating ? "Creating…" : "+ Log action"}
+          </button>
         </div>
-        <div className="field-row">
-          <div className="field">
-            <label>Owner (optional)</label>
-            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-              <option value="">Unassigned</option>
-              {team.map((t) => (
-                <option key={t.userId} value={t.userId}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Due date (optional)</label>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </div>
-        </div>
-        {error && <p className="error-text">{error}</p>}
-        <button className="btn btn-dark" disabled={creating} onClick={createItem}>
-          {creating ? "Creating…" : "+ Log action"}
-        </button>
-      </div>
       )}
 
       {loading && <p className="subtitle">Loading…</p>}
@@ -170,7 +142,6 @@ export default function ActionBoardPage() {
           <thead>
             <tr>
               <th>Title</th>
-              {!isLimited && <th>Business</th>}
               {!isLimited && <th>Owner</th>}
               {!isLimited && <th>Priority</th>}
               <th>Source</th>
@@ -186,7 +157,6 @@ export default function ActionBoardPage() {
                   {item.title}
                   {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
                 </td>
-                {!isLimited && <td>{businessName(item.businessId)}</td>}
                 {!isLimited && (
                   <td>
                     <select value={item.ownerId ?? ""} onChange={(e) => updateItem(item._id, { ownerId: e.target.value || null })}>
@@ -229,7 +199,7 @@ export default function ActionBoardPage() {
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={isLimited ? 4 : 7} className="subtitle">
+                <td colSpan={isLimited ? 4 : 6} className="subtitle">
                   No action items yet.
                 </td>
               </tr>

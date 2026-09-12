@@ -41,6 +41,7 @@ export interface IBusiness {
   questionTemplateId: Types.ObjectId | null; // ADMIN-EDITABLE ONLY, ever
   demographicConfig: IDemographicConfig; // ADMIN-EDITABLE ONLY, ever
   accountManagerId: Types.ObjectId | null;
+  teamMemberSeatLimit: number | null; // ADMIN-EDITABLE ONLY. null = unlimited. Enforced against active team-member count.
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -74,6 +75,7 @@ const BusinessSchema = new Schema<IBusiness>(
     questionTemplateId: { type: Schema.Types.ObjectId, ref: "QuestionTemplate", default: null },
     demographicConfig: { type: DemographicConfigSchema, default: () => ({}) },
     accountManagerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    teamMemberSeatLimit: { type: Number, default: null },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

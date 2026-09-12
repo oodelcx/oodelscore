@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ActionBoardItem, Business, User, sendTemplatedEmail, ACTION_PRIORITIES } from "@oodelscore/shared";
-import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { connectToDatabase, ActionBoardItem, User, sendTemplatedEmail, ACTION_PRIORITIES } from "@oodelscore/shared";
+import { requireBusinessOwner } from "@/lib/ownerAuth";
 
+/**
+ * Standalone business's own single-business Action Board (spec Section 16
+ * correction — previously the Act layer was Group-only). A "limited" tier
+ * Team Member only ever sees items assigned to them.
+ */
 export async function GET() {
-  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true });
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
 
-  const filter: Record<string, unknown> = { parentOrgId: session.org._id };
+  const filter: Record<string, unknown> = { businessId: session.business._id };
   if (session.tier === "limited") filter.ownerId = session.user._id;
 
   const items = await ActionBoardItem.find(filter).sort({ createdAt: -1 });
@@ -16,35 +21,28 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireParentOrgOwner();
+  const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
 
   const body = await request.json().catch(() => null);
   const title = typeof body?.title === "string" ? body.title.trim() : "";
-  const businessId = typeof body?.businessId === "string" ? body.businessId : null;
-  if (!title || !businessId) {
-    return NextResponse.json({ status: "error", message: "title and businessId are required" }, { status: 400 });
-  }
-
-  const business = await Business.findOne({ _id: businessId, parentOrgId: session.org._id });
-  if (!business) {
-    return NextResponse.json({ status: "error", message: "businessId must be a business under this organization" }, { status: 400 });
-  }
+  if (!title) return NextResponse.json({ status: "error", message: "title is required" }, { status: 400 });
 
   const priority = ACTION_PRIORITIES.includes(body?.priority) ? body.priority : "medium";
 
   const item = await ActionBoardItem.create({
-    parentOrgId: session.org._id,
+    parentOrgId: null,
+    businessId: session.business._id,
     title,
     description: typeof body?.description === "string" ? body.description : "",
-    businessId,
     categoryId: typeof body?.categoryId === "string" ? body.categoryId : null,
     priority,
     ownerId: typeof body?.ownerId === "string" ? body.ownerId : null,
     dueDate: typeof body?.dueDate === "string" ? new Date(body.dueDate) : null,
     sourceResponseIds: Array.isArray(body?.sourceResponseIds) ? body.sourceResponseIds : [],
+    source: "manual",
   });
 
   if (item.ownerId) {
@@ -54,7 +52,7 @@ export async function POST(request: Request) {
         name: owner.email,
         action_title: item.title,
         due_date: item.dueDate ? item.dueDate.toISOString().slice(0, 10) : "no due date",
-        action_link: `${process.env.APP_URL ?? ""}/group`,
+        action_link: `${process.env.APP_URL ?? ""}/business`,
       }).catch((err) => console.error("[action-board] failed to send action_assigned", err));
     }
   }

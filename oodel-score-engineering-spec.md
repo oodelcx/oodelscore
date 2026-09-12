@@ -46,6 +46,7 @@ Covers Admin/staff, Group logins, Business logins, and Team Member logins in one
   roleId: ObjectId,            // -> roles._id (admin_staff only; parent_org/business use implicit owner role)
   teamRole: String,            // team_member only — free text (e.g. "Shift Lead"), cosmetic, no permission effect
   tier: enum["full", "limited"],  // team_member only — see Section 16
+  teamOfType: enum["business", "parentOrg"],  // team_member only — since parentId is polymorphic, this says which collection it points at
   inviteStatus: enum["active", "invite_pending", "invite_expired"],
   inviteTokenHash: String,
   inviteExpiresAt: Date,       // 7 days from send, per original spec

@@ -98,7 +98,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     submittedAt: new Date(),
   });
 
-  await evaluateRealTimeAlertsForBusiness(business._id).catch((err) =>
+  // Feeds AI-assisted Action Board triage (spec Section 16.4) if an alert
+  // fires from this response — the first open-text answer, if any.
+  const openTextAnswer = responseAnswers.find((a) => a.type === "open_text" && typeof a.value === "string" && a.value.trim());
+  const triggeringComment = typeof openTextAnswer?.value === "string" ? openTextAnswer.value : null;
+
+  await evaluateRealTimeAlertsForBusiness(business._id, triggeringComment).catch((err) =>
     console.error("[feedback] real-time alert evaluation failed", err)
   );
 

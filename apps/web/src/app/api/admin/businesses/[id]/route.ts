@@ -78,6 +78,23 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "Invalid plan" }, { status: 400 });
   }
 
+  // Spec Section 16: never let teamMemberSeatLimit drop below the
+  // currently-active team-member count.
+  if (body.teamMemberSeatLimit !== undefined && body.teamMemberSeatLimit !== null) {
+    const activeMembers = await User.countDocuments({
+      accountType: "team_member",
+      teamOfType: "business",
+      parentId: business._id,
+      inviteStatus: { $ne: "invite_expired" },
+    });
+    if (body.teamMemberSeatLimit < activeMembers) {
+      return NextResponse.json(
+        { status: "error", message: `Can't set team seat limit below the ${activeMembers} currently-active team members.` },
+        { status: 400 }
+      );
+    }
+  }
+
   const editableFields = [
     "name",
     "industry",
@@ -94,6 +111,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "questionTemplateId",
     "demographicConfig",
     "accountManagerId",
+    "teamMemberSeatLimit",
     "active",
   ] as const;
 

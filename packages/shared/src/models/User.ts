@@ -1,7 +1,10 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
-export const ACCOUNT_TYPES = ["admin_staff", "parent_org", "business"] as const;
+export const ACCOUNT_TYPES = ["admin_staff", "parent_org", "business", "team_member"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
+
+export const TEAM_MEMBER_TIERS = ["full", "limited"] as const;
+export type TeamMemberTier = (typeof TEAM_MEMBER_TIERS)[number];
 
 export const INVITE_STATUSES = ["active", "invite_pending", "invite_expired"] as const;
 export type InviteStatus = (typeof INVITE_STATUSES)[number];
@@ -12,6 +15,9 @@ export interface IUser {
   accountType: AccountType;
   parentId: Types.ObjectId | null; // -> parentOrganizations._id or businesses._id, null for admin_staff
   roleId: Types.ObjectId | null; // -> roles._id (admin_staff only)
+  teamRole: string; // team_member only — free text (e.g. "Shift Lead"), cosmetic, no permission effect
+  tier: TeamMemberTier | null; // team_member only
+  teamOfType: "business" | "parentOrg" | null; // team_member only — which collection parentId points at
   inviteStatus: InviteStatus;
   inviteTokenHash: string | null;
   inviteExpiresAt: Date | null; // 7 days from send
@@ -34,6 +40,9 @@ const UserSchema = new Schema<IUser>(
     // Polymorphic: points at parentOrganizations._id or businesses._id depending on accountType.
     parentId: { type: Schema.Types.ObjectId, default: null },
     roleId: { type: Schema.Types.ObjectId, ref: "Role", default: null },
+    teamRole: { type: String, default: "" },
+    tier: { type: String, enum: TEAM_MEMBER_TIERS, default: null },
+    teamOfType: { type: String, enum: ["business", "parentOrg"], default: null },
     inviteStatus: { type: String, enum: INVITE_STATUSES, default: "invite_pending" },
     inviteTokenHash: { type: String, default: null },
     inviteExpiresAt: { type: Date, default: null },

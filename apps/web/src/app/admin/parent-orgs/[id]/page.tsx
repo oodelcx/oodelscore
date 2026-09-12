@@ -21,6 +21,8 @@ interface FormState {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  branchSeatLimit: string; // "" = unlimited
+  teamMemberSeatLimit: string; // "" = unlimited
 }
 
 const EMPTY_FORM: FormState = {
@@ -31,6 +33,8 @@ const EMPTY_FORM: FormState = {
   contactName: "",
   contactEmail: "",
   contactPhone: "",
+  branchSeatLimit: "",
+  teamMemberSeatLimit: "",
 };
 
 interface BusinessRow {
@@ -77,6 +81,8 @@ export default function ParentOrgDetailPage() {
           contactName: o.contactName ?? "",
           contactEmail: o.contactEmail ?? "",
           contactPhone: o.contactPhone ?? "",
+          branchSeatLimit: o.branchSeatLimit != null ? String(o.branchSeatLimit) : "",
+          teamMemberSeatLimit: o.teamMemberSeatLimit != null ? String(o.teamMemberSeatLimit) : "",
         });
         setBusinesses(d.businesses ?? []);
       })
@@ -157,6 +163,8 @@ export default function ParentOrgDetailPage() {
       contactName: form.contactName,
       contactEmail: form.contactEmail,
       contactPhone: form.contactPhone,
+      branchSeatLimit: form.branchSeatLimit.trim() ? Number(form.branchSeatLimit) : null,
+      teamMemberSeatLimit: form.teamMemberSeatLimit.trim() ? Number(form.teamMemberSeatLimit) : null,
     };
 
     const res = await fetch(isNew ? "/api/admin/parent-orgs" : `/api/admin/parent-orgs/${params.id}`, {
@@ -247,6 +255,32 @@ export default function ParentOrgDetailPage() {
               Billing tab.
             </div>
           </div>
+          {!isNew && (
+            <div className="field-row">
+              <div className="field">
+                <label>Branch seat limit</label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Unlimited"
+                  value={form.branchSeatLimit}
+                  onChange={(e) => setForm((f) => ({ ...f, branchSeatLimit: e.target.value }))}
+                />
+                <div className="field-hint">Blank = unlimited. Enforced against currently-active branches.</div>
+              </div>
+              <div className="field">
+                <label>Group&rsquo;s own team seat limit</label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Unlimited"
+                  value={form.teamMemberSeatLimit}
+                  onChange={(e) => setForm((f) => ({ ...f, teamMemberSeatLimit: e.target.value }))}
+                />
+                <div className="field-hint">Independent of any branch&rsquo;s own team seat limit.</div>
+              </div>
+            </div>
+          )}
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : isNew ? "Create organization" : "Save"}
           </button>

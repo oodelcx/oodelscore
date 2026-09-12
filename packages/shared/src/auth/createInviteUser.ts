@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { User, type AccountType } from "../models/User";
+import { User, type AccountType, type TeamMemberTier } from "../models/User";
 import { generateSetPasswordToken } from "./tokens";
 import { hashPassword } from "./password";
 import { sendTemplatedEmail } from "../email/resend";
@@ -17,6 +17,12 @@ export async function createInviteUser(params: {
   accountType: AccountType;
   parentId: Types.ObjectId | string | null;
   roleId?: Types.ObjectId | string | null;
+  // team_member only (spec Section 16):
+  teamRole?: string;
+  tier?: TeamMemberTier;
+  teamOfType?: "business" | "parentOrg";
+  inviterName?: string;
+  businessOrOrgName?: string;
   appUrl: string;
 }) {
   const email = params.email.trim().toLowerCase();
@@ -34,13 +40,28 @@ export async function createInviteUser(params: {
     accountType: params.accountType,
     parentId: params.parentId,
     roleId: params.accountType === "admin_staff" ? (params.roleId ?? null) : null,
+    teamRole: params.accountType === "team_member" ? (params.teamRole ?? "") : "",
+    tier: params.accountType === "team_member" ? (params.tier ?? "full") : null,
+    teamOfType: params.accountType === "team_member" ? (params.teamOfType ?? null) : null,
     inviteStatus: "invite_pending",
     inviteTokenHash: hash,
     inviteExpiresAt: expiresAt,
   });
 
   const setPasswordLink = `${params.appUrl}/set-password?uid=${user._id.toString()}&token=${token}`;
-  await sendTemplatedEmail("welcome", email, { name: email, email, set_password_link: setPasswordLink });
+
+  // Same invite-email mechanism as every other account type (spec Section 3)
+  // — a team_member just uses the invite_to_team copy instead of welcome.
+  if (params.accountType === "team_member") {
+    await sendTemplatedEmail("invite_to_team", email, {
+      name: email,
+      inviter_name: params.inviterName ?? "Your team",
+      business_name: params.businessOrOrgName ?? "",
+      set_password_link: setPasswordLink,
+    });
+  } else {
+    await sendTemplatedEmail("welcome", email, { name: email, email, set_password_link: setPasswordLink });
+  }
 
   return user;
 }
