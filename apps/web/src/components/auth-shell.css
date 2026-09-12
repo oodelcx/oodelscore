@@ -1,24 +1,30 @@
 .as-shell {
   min-height: 100vh;
   display: flex;
+  overflow-x: hidden;
 }
 
 .as-visual {
   flex: 0 0 75%;
-  background: linear-gradient(160deg, #0a4a34 0%, #111412 75%);
+  /* No min-width floor here — a fixed floor on the *other* flex item
+     (form panel) combined with this 75% basis is exactly what caused the
+     horizontal-scroll bug: below ~1280px, 25% of the viewport was less
+     than the old 320px form-panel floor, so the two together summed to
+     more than 100% of the viewport width. Nothing here has a hard pixel
+     floor now, so the split can only ever total 100%. */
+  max-width: 100%;
+  background: #111412;
   color: #fff;
-  padding: 40px 56px;
+  padding: 32px 40px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
-.as-visual-top {
-  z-index: 1;
-}
+
 .as-brand {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -26,89 +32,34 @@
   color: #3fbe8b;
 }
 
-.as-visual-card {
-  align-self: center;
-  width: 100%;
-  max-width: 380px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(6px);
-  border-radius: 16px;
-  padding: 26px 28px;
-  z-index: 1;
-}
-.as-card-eyebrow {
-  font-size: 12px;
-  color: #9fa39a;
-  margin-bottom: 4px;
-}
-.as-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #d5d8d1;
-  margin-bottom: 14px;
-}
-.as-card-score {
-  font-size: 52px;
+.as-headline {
+  font-size: clamp(28px, 3.4vw, 42px);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+  max-width: 32ch;
+}
+.as-highlight {
   color: #3fbe8b;
-}
-.as-card-score-label {
-  font-size: 12px;
-  color: #9fa39a;
-  margin-bottom: 20px;
-}
-.as-card-rows {
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: 12px;
-}
-.as-card-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  padding: 7px 0;
-  color: #d5d8d1;
-}
-.as-card-tag {
-  font-size: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 20px;
-  padding: 2px 9px;
-  color: #b9bdb8;
-}
-
-.as-visual-bottom {
-  z-index: 1;
-  max-width: 480px;
-}
-.as-quote {
-  font-size: 17px;
-  line-height: 1.5;
-  font-weight: 500;
-  margin: 0 0 12px;
-}
-.as-quote-attr {
-  font-size: 12.5px;
-  color: #9fa39a;
 }
 
 .as-form-panel {
-  flex: 1;
+  flex: 1 1 25%;
+  min-width: 0; /* allow shrinking freely — no artificial floor */
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
   background: #fff;
-  min-width: 320px;
+  box-sizing: border-box;
 }
 .as-form-inner {
   width: 100%;
   max-width: 340px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .as-shell {
     flex-direction: column;
   }
@@ -117,5 +68,6 @@
   }
   .as-form-panel {
     min-height: 100vh;
+    flex: 1 1 auto;
   }
 }

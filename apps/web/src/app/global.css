@@ -1,0 +1,11 @@
+/*
+ * Site-wide safeguard, not a fix in itself: no layout should ever need to
+ * rely on this, but a stray fixed-width or absolutely-positioned element
+ * elsewhere in the app shouldn't be able to make the whole page
+ * horizontally scrollable either.
+ */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}

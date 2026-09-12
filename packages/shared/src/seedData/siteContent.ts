@@ -264,4 +264,16 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       ]),
     },
   },
+  {
+    page: "login",
+    navItems: [],
+    sections: [],
+    fields: {
+      // heroHighlight must be an exact substring of heroHeadline — the
+      // login/forgot-password/set-password visual panel renders that
+      // substring in the accent green, everything else in white.
+      heroHeadline: "Every scan is someone telling you the truth.",
+      heroHighlight: "the truth",
+    },
+  },
 ];
