@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import "../admin/admin.css";
+import "../auth.css";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -21,30 +23,27 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main style={{ maxWidth: 360, margin: "80px auto", fontFamily: "sans-serif" }}>
-      <h1>Reset your password</h1>
-      {submitted ? (
-        <p>If an account exists for that email, we&apos;ve sent a reset link.</p>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <label style={{ display: "block", marginBottom: 12 }}>
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ display: "block", width: "100%", marginTop: 4 }}
-            />
-          </label>
-          <button type="submit" disabled={loading}>
-            {loading ? "Sending..." : "Send reset link"}
-          </button>
-        </form>
-      )}
-      <p style={{ marginTop: 16 }}>
-        <Link href="/login">Back to sign in</Link>
-      </p>
-    </main>
+    <div className="auth-shell">
+      <div className="auth-card">
+        <div className="auth-brand">Oodel Score</div>
+        <p className="auth-subtitle">Reset your password.</p>
+        {submitted ? (
+          <p className="auth-success">If an account exists for that email, we&apos;ve sent a reset link.</p>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div className="field">
+              <label>Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+            </div>
+            <button type="submit" className="btn btn-dark" disabled={loading}>
+              {loading ? "Sending…" : "Send reset link"}
+            </button>
+          </form>
+        )}
+        <div className="auth-footer">
+          <Link href="/login">Back to sign in</Link>
+        </div>
+      </div>
+    </div>
   );
 }

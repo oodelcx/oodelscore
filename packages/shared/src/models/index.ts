@@ -22,3 +22,4 @@ export * from "./Playbook";
 export * from "./CxPulseScore";
 export * from "./CxPulseFramework";
 export * from "./CxPulsePulseResponse";
+export * from "./DemoRequest";

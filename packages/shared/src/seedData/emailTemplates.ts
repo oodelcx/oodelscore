@@ -64,4 +64,10 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     body: "Hi {{name}}, a payment for {{business_name}} failed. Please update your payment method: {{billing_link}}",
     availableVars: ["name", "business_name", "billing_link"],
   },
+  {
+    key: "demo_request",
+    subject: "New demo request: {{requester_name}}",
+    body: "{{requester_name}} ({{requester_email}}) at {{requester_company}} asked for a demo.\n\nMessage: {{requester_message}}",
+    availableVars: ["requester_name", "requester_email", "requester_company", "requester_message"],
+  },
 ];

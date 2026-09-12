@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { INavItem } from "@oodelscore/shared";
+import { BookDemoButton } from "./demo-modal";
 
 const PATH_BY_KEY: Record<string, string> = {
   product: "/product",
@@ -26,9 +27,7 @@ export function MarketingNav({ active, navItems }: { active: string; navItems: I
         </div>
         <div className="nav-right">
           <Link href="/login">Sign in</Link>
-          <a className="btn-primary" href="#demo">
-            Book a demo
-          </a>
+          <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
         </div>
       </div>
     </nav>

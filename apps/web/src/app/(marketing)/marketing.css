@@ -911,3 +911,83 @@
   color: var(--ink);
   font-weight: 400;
 }
+
+/* ===== BOOK A DEMO MODAL ===== */
+.mkt .demo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 20, 18, 0.55);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.mkt .demo-modal {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 30px;
+  font-family: "General Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.mkt .demo-modal h3 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+.mkt .demo-modal-sub {
+  font-size: 14px;
+  color: var(--text-2);
+  margin: 0 0 22px;
+}
+.mkt .demo-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: none;
+  background: none;
+  font-size: 15px;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.mkt .demo-field {
+  margin-bottom: 14px;
+}
+.mkt .demo-field label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+.mkt .demo-field input,
+.mkt .demo-field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #fff;
+}
+.mkt .demo-field textarea {
+  resize: vertical;
+}
+.mkt .demo-modal-error {
+  color: var(--red);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+.mkt .demo-modal-success h3 {
+  margin-bottom: 10px;
+}
+.mkt .demo-modal-success p {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.6;
+  margin: 0;
+}

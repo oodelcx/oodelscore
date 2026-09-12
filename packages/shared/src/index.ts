@@ -18,3 +18,4 @@ export * from "./scoring/network";
 export * from "./alerts/evaluate";
 export * from "./cxpulse/compute";
 export * from "./cxpulse/portfolio";
+export * from "./qr/generate";
