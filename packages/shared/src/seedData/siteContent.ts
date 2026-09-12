@@ -132,7 +132,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           ],
         },
       ]),
-      enterpriseNote: "Onboarding a school trust, healthcare group, or retail chain? Talk to us about volume pricing.",
+      enterpriseNote: "Onboarding a school trust, healthcare group, or retail chain?",
     },
   },
   {
