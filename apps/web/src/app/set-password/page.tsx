@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import "../admin/admin.css";
 import "../auth.css";
 import { AuthShell } from "@/components/auth-shell";
+import { PasswordField } from "@/components/password-field";
 
 /** Completes either flow that hands out a set-password link (spec Section
  * 11): the initial invite, or a password reset — both land here with
@@ -60,11 +61,11 @@ function SetPasswordForm() {
     <form className="auth-form" onSubmit={handleSubmit}>
       <div className="field">
         <label>New password</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoFocus />
+        <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoFocus />
       </div>
       <div className="field">
         <label>Confirm password</label>
-        <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} />
+        <PasswordField value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} />
       </div>
       {error && <p className="error-text">{error}</p>}
       <button type="submit" className="btn btn-dark" disabled={loading}>
