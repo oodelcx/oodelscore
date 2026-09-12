@@ -33,6 +33,20 @@ export async function POST(request: Request) {
     );
   }
 
+  // Spec Section 13 bug #3: flip a lapsed invite to "invite_expired" here
+  // (not just in admin listings) so a stale link gives an accurate reason.
+  if (user.inviteStatus === "invite_pending" && user.inviteExpiresAt && user.inviteExpiresAt.getTime() < Date.now()) {
+    user.inviteStatus = "invite_expired";
+    await user.save();
+  }
+
+  if (user.inviteStatus === "invite_expired") {
+    return NextResponse.json(
+      { status: "error", message: "Your invite link has expired. Ask an admin to resend it." },
+      { status: 403 }
+    );
+  }
+
   if (user.inviteStatus !== "active") {
     return NextResponse.json(
       { status: "error", message: "Account is not active yet — check your invite email." },

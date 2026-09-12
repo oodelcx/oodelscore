@@ -73,6 +73,20 @@ export default function AccountsPage() {
     if (res.ok) setStaff((s) => s.filter((row) => row._id !== id));
   }
 
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
+  async function resendInvite(id: string) {
+    setResendingId(id);
+    const res = await fetch(`/api/admin/users/${id}/resend-invite`, { method: "POST" });
+    setResendingId(null);
+    if (res.ok) {
+      setStaff((s) => s.map((row) => (row._id === id ? { ...row, inviteStatus: "invite_pending" } : row)));
+    } else {
+      const data = await res.json().catch(() => null);
+      setError(data?.message ?? "Failed to resend invite");
+    }
+  }
+
   const cta =
     tab === "businesses" ? (
       <Link className="btn btn-dark" href="/admin/businesses/new">
@@ -199,6 +213,16 @@ export default function AccountsPage() {
                   <span className={`pill ${s.inviteStatus === "active" ? "pill-green" : "pill-amber"}`}>{s.inviteStatus}</span>
                 </td>
                 <td style={{ textAlign: "right" }}>
+                  {s.inviteStatus !== "active" && (
+                    <button
+                      className="btn btn-sm"
+                      style={{ marginRight: 8 }}
+                      disabled={resendingId === s._id}
+                      onClick={() => resendInvite(s._id)}
+                    >
+                      {resendingId === s._id ? "Sending…" : "Resend invite"}
+                    </button>
+                  )}
                   <button className="icon-btn btn-danger" onClick={() => removeStaff(s._id)}>
                     🗑
                   </button>
