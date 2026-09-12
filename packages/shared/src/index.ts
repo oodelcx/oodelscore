@@ -15,6 +15,7 @@ export * from "./stripe/billing";
 export * from "./scoring/aggregate";
 export * from "./scoring/periods";
 export * from "./scoring/network";
+export * from "./scoring/device";
 export * from "./alerts/evaluate";
 export * from "./ai/triage";
 export * from "./cxpulse/compute";

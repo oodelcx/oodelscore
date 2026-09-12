@@ -24,3 +24,4 @@ export * from "./CxPulseFramework";
 export * from "./CxPulsePulseResponse";
 export * from "./DemoRequest";
 export * from "./CategoryOwnerMapping";
+export * from "./ScanToken";

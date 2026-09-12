@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import "../admin/admin.css";
 import "../auth.css";
+import { AuthShell } from "@/components/auth-shell";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,28 +38,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-brand">Oodel Score</div>
-        <p className="auth-subtitle">Sign in to your dashboard.</p>
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
-          </div>
-          <div className="field">
-            <label>Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-          {error && <p className="error-text">{error}</p>}
-          <button type="submit" className="btn btn-dark" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
-        <div className="auth-footer">
-          <Link href="/forgot-password">Forgot password?</Link>
+    <AuthShell>
+      <div className="auth-brand">Sign in</div>
+      <p className="auth-subtitle">Welcome back — sign in to your dashboard.</p>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <div className="field">
+          <label>Email</label>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
         </div>
+        <div className="field">
+          <label>Password</label>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        {error && <p className="error-text">{error}</p>}
+        <button type="submit" className="btn btn-dark" disabled={loading}>
+          {loading ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
+      <div className="auth-footer">
+        <Link href="/forgot-password">Forgot password?</Link>
       </div>
-    </div>
+    </AuthShell>
   );
 }

@@ -18,6 +18,7 @@ interface DemographicConfig {
   gender: string;
 }
 interface FormData {
+  scanToken: string;
   businessName: string;
   groupTag: string | null;
   formLayout: "single_page" | "one_per_screen";
@@ -100,6 +101,7 @@ export default function FeedbackFormPage({ params }: { params: Promise<{ token: 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        scanToken: data?.scanToken ?? "",
         answers: Object.entries(answers).map(([index, value]) => ({ index: Number(index), value })),
         respondentName: demographics.name || null,
         respondentEmail: demographics.email || null,

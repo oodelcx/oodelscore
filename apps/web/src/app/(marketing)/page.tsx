@@ -105,7 +105,7 @@ export default async function MarketingHomePage() {
         </div>
       </section>
 
-      <section className="pulse-section">
+      <section className="pulse-section" id="cx-pulse">
         <div className="wrap pulse-grid">
           <div>
             <div className="pulse-tag">CX Pulse</div>
@@ -159,7 +159,7 @@ export default async function MarketingHomePage() {
         </div>
       </section>
 
-      <MarketingFooter full fields={menu.fields} />
+      <MarketingFooter fields={menu.fields} />
     </>
   );
 }

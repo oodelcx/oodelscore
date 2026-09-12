@@ -23,6 +23,8 @@ const TABS: { id: string; label: string }[] = [
   { id: "product", label: "Product" },
   { id: "solutions", label: "Solutions" },
   { id: "company", label: "Company" },
+  { id: "privacy", label: "Privacy Policy" },
+  { id: "terms", label: "Terms of Service" },
 ];
 
 function parseJsonArray<T>(value: string | undefined): T[] {
@@ -110,6 +112,9 @@ export default function SiteContentPage() {
       {current && activeTab === "product" && <ProductPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "solutions" && <SolutionsPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "company" && <CompanyPanel content={current} onFieldChange={updateField} />}
+      {current && (activeTab === "privacy" || activeTab === "terms") && (
+        <LegalPanel content={current} page={activeTab} onFieldChange={updateField} />
+      )}
 
       {current && (
         <div style={{ marginTop: 16, textAlign: "right" }}>
@@ -731,5 +736,58 @@ function CompanyPanel({
         />
       </div>
     </>
+  );
+}
+
+interface LegalSection {
+  heading: string;
+  text: string;
+}
+
+function LegalPanel({
+  content,
+  page,
+  onFieldChange,
+}: {
+  content: PageContent;
+  page: string;
+  onFieldChange: (page: string, key: string, value: string) => void;
+}) {
+  const sections = parseJsonArray<LegalSection>(content.fields.body);
+
+  function updateSection(i: number, patch: Partial<LegalSection>) {
+    const next = [...sections];
+    next[i] = { ...next[i], ...patch };
+    onFieldChange(page, "body", JSON.stringify(next));
+  }
+
+  return (
+    <div className="card">
+      <h3>Page heading</h3>
+      <div className="field-row">
+        <Field label="Heading" value={content.fields.heading} onChange={(v) => onFieldChange(page, "heading", v)} />
+        <Field label="Last updated" value={content.fields.lastUpdated} onChange={(v) => onFieldChange(page, "lastUpdated", v)} />
+      </div>
+      <h3 style={{ marginTop: 24 }}>Sections</h3>
+      {sections.map((section, i) => (
+        <div className="qrow" key={i}>
+          <div className="qrow-top">
+            <input
+              type="text"
+              style={{ flex: 1, fontWeight: 600 }}
+              value={section.heading}
+              onChange={(e) => updateSection(i, { heading: e.target.value })}
+            />
+            <span className="icon-btn btn-danger" onClick={() => onFieldChange(page, "body", JSON.stringify(sections.filter((_, idx) => idx !== i)))}>
+              🗑
+            </span>
+          </div>
+          <textarea style={{ minHeight: 70 }} value={section.text} onChange={(e) => updateSection(i, { text: e.target.value })} />
+        </div>
+      ))}
+      <button className="btn" onClick={() => onFieldChange(page, "body", JSON.stringify([...sections, { heading: "", text: "" }]))}>
+        + Add section
+      </button>
+    </div>
   );
 }

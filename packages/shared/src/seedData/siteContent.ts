@@ -23,10 +23,11 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     ],
     sections: [],
     fields: {
-      footerDescription: "Feedback is easy to collect. Acting on it is the hard part.",
-      footerProductLinks: JSON.stringify(["How it works", "CX Pulse"]),
+      footerDescription:
+        "Feedback collection, AI-written reports, and the tools to actually act on both — for one location or a thousand.",
+      footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
       footerSolutionsLinks: JSON.stringify(["Single business", "Multi-location groups", "Enterprise"]),
-      footerCompanyLinks: JSON.stringify(["Company", "Pricing", "hello@oodelscore.com"]),
+      footerCompanyLinks: JSON.stringify(["About", "Privacy policy", "Terms"]),
       copyrightText: "© Oodel Score. All rights reserved.",
     },
   },
@@ -40,7 +41,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         "Oodel Score turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
       heroPrimaryButton: "Book a demo",
       heroSecondaryButton: "See how it works",
-      heroBuiltForLine: "restaurants, retail chains, school trusts, and healthcare groups",
+      heroBuiltForLine: "bank branch networks, retail chains, school trusts, and healthcare groups",
       narrativeHeadline: "Most tools stop at collecting. We built the other two thirds.",
       narrativeSubhead: "A score with nowhere to go is just a number.",
       narrativeSteps: JSON.stringify([
@@ -207,6 +208,60 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         },
       ]),
       contactEmail: "hello@oodelscore.com",
+    },
+  },
+  {
+    page: "privacy",
+    navItems: [],
+    sections: [],
+    fields: {
+      heading: "Privacy Policy",
+      lastUpdated: "September 2026",
+      body: JSON.stringify([
+        {
+          heading: "What we collect",
+          text: "We collect account information you provide (name, email, business details) and feedback responses submitted through your feedback points. Respondents filling out a feedback form are never required to identify themselves unless a business chooses to make name/email/phone collection mandatory.",
+        },
+        {
+          heading: "How we use it",
+          text: "Account data is used to operate your dashboard, generate AI-written insights reports, and send the account-side emails described in your Email Templates. Feedback response data belongs to the business or organization that collected it.",
+        },
+        {
+          heading: "Data retention",
+          text: "Data is retained for as long as your account is active, per the retention policy attached to your plan tier. You can request deletion at any time by contacting us.",
+        },
+        {
+          heading: "Contact",
+          text: "Questions about this policy can be sent to hello@oodelscore.com.",
+        },
+      ]),
+    },
+  },
+  {
+    page: "terms",
+    navItems: [],
+    sections: [],
+    fields: {
+      heading: "Terms of Service",
+      lastUpdated: "September 2026",
+      body: JSON.stringify([
+        {
+          heading: "Using Oodel Score",
+          text: "By creating an account, you agree to use Oodel Score only for lawful feedback collection and analysis, and not to attempt to identify respondents who submitted feedback anonymously.",
+        },
+        {
+          heading: "Billing",
+          text: "Plans are billed per the pricing shown at signup or agreed with your account manager. Branch and team-seat limits are enforced per your plan tier.",
+        },
+        {
+          heading: "AI-generated content",
+          text: "Insights reports are drafted with AI assistance and reviewed by a person before publication, but Oodel Score does not guarantee the accuracy of AI-generated summaries.",
+        },
+        {
+          heading: "Contact",
+          text: "Questions about these terms can be sent to hello@oodelscore.com.",
+        },
+      ]),
     },
   },
 ];

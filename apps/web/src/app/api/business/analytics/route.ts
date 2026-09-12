@@ -49,10 +49,16 @@ export async function GET() {
   const comments: string[] = [];
   const ageGroups = new Map<string, number>();
   const genders = new Map<string, number>();
+  const devices = new Map<string, number>();
+  // [dayOfWeek 0-6][hourOfDay 0-23] — server-local time, good enough for
+  // "when do people scan" at the granularity a business actually acts on.
+  const dayHourCounts: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
 
   for (const response of responses) {
     if (response.demographics.ageGroup) ageGroups.set(response.demographics.ageGroup, (ageGroups.get(response.demographics.ageGroup) ?? 0) + 1);
     if (response.demographics.gender) genders.set(response.demographics.gender, (genders.get(response.demographics.gender) ?? 0) + 1);
+    devices.set(response.deviceType, (devices.get(response.deviceType) ?? 0) + 1);
+    dayHourCounts[response.submittedAt.getDay()][response.submittedAt.getHours()] += 1;
 
     for (const answer of response.answers) {
       if (answer.type === "nps_0_10" && typeof answer.value === "number") npsAnswers.push(answer.value);
@@ -86,6 +92,10 @@ export async function GET() {
     demographics: {
       ageGroups: Array.from(ageGroups.entries()).map(([label, count]) => ({ label, count })),
       genders: Array.from(genders.entries()).map(([label, count]) => ({ label, count })),
+    },
+    scanPatterns: {
+      deviceBreakdown: Array.from(devices.entries()).map(([label, count]) => ({ label, count })),
+      dayHourCounts,
     },
   });
 }

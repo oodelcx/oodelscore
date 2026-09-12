@@ -1,38 +1,21 @@
 /*
- * Shared layout for the 3 unauthenticated auth pages (login, forgot
- * password, set password) — no mockup exists for these, so this reuses
- * admin.css's tokens/components (.card, .field, .btn-dark) rather than
- * inventing a third visual language.
+ * Inner form styling for the 3 unauthenticated auth pages (login, forgot
+ * password, set password) — the outer 75/25 layout is AuthShell
+ * (components/auth-shell.tsx/.css). Reuses admin.css's tokens/components
+ * (.field, .btn-dark) for the form itself.
  */
-.auth-shell {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-  padding: 24px;
-}
-.auth-card {
-  width: 100%;
-  max-width: 380px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 36px 32px;
-  box-shadow: 0 20px 50px -30px rgba(17, 20, 18, 0.25);
-}
 .auth-brand {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .auth-subtitle {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--text-2);
   margin: 0 0 28px;
 }
-.auth-card .btn-dark {
+.auth-form .btn-dark {
   width: 100%;
   text-align: center;
   margin-top: 6px;

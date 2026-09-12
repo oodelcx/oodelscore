@@ -13,6 +13,9 @@ export interface IDemographics {
   gender: string;
 }
 
+export const DEVICE_TYPES = ["mobile", "tablet", "desktop", "unknown"] as const;
+export type DeviceType = (typeof DEVICE_TYPES)[number];
+
 /**
  * Raw feedback submissions.
  *
@@ -30,6 +33,7 @@ export interface IResponse {
   respondentPhone: string | null; // null if not collected
   demographics: IDemographics;
   submittedAt: Date;
+  deviceType: DeviceType; // derived server-side from the submitting request's User-Agent
   flagged: boolean; // Business/Group "Flag" action on Raw Feedback
   createdAt: Date;
   updatedAt: Date;
@@ -63,6 +67,7 @@ const ResponseSchema = new Schema<IResponse>(
     respondentPhone: { type: String, default: null },
     demographics: { type: DemographicsSchema, default: () => ({}) },
     submittedAt: { type: Date, required: true, default: Date.now },
+    deviceType: { type: String, enum: DEVICE_TYPES, default: "unknown" },
     flagged: { type: Boolean, default: false },
   },
   { timestamps: true }
