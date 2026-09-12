@@ -6,6 +6,7 @@ interface ItemRow {
   _id: string;
   title: string;
   businessId: string;
+  ownerId: string | null;
   priority: string;
   status: string;
   dueDate: string | null;
@@ -14,14 +15,21 @@ interface BusinessRow {
   _id: string;
   name: string;
 }
+interface TeamRow {
+  userId: string;
+  label: string;
+}
 
 export default function ActionBoardPage() {
   const [items, setItems] = useState<ItemRow[]>([]);
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
+  const [team, setTeam] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [businessId, setBusinessId] = useState("");
   const [priority, setPriority] = useState("medium");
+  const [ownerId, setOwnerId] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -30,17 +38,18 @@ export default function ActionBoardPage() {
     Promise.all([
       fetch("/api/group/action-board").then((r) => r.json()),
       fetch("/api/group/businesses").then((r) => r.json()),
-    ]).then(([itemsData, businessesData]) => {
+      fetch("/api/group/team").then((r) => r.json()),
+    ]).then(([itemsData, businessesData, teamData]) => {
       setItems(itemsData.items ?? []);
       setBusinesses(businessesData.businesses ?? []);
-      if (!businessId && businessesData.businesses?.[0]) setBusinessId(businessesData.businesses[0]._id);
+      setTeam(teamData.team ?? []);
+      setBusinessId((current) => current || businessesData.businesses?.[0]?._id || "");
       setLoading(false);
     });
   }
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function createItem() {
@@ -50,7 +59,7 @@ export default function ActionBoardPage() {
     const res = await fetch("/api/group/action-board", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, businessId, priority }),
+      body: JSON.stringify({ title, businessId, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
     });
     const data = await res.json();
     setCreating(false);
@@ -59,14 +68,16 @@ export default function ActionBoardPage() {
       return;
     }
     setTitle("");
+    setOwnerId("");
+    setDueDate("");
     load();
   }
 
-  async function markResolved(id: string) {
+  async function updateItem(id: string, patch: Record<string, unknown>) {
     await fetch(`/api/group/action-board/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "resolved" }),
+      body: JSON.stringify(patch),
     });
     load();
   }
@@ -111,6 +122,23 @@ export default function ActionBoardPage() {
             </select>
           </div>
         </div>
+        <div className="field-row">
+          <div className="field">
+            <label>Owner (optional)</label>
+            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+              <option value="">Unassigned</option>
+              {team.map((t) => (
+                <option key={t.userId} value={t.userId}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Due date (optional)</label>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+        </div>
         {error && <p className="error-text">{error}</p>}
         <button className="btn btn-dark" disabled={creating} onClick={createItem}>
           {creating ? "Creating…" : "+ Log action"}
@@ -124,6 +152,7 @@ export default function ActionBoardPage() {
             <tr>
               <th>Title</th>
               <th>Business</th>
+              <th>Owner</th>
               <th>Priority</th>
               <th>Status</th>
               <th>Due</th>
@@ -136,7 +165,22 @@ export default function ActionBoardPage() {
                 <td>{item.title}</td>
                 <td>{businessName(item.businessId)}</td>
                 <td>
-                  <span className="pill pill-purple">{item.priority}</span>
+                  <select value={item.ownerId ?? ""} onChange={(e) => updateItem(item._id, { ownerId: e.target.value || null })}>
+                    <option value="">Unassigned</option>
+                    {team.map((t) => (
+                      <option key={t.userId} value={t.userId}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <select value={item.priority} onChange={(e) => updateItem(item._id, { priority: e.target.value })}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
                 </td>
                 <td>
                   <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>{item.status}</span>
@@ -144,7 +188,7 @@ export default function ActionBoardPage() {
                 <td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</td>
                 <td style={{ textAlign: "right" }}>
                   {item.status !== "resolved" && (
-                    <button className="btn btn-sm" onClick={() => markResolved(item._id)}>
+                    <button className="btn btn-sm" onClick={() => updateItem(item._id, { status: "resolved" })}>
                       Mark resolved
                     </button>
                   )}
@@ -153,7 +197,7 @@ export default function ActionBoardPage() {
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={6} className="subtitle">
+                <td colSpan={7} className="subtitle">
                   No action items yet.
                 </td>
               </tr>

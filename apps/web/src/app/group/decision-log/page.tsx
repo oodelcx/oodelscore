@@ -51,6 +51,21 @@ export default function DecisionLogPage() {
     load();
   }
 
+  async function updateStatus(id: string, status: string) {
+    await fetch(`/api/group/decision-log/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    load();
+  }
+
+  async function removeEntry(id: string) {
+    if (!confirm("Delete this decision log entry?")) return;
+    await fetch(`/api/group/decision-log/${id}`, { method: "DELETE" });
+    load();
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -87,6 +102,7 @@ export default function DecisionLogPage() {
               <th>Trigger</th>
               <th>Status</th>
               <th>Outcome</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -95,14 +111,23 @@ export default function DecisionLogPage() {
                 <td>{e.title}</td>
                 <td>{e.trigger || "—"}</td>
                 <td>
-                  <span className="pill pill-blue">{e.status}</span>
+                  <select value={e.status} onChange={(ev) => updateStatus(e._id, ev.target.value)}>
+                    <option value="planned">Planned</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="implemented">Implemented</option>
+                  </select>
                 </td>
                 <td>{e.outcomeBefore !== null && e.outcomeAfter !== null ? `${e.outcomeBefore} → ${e.outcomeAfter}` : "not measured yet"}</td>
+                <td style={{ textAlign: "right" }}>
+                  <button className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
+                    🗑
+                  </button>
+                </td>
               </tr>
             ))}
             {entries.length === 0 && (
               <tr>
-                <td colSpan={4} className="subtitle">
+                <td colSpan={5} className="subtitle">
                   No decisions logged yet.
                 </td>
               </tr>

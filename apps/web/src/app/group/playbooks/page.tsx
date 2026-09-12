@@ -56,6 +56,12 @@ export default function PlaybooksPage() {
     load();
   }
 
+  async function removePlaybook(id: string) {
+    if (!confirm("Delete this playbook?")) return;
+    await fetch(`/api/group/playbooks/${id}`, { method: "DELETE" });
+    load();
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -96,9 +102,14 @@ export default function PlaybooksPage() {
         <div>
           {playbooks.map((p) => (
             <div className="card" key={p._id}>
-              <h3 style={{ margin: 0 }}>
-                {p.title} <span className="pill pill-purple">{p.usageCount} uses</span>
-              </h3>
+              <div className="page-head" style={{ marginBottom: 0 }}>
+                <h3 style={{ margin: 0 }}>
+                  {p.title} <span className="pill pill-purple">{p.usageCount} uses</span>
+                </h3>
+                <button className="icon-btn btn-danger" onClick={() => removePlaybook(p._id)}>
+                  🗑
+                </button>
+              </div>
               <p className="card-sub">Trigger: {p.triggerCondition || "—"}</p>
               <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
                 {p.steps.map((step, i) => (

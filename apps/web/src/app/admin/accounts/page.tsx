@@ -11,10 +11,14 @@ interface BusinessRow {
   industry: string;
   parentOrgId: string | null;
   active: boolean;
+  ownerUserId: string | null;
+  ownerInviteStatus: string | null;
 }
 interface ParentOrgRow {
   _id: string;
   name: string;
+  ownerUserId: string | null;
+  ownerInviteStatus: string | null;
 }
 interface StaffRow {
   _id: string;
@@ -54,10 +58,10 @@ export default function AccountsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  function loadAll() {
     setLoading(true);
     setError(null);
-    Promise.all([
+    return Promise.all([
       fetchJson<{ businesses: BusinessRow[] }>("/api/admin/businesses").then((d) => setBusinesses(d.businesses)),
       fetchJson<{ parentOrgs: ParentOrgRow[] }>("/api/admin/parent-orgs").then((d) => setParentOrgs(d.parentOrgs)),
       fetchJson<{ staff: StaffRow[] }>("/api/admin/staff").then((d) => setStaff(d.staff)),
@@ -65,6 +69,11 @@ export default function AccountsPage() {
     ])
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function removeStaff(id: string) {
@@ -80,7 +89,7 @@ export default function AccountsPage() {
     const res = await fetch(`/api/admin/users/${id}/resend-invite`, { method: "POST" });
     setResendingId(null);
     if (res.ok) {
-      setStaff((s) => s.map((row) => (row._id === id ? { ...row, inviteStatus: "invite_pending" } : row)));
+      loadAll();
     } else {
       const data = await res.json().catch(() => null);
       setError(data?.message ?? "Failed to resend invite");
@@ -129,6 +138,25 @@ export default function AccountsPage() {
     ]);
   }
 
+  function loginStatusCell(ownerUserId: string | null, ownerInviteStatus: string | null) {
+    if (!ownerUserId) return <span className="pill pill-red">No login</span>;
+    return (
+      <span className="row-flex">
+        <span className={`pill ${ownerInviteStatus === "active" ? "pill-green" : "pill-amber"}`}>{ownerInviteStatus}</span>
+        {ownerInviteStatus !== "active" && (
+          <button
+            className="btn btn-sm"
+            style={{ marginLeft: 8 }}
+            disabled={resendingId === ownerUserId}
+            onClick={() => resendInvite(ownerUserId)}
+          >
+            {resendingId === ownerUserId ? "Sending…" : "Resend invite"}
+          </button>
+        )}
+      </span>
+    );
+  }
+
   const cta =
     tab === "businesses" ? (
       <Link className="btn btn-dark" href="/admin/businesses/new">
@@ -172,6 +200,7 @@ export default function AccountsPage() {
               <th>Name</th>
               <th>Industry</th>
               <th>Active</th>
+              <th>Login</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -185,6 +214,7 @@ export default function AccountsPage() {
                 <td>
                   <span className={`pill ${b.active ? "pill-green" : "pill-gray"}`}>{b.active ? "Active" : "Inactive"}</span>
                 </td>
+                <td>{loginStatusCell(b.ownerUserId, b.ownerInviteStatus)}</td>
                 <td>
                   <Link className="btn btn-sm" href={`/admin/businesses/${b._id}`}>
                     Manage →
@@ -194,7 +224,7 @@ export default function AccountsPage() {
             ))}
             {businesses.length === 0 && (
               <tr>
-                <td colSpan={4} className="subtitle">
+                <td colSpan={5} className="subtitle">
                   No businesses yet.
                 </td>
               </tr>
@@ -208,6 +238,7 @@ export default function AccountsPage() {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Login</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -215,6 +246,7 @@ export default function AccountsPage() {
             {parentOrgs.map((o) => (
               <tr key={o._id}>
                 <td>{o.name}</td>
+                <td>{loginStatusCell(o.ownerUserId, o.ownerInviteStatus)}</td>
                 <td>
                   <Link className="btn btn-sm" href={`/admin/parent-orgs/${o._id}`}>
                     Manage →
@@ -224,7 +256,7 @@ export default function AccountsPage() {
             ))}
             {parentOrgs.length === 0 && (
               <tr>
-                <td colSpan={2} className="subtitle">
+                <td colSpan={3} className="subtitle">
                   No parent organizations yet.
                 </td>
               </tr>
