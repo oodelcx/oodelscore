@@ -25,6 +25,7 @@ const TABS: { id: string; label: string }[] = [
   { id: "company", label: "Company" },
   { id: "privacy", label: "Privacy Policy" },
   { id: "terms", label: "Terms of Service" },
+  { id: "login", label: "Login" },
 ];
 
 function parseJsonArray<T>(value: string | undefined): T[] {
@@ -115,6 +116,7 @@ export default function SiteContentPage() {
       {current && (activeTab === "privacy" || activeTab === "terms") && (
         <LegalPanel content={current} page={activeTab} onFieldChange={updateField} />
       )}
+      {current && activeTab === "login" && <LoginPanel content={current} onFieldChange={updateField} />}
 
       {current && (
         <div style={{ marginTop: 16, textAlign: "right" }}>
@@ -788,6 +790,73 @@ function LegalPanel({
       <button className="btn" onClick={() => onFieldChange(page, "body", JSON.stringify([...sections, { heading: "", text: "" }]))}>
         + Add section
       </button>
+    </div>
+  );
+}
+
+function LoginHeadlinePreview({ headline, highlight }: { headline: string; highlight: string }) {
+  const index = highlight ? headline.indexOf(highlight) : -1;
+  return (
+    <div
+      style={{
+        background: "#111412",
+        color: "#fff",
+        borderRadius: 12,
+        padding: "28px 32px",
+        fontSize: 22,
+        fontWeight: 700,
+        lineHeight: 1.2,
+        maxWidth: 420,
+      }}
+    >
+      {index === -1 ? (
+        headline
+      ) : (
+        <>
+          {headline.slice(0, index)}
+          <span style={{ color: "#3fbe8b" }}>{headline.slice(index, index + highlight.length)}</span>
+          {headline.slice(index + highlight.length)}
+        </>
+      )}
+    </div>
+  );
+}
+
+function LoginPanel({
+  content,
+  onFieldChange,
+}: {
+  content: PageContent;
+  onFieldChange: (page: string, key: string, value: string) => void;
+}) {
+  const headline = content.fields.heroHeadline ?? "";
+  const highlight = content.fields.heroHighlight ?? "";
+  const highlightNotFound = !!highlight && !headline.includes(highlight);
+
+  return (
+    <div className="card">
+      <h3>Sign-in screen</h3>
+      <p className="card-sub">
+        Shown on the dark panel of the Login, Forgot Password, and Set Password screens.
+      </p>
+      <Field label="Headline" textarea value={headline} onChange={(v) => onFieldChange("login", "heroHeadline", v)} />
+      <Field
+        label="Highlighted portion (shown in green)"
+        value={highlight}
+        onChange={(v) => onFieldChange("login", "heroHighlight", v)}
+      />
+      {highlightNotFound && (
+        <p className="error-text">This text doesn&rsquo;t appear in the headline above, so nothing will be highlighted.</p>
+      )}
+      <div className="field-hint" style={{ marginBottom: 8 }}>
+        Must match a portion of the headline exactly (including punctuation) to be highlighted.
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <div className="field-hint" style={{ marginBottom: 8 }}>
+          Preview
+        </div>
+        <LoginHeadlinePreview headline={headline} highlight={highlight} />
+      </div>
     </div>
   );
 }
