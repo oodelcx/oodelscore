@@ -1,0 +1,53 @@
+import { NextResponse } from "next/server";
+import { connectToDatabase, SiteContent, SITE_CONTENT_PAGES, type SiteContentPage } from "@oodelscore/shared";
+import { requireStaffSession } from "@/lib/adminAuth";
+
+type RouteParams = { params: Promise<{ page: string }> };
+
+const PAGE_SET: readonly string[] = SITE_CONTENT_PAGES;
+
+export async function PATCH(request: Request, { params }: RouteParams) {
+  const session = await requireStaffSession();
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!session.role.permissions.emailAndSiteContent.edit) {
+    return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  }
+
+  const { page } = await params;
+  if (!PAGE_SET.includes(page)) {
+    return NextResponse.json({ status: "error", message: "Unknown page" }, { status: 404 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ status: "error", message: "Invalid body" }, { status: 400 });
+  }
+
+  const update: Record<string, unknown> = {};
+  if (Array.isArray(body.navItems)) update.navItems = body.navItems;
+  if (Array.isArray(body.sections)) update.sections = body.sections;
+  if (body.fields && typeof body.fields === "object" && !Array.isArray(body.fields)) {
+    const fields: Record<string, string> = {};
+    for (const [key, value] of Object.entries(body.fields as Record<string, unknown>)) {
+      if (typeof value === "string") fields[key] = value;
+    }
+    update.fields = fields;
+  }
+
+  await connectToDatabase();
+  const doc = await SiteContent.findOneAndUpdate(
+    { page: page as SiteContentPage },
+    { $set: update },
+    { upsert: true, new: true }
+  );
+
+  return NextResponse.json({
+    status: "ok",
+    page: {
+      page: doc.page,
+      navItems: doc.navItems,
+      sections: doc.sections,
+      fields: Object.fromEntries(doc.fields),
+    },
+  });
+}
