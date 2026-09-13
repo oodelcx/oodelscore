@@ -24,7 +24,6 @@
   color: var(--cc-text);
   font-variant-numeric: tabular-nums;
   max-width: 100%;
-  overflow-x: hidden;
 }
 
 .cc-band-green { color: var(--cc-green); }
@@ -126,8 +125,8 @@
 .cc-card-title { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--cc-dim); text-transform: uppercase; }
 .cc-card-sub { font-size: 10.5px; color: var(--cc-dim); }
 
-.cc-branch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
-.cc-branch-tile { border-radius: 6px; padding: 10px 11px; border: 1px solid var(--cc-border); }
+.cc-branch-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.cc-branch-tile { flex: 1 1 130px; min-width: 0; border-radius: 6px; padding: 10px 11px; border: 1px solid var(--cc-border); }
 .cc-branch-tile.green { background: linear-gradient(155deg, #0e2417, #0f151c); border-color: #1c4a30; }
 .cc-branch-tile.amber { background: linear-gradient(155deg, #2a2008, #14181c); border-color: #4a3b12; }
 .cc-branch-tile.red { background: linear-gradient(155deg, #2a0f12, #14181c); border-color: #4a1c22; }
@@ -181,7 +180,6 @@
 
 .cc-empty { padding: 40px 20px; text-align: center; color: var(--cc-dim); }
 
-@media (max-width: 1000px) {
-  .cc-grid { grid-template-columns: 1fr; }
-  .cc-branch-grid { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1100px) {
+  .cc-grid { grid-template-columns: minmax(0, 1fr); }
 }

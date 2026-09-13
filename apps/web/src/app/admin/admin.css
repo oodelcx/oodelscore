@@ -165,9 +165,22 @@
 
 .admin-main {
   flex: 1;
+  /* A flex item's default min-width is auto, not 0 — it refuses to shrink
+     below its content's intrinsic width. Any wide child (a table, a grid
+     card row) then pushes .admin-main past the viewport instead of letting
+     that child scroll on its own, and the global overflow-x:hidden
+     safeguard (global.css) silently clips it instead of showing a
+     scrollbar. This is what was cutting content off on every portal page
+     that reuses this shell (Admin, Business, Group). */
+  min-width: 0;
   padding: 32px 40px;
   /* oodel-score-admin-rebuild.html .main{max-width:1520px} */
   max-width: 1520px;
+  /* Safety net, not the fix itself (min-width:0 above is): if some specific
+     piece of content still can't shrink to fit (e.g. an unusually wide
+     table), this scrolls just that content area instead of the global
+     overflow-x:hidden safeguard (global.css) silently clipping it. */
+  overflow-x: auto;
 }
 h1 {
   font-size: 24px;
@@ -237,6 +250,14 @@ h1 {
 .grid {
   display: grid;
   gap: 16px;
+  min-width: 0;
+}
+.grid > * {
+  /* Same grid-track floor issue as .admin-main above: a 1fr track's
+     implicit minimum is the size of its content, not 0, so a card
+     containing a wide table refuses to shrink and forces the grid (and
+     everything downstream of it) to overflow. */
+  min-width: 0;
 }
 .grid-2 {
   grid-template-columns: 1fr 1fr;

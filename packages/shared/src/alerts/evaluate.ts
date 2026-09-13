@@ -47,12 +47,24 @@ async function autoTriageAndCreateActionItem(
     categories: categories.map((c) => ({ id: c._id.toString(), name: c.name })),
   });
 
-  const scope = business.parentOrgId
-    ? { ownerScope: "parentOrg" as const, ownerScopeId: business.parentOrgId }
-    : { ownerScope: "business" as const, ownerScopeId: business._id };
-
+  // A branch can set its own owner for a category from its own Category
+  // Owners page — that's always checked first. Only when the branch hasn't
+  // set one does the org-wide default (set on the Group's Category Owners
+  // page) apply. A standalone business only ever has the business-scope
+  // mapping, since it has no org to fall back to.
   const mapping = suggestion.categoryId
-    ? await CategoryOwnerMapping.findOne({ ...scope, categoryId: suggestion.categoryId })
+    ? (await CategoryOwnerMapping.findOne({
+        ownerScope: "business",
+        ownerScopeId: business._id,
+        categoryId: suggestion.categoryId,
+      })) ??
+      (business.parentOrgId
+        ? await CategoryOwnerMapping.findOne({
+            ownerScope: "parentOrg",
+            ownerScopeId: business.parentOrgId,
+            categoryId: suggestion.categoryId,
+          })
+        : null)
     : null;
 
   // A category owner mapping means items in that category always go
