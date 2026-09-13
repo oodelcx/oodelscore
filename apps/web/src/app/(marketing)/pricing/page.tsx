@@ -1,5 +1,6 @@
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
+import { BookDemoButton } from "../demo-modal";
 
 interface Plan {
   name: string;
@@ -41,9 +42,15 @@ export default async function PricingPage() {
               <div className="plan-name">{plan.name}</div>
               <div className="plan-price">{plan.price}</div>
               <div className="plan-unit">{plan.priceNote}</div>
-              <a className="plan-cta" href="#">
-                {plan.cta}
-              </a>
+              {plan.cta === "Start free trial" ? (
+                // Self-serve signup/trial flow doesn't exist yet — a real
+                // product decision, not wired here (see PR description).
+                <a className="plan-cta" href="#">
+                  {plan.cta}
+                </a>
+              ) : (
+                <BookDemoButton className="plan-cta">{plan.cta}</BookDemoButton>
+              )}
               {plan.features.map((feat, j) => (
                 <div className="plan-feat" key={j}>
                   {feat}
@@ -53,7 +60,7 @@ export default async function PricingPage() {
           ))}
         </div>
         <div className="enterprise-note">
-          {f.enterpriseNote} <a href="#">Talk to us about volume pricing →</a>
+          {f.enterpriseNote} <BookDemoButton className="link-cta">Talk to us about volume pricing →</BookDemoButton>
         </div>
       </div>
 

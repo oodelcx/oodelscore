@@ -22,10 +22,14 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   // Admin, Business, and Group each have a real portal now — route
-  // straight there instead of showing the placeholder below.
+  // straight there instead of showing the placeholder below. Team members
+  // (accountType "team_member") act on the same portal as the owner of
+  // whichever parent they belong to (see ownerAuth.ts).
   if (user.accountType === "admin_staff") redirect("/admin/accounts");
   if (user.accountType === "business") redirect("/business");
   if (user.accountType === "parent_org") redirect("/group");
+  if (user.accountType === "team_member" && user.teamOfType === "business") redirect("/business");
+  if (user.accountType === "team_member" && user.teamOfType === "parentOrg") redirect("/group");
 
   const parentName = await resolveParentName(user.accountType, user.parentId);
 

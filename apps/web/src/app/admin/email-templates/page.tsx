@@ -22,6 +22,10 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string }>
   invoice_receipt: { label: "Invoice Receipt", trigger: "A payment succeeds" },
   payment_failed: { label: "Payment Failed", trigger: "A payment fails or goes overdue" },
   demo_request: { label: "Demo Request", trigger: "A visitor submits \"Book a demo\" on the marketing site" },
+  feedback_point_request: {
+    label: "Feedback Point Request",
+    trigger: "A business requests a new feedback point or changes to one",
+  },
 };
 
 function timeAgo(iso: string | null): string {

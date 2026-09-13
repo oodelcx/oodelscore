@@ -70,4 +70,10 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     body: "{{requester_name}} ({{requester_email}}) at {{requester_company}} asked for a demo.\n\nMessage: {{requester_message}}",
     availableVars: ["requester_name", "requester_email", "requester_company", "requester_message"],
   },
+  {
+    key: "feedback_point_request",
+    subject: "New feedback point request from {{business_name}}",
+    body: "{{business_name}} ({{requester_email}}) requested a new feedback point.\n\nNote: {{note}}",
+    availableVars: ["business_name", "requester_email", "note"],
+  },
 ];

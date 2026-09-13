@@ -11,6 +11,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "invoice_receipt",
   "payment_failed",
   "demo_request",
+  "feedback_point_request",
 ] as const;
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
 
