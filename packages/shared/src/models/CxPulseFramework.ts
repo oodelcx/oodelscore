@@ -8,6 +8,10 @@ export interface ICxPulseFramework {
   singletonKey: string;
   weights: ICxPulseDimensions; // sum to 100
   pulseQuestions: string[]; // quarterly self-assessment questions
+  // One line per maturity level (index 0 = Level 1 Collecting ... index 4 =
+  // Level 5 Embedded), shown under each rung of the ladder on the real CX
+  // Pulse page. Admin-editable so the copy isn't hardcoded in the frontend.
+  levelDescriptions: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +32,16 @@ const CxPulseFrameworkSchema = new Schema<ICxPulseFramework>(
     singletonKey: { type: String, required: true, unique: true, default: CX_PULSE_FRAMEWORK_SINGLETON_KEY },
     weights: { type: CxPulseWeightsSchema, required: true },
     pulseQuestions: { type: [String], default: [] },
+    levelDescriptions: {
+      type: [String],
+      default: [
+        "Feedback is collected but rarely reviewed.",
+        "Managers see scores, but there's no routine action on them.",
+        "Negative feedback gets actioned reliably.",
+        "Named owners, playbooks, and closed loops on issues.",
+        "Feedback drives measurable strategy shifts.",
+      ],
+    },
   },
   { timestamps: true }
 );

@@ -1,7 +1,7 @@
 import { EmailTemplate, type EmailTemplateKey } from "../models/EmailTemplate";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-const DEFAULT_FROM = "Oodel Score <noreply@oodelscore.com>";
+const DEFAULT_FROM = "OodelCX <noreply@oodelscore.com>";
 
 export function substituteMergeVars(text: string, vars: Record<string, string>): string {
   return text.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (match, key: string) => vars[key] ?? match);

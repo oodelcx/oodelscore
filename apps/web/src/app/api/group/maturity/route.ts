@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, Category, CategoryOwnerMapping, CxPulseScore, Playbook } from "@oodelscore/shared";
+import { connectToDatabase, Business, Category, CategoryOwnerMapping, CxPulseScore, Playbook, getCxPulseFrameworkOrDefault } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 const DIMENSION_KEYS = ["awareness", "response", "ownership", "culture", "outcome"] as const;
@@ -67,5 +67,15 @@ export async function GET() {
     done: totalPlaybookUsage > 0,
   });
 
-  return NextResponse.json({ status: "ok", score, history, branches, groupAvgDimensions, checklist });
+  const framework = await getCxPulseFrameworkOrDefault();
+
+  return NextResponse.json({
+    status: "ok",
+    score,
+    history,
+    branches,
+    groupAvgDimensions,
+    checklist,
+    levelDescriptions: framework.levelDescriptions,
+  });
 }

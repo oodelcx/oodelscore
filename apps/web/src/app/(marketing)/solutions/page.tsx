@@ -7,7 +7,7 @@ import { BookDemoButton } from "../demo-modal";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Solutions — Oodel Score",
+  title: "Solutions — OodelCX",
 };
 
 export default async function SolutionsPage() {
@@ -72,7 +72,7 @@ export default async function SolutionsPage() {
       <section className="final-cta">
         <div className="wrap">
           <h2>Tell us how your organization is structured.</h2>
-          <p>We&rsquo;ll show you exactly how it maps onto Oodel Score.</p>
+          <p>We&rsquo;ll show you exactly how it maps onto OodelCX.</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
             <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
             <a className="btn-ghost" href="/pricing">

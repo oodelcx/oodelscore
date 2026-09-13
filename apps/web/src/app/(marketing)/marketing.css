@@ -63,13 +63,14 @@
   justify-content: space-between;
 }
 .mkt .nav-logo {
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
   cursor: pointer;
 }
-.mkt .nav-logo span {
-  color: var(--signal);
+.mkt .nav-logo img {
+  height: 26px;
+  width: auto;
+  display: block;
 }
 .mkt .nav-links {
   display: flex;
@@ -530,12 +531,13 @@
   }
 }
 .mkt .foot-logo {
-  font-size: 17px;
-  font-weight: 600;
+  display: inline-block;
   margin-bottom: 10px;
 }
-.mkt .foot-logo span {
-  color: var(--signal);
+.mkt .foot-logo img {
+  height: 22px;
+  width: auto;
+  display: block;
 }
 .mkt .foot-desc {
   font-size: 13px;

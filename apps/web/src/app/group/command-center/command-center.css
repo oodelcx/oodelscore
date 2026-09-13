@@ -183,3 +183,11 @@
 @media (max-width: 1100px) {
   .cc-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.cc-clickable {
+  cursor: pointer;
+  transition: background 0.12s ease, opacity 0.12s ease;
+}
+.cc-clickable:hover {
+  opacity: 0.82;
+}

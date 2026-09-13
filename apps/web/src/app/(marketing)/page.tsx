@@ -23,7 +23,7 @@ interface TitleBodyItem {
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Oodel Score — Feedback that turns into action",
+  title: "OodelCX — Feedback that turns into action",
 };
 
 export default async function MarketingHomePage() {
@@ -131,7 +131,7 @@ export default async function MarketingHomePage() {
       <section className="why" id="company">
         <div className="wrap">
           <div className="narrative-head">
-            <h2>Why teams choose Oodel Score</h2>
+            <h2>Why teams choose OodelCX</h2>
           </div>
           <div className="why-grid">
             {whyItems.map((item, i) => (

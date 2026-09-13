@@ -25,7 +25,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
       <aside className="admin-sidebar">
         <div>
           <div className="admin-sidebar-top">
-            <img className="admin-logo" src="/oodel-logo.png" alt="Oodel Score" />
+            <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
           </div>
           {isLimitedTeamMember ? (

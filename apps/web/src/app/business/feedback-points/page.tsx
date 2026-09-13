@@ -132,7 +132,7 @@ export default function FeedbackPointsPage() {
       </div>
 
       <div className="callout">
-        New feedback points and question changes are set up by your Oodel Score account manager to keep every survey
+        New feedback points and question changes are set up by your OodelCX account manager to keep every survey
         error-free. Requests are usually actioned within one business day.
       </div>
       {requestSent && <div className="callout">Your request has been sent — your account manager will be in touch.</div>}

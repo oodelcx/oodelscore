@@ -9,7 +9,7 @@ interface BodySection {
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Privacy Policy — Oodel Score",
+  title: "Privacy Policy — OodelCX",
 };
 
 export default async function PrivacyPage() {

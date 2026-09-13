@@ -28,7 +28,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
       footerSolutionsLinks: JSON.stringify(["Single business", "Multi-location groups", "Enterprise"]),
       footerCompanyLinks: JSON.stringify(["About", "Privacy policy", "Terms"]),
-      copyrightText: "© Oodel Score. All rights reserved.",
+      copyrightText: "© OodelCX. All rights reserved.",
     },
   },
   {
@@ -38,7 +38,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heroHeadline: "Feedback is easy to collect. Acting on it is the hard part.",
       heroSubheadline:
-        "Oodel Score turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
+        "OodelCX turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
       heroPrimaryButton: "Book a demo",
       heroSecondaryButton: "See how it works",
       heroBuiltForLine: "bank branch networks, retail chains, school trusts, and healthcare groups",
@@ -154,7 +154,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         "Five dimensions — awareness, response speed, ownership, culture, and measured outcomes — rolled into one number your whole team can rally around.",
       aiHeadline: "Written for you, checked by a person",
       aiBody:
-        "Weekly and monthly reports summarize what changed and why — but nothing reaches your dashboard until a human at Oodel Score has reviewed it.",
+        "Weekly and monthly reports summarize what changed and why — but nothing reaches your dashboard until a human at OodelCX has reviewed it.",
     },
   },
   {
@@ -192,7 +192,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heroHeadline: "We think feedback tools stopped too early.",
       missionStatement:
-        "Most platforms treat \"collect feedback\" as the whole job. We think that's the easy third. Oodel Score exists because the harder, more valuable work — turning what customers say into something a team actually does, and knowing whether it worked — was left to spreadsheets and good intentions. We built the other two thirds.",
+        "Most platforms treat \"collect feedback\" as the whole job. We think that's the easy third. OodelCX exists because the harder, more valuable work — turning what customers say into something a team actually does, and knowing whether it worked — was left to spreadsheets and good intentions. We built the other two thirds.",
       howWeWorkItems: JSON.stringify([
         {
           title: "We review the AI, not just ship it",
@@ -200,7 +200,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         },
         {
           title: "We design for the org chart, not the demo",
-          body: "A single café and a thousand-branch retailer both use Oodel Score.",
+          body: "A single café and a thousand-branch retailer both use OodelCX.",
         },
         {
           title: "We stay small and direct",
@@ -246,8 +246,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       lastUpdated: "September 2026",
       body: JSON.stringify([
         {
-          heading: "Using Oodel Score",
-          text: "By creating an account, you agree to use Oodel Score only for lawful feedback collection and analysis, and not to attempt to identify respondents who submitted feedback anonymously.",
+          heading: "Using OodelCX",
+          text: "By creating an account, you agree to use OodelCX only for lawful feedback collection and analysis, and not to attempt to identify respondents who submitted feedback anonymously.",
         },
         {
           heading: "Billing",
@@ -255,7 +255,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         },
         {
           heading: "AI-generated content",
-          text: "Insights reports are drafted with AI assistance and reviewed by a person before publication, but Oodel Score does not guarantee the accuracy of AI-generated summaries.",
+          text: "Insights reports are drafted with AI assistance and reviewed by a person before publication, but OodelCX does not guarantee the accuracy of AI-generated summaries.",
         },
         {
           heading: "Contact",
@@ -272,8 +272,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       // heroHighlight must be an exact substring of heroHeadline — the
       // login/forgot-password/set-password visual panel renders that
       // substring in the accent green, everything else in white.
-      heroHeadline: "Every scan is someone telling you the truth.",
-      heroHighlight: "the truth",
+      heroHeadline: "Know where you stand. Own where you are going.",
+      heroHighlight: "Own where you are going.",
     },
   },
 ];

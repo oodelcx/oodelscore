@@ -5,7 +5,7 @@ import "./global.css";
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata = {
-  title: "Oodel Score",
+  title: "OodelCX",
 };
 
 // One font, everywhere — dashboards, marketing site, and printable posters
