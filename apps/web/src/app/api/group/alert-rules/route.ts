@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AlertRule, Business, ALERT_RULE_TYPES, ALERT_DELIVERY_MODES, ALERT_SCOPES } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  AlertRule,
+  AlertActivity,
+  Business,
+  ALERT_RULE_TYPES,
+  ALERT_DELIVERY_MODES,
+  ALERT_SCOPES,
+} from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 /**
@@ -18,10 +26,27 @@ export async function GET() {
     scope: { $in: ["parentOrg_all", "parentOrg_region"] },
   }).sort({ createdAt: 1 });
 
-  const businesses = await Business.find({ parentOrgId: session.org._id }).select("_id name");
+  const businesses = await Business.find({ parentOrgId: session.org._id }).select("_id name region");
   const businessRules = await AlertRule.find({ scope: "business", ownerId: { $in: businesses.map((b) => b._id) } });
 
-  return NextResponse.json({ status: "ok", orgRules, businessRules, businesses });
+  // "Fired this week" per rule (spec: "this is what produces the Flagged
+  // counts you see on Overview" — never hardcode, compute from alertActivity).
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const allRuleIds = [...orgRules, ...businessRules].map((r) => r._id);
+  const recentActivity = await AlertActivity.find({ alertRuleId: { $in: allRuleIds }, triggeredAt: { $gte: sevenDaysAgo } }).select(
+    "alertRuleId businessId"
+  );
+  const firedCounts = new Map<string, Set<string>>();
+  for (const a of recentActivity) {
+    const key = a.alertRuleId.toString();
+    const set = firedCounts.get(key) ?? new Set<string>();
+    set.add(a.businessId.toString());
+    firedCounts.set(key, set);
+  }
+  const withFired = (rules: typeof orgRules) =>
+    rules.map((r) => ({ ...r.toObject(), firedCount: firedCounts.get(r._id.toString())?.size ?? 0 }));
+
+  return NextResponse.json({ status: "ok", orgRules: withFired(orgRules), businessRules: withFired(businessRules), businesses });
 }
 
 export async function POST(request: Request) {
