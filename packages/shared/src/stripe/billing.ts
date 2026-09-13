@@ -1,7 +1,13 @@
 import type Stripe from "stripe";
 import { Types } from "mongoose";
 import { getStripeClient } from "./client";
-import { BillingSubscription, BILLING_OWNER_TYPES, type BillingOwnerType, type IBillingSubscription } from "../models/BillingSubscription";
+import {
+  BillingSubscription,
+  BILLING_OWNER_TYPES,
+  type BillingOwnerType,
+  type IBillingSubscription,
+  type CompPeriod,
+} from "../models/BillingSubscription";
 import { Invoice } from "../models/Invoice";
 import { Business } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
@@ -135,14 +141,45 @@ export async function getInvoiceHostedUrl(stripeInvoiceId: string): Promise<stri
 }
 
 /**
+ * A comp account's expiry given its period, computed from `startedAt`
+ * (defaults to now) — "unlimited" and "custom" are the only two cases with
+ * no automatic date math: unlimited never expires, custom takes whatever
+ * date Admin picked directly.
+ */
+export function computeCompExpiry(period: CompPeriod, startedAt: Date, customExpiresAt?: Date | null): Date | null {
+  switch (period) {
+    case "15_days":
+      return new Date(startedAt.getTime() + 15 * 24 * 60 * 60 * 1000);
+    case "30_days":
+      return new Date(startedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    case "60_days":
+      return new Date(startedAt.getTime() + 60 * 24 * 60 * 60 * 1000);
+    case "unlimited":
+      return null;
+    case "custom":
+      return customExpiresAt ?? null;
+  }
+}
+
+/**
  * Marks an owner as comp (spec Section 5: "bypasses Stripe charge but
  * should still be visible in Billing Oversight with a comp badge"). No
- * Stripe API calls — this is a direct DB write.
+ * Stripe API calls — this is a direct DB write. `period` drives an
+ * editable expiry (15/30/60 days, unlimited, or a custom date) — Admin can
+ * call this again later with a new period to change it, since it's an
+ * upsert keyed on the owner.
  */
-export async function markOwnerComp(params: { ownerType: BillingOwnerType; ownerId: string }): Promise<IBillingSubscription> {
+export async function markOwnerComp(params: {
+  ownerType: BillingOwnerType;
+  ownerId: string;
+  period: CompPeriod;
+  customExpiresAt?: Date | null;
+}): Promise<IBillingSubscription> {
   if (params.ownerType === "business") {
     await assertBusinessCanHaveOwnSubscription(params.ownerId);
   }
+  const startedAt = new Date();
+  const compExpiresAt = computeCompExpiry(params.period, startedAt, params.customExpiresAt);
   const subscription = await BillingSubscription.findOneAndUpdate(
     { ownerType: params.ownerType, ownerId: params.ownerId },
     {
@@ -150,6 +187,9 @@ export async function markOwnerComp(params: { ownerType: BillingOwnerType; owner
         ownerType: params.ownerType,
         ownerId: params.ownerId,
         isComp: true,
+        compPeriod: params.period,
+        compStartedAt: startedAt,
+        compExpiresAt,
         mrrValue: 0,
         status: "active",
         plan: "comp",

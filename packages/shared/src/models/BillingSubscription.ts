@@ -6,6 +6,9 @@ export type BillingOwnerType = (typeof BILLING_OWNER_TYPES)[number];
 export const SUBSCRIPTION_STATUSES = ["active", "overdue", "canceled"] as const;
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 
+export const COMP_PERIODS = ["15_days", "30_days", "60_days", "unlimited", "custom"] as const;
+export type CompPeriod = (typeof COMP_PERIODS)[number];
+
 /**
  * Rule (spec Section 2/5, bug #2): a `businesses` doc with
  * billingAssignment "group_pays" must NOT have its own row here — its cost
@@ -20,6 +23,9 @@ export interface IBillingSubscription {
   stripeSubscriptionId: string;
   plan: string;
   isComp: boolean;
+  compPeriod: CompPeriod | null; // null unless isComp
+  compStartedAt: Date | null;
+  compExpiresAt: Date | null; // null = unlimited (or not comp)
   mrrValue: number; // 0 for comp
   nextPaymentDate: Date | null;
   status: SubscriptionStatus;
@@ -36,6 +42,9 @@ const BillingSubscriptionSchema = new Schema<IBillingSubscription>(
     stripeSubscriptionId: { type: String, default: "" },
     plan: { type: String, default: "" },
     isComp: { type: Boolean, default: false },
+    compPeriod: { type: String, enum: COMP_PERIODS, default: null },
+    compStartedAt: { type: Date, default: null },
+    compExpiresAt: { type: Date, default: null },
     mrrValue: { type: Number, default: 0 },
     nextPaymentDate: { type: Date, default: null },
     status: { type: String, enum: SUBSCRIPTION_STATUSES, default: "active" },
