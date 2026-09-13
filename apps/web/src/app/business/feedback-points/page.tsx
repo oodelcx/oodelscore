@@ -18,6 +18,10 @@ export default function FeedbackPointsPage() {
   const [loading, setLoading] = useState(true);
   const [requestSent, setRequestSent] = useState(false);
   const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestNote, setRequestNote] = useState("");
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -34,9 +38,33 @@ export default function FeedbackPointsPage() {
     });
   }, []);
 
-  function requestChange() {
-    setRequestSent(true);
-    setTimeout(() => setRequestSent(false), 4000);
+  function openRequest() {
+    setRequestError(null);
+    setRequestOpen(true);
+  }
+
+  async function submitRequest() {
+    setRequestSubmitting(true);
+    setRequestError(null);
+    try {
+      const res = await fetch("/api/business/feedback-points/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: requestNote.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.status !== "ok") {
+        throw new Error(data.message || "Couldn't send your request. Please try again.");
+      }
+      setRequestOpen(false);
+      setRequestNote("");
+      setRequestSent(true);
+      setTimeout(() => setRequestSent(false), 4000);
+    } catch (err) {
+      setRequestError(err instanceof Error ? err.message : "Couldn't send your request. Please try again.");
+    } finally {
+      setRequestSubmitting(false);
+    }
   }
 
   return (
@@ -48,7 +76,7 @@ export default function FeedbackPointsPage() {
             View your QR codes and what each one asks customers.
           </p>
         </div>
-        <button className="btn btn-dark" onClick={requestChange}>
+        <button className="btn btn-dark" onClick={openRequest}>
           + Request new feedback point
         </button>
       </div>
@@ -57,7 +85,38 @@ export default function FeedbackPointsPage() {
         New feedback points and question changes are set up by your Oodel Score account manager to keep every survey
         error-free. Requests are usually actioned within one business day.
       </div>
-      {requestSent && <div className="callout">Your request has been noted — your account manager will be in touch.</div>}
+      {requestSent && <div className="callout">Your request has been sent — your account manager will be in touch.</div>}
+      {requestOpen && (
+        <div className="card" style={{ marginBottom: 18 }}>
+          <h3>Request a feedback point</h3>
+          <p className="card-sub">
+            Tell your account manager what you need — a new location, an updated question set, anything else.
+          </p>
+          <textarea
+            value={requestNote}
+            onChange={(e) => setRequestNote(e.target.value)}
+            placeholder="Optional note (e.g. which location, what should change)"
+            rows={3}
+            style={{ width: "100%", marginTop: 8, marginBottom: 8 }}
+          />
+          {requestError && <p style={{ color: "var(--danger, #c0392b)" }}>{requestError}</p>}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-dark" onClick={submitRequest} disabled={requestSubmitting}>
+              {requestSubmitting ? "Sending…" : "Send request"}
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                setRequestOpen(false);
+                setRequestError(null);
+              }}
+              disabled={requestSubmitting}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
@@ -83,7 +142,7 @@ export default function FeedbackPointsPage() {
                   <button className="btn" style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
                     View QR
                   </button>
-                  <button className="btn" style={{ flex: 1 }} onClick={requestChange}>
+                  <button className="btn" style={{ flex: 1 }} onClick={openRequest}>
                     Request changes
                   </button>
                 </div>

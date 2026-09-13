@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface SettingsData {
   demographicConfig: Record<string, string>;
@@ -74,9 +75,9 @@ export default function SurveySettingsPage() {
           </div>
         ))}
       </div>
-      <button className="btn" style={{ marginTop: 16 }}>
+      <Link className="btn" style={{ marginTop: 16, display: "inline-block" }} href="/business/messages">
         Message us to change these →
-      </button>
+      </Link>
     </div>
   );
 }
