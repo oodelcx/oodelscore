@@ -1,10 +1,28 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { connectToDatabase, SiteContent, SITE_CONTENT_PAGES, type SiteContentPage } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 type RouteParams = { params: Promise<{ page: string }> };
 
 const PAGE_SET: readonly string[] = SITE_CONTENT_PAGES;
+
+// Marketing pages are ISR-cached (revalidate = 60s each) so real traffic
+// doesn't hit Mongo on every request — but that meant a save here only
+// took effect after up to a minute, which reads as "the toggle didn't
+// work" if you check right away. "menu" backs the nav + footer on every
+// marketing page, so it needs all of them revalidated, not just its own.
+const MARKETING_ROUTES_BY_PAGE: Record<string, string[]> = {
+  menu: ["/", "/product", "/solutions", "/pricing", "/company", "/privacy", "/terms"],
+  home: ["/"],
+  pricing: ["/pricing"],
+  product: ["/product"],
+  solutions: ["/solutions"],
+  company: ["/company"],
+  privacy: ["/privacy"],
+  terms: ["/terms"],
+  login: [], // AuthShell fetches this live via /api/login-visual — never ISR-cached
+};
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireStaffSession();
@@ -40,6 +58,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     { $set: update },
     { upsert: true, new: true }
   );
+
+  for (const route of MARKETING_ROUTES_BY_PAGE[page] ?? []) {
+    revalidatePath(route);
+  }
 
   return NextResponse.json({
     status: "ok",
