@@ -12,7 +12,9 @@ interface RuleRow {
   dropPercent: number | null;
   region: string;
   recipients: string[];
+  delivery: string;
   active: boolean;
+  firedCount: number;
 }
 interface BusinessRow {
   _id: string;
@@ -83,6 +85,15 @@ export default function GroupAlertRulesPage() {
 
   async function removeRule(id: string) {
     await fetch(`/api/group/alert-rules/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  async function toggleActive(rule: RuleRow) {
+    await fetch(`/api/group/alert-rules/${rule._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !rule.active }),
+    });
     load();
   }
 
@@ -170,13 +181,16 @@ export default function GroupAlertRulesPage() {
       {!loading && (
         <>
           <h3 className="section-label" style={{ marginTop: 0 }}>Your organization rules</h3>
+          <p className="section-sub">This is what produces the &quot;Flagged&quot; counts you see on Overview.</p>
           <table className="clean">
             <thead>
               <tr>
                 <th>Scope</th>
                 <th>Type</th>
-                <th>Metric</th>
-                <th>Value</th>
+                <th>Condition</th>
+                <th>Delivery</th>
+                <th>Fired this week</th>
+                <th>Active</th>
                 <th></th>
               </tr>
             </thead>
@@ -184,9 +198,26 @@ export default function GroupAlertRulesPage() {
               {orgRules.map((r) => (
                 <tr key={r._id}>
                   <td>{r.scope === "parentOrg_region" ? `Region: ${r.region}` : "All businesses"}</td>
-                  <td>{r.ruleType}</td>
-                  <td>{r.metric || "—"}</td>
-                  <td>{r.threshold ?? r.sensitivity ?? r.dropPercent ?? "—"}</td>
+                  <td>{r.ruleType.replace(/_/g, " ")}</td>
+                  <td>{r.metric || "—"} {r.threshold ?? r.sensitivity ?? r.dropPercent ?? ""}</td>
+                  <td>{r.delivery === "weekly_digest" ? "Weekly digest" : "Immediate email"}</td>
+                  <td>
+                    {r.firedCount > 0 ? (
+                      <span className="pill pill-red">{r.firedCount} branch{r.firedCount === 1 ? "" : "es"} →</span>
+                    ) : (
+                      <span className="pill pill-green">0</span>
+                    )}
+                  </td>
+                  <td>
+                    <span
+                      className={`pill ${r.active ? "pill-green" : "pill-gray"}`}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => toggleActive(r)}
+                      title="Click to toggle"
+                    >
+                      {r.active ? "On" : "Off"}
+                    </span>
+                  </td>
                   <td style={{ textAlign: "right" }}>
                     <button className="icon-btn btn-danger" onClick={() => removeRule(r._id)}>
                       🗑
@@ -196,7 +227,7 @@ export default function GroupAlertRulesPage() {
               ))}
               {orgRules.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="subtitle">
+                  <td colSpan={7} className="subtitle">
                     No organization-wide rules yet.
                   </td>
                 </tr>
@@ -212,20 +243,22 @@ export default function GroupAlertRulesPage() {
                 <th>Type</th>
                 <th>Metric</th>
                 <th>Threshold</th>
+                <th>Fired this week</th>
               </tr>
             </thead>
             <tbody>
               {businessRules.map((r) => (
                 <tr key={r._id}>
                   <td>{businesses.find((b) => b._id === (r as unknown as { ownerId: string }).ownerId)?.name ?? "—"}</td>
-                  <td>{r.ruleType}</td>
-                  <td>{r.metric}</td>
+                  <td>{r.ruleType.replace(/_/g, " ")}</td>
+                  <td>{r.metric || "—"}</td>
                   <td>{r.threshold ?? "—"}</td>
+                  <td>{r.firedCount}</td>
                 </tr>
               ))}
               {businessRules.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="subtitle">
+                  <td colSpan={5} className="subtitle">
                     No business-level rules yet.
                   </td>
                 </tr>

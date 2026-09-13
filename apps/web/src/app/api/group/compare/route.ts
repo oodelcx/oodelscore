@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, CxPulseScore, computeBusinessMetrics, computeDailyTrend } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  Business,
+  CxPulseScore,
+  computeBusinessMetrics,
+  computeDailyTrend,
+  computeBusinessCategoryBreakdown,
+} from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 const MAX_COMPARE = 6;
@@ -21,10 +28,11 @@ export async function GET(request: Request) {
 
   const branches = await Promise.all(
     businesses.map(async (b) => {
-      const [metrics, score, trend] = await Promise.all([
+      const [metrics, score, trend, categoryBreakdown] = await Promise.all([
         computeBusinessMetrics(b._id, from30d, now),
         CxPulseScore.findOne({ ownerType: "business", ownerId: b._id }).sort({ period: -1 }),
         computeDailyTrend([b._id], TREND_DAYS, now),
+        computeBusinessCategoryBreakdown(b._id, from30d, now),
       ]);
       return {
         businessId: b._id.toString(),
@@ -34,9 +42,15 @@ export async function GET(request: Request) {
         responseCount: metrics.responseCount,
         cxPulseLevel: score?.level ?? null,
         trend,
+        categoryBreakdown,
       };
     })
   );
 
-  return NextResponse.json({ status: "ok", branches });
+  // Union of every category name appearing on any selected branch, so the
+  // grouped bars and full comparison table have consistent columns even when
+  // branches don't share identical category sets.
+  const categoryNames = Array.from(new Set(branches.flatMap((b) => b.categoryBreakdown.map((c) => c.name)))).sort();
+
+  return NextResponse.json({ status: "ok", branches, categoryNames });
 }
