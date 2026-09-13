@@ -23,11 +23,15 @@ export default function FeedbackResponsesPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterId>("all");
   const [q, setQ] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   function load() {
     setLoading(true);
     const params = new URLSearchParams();
     if (q.trim()) params.set("q", q.trim());
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     fetch(`/api/admin/feedback-responses?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
@@ -40,7 +44,7 @@ export default function FeedbackResponsesPage() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, [q]);
+  useEffect(load, [q, from, to]);
 
   async function deleteResponse(id: string) {
     if (!confirm("Delete this response permanently?")) return;
@@ -69,7 +73,11 @@ export default function FeedbackResponsesPage() {
             Every response submitted across the platform.
           </p>
         </div>
-        <input type="text" placeholder="Search by respondent or business…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="btn-group">
+          <input type="text" placeholder="Search by respondent or business…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} title="From date" />
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} title="To date" />
+        </div>
       </div>
 
       <div className="filters">
