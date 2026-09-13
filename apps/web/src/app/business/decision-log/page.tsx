@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 interface EntryRow {
   _id: string;
@@ -11,6 +11,12 @@ interface EntryRow {
   outcomeAfter: number | null;
 }
 
+function outcomeDelta(entry: EntryRow): string | null {
+  if (entry.outcomeBefore === null || entry.outcomeAfter === null) return null;
+  const delta = Math.round((entry.outcomeAfter - entry.outcomeBefore) * 100) / 100;
+  return delta > 0 ? `+${delta}` : String(delta);
+}
+
 export default function BusinessDecisionLogPage() {
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +24,9 @@ export default function BusinessDecisionLogPage() {
   const [trigger, setTrigger] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [measuringId, setMeasuringId] = useState<string | null>(null);
+  const [outcomeBeforeDraft, setOutcomeBeforeDraft] = useState("");
+  const [outcomeAfterDraft, setOutcomeAfterDraft] = useState("");
 
   function load() {
     setLoading(true);
@@ -66,6 +75,25 @@ export default function BusinessDecisionLogPage() {
     load();
   }
 
+  function startMeasure(entry: EntryRow) {
+    setMeasuringId(entry._id);
+    setOutcomeBeforeDraft(entry.outcomeBefore !== null ? String(entry.outcomeBefore) : "");
+    setOutcomeAfterDraft(entry.outcomeAfter !== null ? String(entry.outcomeAfter) : "");
+  }
+
+  async function saveOutcome(id: string) {
+    const patch: Record<string, number> = {};
+    if (outcomeBeforeDraft.trim()) patch.outcomeBefore = Number(outcomeBeforeDraft);
+    if (outcomeAfterDraft.trim()) patch.outcomeAfter = Number(outcomeAfterDraft);
+    await fetch(`/api/business/decision-log/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    setMeasuringId(null);
+    load();
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -110,23 +138,71 @@ export default function BusinessDecisionLogPage() {
           </thead>
           <tbody>
             {entries.map((e) => (
-              <tr key={e._id}>
-                <td>{e.title}</td>
-                <td>{e.trigger || "—"}</td>
-                <td>
-                  <select value={e.status} onChange={(ev) => updateStatus(e._id, ev.target.value)}>
-                    <option value="planned">Planned</option>
-                    <option value="in_progress">In progress</option>
-                    <option value="implemented">Implemented</option>
-                  </select>
-                </td>
-                <td>{e.outcomeBefore !== null && e.outcomeAfter !== null ? `${e.outcomeBefore} → ${e.outcomeAfter}` : "not measured yet"}</td>
-                <td style={{ textAlign: "right" }}>
-                  <button className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
-                    🗑
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={e._id}>
+                <tr>
+                  <td>{e.title}</td>
+                  <td>{e.trigger || "—"}</td>
+                  <td>
+                    <select value={e.status} onChange={(ev) => updateStatus(e._id, ev.target.value)}>
+                      <option value="planned">Planned</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="implemented">Implemented</option>
+                    </select>
+                  </td>
+                  <td>
+                    {e.outcomeBefore !== null && e.outcomeAfter !== null ? (
+                      <>
+                        {e.outcomeBefore} → {e.outcomeAfter}{" "}
+                        <span className={`pill ${(outcomeDelta(e) ?? "").startsWith("+") ? "pill-green" : "pill-red"}`}>
+                          {outcomeDelta(e)}
+                        </span>
+                      </>
+                    ) : (
+                      "not measured yet"
+                    )}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startMeasure(e)}>
+                      Measure outcome
+                    </button>
+                    <button className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
+                      🗑
+                    </button>
+                  </td>
+                </tr>
+                {measuringId === e._id && (
+                  <tr>
+                    <td colSpan={5}>
+                      <div className="field-row" style={{ margin: "6px 0" }}>
+                        <div className="field">
+                          <label>Outcome before</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={outcomeBeforeDraft}
+                            onChange={(ev) => setOutcomeBeforeDraft(ev.target.value)}
+                          />
+                        </div>
+                        <div className="field">
+                          <label>Outcome after</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={outcomeAfterDraft}
+                            onChange={(ev) => setOutcomeAfterDraft(ev.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <button className="btn btn-dark btn-sm" onClick={() => saveOutcome(e._id)}>
+                        Save outcome
+                      </button>{" "}
+                      <button className="btn btn-sm" onClick={() => setMeasuringId(null)}>
+                        Cancel
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
             {entries.length === 0 && (
               <tr>
