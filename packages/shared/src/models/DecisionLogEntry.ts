@@ -4,7 +4,13 @@ export const DECISION_STATUSES = ["planned", "in_progress", "implemented"] as co
 export type DecisionStatus = (typeof DECISION_STATUSES)[number];
 
 export interface IDecisionLogEntry {
-  parentOrgId: Types.ObjectId;
+  // Exactly one of these is set, enforced at the API layer (not here): a
+  // Group-created entry gets parentOrgId (org-wide), a standalone business's
+  // entry gets businessId instead — mirrors the ActionBoardItem fix (spec
+  // Section 16 correction), since a business with no parent org needs a
+  // Decision Log too.
+  parentOrgId: Types.ObjectId | null;
+  businessId: Types.ObjectId | null;
   title: string;
   trigger: string;
   linkedActionIds: Types.ObjectId[];
@@ -22,7 +28,8 @@ export interface IDecisionLogEntry {
 
 const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
   {
-    parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", required: true },
+    parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", default: null },
+    businessId: { type: Schema.Types.ObjectId, ref: "Business", default: null },
     title: { type: String, required: true },
     trigger: { type: String, default: "" },
     linkedActionIds: { type: [Schema.Types.ObjectId], ref: "ActionBoardItem", default: [] },
@@ -39,6 +46,7 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
 );
 
 DecisionLogEntrySchema.index({ parentOrgId: 1, affectedBusinessIds: 1 });
+DecisionLogEntrySchema.index({ businessId: 1 });
 
 export const DecisionLogEntry: Model<IDecisionLogEntry> =
   mongoose.models.DecisionLogEntry ?? model<IDecisionLogEntry>("DecisionLogEntry", DecisionLogEntrySchema);

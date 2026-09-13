@@ -9,7 +9,6 @@ interface CategoryRow {
 interface MappingRow {
   categoryId: string;
   defaultOwnerId: string;
-  autoAssignWithoutConfirmation: boolean;
 }
 interface TeamRow {
   userId: string;
@@ -21,7 +20,6 @@ export default function GroupCategoryOwnersPage() {
   const [mappings, setMappings] = useState<Record<string, MappingRow>>({});
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [autoAssign, setAutoAssign] = useState(false);
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
 
   function load() {
@@ -32,7 +30,6 @@ export default function GroupCategoryOwnersPage() {
         const byCategory: Record<string, MappingRow> = {};
         for (const m of data.mappings ?? []) byCategory[m.categoryId] = m;
         setMappings(byCategory);
-        setAutoAssign(Object.values(byCategory).some((m) => m.autoAssignWithoutConfirmation));
         setTeam(teamData.team ?? []);
         setLoading(false);
       }
@@ -53,15 +50,6 @@ export default function GroupCategoryOwnersPage() {
     load();
   }
 
-  async function toggleAutoAssign(value: boolean) {
-    setAutoAssign(value);
-    await fetch("/api/group/category-owners", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ autoAssignWithoutConfirmation: value }),
-    });
-  }
-
   return (
     <div>
       <div className="page-head">
@@ -73,15 +61,9 @@ export default function GroupCategoryOwnersPage() {
         </div>
       </div>
 
-      <div className="callout" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span>
-          <b>Auto-assign without confirmation.</b> Off by default — new items are suggestions the mapped owner must
-          Accept. Turn on once you trust these mappings.
-        </span>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
-          <input type="checkbox" checked={autoAssign} onChange={(e) => toggleAutoAssign(e.target.checked)} />
-          Enabled
-        </label>
+      <div className="callout">
+        Items in a mapped category are assigned directly to that category&rsquo;s default owner — no separate
+        confirmation step.
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}

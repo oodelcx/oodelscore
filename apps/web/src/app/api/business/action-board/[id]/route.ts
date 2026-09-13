@@ -1,9 +1,42 @@
 import { NextResponse } from "next/server";
-import { Types } from "mongoose";
-import { connectToDatabase, ActionBoardItem, User, sendTemplatedEmail, ACTION_PRIORITIES, ACTION_STATUSES } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { Types, type HydratedDocument } from "mongoose";
+import {
+  connectToDatabase,
+  ActionBoardItem,
+  DecisionLogEntry,
+  User,
+  sendTemplatedEmail,
+  ACTION_PRIORITIES,
+  ACTION_STATUSES,
+  type IActionBoardItem,
+} from "@oodelscore/shared";
+import { requireBusinessOwner, type BusinessOwnerSession } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
+
+/**
+ * Resolving with a note is how a decision gets recorded now — no separate
+ * manual Decision Log entry step (product feedback: nobody thought to check
+ * a separate page for it). One DecisionLogEntry per resolution, linked back
+ * to the action item.
+ */
+async function logDecisionForResolution(
+  item: HydratedDocument<IActionBoardItem>,
+  session: BusinessOwnerSession,
+  resolutionNote: string
+) {
+  await DecisionLogEntry.create({
+    parentOrgId: session.business.parentOrgId ?? null,
+    businessId: session.business.parentOrgId ? null : session.business._id,
+    title: item.title,
+    trigger: resolutionNote,
+    linkedActionIds: [item._id],
+    affectedBusinessIds: [item.businessId],
+    ownerId: item.ownerId,
+    implementationDate: new Date(),
+    status: "implemented",
+  });
+}
 
 /** Fires spec Section 11's action_assigned trigger whenever ownerId is set or changed.
  * A "limited" tier Team Member may only update status/resolutionNote on an item already
@@ -28,6 +61,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (body?.status === "resolved") item.resolvedAt = new Date();
     if (typeof body?.resolutionNote === "string") item.resolutionNote = body.resolutionNote;
     await item.save();
+    if (body?.status === "resolved" && typeof body?.resolutionNote === "string" && body.resolutionNote.trim()) {
+      await logDecisionForResolution(item, session, body.resolutionNote.trim());
+    }
     return NextResponse.json({ status: "ok", item });
   }
 
@@ -48,6 +84,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await item.save();
+
+  if (body?.status === "resolved" && typeof body?.resolutionNote === "string" && body.resolutionNote.trim()) {
+    await logDecisionForResolution(item, session, body.resolutionNote.trim());
+  }
 
   const newOwnerId = item.ownerId?.toString() ?? null;
   if (newOwnerId && newOwnerId !== previousOwnerId) {

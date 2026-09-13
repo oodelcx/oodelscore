@@ -58,6 +58,8 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <div className="section-label" style={{ margin: "14px 14px 4px" }}>Act</div>
               <nav className="admin-nav">
                 <a href="/business/action-board">Action Board</a>
+                <a href="/business/decision-log">Decision Log</a>
+                <a href="/business/playbooks">Playbooks</a>
               </nav>
 
               {isBranch && (
