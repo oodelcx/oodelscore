@@ -123,6 +123,18 @@ export async function createBillingPortalSession(stripeCustomerId: string, retur
 }
 
 /**
+ * Powers the "Download" action on an Invoice History row (Business/Group
+ * Billing pages). Read-only — no Stripe side effect — so it's safe to call
+ * directly on click, unlike checkout/portal actions.
+ */
+export async function getInvoiceHostedUrl(stripeInvoiceId: string): Promise<string | null> {
+  if (!stripeInvoiceId) return null;
+  const stripe = getStripeClient();
+  const invoice = await stripe.invoices.retrieve(stripeInvoiceId);
+  return invoice.hosted_invoice_url ?? invoice.invoice_pdf ?? null;
+}
+
+/**
  * Marks an owner as comp (spec Section 5: "bypasses Stripe charge but
  * should still be visible in Billing Oversight with a comp badge"). No
  * Stripe API calls — this is a direct DB write.

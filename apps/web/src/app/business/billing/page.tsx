@@ -14,6 +14,8 @@ interface BillingData {
   invoices: { _id: string; amount: number; currency: string; status: string; issuedAt: string }[];
   usage: { feedbackPointsUsed: number; feedbackPointsAllowed: number; responseCount: number };
   billingAssignment: string;
+  groupName: string | null;
+  groupBranchCount: number | null;
 }
 
 export default function BillingPage() {
@@ -44,17 +46,23 @@ export default function BillingPage() {
     return (
       <div>
         <h1>Billing</h1>
-        <p className="subtitle">Your subscription is managed by your parent organization.</p>
+        <p className="subtitle">Your subscription is managed by {data.groupName ?? "your parent organization"}.</p>
         <div className="callout">
-          This business is billed to your parent group, not to you directly. Contact your regional manager for billing
-          questions.
+          This business is billed to your parent group, not to you directly. {data.groupName ?? "Your parent group"}&apos;s
+          admin manages the payment method and invoice for all its &quot;Group pays&quot; branches, including this one.
+          Contact your regional manager for billing questions.
         </div>
         <div className="card">
           <div className="row-flex" style={{ marginBottom: 6 }}>
-            <span className="pill pill-blue">Billed to group</span>
+            <span className="pill pill-blue">Billed to: {data.groupName ?? "Group"}</span>
             <span className="pill pill-green">Active</span>
           </div>
-          <div className="metric-note">No payment method or invoice history to manage here.</div>
+          <div className="metric-note">
+            {data.groupBranchCount
+              ? `Part of a consolidated invoice covering ${data.groupBranchCount} branch${data.groupBranchCount === 1 ? "" : "es"}. `
+              : ""}
+            No payment method or invoice history to manage here.
+          </div>
         </div>
       </div>
     );
@@ -110,6 +118,7 @@ export default function BillingPage() {
             <th>Date</th>
             <th>Amount</th>
             <th>Status</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -122,11 +131,21 @@ export default function BillingPage() {
               <td>
                 <span className={`pill ${inv.status === "paid" ? "pill-green" : "pill-red"}`}>{inv.status}</span>
               </td>
+              <td style={{ textAlign: "right" }}>
+                <a
+                  href={`/api/business/billing/invoices/${inv._id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--accent)", cursor: "pointer" }}
+                >
+                  Download
+                </a>
+              </td>
             </tr>
           ))}
           {data.invoices.length === 0 && (
             <tr>
-              <td colSpan={3} className="subtitle">
+              <td colSpan={4} className="subtitle">
                 No invoices yet.
               </td>
             </tr>
