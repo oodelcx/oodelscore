@@ -37,24 +37,3 @@ export async function PUT(request: Request) {
 
   return NextResponse.json({ status: "ok", mapping });
 }
-
-// Approximates the spec's single per-org "Auto-assign without
-// confirmation" toggle by applying it across every mapping for this org
-// at once, since the field lives per-mapping in the schema.
-export async function PATCH(request: Request) {
-  const session = await requireParentOrgOwner();
-  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
-
-  const body = await request.json().catch(() => null);
-  if (typeof body?.autoAssignWithoutConfirmation !== "boolean") {
-    return NextResponse.json({ status: "error", message: "autoAssignWithoutConfirmation must be a boolean" }, { status: 400 });
-  }
-
-  await connectToDatabase();
-  await CategoryOwnerMapping.updateMany(
-    { ownerScope: "parentOrg", ownerScopeId: session.org._id },
-    { $set: { autoAssignWithoutConfirmation: body.autoAssignWithoutConfirmation } }
-  );
-
-  return NextResponse.json({ status: "ok" });
-}

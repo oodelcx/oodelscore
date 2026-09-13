@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ActionBoardItem, User, sendTemplatedEmail, ACTION_PRIORITIES } from "@oodelscore/shared";
+import { connectToDatabase, ActionBoardItem, Playbook, User, sendTemplatedEmail, ACTION_PRIORITIES } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
@@ -16,8 +16,15 @@ export async function GET() {
   const filter: Record<string, unknown> = { businessId: session.business._id };
   if (session.tier === "limited") filter.ownerId = session.user._id;
 
-  const items = await ActionBoardItem.find(filter).sort({ createdAt: -1 });
-  return NextResponse.json({ status: "ok", items, tier: session.tier });
+  const scope = session.business.parentOrgId
+    ? { parentOrgId: session.business.parentOrgId }
+    : { businessId: session.business._id };
+
+  const [items, playbooks] = await Promise.all([
+    ActionBoardItem.find(filter).sort({ createdAt: -1 }),
+    Playbook.find(scope),
+  ]);
+  return NextResponse.json({ status: "ok", items, playbooks, tier: session.tier });
 }
 
 export async function POST(request: Request) {

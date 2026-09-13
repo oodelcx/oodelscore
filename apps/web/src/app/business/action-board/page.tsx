@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 interface ItemRow {
   _id: string;
   title: string;
   description: string;
+  categoryId: string | null;
   ownerId: string | null;
   priority: string;
   status: string;
@@ -16,6 +17,13 @@ interface ItemRow {
 interface TeamRow {
   userId: string;
   label: string;
+}
+interface PlaybookRow {
+  _id: string;
+  categoryId: string | null;
+  title: string;
+  triggerCondition: string;
+  steps: string[];
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -28,6 +36,7 @@ const SOURCE_LABELS: Record<string, string> = {
 export default function BusinessActionBoardPage() {
   const [items, setItems] = useState<ItemRow[]>([]);
   const [team, setTeam] = useState<TeamRow[]>([]);
+  const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
   const [tier, setTier] = useState<"full" | "limited" | null>(null);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
@@ -36,12 +45,17 @@ export default function BusinessActionBoardPage() {
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [resolutionDraft, setResolutionDraft] = useState("");
+  const [resolutionError, setResolutionError] = useState<string | null>(null);
+  const [expandedPlaybookFor, setExpandedPlaybookFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
     Promise.all([fetch("/api/business/action-board").then((r) => r.json()), fetch("/api/business/team").then((r) => r.json())]).then(
       ([itemsData, teamData]) => {
         setItems(itemsData.items ?? []);
+        setPlaybooks(itemsData.playbooks ?? []);
         setTier(itemsData.tier ?? null);
         setTeam(teamData.team ?? []);
         setLoading(false);
@@ -50,6 +64,34 @@ export default function BusinessActionBoardPage() {
   }
 
   useEffect(load, []);
+
+  function playbookForCategory(categoryId: string | null) {
+    if (!categoryId) return null;
+    return playbooks.find((p) => p.categoryId === categoryId) ?? null;
+  }
+
+  function startResolve(id: string) {
+    setResolvingId(id);
+    setResolutionDraft("");
+    setResolutionError(null);
+  }
+
+  function cancelResolve() {
+    setResolvingId(null);
+    setResolutionDraft("");
+    setResolutionError(null);
+  }
+
+  async function confirmResolve(id: string) {
+    if (!resolutionDraft.trim()) {
+      setResolutionError("Describe what you did about this before marking it resolved.");
+      return;
+    }
+    await updateItem(id, { status: "resolved", resolutionNote: resolutionDraft.trim() });
+    setResolvingId(null);
+    setResolutionDraft("");
+    setResolutionError(null);
+  }
 
   async function createItem() {
     if (!title.trim()) return;
@@ -151,52 +193,103 @@ export default function BusinessActionBoardPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
-              <tr key={item._id}>
-                <td>
-                  {item.title}
-                  {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
-                </td>
-                {!isLimited && (
-                  <td>
-                    <select value={item.ownerId ?? ""} onChange={(e) => updateItem(item._id, { ownerId: e.target.value || null })}>
-                      <option value="">Unassigned</option>
-                      {team.map((t) => (
-                        <option key={t.userId} value={t.userId}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                )}
-                {!isLimited && (
-                  <td>
-                    <select value={item.priority} onChange={(e) => updateItem(item._id, { priority: e.target.value })}>
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
-                    </select>
-                  </td>
-                )}
-                <td>
-                  <span className={`pill ${item.source === "manual" ? "pill-gray" : "pill-purple"}`}>
-                    {SOURCE_LABELS[item.source] ?? item.source}
-                  </span>
-                </td>
-                <td>
-                  <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>{item.status}</span>
-                </td>
-                <td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</td>
-                <td style={{ textAlign: "right" }}>
-                  {item.status !== "resolved" && (
-                    <button className="btn btn-sm" onClick={() => updateItem(item._id, { status: "resolved" })}>
-                      Mark resolved
-                    </button>
+            {items.map((item) => {
+              const playbook = playbookForCategory(item.categoryId);
+              const colCount = isLimited ? 4 : 6;
+              return (
+                <Fragment key={item._id}>
+                  <tr>
+                    <td>
+                      {item.title}
+                      {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
+                      {playbook && (
+                        <button
+                          className="btn btn-sm"
+                          style={{ marginTop: 6 }}
+                          onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
+                        >
+                          {expandedPlaybookFor === item._id ? "Hide playbook" : "📘 Playbook: " + playbook.title}
+                        </button>
+                      )}
+                    </td>
+                    {!isLimited && (
+                      <td>
+                        <select value={item.ownerId ?? ""} onChange={(e) => updateItem(item._id, { ownerId: e.target.value || null })}>
+                          <option value="">Unassigned</option>
+                          {team.map((t) => (
+                            <option key={t.userId} value={t.userId}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
+                    {!isLimited && (
+                      <td>
+                        <select value={item.priority} onChange={(e) => updateItem(item._id, { priority: e.target.value })}>
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                          <option value="critical">Critical</option>
+                        </select>
+                      </td>
+                    )}
+                    <td>
+                      <span className={`pill ${item.source === "manual" ? "pill-gray" : "pill-purple"}`}>
+                        {SOURCE_LABELS[item.source] ?? item.source}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>{item.status}</span>
+                    </td>
+                    <td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {item.status !== "resolved" && resolvingId !== item._id && (
+                        <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
+                          Mark resolved
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {expandedPlaybookFor === item._id && playbook && (
+                    <tr>
+                      <td colSpan={colCount} style={{ background: "var(--bg-2, #f7f7f8)" }}>
+                        <div className="card-sub" style={{ margin: "4px 0" }}>
+                          <b>Trigger:</b> {playbook.triggerCondition || "—"}
+                        </div>
+                        <ul style={{ margin: "4px 0 6px", paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
+                          {playbook.steps.map((step, i) => (
+                            <li key={i}>{step}</li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            ))}
+                  {resolvingId === item._id && (
+                    <tr>
+                      <td colSpan={colCount}>
+                        <div className="field" style={{ margin: "6px 0" }}>
+                          <label>What did you do about this?</label>
+                          <textarea
+                            value={resolutionDraft}
+                            onChange={(e) => setResolutionDraft(e.target.value)}
+                            autoFocus
+                            placeholder="Describe the action taken — this is logged to the Decision Log automatically."
+                          />
+                        </div>
+                        {resolutionError && <p className="error-text">{resolutionError}</p>}
+                        <button className="btn btn-dark btn-sm" onClick={() => confirmResolve(item._id)}>
+                          Confirm resolved
+                        </button>{" "}
+                        <button className="btn btn-sm" onClick={cancelResolve}>
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
             {items.length === 0 && (
               <tr>
                 <td colSpan={isLimited ? 4 : 6} className="subtitle">

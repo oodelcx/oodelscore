@@ -55,8 +55,11 @@ async function autoTriageAndCreateActionItem(
     ? await CategoryOwnerMapping.findOne({ ...scope, categoryId: suggestion.categoryId })
     : null;
 
-  const willAutoAssign = !!mapping?.autoAssignWithoutConfirmation;
-  const ownerId = willAutoAssign ? mapping!.defaultOwnerId : null;
+  // A category owner mapping means items in that category always go
+  // straight to that owner — no unassigned "suggested" state, no separate
+  // accept/reassign step. Manual reassignment afterward (the owner dropdown
+  // on each Action Board item) is unrelated and still works as before.
+  const ownerId = mapping?.defaultOwnerId ?? null;
 
   const item = await ActionBoardItem.create({
     parentOrgId: business.parentOrgId ?? null,
@@ -66,15 +69,13 @@ async function autoTriageAndCreateActionItem(
     categoryId: suggestion.categoryId,
     priority: suggestion.priority,
     ownerId,
-    source: willAutoAssign ? "auto_assigned" : "auto_suggested",
+    source: mapping ? "auto_assigned" : "auto_suggested",
   });
 
-  // Notify the mapped owner either way — silently for auto-assign, with an
-  // Accept/Reassign prompt otherwise (the item stays unassigned until they
-  // act on it from the Action Board, which is the "confirmation" step).
-  const notifyUserId = mapping?.defaultOwnerId;
-  if (notifyUserId) {
-    const owner = await User.findById(notifyUserId);
+  // Notify the owner that they've been assigned this item — no confirmation
+  // language, since the assignment already happened.
+  if (mapping) {
+    const owner = await User.findById(mapping.defaultOwnerId);
     if (owner) {
       await sendTemplatedEmail("action_assigned", owner.email, {
         name: owner.email,
