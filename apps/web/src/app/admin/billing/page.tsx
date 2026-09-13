@@ -20,6 +20,21 @@ interface InvoiceRow {
   status: string;
   issuedAt: string;
 }
+
+function downloadCsv(filename: string, rows: string[][]) {
+  const csv = rows
+    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 interface IntegrityIssues {
   orphanedSubscriptionIds: string[];
   groupPaysWithOwnSubscriptionIds: string[];
@@ -39,6 +54,13 @@ export default function BillingOversightPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [subSearch, setSubSearch] = useState("");
+  const [subTypeFilter, setSubTypeFilter] = useState("all");
+  const [subStatusFilter, setSubStatusFilter] = useState("all");
+  const [invoiceFrom, setInvoiceFrom] = useState("");
+  const [invoiceTo, setInvoiceTo] = useState("");
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("all");
+
   const [creditOwnerType, setCreditOwnerType] = useState("business");
   const [creditOwnerId, setCreditOwnerId] = useState("");
   const [creditType, setCreditType] = useState("credit");
@@ -46,12 +68,22 @@ export default function BillingOversightPage() {
   const [creditReason, setCreditReason] = useState("");
   const [issuingCredit, setIssuingCredit] = useState(false);
 
+  function loadInvoices() {
+    const params = new URLSearchParams();
+    if (invoiceStatusFilter !== "all") params.set("status", invoiceStatusFilter);
+    if (invoiceFrom) params.set("from", invoiceFrom);
+    if (invoiceTo) params.set("to", invoiceTo);
+    return fetchJson<{ invoices: InvoiceRow[] }>(`/api/admin/billing/invoices?${params.toString()}`).then((d) =>
+      setInvoices(d.invoices)
+    );
+  }
+
   function loadAll() {
     setLoading(true);
     setError(null);
     Promise.all([
       fetchJson<{ subscriptions: SubscriptionRow[] }>("/api/admin/billing/subscriptions").then((d) => setSubscriptions(d.subscriptions)),
-      fetchJson<{ invoices: InvoiceRow[] }>("/api/admin/billing/invoices").then((d) => setInvoices(d.invoices)),
+      loadInvoices(),
       fetchJson<{ issues: IntegrityIssues }>("/api/admin/billing/integrity").then((d) => setIssues(d.issues)),
     ])
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -59,9 +91,38 @@ export default function BillingOversightPage() {
   }
 
   useEffect(loadAll, []);
+  useEffect(() => {
+    loadInvoices().catch((err) => setError(err instanceof Error ? err.message : "Failed to load invoices"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceStatusFilter, invoiceFrom, invoiceTo]);
 
   const mrrTotal = subscriptions.filter((s) => !s.isComp).reduce((sum, s) => sum + s.mrrValue, 0);
   const hasIntegrityIssues = issues && (issues.orphanedSubscriptionIds.length > 0 || issues.groupPaysWithOwnSubscriptionIds.length > 0);
+
+  const overdueSubs = subscriptions.filter((s) => s.status === "overdue");
+  const overdueAtRisk = overdueSubs.reduce((sum, s) => sum + s.mrrValue, 0);
+
+  const mrrByPlan = new Map<string, number>();
+  for (const s of subscriptions) {
+    const key = s.isComp ? "comp" : s.plan;
+    mrrByPlan.set(key, (mrrByPlan.get(key) ?? 0) + s.mrrValue);
+  }
+  const maxPlanMrr = Math.max(1, ...Array.from(mrrByPlan.values()));
+
+  const filteredSubscriptions = subscriptions.filter((s) => {
+    if (subTypeFilter !== "all" && s.ownerType !== subTypeFilter) return false;
+    if (subStatusFilter !== "all" && s.status !== subStatusFilter) return false;
+    if (subSearch.trim() && !s.ownerName.toLowerCase().includes(subSearch.trim().toLowerCase())) return false;
+    return true;
+  });
+
+  function exportInvoicesCsv() {
+    const rows = [
+      ["Date", "Account", "Amount", "Currency", "Status"],
+      ...invoices.map((i) => [new Date(i.issuedAt).toLocaleDateString(), i.ownerName, i.amount.toFixed(2), i.currency.toUpperCase(), i.status]),
+    ];
+    downloadCsv("oodelscore-invoice-ledger.csv", rows);
+  }
 
   async function issueCredit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +158,9 @@ export default function BillingOversightPage() {
           <h1>Billing Oversight</h1>
           <p className="subtitle">Full finance view — subscriptions, invoices, and credits across the platform.</p>
         </div>
+        <button className="btn" onClick={exportInvoicesCsv} disabled={invoices.length === 0}>
+          ⬇ Export for accounting
+        </button>
       </div>
 
       {error && <p className="error-text">{error}</p>}
@@ -112,26 +176,92 @@ export default function BillingOversightPage() {
             </div>
           )}
 
-          <div className="grid grid-2" style={{ marginBottom: 24 }}>
+          <div className="grid grid-4" style={{ marginBottom: 20 }}>
             <div className="card">
-              <h3>Monthly Recurring Revenue</h3>
-              <p style={{ fontSize: 26, fontWeight: 600 }}>${mrrTotal.toFixed(2)}</p>
-              <p className="card-sub">Excludes comp accounts</p>
+              <div className="metric-label">Total MRR</div>
+              <div className="metric-val">${mrrTotal.toFixed(2)}</div>
+              <div className="metric-note">Excludes comp accounts</div>
             </div>
             <div className="card">
-              <h3>Subscriptions</h3>
-              <p style={{ fontSize: 26, fontWeight: 600 }}>{subscriptions.length}</p>
-              <p className="card-sub">{subscriptions.filter((s) => s.isComp).length} comp</p>
+              <div className="metric-label">Subscriptions</div>
+              <div className="metric-val">{subscriptions.length}</div>
+              <div className="metric-note">{subscriptions.filter((s) => s.isComp).length} comp</div>
+            </div>
+            <div className="card" style={{ background: overdueSubs.length > 0 ? "var(--amber-bg)" : undefined }}>
+              <div className="metric-label" style={{ color: overdueSubs.length > 0 ? "var(--amber)" : undefined }}>
+                Failed / overdue
+              </div>
+              <div className="metric-val" style={{ color: overdueSubs.length > 0 ? "var(--amber)" : undefined }}>
+                {overdueSubs.length} account{overdueSubs.length === 1 ? "" : "s"}
+              </div>
+              <div className="metric-note" style={{ color: overdueSubs.length > 0 ? "var(--amber)" : undefined }}>
+                ${overdueAtRisk.toFixed(2)} at risk
+              </div>
+            </div>
+            <div className="card" style={{ background: hasIntegrityIssues ? "var(--red-bg)" : undefined }}>
+              <div className="metric-label" style={{ color: hasIntegrityIssues ? "var(--red)" : undefined }}>
+                Data integrity
+              </div>
+              <div className="metric-val" style={{ color: hasIntegrityIssues ? "var(--red)" : undefined }}>
+                {(issues?.orphanedSubscriptionIds.length ?? 0) + (issues?.groupPaysWithOwnSubscriptionIds.length ?? 0)}
+              </div>
+              <div className="metric-note" style={{ color: hasIntegrityIssues ? "var(--red)" : undefined }}>
+                Issue(s) found
+              </div>
             </div>
           </div>
 
+          {mrrByPlan.size > 0 && (
+            <div className="card" style={{ marginBottom: 24 }}>
+              <h3>MRR by plan</h3>
+              <div className="bars">
+                {Array.from(mrrByPlan.entries()).map(([plan, value]) => (
+                  <div className="bar-row" key={plan} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <div className="bar-label" style={{ width: 140, fontSize: 12.5 }}>
+                      {plan}
+                    </div>
+                    <div className="bar-track" style={{ flex: 1, background: "var(--border)", borderRadius: 6, height: 10 }}>
+                      <div
+                        className="bar-fill"
+                        style={{
+                          width: `${(value / maxPlanMrr) * 100}%`,
+                          background: plan === "comp" ? "#DADAD5" : "var(--accent)",
+                          height: 10,
+                          borderRadius: 6,
+                        }}
+                      />
+                    </div>
+                    <div className="bar-val" style={{ width: 90, textAlign: "right", fontSize: 12.5 }}>
+                      ${value.toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="section-title" style={{ marginTop: 0 }}>
             Subscriptions
+          </div>
+          <div className="filters">
+            <input type="text" placeholder="Search by account name…" value={subSearch} onChange={(e) => setSubSearch(e.target.value)} />
+            <select value={subTypeFilter} onChange={(e) => setSubTypeFilter(e.target.value)}>
+              <option value="all">All types</option>
+              <option value="business">Business</option>
+              <option value="parentOrg">Parent Org</option>
+            </select>
+            <select value={subStatusFilter} onChange={(e) => setSubStatusFilter(e.target.value)}>
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="overdue">Overdue</option>
+              <option value="canceled">Canceled</option>
+            </select>
           </div>
           <table className="clean" style={{ marginBottom: 30 }}>
             <thead>
               <tr>
                 <th>Account</th>
+                <th>Type</th>
                 <th>Plan</th>
                 <th>MRR</th>
                 <th>Status</th>
@@ -139,11 +269,12 @@ export default function BillingOversightPage() {
               </tr>
             </thead>
             <tbody>
-              {subscriptions.map((s) => (
+              {filteredSubscriptions.map((s) => (
                 <tr key={s._id}>
                   <td>{s.ownerName}</td>
+                  <td>{s.ownerType === "business" ? "Business" : "Parent Org"}</td>
                   <td>
-                    {s.isComp ? <span className="pill pill-purple">Comp</span> : s.plan}
+                    {s.plan} {s.isComp && <span className="pill pill-gray">comp</span>}
                   </td>
                   <td>${s.mrrValue.toFixed(2)}</td>
                   <td>
@@ -156,29 +287,41 @@ export default function BillingOversightPage() {
                   <td>{s.nextPaymentDate ? new Date(s.nextPaymentDate).toLocaleDateString() : "—"}</td>
                 </tr>
               ))}
-              {subscriptions.length === 0 && (
+              {filteredSubscriptions.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="subtitle">
-                    No subscriptions yet.
+                  <td colSpan={6} className="subtitle">
+                    {subscriptions.length === 0 ? "No subscriptions yet." : "No subscriptions match your filters."}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
 
-          <div className="section-title">Invoices</div>
+          <div className="section-title">Invoice ledger</div>
+          <p className="section-sub">Every individual payment across the platform, for reconciliation and accounting exports.</p>
+          <div className="filters">
+            <input type="date" value={invoiceFrom} onChange={(e) => setInvoiceFrom(e.target.value)} title="From date" />
+            <input type="date" value={invoiceTo} onChange={(e) => setInvoiceTo(e.target.value)} title="To date" />
+            <select value={invoiceStatusFilter} onChange={(e) => setInvoiceStatusFilter(e.target.value)}>
+              <option value="all">All statuses</option>
+              <option value="paid">Paid</option>
+              <option value="failed">Failed</option>
+              <option value="refunded">Refunded</option>
+            </select>
+          </div>
           <table className="clean" style={{ marginBottom: 30 }}>
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Account</th>
                 <th>Amount</th>
                 <th>Status</th>
-                <th>Issued</th>
               </tr>
             </thead>
             <tbody>
               {invoices.map((i) => (
                 <tr key={i._id}>
+                  <td>{new Date(i.issuedAt).toLocaleDateString()}</td>
                   <td>{i.ownerName}</td>
                   <td>
                     {i.amount.toFixed(2)} {i.currency.toUpperCase()}
@@ -188,13 +331,12 @@ export default function BillingOversightPage() {
                       {i.status}
                     </span>
                   </td>
-                  <td>{new Date(i.issuedAt).toLocaleDateString()}</td>
                 </tr>
               ))}
               {invoices.length === 0 && (
                 <tr>
                   <td colSpan={4} className="subtitle">
-                    No invoices yet.
+                    No invoices match this filter.
                   </td>
                 </tr>
               )}
