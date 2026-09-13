@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ParentOrganization, User, BILLING_MODES, createInviteUser, expireStaleInvites } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  ParentOrganization,
+  User,
+  BILLING_MODES,
+  COMP_PERIODS,
+  createInviteUser,
+  expireStaleInvites,
+  markOwnerComp,
+  type CompPeriod,
+} from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const BILLING_MODE_SET: readonly string[] = BILLING_MODES;
+const COMP_PERIOD_SET: readonly string[] = COMP_PERIODS;
 
 export async function GET() {
   const session = await requireStaffSession();
@@ -53,6 +64,13 @@ export async function POST(request: Request) {
     );
   }
 
+  const compPeriod: CompPeriod | null = body.compPeriod && COMP_PERIOD_SET.includes(body.compPeriod) ? body.compPeriod : null;
+  const compCustomExpiresAt =
+    compPeriod === "custom" && typeof body.compCustomExpiresAt === "string" ? new Date(body.compCustomExpiresAt) : null;
+  if (compPeriod === "custom" && (!compCustomExpiresAt || Number.isNaN(compCustomExpiresAt.getTime()))) {
+    return NextResponse.json({ status: "error", message: "compCustomExpiresAt is required for a custom comp period" }, { status: 400 });
+  }
+
   await connectToDatabase();
 
   const accountManagerId = role.permissions.parentOrgs.scope === "assigned" ? user._id : (body.accountManagerId ?? null);
@@ -81,5 +99,14 @@ export async function POST(request: Request) {
     console.error("[parent-orgs] failed to create/invite owner login", err);
   }
 
-  return NextResponse.json({ status: "ok", parentOrg, ownerInviteError }, { status: 201 });
+  let compError: string | null = null;
+  if (compPeriod) {
+    try {
+      await markOwnerComp({ ownerType: "parentOrg", ownerId: parentOrg._id.toString(), period: compPeriod, customExpiresAt: compCustomExpiresAt });
+    } catch (err) {
+      compError = err instanceof Error ? err.message : "Failed to mark this organization as comp";
+    }
+  }
+
+  return NextResponse.json({ status: "ok", parentOrg, ownerInviteError, compError }, { status: 201 });
 }
