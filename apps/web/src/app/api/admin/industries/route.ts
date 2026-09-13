@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Industry } from "@oodelscore/shared";
+import { connectToDatabase, Industry, Business } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 export async function GET() {
@@ -12,7 +12,16 @@ export async function GET() {
 
   await connectToDatabase();
   const industries = await Industry.find().sort({ name: 1 });
-  return NextResponse.json({ status: "ok", industries });
+  const usageCounts = await Business.aggregate<{ _id: string; count: number }>([
+    { $match: { industry: { $in: industries.map((i) => i.name) } } },
+    { $group: { _id: "$industry", count: { $sum: 1 } } },
+  ]);
+  const usedByName = new Map(usageCounts.map((u) => [u._id, u.count]));
+
+  return NextResponse.json({
+    status: "ok",
+    industries: industries.map((i) => ({ _id: i._id, name: i.name, usedBy: usedByName.get(i.name) ?? 0 })),
+  });
 }
 
 export async function POST(request: Request) {
