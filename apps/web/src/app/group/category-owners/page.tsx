@@ -97,6 +97,11 @@ export default function GroupCategoryOwnersPage() {
         </div>
       </div>
 
+      <div className="callout" style={{ marginBottom: 12 }}>
+        This is the <b>default</b> owner for every branch in your organization. Any branch can set its own owner for a
+        category from its own Category Owners page — that overrides your default for that branch only, everyone else
+        still falls back to what you set here.
+      </div>
       <div className="callout">
         Items in a mapped category are assigned directly to that category&rsquo;s default owner — no separate
         confirmation step.

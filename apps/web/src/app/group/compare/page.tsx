@@ -104,39 +104,50 @@ export default function ComparePage() {
     };
   })();
 
-  function addBranch(id: string) {
-    if (selected.includes(id) || selected.length >= MAX_COMPARE) return;
-    setSelected((s) => [...s, id]);
-    setSearch("");
+  function toggleBranch(id: string) {
+    setSelected((s) => {
+      if (s.includes(id)) return s.filter((x) => x !== id);
+      if (s.length >= MAX_COMPARE) return s;
+      return [...s, id];
+    });
   }
   function removeBranch(id: string) {
     setSelected((s) => s.filter((x) => x !== id));
   }
 
-  const searchResults = search ? options.filter((o) => o.name.toLowerCase().includes(search.toLowerCase()) && !selected.includes(o.businessId)) : [];
+  const filteredOptions = search ? options.filter((o) => o.name.toLowerCase().includes(search.toLowerCase())) : options;
 
   return (
     <div>
       <h1>Compare branches</h1>
       <p className="subtitle">Search and add up to {MAX_COMPARE} branches to compare category by category.</p>
 
-      <div className="filters" style={{ position: "relative" }}>
-        <input
-          type="text"
-          placeholder="Search branches to add…"
-          style={{ width: 260 }}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {searchResults.length > 0 && (
-          <div className="card" style={{ position: "absolute", top: 36, left: 0, zIndex: 5, padding: 6, width: 260 }}>
-            {searchResults.slice(0, 6).map((o) => (
-              <div key={o.businessId} className="config-row" style={{ cursor: "pointer", padding: "6px 8px" }} onClick={() => addBranch(o.businessId)}>
-                {o.name}
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="card" style={{ maxWidth: 420, marginBottom: 16 }}>
+        <div className="field" style={{ marginBottom: 10 }}>
+          <input
+            type="text"
+            placeholder={`Filter ${options.length} branches…`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div style={{ maxHeight: 260, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+          {filteredOptions.map((o) => {
+            const checked = selected.includes(o.businessId);
+            const disabled = !checked && selected.length >= MAX_COMPARE;
+            return (
+              <label
+                key={o.businessId}
+                className="field-check"
+                style={{ margin: 0, padding: "6px 4px", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1 }}
+              >
+                <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggleBranch(o.businessId)} />
+                <span>{o.name}</span>
+              </label>
+            );
+          })}
+          {filteredOptions.length === 0 && <p className="subtitle" style={{ margin: "4px" }}>No branches match.</p>}
+        </div>
       </div>
 
       <div className="filters">

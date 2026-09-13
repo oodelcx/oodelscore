@@ -23,6 +23,7 @@ export default function BusinessCategoryOwnersPage() {
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
+  const [isBranch, setIsBranch] = useState(false);
   const [inviteForCategory, setInviteForCategory] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
@@ -30,16 +31,19 @@ export default function BusinessCategoryOwnersPage() {
 
   function load() {
     setLoading(true);
-    Promise.all([fetch("/api/business/category-owners").then((r) => r.json()), fetch("/api/business/team").then((r) => r.json())]).then(
-      ([data, teamData]) => {
-        setCategories(data.categories ?? []);
-        const byCategory: Record<string, MappingRow> = {};
-        for (const m of data.mappings ?? []) byCategory[m.categoryId] = m;
-        setMappings(byCategory);
-        setTeam(teamData.team ?? []);
-        setLoading(false);
-      }
-    );
+    Promise.all([
+      fetch("/api/business/category-owners").then((r) => r.json()),
+      fetch("/api/business/team").then((r) => r.json()),
+      fetch("/api/business/me").then((r) => r.json()),
+    ]).then(([data, teamData, meData]) => {
+      setCategories(data.categories ?? []);
+      const byCategory: Record<string, MappingRow> = {};
+      for (const m of data.mappings ?? []) byCategory[m.categoryId] = m;
+      setMappings(byCategory);
+      setTeam(teamData.team ?? []);
+      setIsBranch(!!meData.business?.parentOrgId);
+      setLoading(false);
+    });
   }
 
   useEffect(load, []);
@@ -97,6 +101,12 @@ export default function BusinessCategoryOwnersPage() {
         </div>
       </div>
 
+      {isBranch && (
+        <div className="callout" style={{ marginBottom: 12 }}>
+          Setting an owner here is specific to this branch and overrides your group&rsquo;s default for that category.
+          Leave a category unset here to keep using the group&rsquo;s default owner.
+        </div>
+      )}
       <div className="callout">
         Items in a mapped category are assigned directly to that category&rsquo;s default owner — no separate
         confirmation step.

@@ -289,7 +289,7 @@ const GROUPS: GroupDef[] = [
     sector: "banking",
     branches: [
       { name: "Meridian Bank – Downtown", region: "Central" },
-      { name: "Meridian Bank – Uptown", region: "North" },
+      { name: "Meridian Bank – Uptown", region: "Central" },
       { name: "Meridian Bank – Airport Road", region: "South" },
     ],
   },
@@ -310,7 +310,7 @@ const GROUPS: GroupDef[] = [
     sector: "diagnostics",
     branches: [
       { name: "PrecisionDx – Central Lab", region: "Central" },
-      { name: "PrecisionDx – North Clinic", region: "North" },
+      { name: "PrecisionDx – North Clinic", region: "Central" },
       { name: "PrecisionDx – Mall Branch", region: "West" },
     ],
   },
@@ -320,7 +320,7 @@ const GROUPS: GroupDef[] = [
     sector: "retail",
     branches: [
       { name: "UrbanMart – Mall Plaza", region: "Central" },
-      { name: "UrbanMart – High Street", region: "North" },
+      { name: "UrbanMart – High Street", region: "Central" },
       { name: "UrbanMart – Riverside", region: "South" },
     ],
   },
