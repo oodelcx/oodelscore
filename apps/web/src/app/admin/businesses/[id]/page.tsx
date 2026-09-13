@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { QrModal } from "@/components/qr-modal";
 
-type TabId = "general" | "address" | "contact" | "settings" | "feedback-points";
+type TabId = "general" | "address" | "contact" | "settings" | "feedback-points" | "group";
 
-const TABS: { id: TabId; label: string }[] = [
+const BASE_TABS: { id: TabId; label: string }[] = [
   { id: "general", label: "General" },
   { id: "address", label: "Address & Billing" },
   { id: "contact", label: "Contact" },
@@ -32,6 +32,7 @@ interface FormState {
   maxFeedbackPoints: string;
   teamMemberSeatLimit: string;
   demographicConfig: Record<string, string>;
+  accountManagerId: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -49,6 +50,7 @@ const EMPTY_FORM: FormState = {
   maxFeedbackPoints: "",
   teamMemberSeatLimit: "",
   demographicConfig: { name: "off", email: "off", phone: "off", ageGroup: "off", gender: "off" },
+  accountManagerId: "",
 };
 
 export default function BusinessDetailPage() {
@@ -65,9 +67,11 @@ export default function BusinessDetailPage() {
   const [industries, setIndustries] = useState<{ _id: string; name: string }[]>([]);
   const [parentOrgs, setParentOrgs] = useState<{ _id: string; name: string }[]>([]);
   const [templates, setTemplates] = useState<{ _id: string; name: string }[]>([]);
+  const [staff, setStaff] = useState<{ _id: string; email: string }[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [subscription, setSubscription] = useState<{
     status: string;
     isComp: boolean;
@@ -86,6 +90,8 @@ export default function BusinessDetailPage() {
     scans: number;
     active: boolean;
     formLayoutOverride: string | null;
+    questionTemplateOverride: string | null;
+    demographicOverride: Record<string, string> | null;
   }
   const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPointRow[]>([]);
   const [fpName, setFpName] = useState("");
@@ -93,6 +99,8 @@ export default function BusinessDetailPage() {
   const [fpCreating, setFpCreating] = useState(false);
   const [fpError, setFpError] = useState<string | null>(null);
   const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [expandedFieldsId, setExpandedFieldsId] = useState<string | null>(null);
 
   function loadFeedbackPoints() {
     if (isNew) return;
@@ -145,10 +153,77 @@ export default function BusinessDetailPage() {
     loadFeedbackPoints();
   }
 
+  async function updateFeedbackPointTemplate(fpId: string, questionTemplateOverride: string) {
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionTemplateOverride: questionTemplateOverride || null }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function updateFeedbackPointDemographic(fpId: string, field: string, value: string, current: Record<string, string> | null) {
+    const base = current ?? { name: "off", email: "optional", phone: "off", ageGroup: "optional", gender: "optional" };
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demographicOverride: { ...base, [field]: value } }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function clearFeedbackPointDemographicOverride(fpId: string) {
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demographicOverride: null }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function regenerateFeedbackPointQr(fp: FeedbackPointRow) {
+    if (
+      !confirm(
+        `Regenerate the QR code for ${fp.name}? The old code stops working immediately — any printed posters using it will show an error.`
+      )
+    )
+      return;
+    setRegeneratingId(fp._id);
+    const res = await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fp._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regenerateQr: true }),
+    });
+    const data = await res.json().catch(() => null);
+    setRegeneratingId(null);
+    loadFeedbackPoints();
+    if (res.ok && data?.feedbackPoint) setQrPoint(data.feedbackPoint);
+  }
+
   async function removeFeedbackPoint(fpId: string) {
     if (!confirm("Delete this feedback point? Its QR link will stop working.")) return;
     await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, { method: "DELETE" });
     loadFeedbackPoints();
+  }
+
+  async function deleteBusiness() {
+    if (isNew) return;
+    if (
+      !confirm(
+        `Permanently delete ${form.name || "this business"}? This deletes all its feedback points, responses, and insight history. This cannot be undone.`
+      )
+    )
+      return;
+    setDeleting(true);
+    setError(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.message ?? "Failed to delete business");
+      return;
+    }
+    router.push("/admin/accounts");
   }
 
   useEffect(() => {
@@ -161,6 +236,10 @@ export default function BusinessDetailPage() {
     fetch("/api/admin/question-templates")
       .then((r) => r.json())
       .then((d) => setTemplates(d.templates ?? []));
+    fetch("/api/admin/staff")
+      .then((r) => r.json())
+      .then((d) => setStaff(d.staff ?? []))
+      .catch(() => setStaff([]));
   }, []);
 
   useEffect(() => {
@@ -186,6 +265,7 @@ export default function BusinessDetailPage() {
           maxFeedbackPoints: b.maxFeedbackPoints != null ? String(b.maxFeedbackPoints) : "",
           teamMemberSeatLimit: b.teamMemberSeatLimit != null ? String(b.teamMemberSeatLimit) : "",
           demographicConfig: b.demographicConfig ?? EMPTY_FORM.demographicConfig,
+          accountManagerId: b.accountManagerId ?? "",
         });
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -272,6 +352,7 @@ export default function BusinessDetailPage() {
       maxFeedbackPoints: form.maxFeedbackPoints ? Number(form.maxFeedbackPoints) : 1,
       teamMemberSeatLimit: form.teamMemberSeatLimit.trim() ? Number(form.teamMemberSeatLimit) : null,
       demographicConfig: form.demographicConfig,
+      accountManagerId: form.accountManagerId || null,
     };
 
     const res = await fetch(isNew ? "/api/admin/businesses" : `/api/admin/businesses/${params.id}`, {
@@ -301,6 +382,11 @@ export default function BusinessDetailPage() {
 
   if (loading) return <p className="subtitle">Loading…</p>;
 
+  const parentOrgName = parentOrgs.find((o) => o._id === form.parentOrgId)?.name ?? null;
+  const tabs = form.parentOrgId
+    ? [...BASE_TABS, { id: "group" as TabId, label: "Group" }]
+    : BASE_TABS;
+
   return (
     <div>
       <Link className="backlink" href="/admin/accounts">
@@ -321,11 +407,11 @@ export default function BusinessDetailPage() {
       )}
 
       <div className="subtabs">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             className={tab === t.id ? "active" : ""}
-            disabled={isNew && t.id === "feedback-points"}
+            disabled={isNew && (t.id === "feedback-points" || t.id === "group")}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -420,20 +506,30 @@ export default function BusinessDetailPage() {
             />
             Billing address same as above
           </div>
-          <div className="field">
-            <label>Billing assignment (Admin-only)</label>
-            <select
-              value={form.billingAssignment}
-              onChange={(e) => setForm((f) => ({ ...f, billingAssignment: e.target.value }))}
-            >
-              <option value="unassigned">Unassigned</option>
-              <option value="branch_pays">Branch pays</option>
-              <option value="group_pays">Group pays</option>
-            </select>
-            <div className="field-hint">
-              Only the Admin system role can change this — a server-side check rejects the write otherwise.
+          {form.parentOrgId ? (
+            <div className="callout">
+              Billing assignment is managed on the{" "}
+              <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => setTab("group")}>
+                {parentOrgName ?? "parent organization"}
+              </span>{" "}
+              page, alongside every other business in the org.
             </div>
-          </div>
+          ) : (
+            <div className="field">
+              <label>Billing assignment (Admin-only)</label>
+              <select
+                value={form.billingAssignment}
+                onChange={(e) => setForm((f) => ({ ...f, billingAssignment: e.target.value }))}
+              >
+                <option value="unassigned">Unassigned</option>
+                <option value="branch_pays">Branch pays</option>
+                <option value="group_pays">Group pays</option>
+              </select>
+              <div className="field-hint">
+                Only the Admin system role can change this — a server-side check rejects the write otherwise.
+              </div>
+            </div>
+          )}
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : isNew ? "Create business" : "Save"}
           </button>
@@ -521,6 +617,30 @@ export default function BusinessDetailPage() {
         </div>
       )}
 
+      {tab === "group" && form.parentOrgId && (
+        <div className="card" style={{ maxWidth: 640 }}>
+          <h3>{parentOrgName ?? "Parent organization"}</h3>
+          <p className="card-sub">This business belongs to a Parent Organization.</p>
+          <div className="field">
+            <label>Billing assignment (Admin-only)</label>
+            <select
+              value={form.billingAssignment}
+              onChange={(e) => setForm((f) => ({ ...f, billingAssignment: e.target.value }))}
+            >
+              <option value="unassigned">Unassigned</option>
+              <option value="branch_pays">Branch pays</option>
+              <option value="group_pays">Group pays</option>
+            </select>
+          </div>
+          <button className="btn btn-dark" disabled={saving} onClick={handleSave} style={{ marginRight: 8 }}>
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <Link className="btn" href={`/admin/parent-orgs/${form.parentOrgId}`}>
+            View {parentOrgName ?? "organization"} →
+          </Link>
+        </div>
+      )}
+
       {tab === "settings" && (
         <div className="card" style={{ maxWidth: 720 }}>
           <div className="field-row">
@@ -558,6 +678,21 @@ export default function BusinessDetailPage() {
               <div className="field-hint">Blank = unlimited. Enforced against currently-active team members.</div>
             </div>
           </div>
+          <div className="field" style={{ maxWidth: 340 }}>
+            <label>Assigned staff (account manager)</label>
+            <select
+              value={form.accountManagerId}
+              onChange={(e) => setForm((f) => ({ ...f, accountManagerId: e.target.value }))}
+            >
+              <option value="">Unassigned</option>
+              {staff.map((s) => (
+                <option key={s._id} value={s._id}>
+                  {s.email}
+                </option>
+              ))}
+            </select>
+            <div className="field-hint">Controls which "assigned"-scoped staff (e.g. Account managers) can see this business.</div>
+          </div>
           <div className="section-label">Respondent fields (Admin-only)</div>
           <div className="field-row">
             {DEMOGRAPHIC_FIELDS.slice(0, 3).map((field) => (
@@ -589,6 +724,19 @@ export default function BusinessDetailPage() {
         </div>
       )}
 
+      {tab === "settings" && !isNew && (
+        <div className="card" style={{ maxWidth: 720, marginTop: 20, borderColor: "#F0C7C7" }}>
+          <h3 style={{ color: "var(--red)" }}>Danger zone</h3>
+          <p className="card-sub">
+            Permanently delete this business, its feedback points, responses, and insights. This cannot be undone — use
+            &quot;Account active&quot; on the General tab instead if you just want to disable it.
+          </p>
+          <button className="btn btn-danger" disabled={deleting} onClick={deleteBusiness}>
+            {deleting ? "Deleting…" : "Delete this business"}
+          </button>
+        </div>
+      )}
+
       {tab === "feedback-points" && (
         <div>
           <div className="card" style={{ marginBottom: 20 }}>
@@ -614,6 +762,7 @@ export default function BusinessDetailPage() {
               <tr>
                 <th>Name</th>
                 <th>Scans</th>
+                <th>Question template</th>
                 <th>Layout</th>
                 <th>Status</th>
                 <th></th>
@@ -621,37 +770,96 @@ export default function BusinessDetailPage() {
             </thead>
             <tbody>
               {feedbackPoints.map((fp) => (
-                <tr key={fp._id}>
-                  <td>{fp.name}</td>
-                  <td>{fp.scans}</td>
-                  <td>
-                    <select
-                      value={fp.formLayoutOverride ?? "single_page"}
-                      onChange={(e) => updateFeedbackPointLayout(fp._id, e.target.value)}
-                    >
-                      <option value="single_page">All questions, one screen</option>
-                      <option value="one_per_screen">One question per screen</option>
-                    </select>
-                  </td>
-                  <td>
-                    <span className={`pill ${fp.active ? "pill-green" : "pill-gray"}`}>{fp.active ? "Active" : "Inactive"}</span>
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => setQrPoint(fp)}>
-                      View QR
-                    </button>
-                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleFeedbackPointActive(fp)}>
-                      {fp.active ? "Deactivate" : "Activate"}
-                    </button>
-                    <button className="icon-btn btn-danger" onClick={() => removeFeedbackPoint(fp._id)}>
-                      🗑
-                    </button>
-                  </td>
-                </tr>
+                <Fragment key={fp._id}>
+                  <tr>
+                    <td>{fp.name}</td>
+                    <td>{fp.scans}</td>
+                    <td>
+                      <select
+                        value={fp.questionTemplateOverride ?? ""}
+                        onChange={(e) => updateFeedbackPointTemplate(fp._id, e.target.value)}
+                      >
+                        <option value="">Use business default</option>
+                        {templates.map((t) => (
+                          <option key={t._id} value={t._id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <select
+                        value={fp.formLayoutOverride ?? "single_page"}
+                        onChange={(e) => updateFeedbackPointLayout(fp._id, e.target.value)}
+                      >
+                        <option value="single_page">All questions, one screen</option>
+                        <option value="one_per_screen">One question per screen</option>
+                      </select>
+                    </td>
+                    <td>
+                      <span className={`pill ${fp.active ? "pill-green" : "pill-gray"}`}>{fp.active ? "Active" : "Inactive"}</span>
+                    </td>
+                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => setQrPoint(fp)}>
+                        View QR
+                      </button>
+                      <button
+                        className="icon-btn"
+                        style={{ marginRight: 8 }}
+                        disabled={regeneratingId === fp._id}
+                        title="Regenerate QR"
+                        onClick={() => regenerateFeedbackPointQr(fp)}
+                      >
+                        ↻
+                      </button>
+                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleFeedbackPointActive(fp)}>
+                        {fp.active ? "Deactivate" : "Activate"}
+                      </button>
+                      <button className="icon-btn btn-danger" onClick={() => removeFeedbackPoint(fp._id)}>
+                        🗑
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={6} style={{ borderBottom: expandedFieldsId === fp._id ? undefined : "none", paddingTop: 0 }}>
+                      <span
+                        style={{ fontSize: 12.5, color: "var(--accent)", cursor: "pointer" }}
+                        onClick={() => setExpandedFieldsId(expandedFieldsId === fp._id ? null : fp._id)}
+                      >
+                        {expandedFieldsId === fp._id ? "▾" : "▸"} Respondent fields for this QR{" "}
+                        {fp.demographicOverride ? "(overridden)" : "(using business default)"}
+                      </span>
+                      {expandedFieldsId === fp._id && (
+                        <div style={{ background: "#FAFAF8", borderRadius: 8, padding: "12px 14px", marginTop: 8 }}>
+                          <div className="field-row">
+                            {DEMOGRAPHIC_FIELDS.map((field) => (
+                              <div className="field" key={field}>
+                                <label>{field}</label>
+                                <select
+                                  value={fp.demographicOverride?.[field] ?? form.demographicConfig[field]}
+                                  onChange={(e) => updateFeedbackPointDemographic(fp._id, field, e.target.value, fp.demographicOverride)}
+                                >
+                                  <option value="off">Off</option>
+                                  <option value="optional">Optional</option>
+                                  <option value="mandatory">Mandatory</option>
+                                </select>
+                              </div>
+                            ))}
+                          </div>
+                          {fp.demographicOverride && (
+                            <button className="btn btn-sm" onClick={() => clearFeedbackPointDemographicOverride(fp._id)}>
+                              Revert to business default
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                </Fragment>
               ))}
               {feedbackPoints.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="subtitle">
+                  <td colSpan={6} className="subtitle">
                     No feedback points yet.
                   </td>
                 </tr>
