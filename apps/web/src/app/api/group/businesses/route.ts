@@ -8,6 +8,6 @@ export async function GET() {
 
   await connectToDatabase();
 
-  const businesses = await Business.find({ parentOrgId: session.org._id }).sort({ name: 1 });
+  const businesses = await Business.find({ parentOrgId: session.org._id }).select("name region billingAssignment active").sort({ name: 1 });
   return NextResponse.json({ status: "ok", businesses });
 }

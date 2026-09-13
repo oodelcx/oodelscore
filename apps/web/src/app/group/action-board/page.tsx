@@ -13,6 +13,7 @@ interface ItemRow {
   status: string;
   dueDate: string | null;
   resolutionNote: string;
+  resolvedAt: string | null;
   source: string;
 }
 interface PlaybookRow {
@@ -32,6 +33,7 @@ const SOURCE_LABELS: Record<string, string> = {
 interface BusinessRow {
   _id: string;
   name: string;
+  region?: string;
 }
 interface TeamRow {
   userId: string;
@@ -56,6 +58,8 @@ export default function ActionBoardPage() {
   const [resolutionDraft, setResolutionDraft] = useState("");
   const [resolutionError, setResolutionError] = useState<string | null>(null);
   const [expandedPlaybookFor, setExpandedPlaybookFor] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "unassigned" | "overdue" | "resolved">("all");
+  const [regionFilter, setRegionFilter] = useState("");
 
   function load() {
     setLoading(true);
@@ -140,7 +144,29 @@ export default function ActionBoardPage() {
     return businesses.find((b) => b._id === id)?.name ?? "—";
   }
 
+  function isOverdue(item: ItemRow) {
+    return !!item.dueDate && new Date(item.dueDate) < new Date() && item.status !== "resolved";
+  }
+
   const isLimited = tier === "limited";
+  const regions = Array.from(new Set(businesses.map((b) => b.region).filter((r): r is string => !!r))).sort();
+
+  const openCount = items.filter((i) => i.status === "open").length;
+  const inProgressCount = items.filter((i) => i.status === "in_progress").length;
+  const overdueCount = items.filter(isOverdue).length;
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const resolved30dCount = items.filter((i) => i.status === "resolved" && i.resolvedAt && new Date(i.resolvedAt).getTime() >= thirtyDaysAgo).length;
+
+  const visibleItems = items.filter((item) => {
+    if (regionFilter) {
+      const region = businesses.find((b) => b._id === item.businessId)?.region;
+      if (region !== regionFilter) return false;
+    }
+    if (filter === "unassigned") return !item.ownerId;
+    if (filter === "overdue") return isOverdue(item);
+    if (filter === "resolved") return item.status === "resolved";
+    return true;
+  });
 
   return (
     <div>
@@ -154,6 +180,47 @@ export default function ActionBoardPage() {
           </p>
         </div>
       </div>
+
+      {!isLimited && (
+        <div className="grid grid-4" style={{ marginBottom: 20 }}>
+          <div className="card">
+            <div className="metric-label">Open</div>
+            <div className="metric-val">{openCount}</div>
+          </div>
+          <div className="card">
+            <div className="metric-label">In progress</div>
+            <div className="metric-val">{inProgressCount}</div>
+          </div>
+          <div className="card" style={{ background: "var(--red-bg)" }}>
+            <div className="metric-label" style={{ color: "var(--red)" }}>Overdue</div>
+            <div className="metric-val" style={{ color: "var(--red)" }}>{overdueCount}</div>
+          </div>
+          <div className="card">
+            <div className="metric-label">Resolved (30d)</div>
+            <div className="metric-val">{resolved30dCount}</div>
+          </div>
+        </div>
+      )}
+
+      {!isLimited && (
+        <div className="filters">
+          {(["all", "unassigned", "overdue", "resolved"] as const).map((f) => (
+            <div key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
+              {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+            </div>
+          ))}
+          {regions.length > 0 && (
+            <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
+              <option value="">All regions</option>
+              {regions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
 
       {!isLimited && (
       <div className="card">
@@ -223,7 +290,7 @@ export default function ActionBoardPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => {
+            {(isLimited ? items : visibleItems).map((item) => {
               const playbook = playbookForCategory(item.categoryId);
               const colCount = isLimited ? 4 : 7;
               return (
@@ -321,10 +388,10 @@ export default function ActionBoardPage() {
                 </Fragment>
               );
             })}
-            {items.length === 0 && (
+            {(isLimited ? items : visibleItems).length === 0 && (
               <tr>
                 <td colSpan={isLimited ? 4 : 7} className="subtitle">
-                  No action items yet.
+                  {items.length === 0 ? "No action items yet." : "No items match this filter."}
                 </td>
               </tr>
             )}
