@@ -3,7 +3,7 @@ import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 export const ALERT_SCOPES = ["business", "parentOrg_all", "parentOrg_region"] as const;
 export type AlertScope = (typeof ALERT_SCOPES)[number];
 
-export const ALERT_RULE_TYPES = ["fixed_threshold", "regional_outlier", "sudden_drop", "nps_floor"] as const;
+export const ALERT_RULE_TYPES = ["fixed_threshold", "regional_outlier", "sudden_drop", "nps_floor", "negative_sentiment"] as const;
 export type AlertRuleType = (typeof ALERT_RULE_TYPES)[number];
 
 export const ALERT_DELIVERY_MODES = ["immediate", "weekly_digest"] as const;

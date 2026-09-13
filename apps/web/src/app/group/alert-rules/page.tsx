@@ -129,6 +129,7 @@ export default function GroupAlertRulesPage() {
               <option value="nps_floor">NPS floor</option>
               <option value="regional_outlier">Regional outlier</option>
               <option value="sudden_drop">Sudden drop</option>
+              <option value="negative_sentiment">Negative sentiment (AI-detected)</option>
             </select>
           </div>
         </div>
@@ -166,6 +167,12 @@ export default function GroupAlertRulesPage() {
             </div>
           </div>
         )}
+        {ruleType === "negative_sentiment" && (
+          <p className="field-hint" style={{ margin: "-6px 0 12px" }}>
+            Fires whenever a respondent's written comment reads as genuinely negative, regardless of their star
+            rating — checked by AI, independent of the score-based rules above.
+          </p>
+        )}
 
         <div className="field">
           <label>Recipients (comma-separated emails)</label>
@@ -199,7 +206,11 @@ export default function GroupAlertRulesPage() {
                 <tr key={r._id}>
                   <td>{r.scope === "parentOrg_region" ? `Region: ${r.region}` : "All businesses"}</td>
                   <td>{r.ruleType.replace(/_/g, " ")}</td>
-                  <td>{r.metric || "—"} {r.threshold ?? r.sensitivity ?? r.dropPercent ?? ""}</td>
+                  <td>
+                    {r.ruleType === "negative_sentiment"
+                      ? "AI flags a genuinely negative comment"
+                      : `${r.metric || "—"} ${r.threshold ?? r.sensitivity ?? r.dropPercent ?? ""}`}
+                  </td>
                   <td>{r.delivery === "weekly_digest" ? "Weekly digest" : "Immediate email"}</td>
                   <td>
                     {r.firedCount > 0 ? (

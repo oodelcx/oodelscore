@@ -13,7 +13,11 @@ interface RuleRow {
   activity: { count: number; lastFiredAt: string } | null;
 }
 
-const RULE_TYPE_LABELS: Record<string, string> = { fixed_threshold: "Low rating alert", nps_floor: "Detractor alert" };
+const RULE_TYPE_LABELS: Record<string, string> = {
+  fixed_threshold: "Low rating alert",
+  nps_floor: "Detractor alert",
+  negative_sentiment: "Negative sentiment (AI-detected)",
+};
 const METRIC_LABELS: Record<string, string> = { star_average: "Star rating", nps: "NPS score" };
 
 export default function BusinessAlertRulesPage() {
@@ -97,20 +101,31 @@ export default function BusinessAlertRulesPage() {
             <select value={ruleType} onChange={(e) => setRuleType(e.target.value)}>
               <option value="fixed_threshold">Fixed threshold</option>
               <option value="nps_floor">NPS floor</option>
+              <option value="negative_sentiment">Negative sentiment (AI-detected)</option>
             </select>
           </div>
-          <div className="field">
-            <label>Metric</label>
-            <select value={metric} onChange={(e) => setMetric(e.target.value)}>
-              <option value="star_average">Star average</option>
-              <option value="nps">NPS</option>
-            </select>
-          </div>
-          <div className="field">
-            <label>Threshold</label>
-            <input type="number" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
-          </div>
+          {ruleType !== "negative_sentiment" && (
+            <>
+              <div className="field">
+                <label>Metric</label>
+                <select value={metric} onChange={(e) => setMetric(e.target.value)}>
+                  <option value="star_average">Star average</option>
+                  <option value="nps">NPS</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>Threshold</label>
+                <input type="number" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
+              </div>
+            </>
+          )}
         </div>
+        {ruleType === "negative_sentiment" && (
+          <p className="field-hint" style={{ margin: "-6px 0 12px" }}>
+            Fires whenever a respondent's written comment reads as genuinely negative, regardless of their star
+            rating — checked by AI, independent of the score-based rules above.
+          </p>
+        )}
         <div className="field">
           <label>Recipients (comma-separated emails)</label>
           <input value={recipients} onChange={(e) => setRecipients(e.target.value)} />
@@ -141,7 +156,9 @@ export default function BusinessAlertRulesPage() {
                 <tr key={r._id}>
                   <td>{RULE_TYPE_LABELS[r.ruleType] ?? r.ruleType}</td>
                   <td>
-                    {METRIC_LABELS[r.metric] ?? r.metric} {r.ruleType === "nps_floor" ? "below" : "below"} {r.threshold ?? "—"}
+                    {r.ruleType === "negative_sentiment"
+                      ? "AI flags a genuinely negative comment"
+                      : `${METRIC_LABELS[r.metric] ?? r.metric} below ${r.threshold ?? "—"}`}
                   </td>
                   <td>Email · {r.recipients.join(", ") || "—"}</td>
                   <td>

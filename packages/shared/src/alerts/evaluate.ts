@@ -9,6 +9,7 @@ import { User } from "../models/User";
 import { computeBusinessMetrics } from "../scoring/aggregate";
 import { sendTemplatedEmail } from "../email/resend";
 import { generateTriageSuggestion } from "../ai/triage";
+import { classifyCommentAsNegative } from "../ai/sentiment";
 
 const METRIC_WINDOW_DAYS = 30;
 
@@ -100,7 +101,10 @@ async function recordFiringAndNotify(
   const business = await Business.findById(businessId);
   const businessName = business?.name ?? "A business";
   const alertLink = `${process.env.APP_URL ?? ""}/business`;
-  const ruleDescription = `${rule.ruleType.replace(/_/g, " ")}: ${value}`;
+  const ruleDescription =
+    rule.ruleType === "negative_sentiment"
+      ? "AI-detected negative comment"
+      : `${rule.ruleType.replace(/_/g, " ")}: ${value}`;
 
   for (const recipient of rule.recipients) {
     await sendTemplatedEmail("alert_notification", recipient, {
@@ -123,7 +127,9 @@ async function recordFiringAndNotify(
  * and nps_floor are single-data-point comparisons, so there's no need to
  * wait for the hourly sweep (spec Section 10a). `triggeringComment` (the new
  * response's open-text answer, if any) feeds AI-assisted triage — spec
- * Section 16.4.
+ * Section 16.4 — and also drives negative_sentiment, a distinct trigger that
+ * fires off what the comment actually says rather than any numeric score
+ * (a 4-star rating with a scathing comment never trips a star-based rule).
  */
 export async function evaluateRealTimeAlertsForBusiness(
   businessId: Types.ObjectId | string,
@@ -142,20 +148,38 @@ export async function evaluateRealTimeAlertsForBusiness(
 
   const rules = await AlertRule.find({
     active: true,
-    ruleType: { $in: ["fixed_threshold", "nps_floor"] },
+    ruleType: { $in: ["fixed_threshold", "nps_floor", "negative_sentiment"] },
     $or: ownerFilters,
   });
   if (rules.length === 0) return;
 
-  const to = new Date();
-  const from = new Date(to.getTime() - METRIC_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const metrics = await computeBusinessMetrics(business._id, from, to);
+  const scoreRules = rules.filter((r) => r.ruleType === "fixed_threshold" || r.ruleType === "nps_floor");
+  if (scoreRules.length > 0) {
+    const to = new Date();
+    const from = new Date(to.getTime() - METRIC_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const metrics = await computeBusinessMetrics(business._id, from, to);
 
-  for (const rule of rules) {
-    const value = rule.ruleType === "nps_floor" ? metrics.npsScore : metricValue(rule.metric, metrics);
-    if (value === null || rule.threshold === null) continue;
-    if (value < rule.threshold) {
-      await recordFiringAndNotify(rule, business._id, value, triggeringComment);
+    for (const rule of scoreRules) {
+      const value = rule.ruleType === "nps_floor" ? metrics.npsScore : metricValue(rule.metric, metrics);
+      if (value === null || rule.threshold === null) continue;
+      if (value < rule.threshold) {
+        await recordFiringAndNotify(rule, business._id, value, triggeringComment);
+      }
+    }
+  }
+
+  // Only spend on a classification call when there's actually a
+  // negative_sentiment rule configured and a comment to check.
+  const sentimentRules = rules.filter((r) => r.ruleType === "negative_sentiment");
+  if (sentimentRules.length > 0 && triggeringComment && triggeringComment.trim()) {
+    const isNegative = await classifyCommentAsNegative(triggeringComment).catch((err) => {
+      console.error("[alerts] sentiment classification failed", err);
+      return false;
+    });
+    if (isNegative) {
+      for (const rule of sentimentRules) {
+        await recordFiringAndNotify(rule, business._id, 1, triggeringComment);
+      }
     }
   }
 }
