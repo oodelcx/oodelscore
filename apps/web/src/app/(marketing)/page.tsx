@@ -114,9 +114,7 @@ export default async function MarketingHomePage() {
               CX Pulse measures whether feedback is actually shaping decisions — awareness, response speed, ownership, culture, and
               measured outcomes, rolled into one score your whole team can rally around.
             </p>
-            <BookDemoButton className="btn-ghost" style={{ borderColor: "#3A3D35", color: "#fff" }}>
-              See CX Pulse in a demo
-            </BookDemoButton>
+            <BookDemoButton className="btn-ghost on-dark">See CX Pulse in a demo</BookDemoButton>
           </div>
           <div className="levels">
             {levels.map((lvl, i) => (
