@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Response, Category, computeDailyTrend } from "@oodelscore/shared";
+import { connectToDatabase, Response, Category, FeedbackPoint } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import type { FilterQuery } from "mongoose";
+import type { IResponse } from "@oodelscore/shared";
 
 const TREND_DAYS = 30;
 const STOPWORDS = new Set([
@@ -28,20 +30,54 @@ function extractTags(comments: string[]): { word: string; count: number; negativ
     .slice(0, 10);
 }
 
-export async function GET() {
+/** Buckets a set of already-filtered responses into one average-star-rating point per day. */
+function trendFromResponses(responses: IResponse[], from: Date, to: Date) {
+  const byDay = new Map<string, { sum: number; count: number }>();
+  for (const response of responses) {
+    for (const answer of response.answers) {
+      if (answer.type === "star_1_5" && typeof answer.value === "number") {
+        const day = response.submittedAt.toISOString().slice(0, 10);
+        const entry = byDay.get(day) ?? { sum: 0, count: 0 };
+        entry.sum += answer.value;
+        entry.count += 1;
+        byDay.set(day, entry);
+      }
+    }
+  }
+  const points: { date: string; starAverage: number | null }[] = [];
+  const dayMs = 24 * 60 * 60 * 1000;
+  for (let t = from.getTime(); t <= to.getTime(); t += dayMs) {
+    const day = new Date(t).toISOString().slice(0, 10);
+    const entry = byDay.get(day);
+    points.push({ date: day, starAverage: entry ? Math.round((entry.sum / entry.count) * 100) / 100 : null });
+  }
+  return points;
+}
+
+export async function GET(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+
+  const { searchParams } = new URL(request.url);
+  const feedbackPointId = searchParams.get("feedbackPointId");
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
 
   await connectToDatabase();
   const businessId = session.business._id;
   const now = new Date();
-  const from = new Date(now.getTime() - TREND_DAYS * 24 * 60 * 60 * 1000);
+  const to = toParam ? new Date(`${toParam}T23:59:59.999Z`) : now;
+  const from = fromParam ? new Date(`${fromParam}T00:00:00.000Z`) : new Date(now.getTime() - TREND_DAYS * 24 * 60 * 60 * 1000);
 
-  const [trend, responses, categories] = await Promise.all([
-    computeDailyTrend([businessId], TREND_DAYS, now),
-    Response.find({ businessId, submittedAt: { $gte: from } }),
+  const filter: FilterQuery<IResponse> = { businessId, submittedAt: { $gte: from, $lte: to } };
+  if (feedbackPointId) filter.feedbackPointId = feedbackPointId;
+
+  const [responses, categories, feedbackPoints] = await Promise.all([
+    Response.find(filter),
     Category.find(),
+    FeedbackPoint.find({ businessId }).select("name").sort({ createdAt: 1 }),
   ]);
+  const trend = trendFromResponses(responses, from, to);
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));
 
   const npsAnswers: number[] = [];
@@ -85,6 +121,8 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    feedbackPoints: feedbackPoints.map((p) => ({ _id: p._id.toString(), name: p.name })),
+    filters: { feedbackPointId: feedbackPointId ?? null, from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
     trend,
     npsBreakdown: { promoters, passives, detractors },
     categoryBreakdown,
