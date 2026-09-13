@@ -12,7 +12,6 @@ interface ItemRow {
   status: string;
   dueDate: string | null;
   resolutionNote: string;
-  source: string;
 }
 interface TeamRow {
   userId: string;
@@ -25,13 +24,6 @@ interface PlaybookRow {
   triggerCondition: string;
   steps: string[];
 }
-
-const SOURCE_LABELS: Record<string, string> = {
-  manual: "Manual",
-  auto_suggested: "AI suggested",
-  auto_assigned: "AI auto-assigned",
-  escalated: "Escalated",
-};
 
 export default function BusinessActionBoardPage() {
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -133,7 +125,7 @@ export default function BusinessActionBoardPage() {
           <p className="subtitle">
             {isLimited
               ? "Items assigned to you — update their status as you work through them."
-              : "Work items spawned from flagged feedback, including AI-suggested ones from Alert Rules."}
+              : "Work items spawned from flagged feedback — Alert Rules create these automatically and assign them to whoever owns that category."}
           </p>
         </div>
       </div>
@@ -186,7 +178,6 @@ export default function BusinessActionBoardPage() {
               <th>Title</th>
               {!isLimited && <th>Owner</th>}
               {!isLimited && <th>Priority</th>}
-              <th>Source</th>
               <th>Status</th>
               <th>Due</th>
               <th></th>
@@ -195,7 +186,7 @@ export default function BusinessActionBoardPage() {
           <tbody>
             {items.map((item) => {
               const playbook = playbookForCategory(item.categoryId);
-              const colCount = isLimited ? 4 : 6;
+              const colCount = isLimited ? 3 : 5;
               return (
                 <Fragment key={item._id}>
                   <tr>
@@ -235,14 +226,19 @@ export default function BusinessActionBoardPage() {
                       </td>
                     )}
                     <td>
-                      <span className={`pill ${item.source === "manual" ? "pill-gray" : "pill-purple"}`}>
-                        {SOURCE_LABELS[item.source] ?? item.source}
-                      </span>
-                    </td>
-                    <td>
                       <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>{item.status}</span>
                     </td>
-                    <td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</td>
+                    <td>
+                      {isLimited ? (
+                        item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"
+                      ) : (
+                        <input
+                          type="date"
+                          value={item.dueDate ? item.dueDate.slice(0, 10) : ""}
+                          onChange={(e) => updateItem(item._id, { dueDate: e.target.value || null })}
+                        />
+                      )}
+                    </td>
                     <td style={{ textAlign: "right" }}>
                       {item.status !== "resolved" && resolvingId !== item._id && (
                         <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
@@ -292,7 +288,7 @@ export default function BusinessActionBoardPage() {
             })}
             {items.length === 0 && (
               <tr>
-                <td colSpan={isLimited ? 4 : 6} className="subtitle">
+                <td colSpan={isLimited ? 3 : 5} className="subtitle">
                   No action items yet.
                 </td>
               </tr>

@@ -21,7 +21,16 @@ interface FeedbackPointRow {
   hasNps: boolean;
   hasComments: boolean;
   demographics: DemographicConfig;
+  templateName: string;
+  isTemplateOverridden: boolean;
+  effectiveFormLayout: "single_page" | "one_per_screen";
+  isLayoutOverridden: boolean;
 }
+
+const LAYOUT_LABELS: Record<string, string> = {
+  single_page: "All questions on one screen",
+  one_per_screen: "One question per screen",
+};
 
 const DEMOGRAPHIC_LABELS: Record<keyof DemographicConfig, string> = {
   name: "Name",
@@ -183,6 +192,16 @@ export default function FeedbackPointsPage() {
                       {b.label}
                     </span>
                   ))}
+                </div>
+                <div className="card-sub" style={{ marginTop: 10 }}>
+                  <div>
+                    <b>Questions:</b> {p.templateName}
+                    {p.isTemplateOverridden && " (custom for this point)"}
+                  </div>
+                  <div>
+                    <b>Layout:</b> {LAYOUT_LABELS[p.effectiveFormLayout] ?? p.effectiveFormLayout}
+                    {p.isLayoutOverridden && " (custom for this point)"}
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                   <button className="btn" style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
