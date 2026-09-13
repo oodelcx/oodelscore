@@ -245,7 +245,7 @@ export default function EmailTemplatesPage() {
           <div className="preview-pane">
             <div className="preview-toolbar">Live preview · rendered with example data</div>
             <div className="preview-body">
-              <div className="p-from">From: Oodel Score &lt;hello@oodelscore.com&gt;</div>
+              <div className="p-from">From: OodelCX &lt;hello@oodelscore.com&gt;</div>
               <div className="p-subject">{renderPreview(subject, editing.availableVars)}</div>
               <div className="p-text" style={{ whiteSpace: "pre-wrap" }}>
                 {renderPreview(bodyText, editing.availableVars)}

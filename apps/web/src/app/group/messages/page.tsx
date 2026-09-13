@@ -31,14 +31,14 @@ export default function GroupMessagesPage() {
   return (
     <div>
       <h1>Messages</h1>
-      <p className="subtitle">Your point of contact at Oodel Score.</p>
+      <p className="subtitle">Your point of contact at OodelCX.</p>
 
       {data?.accountManager ? (
         <div className="card" style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <div className="avatar teal">{initials(data.accountManager.email)}</div>
           <div>
             <div style={{ fontWeight: 500, fontSize: 13.5 }}>{data.accountManager.email}</div>
-            <div style={{ fontSize: 12, color: "var(--text-2)" }}>Your Oodel Score account manager</div>
+            <div style={{ fontSize: 12, color: "var(--text-2)" }}>Your OodelCX account manager</div>
           </div>
         </div>
       ) : (

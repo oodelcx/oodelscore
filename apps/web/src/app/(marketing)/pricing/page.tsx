@@ -16,7 +16,7 @@ interface Plan {
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Pricing — Oodel Score",
+  title: "Pricing — OodelCX",
 };
 
 export default async function PricingPage() {

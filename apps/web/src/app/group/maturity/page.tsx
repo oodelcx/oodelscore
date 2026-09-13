@@ -32,10 +32,11 @@ interface MaturityData {
   branches: BranchRow[];
   groupAvgDimensions: Record<string, number | null>;
   checklist: ChecklistItem[];
+  levelDescriptions?: string[];
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
-const LEVEL_BLURBS = [
+const FALLBACK_LEVEL_BLURBS = [
   "",
   "Feedback is collected but rarely reviewed.",
   "Managers see scores, but there's no routine action on them.",
@@ -51,15 +52,10 @@ const DIMENSION_LABELS: { key: keyof Dimensions; label: string; color: string }[
   { key: "outcome", label: "Outcome", color: "#5DCAA5" },
 ];
 
-function trendPath(history: ScoreDoc[]): string | null {
-  if (history.length < 2) return null;
-  const width = 600;
-  const height = 90;
-  const max = 100;
-  const step = width / (history.length - 1);
-  return history
-    .map((h, i) => `${(i * step).toFixed(1)},${(height - (h.compositeScore / max) * height).toFixed(1)}`)
-    .join(" ");
+function levelPillClass(level: number) {
+  if (level >= 4) return "pill-green";
+  if (level === 3) return "pill-amber";
+  return "pill-red";
 }
 
 export default function MaturityPage() {
@@ -76,8 +72,7 @@ export default function MaturityPage() {
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load CX Pulse.</p>;
 
-  const history = [...data.history].reverse(); // oldest first, for a left-to-right trend
-  const points = trendPath(history);
+  const blurbs = data.levelDescriptions && data.levelDescriptions.length === 5 ? ["", ...data.levelDescriptions] : FALLBACK_LEVEL_BLURBS;
 
   return (
     <div>
@@ -92,7 +87,7 @@ export default function MaturityPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-2" style={{ marginBottom: 20, alignItems: "stretch" }}>
+          <div className="grid" style={{ gridTemplateColumns: "minmax(240px, 300px) 1fr", marginBottom: 20, alignItems: "stretch" }}>
             <div className="card">
               <div className="metric-val" style={{ fontSize: 40, color: "var(--accent)" }}>
                 {data.score.compositeScore}
@@ -101,47 +96,31 @@ export default function MaturityPage() {
               <div style={{ fontWeight: 600, marginTop: 6 }}>
                 Level {data.score.level} · {LEVEL_LABELS[data.score.level]}
               </div>
-              <p className="subtitle" style={{ margin: "6px 0 0" }}>{LEVEL_BLURBS[data.score.level]}</p>
+              <p className="subtitle" style={{ margin: "6px 0 0" }}>{blurbs[data.score.level]}</p>
             </div>
-            <div className="card" style={{ display: "flex", gap: 6 }}>
+            <div className="grid grid-5">
               {[1, 2, 3, 4, 5].map((lvl) => (
                 <div
                   key={lvl}
+                  className="card"
                   style={{
-                    flex: 1,
-                    minWidth: 0,
-                    padding: "10px 8px",
-                    borderRadius: 8,
-                    background: lvl === data.score!.level ? "var(--accent-bg)" : "var(--bg)",
+                    padding: "12px 10px",
+                    background: lvl === data.score!.level ? "var(--accent-bg)" : "var(--card)",
                     border: lvl === data.score!.level ? "1px solid var(--accent)" : "1px solid var(--border)",
                   }}
                 >
                   <div style={{ fontSize: 10.5, color: "var(--text-3)" }}>0{lvl}</div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: lvl === data.score!.level ? "var(--accent)" : "var(--text)" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: lvl === data.score!.level ? "var(--accent)" : "var(--text)" }}>
                     {LEVEL_LABELS[lvl]}
                   </div>
+                  <div style={{ fontSize: 11, color: "var(--text-2)", marginTop: 4, lineHeight: 1.4 }}>{blurbs[lvl]}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {points && (
-            <>
-              <div className="section-title">Composite score — last {history.length} months</div>
-              <div className="card" style={{ marginBottom: 20 }}>
-                <svg viewBox="0 0 600 90" width="100%" height="110" preserveAspectRatio="none">
-                  <polyline fill="none" stroke="var(--accent)" strokeWidth="2" points={points} />
-                </svg>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-3)" }}>
-                  <span>{new Date(history[0].period).toLocaleDateString(undefined, { month: "short", year: "2-digit" })}</span>
-                  <span>{new Date(history[history.length - 1].period).toLocaleDateString(undefined, { month: "short", year: "2-digit" })}</span>
-                </div>
-              </div>
-            </>
-          )}
-
           <div className="section-title">By dimension</div>
-          <div className="grid grid-4" style={{ marginBottom: 20 }}>
+          <div className="grid grid-5" style={{ marginBottom: 20 }}>
             {DIMENSION_LABELS.map((d) => {
               const value = data.score!.dimensions[d.key];
               const groupAvg = data.groupAvgDimensions[d.key];
@@ -149,7 +128,7 @@ export default function MaturityPage() {
                 <div className="card" key={d.key} style={{ borderTop: `3px solid ${d.color}` }}>
                   <div className="metric-label">{d.label}</div>
                   <div className="metric-val">{value}</div>
-                  <div className="dim-track" style={{ marginTop: 8 }}>
+                  <div className="dim-track-thin" style={{ marginTop: 8 }}>
                     <div className="dim-fill" style={{ width: `${value}%`, background: d.color }} />
                   </div>
                   <div className="metric-note" style={{ marginTop: 8 }}>
@@ -197,7 +176,7 @@ export default function MaturityPage() {
                         <td>{b.compositeScore ?? "—"}</td>
                         <td>
                           {b.level ? (
-                            <span className="pill pill-blue">
+                            <span className={`pill ${levelPillClass(b.level)}`}>
                               L{b.level} · {LEVEL_LABELS[b.level]}
                             </span>
                           ) : (

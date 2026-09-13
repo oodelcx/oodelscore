@@ -72,7 +72,7 @@ export default function GroupBillingPage() {
       <p className="subtitle">What you&apos;re billed for, how you pay it, and the record of every payment.</p>
 
       <div className="callout callout-amber" style={{ marginBottom: 20 }}>
-        <b>Which model each branch is on</b> (Group pays vs. branch pays) is set by your Oodel Score account manager, not editable
+        <b>Which model each branch is on</b> (Group pays vs. branch pays) is set by your OodelCX account manager, not editable
         here — this keeps commercial arrangements consistent when branches are onboarded or transferred. <b>How you pay for the
         branches on &quot;Group pays&quot;</b> is yours to manage below.
       </div>

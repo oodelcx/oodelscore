@@ -70,7 +70,7 @@ export default function BusinessTeamMembersPage() {
         <div>
           <h1>Team Members</h1>
           <p className="subtitle" style={{ margin: 0 }}>
-            Invite people at your business to Oodel Score, each with their own login.
+            Invite people at your business to OodelCX, each with their own login.
           </p>
         </div>
       </div>

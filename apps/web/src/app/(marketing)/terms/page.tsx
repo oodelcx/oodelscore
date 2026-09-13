@@ -9,7 +9,7 @@ interface BodySection {
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Terms of Service — Oodel Score",
+  title: "Terms of Service — OodelCX",
 };
 
 export default async function TermsPage() {

@@ -64,7 +64,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <aside className="admin-sidebar">
         <div>
           <div className="admin-sidebar-top">
-            <img className="admin-logo" src="/oodel-logo.png" alt="Oodel Score" />
+            <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">ADMIN PORTAL</div>
           </div>
 
@@ -117,7 +117,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           )}
         </div>
         <div className="admin-sidebar-bottom">
-          <div className="biz">Oodel Score Admin</div>
+          <div className="biz">OodelCX Admin</div>
           <div className="email">{user.email}</div>
           <LogoutLink />
         </div>
