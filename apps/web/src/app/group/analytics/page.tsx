@@ -43,10 +43,32 @@ export default function GroupAnalyticsPage() {
   const npsTotal = data.npsBreakdown.promoters + data.npsBreakdown.passives + data.npsBreakdown.detractors;
   const maxCategory = Math.max(...data.categoryBreakdown.map((c) => c.average), 5);
 
+  function exportCsv() {
+    const lines = ["Section,Label,Value"];
+    lines.push(`NPS,Promoters,${data!.npsBreakdown.promoters}`);
+    lines.push(`NPS,Passives,${data!.npsBreakdown.passives}`);
+    lines.push(`NPS,Detractors,${data!.npsBreakdown.detractors}`);
+    for (const c of data!.categoryBreakdown) lines.push(`Category,${c.name},${c.average}`);
+    for (const t of data!.commentTags) lines.push(`Comment theme,${t.word},${t.count}`);
+    for (const p of data!.trend) lines.push(`Trend,${p.date},${p.starAverage ?? ""}`);
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "group-analytics.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
-      <h1>Analytics</h1>
-      <p className="subtitle">Deep dive into your network&apos;s feedback data.</p>
+      <div className="page-head">
+        <div>
+          <h1>Analytics</h1>
+          <p className="subtitle" style={{ margin: 0 }}>Deep dive into your network&apos;s feedback data.</p>
+        </div>
+        <button className="btn" onClick={exportCsv}>⬇ Export CSV</button>
+      </div>
 
       <div className="grid grid-2">
         <div className="card">

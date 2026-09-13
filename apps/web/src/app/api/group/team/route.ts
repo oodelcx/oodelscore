@@ -29,15 +29,32 @@ export async function GET() {
   });
 
   const team = [
-    { userId: session.user._id.toString(), label: `${session.org.name} (Group)` },
-    ...orgTeamMembers.map((u) => ({ userId: u._id.toString(), label: `${u.email} (${session.org.name}${u.teamRole ? `, ${u.teamRole}` : ""})` })),
+    {
+      userId: session.user._id.toString(),
+      label: `${session.org.name} (Group)`,
+      role: "Group admin",
+      access: "Full access, all regions",
+    },
+    ...orgTeamMembers.map((u) => ({
+      userId: u._id.toString(),
+      label: `${u.email} (${session.org.name}${u.teamRole ? `, ${u.teamRole}` : ""})`,
+      role: u.teamRole || "Team member",
+      access: u.tier === "full" ? "Full access, all regions" : "Limited — own assigned Action Board items only",
+    })),
     ...businessUsers.map((u) => ({
       userId: u._id.toString(),
       label: businessNameById.get(u.parentId?.toString() ?? "") ?? u.email,
+      role: "Branch owner",
+      access: `Own dashboard, ${businessNameById.get(u.parentId?.toString() ?? "") ?? "one branch"}`,
     })),
     ...businessTeamMembers.map((u) => {
       const businessName = businessNameById.get(u.parentId?.toString() ?? "") ?? "";
-      return { userId: u._id.toString(), label: `${u.email} (${businessName}${u.teamRole ? `, ${u.teamRole}` : ""})` };
+      return {
+        userId: u._id.toString(),
+        label: `${u.email} (${businessName}${u.teamRole ? `, ${u.teamRole}` : ""})`,
+        role: u.teamRole || "Team member",
+        access: u.tier === "full" ? `Full access, ${businessName}` : `Limited — own assigned items, ${businessName}`,
+      };
     }),
   ];
 

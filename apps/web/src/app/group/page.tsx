@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface RegionRow {
   region: string;
@@ -36,8 +37,11 @@ interface OverviewData {
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
 
 export default function GroupOverviewPage() {
+  const router = useRouter();
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [jump, setJump] = useState("");
+  const [jumpResults, setJumpResults] = useState<{ businessId: string; name: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/group/overview")
@@ -45,6 +49,21 @@ export default function GroupOverviewPage() {
       .then(setData)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!jump.trim()) {
+      setJumpResults([]);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      fetch(`/api/group/branches?q=${encodeURIComponent(jump)}`)
+        .then((res) => res.json())
+        .then((d) =>
+          setJumpResults((d.branches ?? []).slice(0, 6).map((b: { businessId: string; name: string }) => ({ businessId: b.businessId, name: b.name })))
+        );
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, [jump]);
 
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load overview.</p>;
@@ -57,6 +76,29 @@ export default function GroupOverviewPage() {
           <p className="subtitle" style={{ margin: 0 }}>
             {data.branchCount} branches across {data.regions.length} region{data.regions.length === 1 ? "" : "s"}.
           </p>
+        </div>
+        <div style={{ position: "relative" }}>
+          <input
+            type="text"
+            placeholder="Jump to a branch…"
+            style={{ width: 260 }}
+            value={jump}
+            onChange={(e) => setJump(e.target.value)}
+          />
+          {jumpResults.length > 0 && (
+            <div className="card" style={{ position: "absolute", top: 36, right: 0, zIndex: 5, padding: 6, width: 260 }}>
+              {jumpResults.map((r) => (
+                <div
+                  key={r.businessId}
+                  className="config-row"
+                  style={{ cursor: "pointer", padding: "6px 8px" }}
+                  onClick={() => router.push(`/group/branches/${r.businessId}`)}
+                >
+                  {r.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

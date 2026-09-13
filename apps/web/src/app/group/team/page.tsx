@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 interface TeamRow {
   userId: string;
   label: string;
+  role: string;
+  access: string;
 }
 
 export default function TeamPage() {
@@ -21,14 +23,16 @@ export default function TeamPage() {
   return (
     <div>
       <h1>Team &amp; access</h1>
-      <p className="subtitle">Every login with access to your organization&apos;s data — used to assign Action Board owners.</p>
+      <p className="subtitle">Who can see network data, and how much — used to assign Action Board owners.</p>
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <table className="clean">
           <thead>
             <tr>
-              <th>Name / business</th>
+              <th>Person</th>
+              <th>Role</th>
+              <th>Access</th>
             </tr>
           </thead>
           <tbody>
@@ -40,11 +44,15 @@ export default function TeamPage() {
                     {t.label}
                   </div>
                 </td>
+                <td>{t.role}</td>
+                <td>{t.access}</td>
               </tr>
             ))}
             {team.length === 0 && (
               <tr>
-                <td className="subtitle">No team members yet.</td>
+                <td colSpan={3} className="subtitle">
+                  No team members yet.
+                </td>
               </tr>
             )}
           </tbody>
