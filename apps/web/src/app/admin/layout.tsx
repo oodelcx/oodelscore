@@ -51,34 +51,34 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <aside className="admin-sidebar">
         <div>
           <div className="admin-sidebar-top">
-            <div className="admin-brand">Oodel Score</div>
+            <img className="admin-logo" src="/oodel-logo.png" alt="Oodel Score" />
             <div className="admin-brand-sub">ADMIN PORTAL</div>
           </div>
 
-          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Platform</div>
+          <div className="nav-group-label">Platform</div>
           <nav className="admin-nav">
             <a href="/admin">Overview</a>
           </nav>
 
-          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Accounts</div>
+          <div className="nav-group-label">Accounts</div>
           <nav className="admin-nav">
             <a href="/admin/accounts">Accounts</a>
           </nav>
 
-          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Survey setup</div>
+          <div className="nav-group-label">Survey setup</div>
           <nav className="admin-nav">
             <a href="/admin/question-templates">Question Templates</a>
             <a href="/admin/categories">Categories</a>
             <a href="/admin/industries">Industries</a>
           </nav>
 
-          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Content</div>
+          <div className="nav-group-label">Content</div>
           <nav className="admin-nav">
             <a href="/admin/email-templates">Email Templates</a>
             <a href="/admin/site-content">Site Content</a>
           </nav>
 
-          <div className="section-label" style={{ margin: "14px 14px 4px" }}>Oversight</div>
+          <div className="nav-group-label">Oversight</div>
           <nav className="admin-nav">
             <a href="/admin/feedback-responses">Feedback Responses</a>
             <a href="/admin/feedback-requests" style={{ display: "flex", justifyContent: "space-between" }}>

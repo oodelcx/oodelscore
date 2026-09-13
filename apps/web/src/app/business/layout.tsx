@@ -27,7 +27,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
       <aside className="admin-sidebar">
         <div>
           <div className="admin-sidebar-top">
-            <div className="admin-brand">Oodel Score</div>
+            <img className="admin-logo" src="/oodel-logo.png" alt="Oodel Score" />
             <div className="admin-brand-sub">BUSINESS PORTAL</div>
           </div>
           {isLimitedTeamMember ? (
@@ -40,14 +40,14 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 <a href="/business">Dashboard</a>
               </nav>
 
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Setup</div>
+              <div className="nav-group-label">Setup</div>
               <nav className="admin-nav">
                 <a href="/business/feedback-points">Feedback Points</a>
                 <a href="/business/survey-settings">Survey Settings</a>
                 {!isBusinessTeamMember && <a href="/business/category-owners">Category Owners</a>}
               </nav>
 
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Listen</div>
+              <div className="nav-group-label">Listen</div>
               <nav className="admin-nav">
                 <a href="/business/insights">Insights</a>
                 <a href="/business/analytics">Analytics</a>
@@ -55,7 +55,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 <a href="/business/alert-rules">Alert Rules</a>
               </nav>
 
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Act</div>
+              <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
                 <a href="/business/action-board">Action Board</a>
                 <a href="/business/decision-log">Decision Log</a>
@@ -64,14 +64,14 @@ export default async function BusinessLayout({ children }: { children: ReactNode
 
               {isBranch && (
                 <>
-                  <div className="section-label" style={{ margin: "14px 14px 4px" }}>Measure</div>
+                  <div className="nav-group-label">Measure</div>
                   <nav className="admin-nav">
                     <a href="/business/cx-pulse">CX Pulse</a>
                   </nav>
                 </>
               )}
 
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Admin</div>
+              <div className="nav-group-label">Admin</div>
               <nav className="admin-nav">
                 {!isBusinessTeamMember && <a href="/business/team-members">Team Members</a>}
                 <a href="/business/messages">Messages</a>
