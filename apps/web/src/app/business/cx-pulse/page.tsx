@@ -127,7 +127,7 @@ export default function BranchCxPulsePage() {
       </div>
 
       <div className="section-title">Other branches in {data.region ?? "your region"}</div>
-      <div className="card" style={{ padding: 0 }}>
+      <div className="card">
         <table className="clean">
           <thead>
             <tr>

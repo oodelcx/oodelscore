@@ -361,11 +361,6 @@ export default function CommandCenterPage() {
             </div>
           </div>
         )}
-
-        <div className="cc-footnote">
-          Red/amber/green bands and whether this page is shown at all are set by OodelCX Admin on this organization&rsquo;s
-          account page.
-        </div>
       </div>
     </div>
   );

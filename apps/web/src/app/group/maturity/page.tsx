@@ -144,11 +144,20 @@ export default function MaturityPage() {
               <div className="section-title">What would move you to the next level</div>
               <div className="card">
                 {data.checklist.map((c, i) => (
-                  <div key={i} className="config-row" style={{ padding: "6px 0", borderBottom: i === data.checklist.length - 1 ? "none" : undefined }}>
-                    <span style={{ marginRight: 8 }}>{c.done ? "✅" : "⬜"}</span>
-                    <span style={{ color: c.done ? "var(--text-3)" : "var(--text)", textDecoration: c.done ? "line-through" : undefined }}>
-                      {c.label}
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "10px 0",
+                      borderBottom: i === data.checklist.length - 1 ? "none" : "1px solid var(--border)",
+                    }}
+                  >
+                    <span style={{ flexShrink: 0, color: c.done ? "var(--green)" : "var(--text-3)", fontSize: 14 }}>
+                      {c.done ? "✓" : "→"}
                     </span>
+                    <span style={{ fontSize: 13.5, color: "var(--text)" }}>{c.label}</span>
                   </div>
                 ))}
                 {data.checklist.length === 0 && <p className="subtitle" style={{ margin: 0 }}>Nothing outstanding right now.</p>}
@@ -157,7 +166,7 @@ export default function MaturityPage() {
 
             <div>
               <div className="section-title">Branch-level maturity</div>
-              <div className="card" style={{ padding: 0 }}>
+              <div className="card">
                 <table className="clean">
                   <thead>
                     <tr>

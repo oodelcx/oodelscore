@@ -176,8 +176,6 @@
 .cc-spark-name { font-size: 10.5px; width: 96px; flex-shrink: 0; }
 .cc-spark-count { font-size: 10.5px; color: var(--cc-dim); width: 44px; text-align: right; flex-shrink: 0; }
 
-.cc-footnote { color: var(--cc-dim); font-size: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--cc-border); }
-
 .cc-empty { padding: 40px 20px; text-align: center; color: var(--cc-dim); }
 
 @media (max-width: 1100px) {
