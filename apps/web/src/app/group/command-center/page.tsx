@@ -54,6 +54,14 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hr / 24)}d`;
 }
 
+/** Drops a shared org-name prefix ("Meridian Bank – Downtown" → "Downtown")
+ * so matrix column headers stay narrow — full name is still in the title
+ * attribute for a hover tooltip. */
+function shortBranchLabel(name: string): string {
+  const parts = name.split(/[–-]/).map((p) => p.trim());
+  return parts.length > 1 ? parts[parts.length - 1] : name;
+}
+
 function sparkPoints(days: number[], w: number, h: number): string {
   const max = Math.max(1, ...days);
   const step = w / Math.max(1, days.length - 1);
@@ -175,13 +183,14 @@ export default function CommandCenterPage() {
                     <div className="cc-card-title">Category Matrix · Score /5</div>
                     <div className="cc-card-sub">RAG set per org — Admin → Command Center tab</div>
                   </div>
+                  <div className="cc-table-scroll">
                   <table className="cc-matrix">
                     <thead>
                       <tr>
                         <th>Category</th>
                         {data.branchTiles.map((b) => (
-                          <th className="num" key={b.businessId}>
-                            {b.name}
+                          <th className="num" key={b.businessId} title={b.name}>
+                            {shortBranchLabel(b.name)}
                           </th>
                         ))}
                       </tr>
@@ -218,6 +227,7 @@ export default function CommandCenterPage() {
                       </tr>
                     </tbody>
                   </table>
+                  </div>
                 </>
               )}
             </div>
