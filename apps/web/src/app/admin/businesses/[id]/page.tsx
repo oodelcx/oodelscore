@@ -564,24 +564,35 @@ export default function BusinessDetailPage() {
               >
                 <option value="unassigned">Unassigned</option>
                 <option value="branch_pays">Branch pays</option>
-                <option value="group_pays">Group pays</option>
+                {form.parentOrgId && <option value="group_pays">Group pays</option>}
               </select>
               <div className="field-hint">
                 Only the Admin system role can change this — a server-side check rejects the write otherwise.
               </div>
             </div>
           )}
-          {isNew && !form.parentOrgId && form.billingAssignment === "branch_pays" && (
+          {isNew && !form.parentOrgId && (
+            <div className="section-label">Comp account</div>
+          )}
+          {isNew && !form.parentOrgId && (
             <div className="field">
-              <label>
+              <div className="field-check">
                 <input
                   type="checkbox"
+                  id="comp-enabled"
                   checked={form.compEnabled}
-                  onChange={(e) => setForm((f) => ({ ...f, compEnabled: e.target.checked }))}
-                  style={{ marginRight: 6 }}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      compEnabled: e.target.checked,
+                      billingAssignment: e.target.checked ? "branch_pays" : f.billingAssignment,
+                    }))
+                  }
                 />
-                Make this a comp account (no Stripe charge)
-              </label>
+                <label htmlFor="comp-enabled" style={{ margin: 0 }}>
+                  Make this a comp account (no Stripe charge)
+                </label>
+              </div>
               {form.compEnabled && (
                 <div className="field-row" style={{ marginTop: 8 }}>
                   <div className="field">
@@ -617,7 +628,7 @@ export default function BusinessDetailPage() {
         </div>
       )}
 
-      {tab === "address" && !isNew && form.billingAssignment === "branch_pays" && (
+      {tab === "address" && !isNew && form.billingAssignment !== "group_pays" && (
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
           <h3>Subscription</h3>
           {billingError && <p className="error-text">{billingError}</p>}

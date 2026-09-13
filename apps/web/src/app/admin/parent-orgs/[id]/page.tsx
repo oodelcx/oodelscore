@@ -322,17 +322,20 @@ export default function ParentOrgDetailPage() {
               </div>
             </div>
           )}
+          {isNew && <div className="section-label">Comp account</div>}
           {isNew && (
             <div className="field">
-              <label>
+              <div className="field-check">
                 <input
                   type="checkbox"
+                  id="org-comp-enabled"
                   checked={form.compEnabled}
                   onChange={(e) => setForm((f) => ({ ...f, compEnabled: e.target.checked }))}
-                  style={{ marginRight: 6 }}
                 />
-                Make this a comp account (no Stripe charge)
-              </label>
+                <label htmlFor="org-comp-enabled" style={{ margin: 0 }}>
+                  Make this a comp account (no Stripe charge)
+                </label>
+              </div>
               {form.compEnabled && (
                 <div className="field-row" style={{ marginTop: 8 }}>
                   <div className="field">
