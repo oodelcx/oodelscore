@@ -25,6 +25,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "Someone is assigned an item on a group's Action Board",
     category: "alerts",
   },
+  action_comment_added: {
+    label: "Action Comment Added",
+    trigger: "Someone comments on an Action Board item",
+    category: "alerts",
+  },
   invoice_receipt: { label: "Invoice Receipt", trigger: "A payment succeeds", category: "billing" },
   payment_failed: { label: "Payment Failed", trigger: "A payment fails or goes overdue", category: "billing" },
   demo_request: {

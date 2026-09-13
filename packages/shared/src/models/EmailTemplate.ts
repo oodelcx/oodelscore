@@ -8,6 +8,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "alert_notification",
   "report_ready",
   "action_assigned",
+  "action_comment_added",
   "invoice_receipt",
   "payment_failed",
   "demo_request",

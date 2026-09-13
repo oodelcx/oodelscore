@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Category, CategoryOwnerMapping } from "@oodelscore/shared";
+import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForBusiness } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /** Feeds AI-assisted Action Board triage (spec Section 16): the AI picks
- * the category, this mapping says who the item should go to. */
+ * the category, this mapping says who the item should go to. Only shows
+ * categories actually in use on this business's real survey — the full
+ * platform-wide category list would include plenty that don't apply here
+ * (a restaurant's categories showing up for a bank branch, etc.). */
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const [categories, mappings] = await Promise.all([
-    Category.find().sort({ name: 1 }),
+  const [inUseIds, mappings] = await Promise.all([
+    getCategoriesInUseForBusiness(session.business._id),
     CategoryOwnerMapping.find({ ownerScope: "business", ownerScopeId: session.business._id }),
   ]);
+  const categories = inUseIds.size
+    ? await Category.find({ _id: { $in: [...inUseIds] } }).sort({ name: 1 })
+    : [];
 
   return NextResponse.json({ status: "ok", categories, mappings });
 }

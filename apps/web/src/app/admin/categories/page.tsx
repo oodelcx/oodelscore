@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
+interface UsedByBusiness {
+  businessId: string;
+  businessName: string;
+  parentOrgId: string | null;
+  parentOrgName: string | null;
+}
 interface CategoryRow {
   _id: string;
   name: string;
   questionCount: number;
   templateCount: number;
+  usedByBusinesses: UsedByBusiness[];
 }
 
 export default function CategoriesPage() {
@@ -21,6 +28,7 @@ export default function CategoriesPage() {
   const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
   const [editingName, setEditingName] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [expandedUsageFor, setExpandedUsageFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -120,31 +128,64 @@ export default function CategoriesPage() {
             <tr>
               <th>Name</th>
               <th>Used in</th>
+              <th>Used by</th>
               <th style={{ textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {categories.map((c) => (
-              <tr key={c._id}>
-                <td>{c.name}</td>
-                <td style={{ color: c.questionCount === 0 ? "var(--text-3)" : undefined }}>
-                  {c.questionCount === 0
-                    ? "Not currently used"
-                    : `${c.questionCount} question${c.questionCount === 1 ? "" : "s"} across ${c.templateCount} template${c.templateCount === 1 ? "" : "s"}`}
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  <span className="icon-btn" onClick={() => openEditModal(c)} style={{ cursor: "pointer" }}>
-                    ✏
-                  </span>{" "}
-                  <span className="icon-btn btn-danger" onClick={() => deleteCategory(c)} style={{ cursor: "pointer" }}>
-                    🗑
-                  </span>
-                </td>
-              </tr>
+              <Fragment key={c._id}>
+                <tr>
+                  <td>{c.name}</td>
+                  <td style={{ color: c.questionCount === 0 ? "var(--text-3)" : undefined }}>
+                    {c.questionCount === 0
+                      ? "Not currently used"
+                      : `${c.questionCount} question${c.questionCount === 1 ? "" : "s"} across ${c.templateCount} template${c.templateCount === 1 ? "" : "s"}`}
+                  </td>
+                  <td>
+                    {c.usedByBusinesses.length === 0 ? (
+                      <span className="subtitle" style={{ margin: 0 }}>
+                        No business yet
+                      </span>
+                    ) : (
+                      <span
+                        className="btn btn-sm"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setExpandedUsageFor(expandedUsageFor === c._id ? null : c._id)}
+                      >
+                        {c.usedByBusinesses.length} business{c.usedByBusinesses.length === 1 ? "" : "es"}{" "}
+                        {expandedUsageFor === c._id ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <span className="icon-btn" onClick={() => openEditModal(c)} style={{ cursor: "pointer" }}>
+                      ✏
+                    </span>{" "}
+                    <span className="icon-btn btn-danger" onClick={() => deleteCategory(c)} style={{ cursor: "pointer" }}>
+                      🗑
+                    </span>
+                  </td>
+                </tr>
+                {expandedUsageFor === c._id && c.usedByBusinesses.length > 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ background: "var(--bg-2, #f7f7f8)" }}>
+                      <ul style={{ margin: "4px 0", paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
+                        {c.usedByBusinesses.map((b) => (
+                          <li key={b.businessId}>
+                            {b.businessName}
+                            {b.parentOrgName && <span style={{ color: "var(--text-3)" }}> — {b.parentOrgName}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={3} className="subtitle">
+                <td colSpan={4} className="subtitle">
                   No categories yet — add one above.
                 </td>
               </tr>
