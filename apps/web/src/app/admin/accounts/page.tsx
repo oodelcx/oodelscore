@@ -11,12 +11,14 @@ interface BusinessRow {
   industry: string;
   parentOrgId: string | null;
   active: boolean;
+  accountManagerId: string | null;
   ownerUserId: string | null;
   ownerInviteStatus: string | null;
 }
 interface ParentOrgRow {
   _id: string;
   name: string;
+  accountManagerId: string | null;
   ownerUserId: string | null;
   ownerInviteStatus: string | null;
 }
@@ -107,6 +109,24 @@ export default function AccountsPage() {
     if (!confirm("Remove this staff member's access?")) return;
     const res = await fetch(`/api/admin/staff/${id}`, { method: "DELETE" });
     if (res.ok) setStaff((s) => s.filter((row) => row._id !== id));
+  }
+
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  async function toggleBusinessActive(business: BusinessRow) {
+    setTogglingId(business._id);
+    const res = await fetch(`/api/admin/businesses/${business._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !business.active }),
+    });
+    setTogglingId(null);
+    if (res.ok) {
+      setBusinesses((rows) => rows.map((r) => (r._id === business._id ? { ...r, active: !r.active } : r)));
+    } else {
+      const data = await res.json().catch(() => null);
+      setError(data?.message ?? "Failed to update business");
+    }
   }
 
   async function removeBusiness(id: string, name: string) {
@@ -298,6 +318,23 @@ export default function AccountsPage() {
   const filteredOrgs = parentOrgs.filter((o) => o.name.toLowerCase().includes(orgSearch.trim().toLowerCase()));
   const filteredStaff = staff.filter((s) => s.email.toLowerCase().includes(staffSearch.trim().toLowerCase()));
 
+  const orgNameById = new Map(parentOrgs.map((o) => [o._id, o.name]));
+  const businessCountByOrgId = new Map<string, number>();
+  for (const b of businesses) {
+    if (!b.parentOrgId) continue;
+    businessCountByOrgId.set(b.parentOrgId, (businessCountByOrgId.get(b.parentOrgId) ?? 0) + 1);
+  }
+  function assignedAccountsCell(staffRow: StaffRow) {
+    const role = staffRow.roleId ? roles.find((r) => r._id === staffRow.roleId!._id) : null;
+    const scopeAll =
+      role?.permissions.businesses?.scope === "all" || role?.permissions.parentOrgs?.scope === "all";
+    if (scopeAll) return "All";
+    const count =
+      businesses.filter((b) => b.accountManagerId === staffRow._id).length +
+      parentOrgs.filter((o) => o.accountManagerId === staffRow._id).length;
+    return count;
+  }
+
   const cta =
     tab === "businesses" ? (
       <Link className="btn btn-dark" href="/admin/businesses/new">
@@ -349,8 +386,9 @@ export default function AccountsPage() {
             <tr>
               <th>Name</th>
               <th>Industry</th>
-              <th>Active</th>
+              <th>Parent Org</th>
               <th>Login</th>
+              <th>Active</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -362,9 +400,22 @@ export default function AccountsPage() {
                   <span className="pill pill-gray">{b.industry || "—"}</span>
                 </td>
                 <td>
-                  <span className={`pill ${b.active ? "pill-green" : "pill-gray"}`}>{b.active ? "Active" : "Inactive"}</span>
+                  {b.parentOrgId ? (
+                    <Link href={`/admin/parent-orgs/${b.parentOrgId}`}>{orgNameById.get(b.parentOrgId) ?? "—"}</Link>
+                  ) : (
+                    <span className="pill pill-gray">Standalone</span>
+                  )}
                 </td>
                 <td>{loginStatusCell(b.ownerUserId, b.ownerInviteStatus)}</td>
+                <td>
+                  <button
+                    type="button"
+                    className={`toggle ${b.active ? "on" : ""}`}
+                    disabled={togglingId === b._id}
+                    title={b.active ? "Deactivate" : "Activate"}
+                    onClick={() => toggleBusinessActive(b)}
+                  />
+                </td>
                 <td style={{ textAlign: "right" }}>
                   <Link className="btn btn-sm" style={{ marginRight: 8 }} href={`/admin/businesses/${b._id}`}>
                     Manage →
@@ -377,7 +428,7 @@ export default function AccountsPage() {
             ))}
             {filteredBusinesses.length === 0 && (
               <tr>
-                <td colSpan={5} className="subtitle">
+                <td colSpan={6} className="subtitle">
                   {businesses.length === 0 ? "No businesses yet." : "No businesses match your search."}
                 </td>
               </tr>
@@ -401,6 +452,7 @@ export default function AccountsPage() {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Businesses</th>
               <th>Login</th>
               <th>Actions</th>
             </tr>
@@ -409,6 +461,9 @@ export default function AccountsPage() {
             {filteredOrgs.map((o) => (
               <tr key={o._id}>
                 <td>{o.name}</td>
+                <td>
+                  <span className="pill pill-gray">{businessCountByOrgId.get(o._id) ?? 0}</span>
+                </td>
                 <td>{loginStatusCell(o.ownerUserId, o.ownerInviteStatus)}</td>
                 <td style={{ textAlign: "right" }}>
                   <Link className="btn btn-sm" style={{ marginRight: 8 }} href={`/admin/parent-orgs/${o._id}`}>
@@ -422,7 +477,7 @@ export default function AccountsPage() {
             ))}
             {filteredOrgs.length === 0 && (
               <tr>
-                <td colSpan={3} className="subtitle">
+                <td colSpan={4} className="subtitle">
                   {parentOrgs.length === 0 ? "No parent organizations yet." : "No organizations match your search."}
                 </td>
               </tr>
@@ -447,6 +502,7 @@ export default function AccountsPage() {
             <tr>
               <th>Person</th>
               <th>Role</th>
+              <th>Assigned accounts</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -461,8 +517,12 @@ export default function AccountsPage() {
                   </div>
                 </td>
                 <td>
-                  <span className="pill pill-blue">{s.roleId?.name ?? "—"}</span>
+                  <span className="pill pill-blue">{s.roleId?.name ?? "—"}</span>{" "}
+                  <span style={{ fontSize: 12, color: "var(--accent)", cursor: "pointer" }} onClick={() => setTab("roles")}>
+                    what can they see? →
+                  </span>
                 </td>
+                <td>{assignedAccountsCell(s)}</td>
                 <td>
                   <span className={`pill ${s.inviteStatus === "active" ? "pill-green" : "pill-amber"}`}>{s.inviteStatus}</span>
                 </td>
@@ -485,7 +545,7 @@ export default function AccountsPage() {
             ))}
             {filteredStaff.length === 0 && (
               <tr>
-                <td colSpan={4} className="subtitle">
+                <td colSpan={5} className="subtitle">
                   {staff.length === 0 ? "No staff yet." : "No staff match your search."}
                 </td>
               </tr>
