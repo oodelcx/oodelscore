@@ -307,7 +307,7 @@ export default function ActionBoardPage() {
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <table className="clean">
+        <table className="clean striped">
           <thead>
             <tr>
               <th>Title</th>
@@ -329,20 +329,23 @@ export default function ActionBoardPage() {
                     <td>
                       {item.title}
                       {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
-                      {playbook && (
-                        <button
-                          className="btn btn-sm"
-                          style={{ marginTop: 6, marginRight: 6 }}
-                          onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
+                      <div className="action-links">
+                        {playbook && (
+                          <span
+                            className={`action-link${expandedPlaybookFor === item._id ? " open" : ""}`}
+                            onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
+                          >
+                            Playbook
+                          </span>
+                        )}
+                        <span
+                          className={`action-link${expandedCommentsFor === item._id ? " open" : ""}`}
+                          onClick={() => toggleComments(item._id)}
                         >
-                          {expandedPlaybookFor === item._id ? "Hide playbook" : "📘 Playbook: " + playbook.title}
-                        </button>
-                      )}
-                      <button className="btn btn-sm" style={{ marginTop: 6 }} onClick={() => toggleComments(item._id)}>
-                        {expandedCommentsFor === item._id
-                          ? "Hide comments"
-                          : `💬 Comments${commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}`}
-                      </button>
+                          Comments
+                          {commentsByItem[item._id] && <span className="count">{commentsByItem[item._id].length}</span>}
+                        </span>
+                      </div>
                     </td>
                     {!isLimited && <td>{businessName(item.businessId)}</td>}
                     {!isLimited && (

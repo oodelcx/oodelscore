@@ -112,6 +112,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "demographicConfig",
     "accountManagerId",
     "teamMemberSeatLimit",
+    "ragThresholds",
     "active",
   ] as const;
 

@@ -85,6 +85,9 @@ export function assertStaffCanEditBusinessAdminFields(role: IRole, body: Record<
   if ("billingAssignment" in body && !(role.isSystemRole && role.name === "Admin")) {
     throw new ForbiddenFieldWriteError(["billingAssignment"]);
   }
+  if ("ragThresholds" in body && !(role.isSystemRole && role.name === "Admin")) {
+    throw new ForbiddenFieldWriteError(["ragThresholds"]);
+  }
   const questionTemplateFields = (["demographicConfig", "questionTemplateId"] as const).filter((f) => f in body);
   if (questionTemplateFields.length > 0 && !hasStaffPermission(role, "questionTemplates", "edit")) {
     throw new ForbiddenFieldWriteError(questionTemplateFields);

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
+import { connectToDatabase, ParentOrganization } from "@oodelscore/shared";
 import "../admin/admin.css";
 import "../business/business.css";
 import LogoutLink from "./logout-link";
@@ -14,6 +15,10 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   if (!isPrimaryOwner && !isOrgTeamMember) redirect("/dashboard");
 
   const isLimitedTeamMember = isOrgTeamMember && user.tier === "limited";
+
+  await connectToDatabase();
+  const org = await ParentOrganization.findById(user.parentId).select("commandCenterEnabled");
+  const commandCenterEnabled = org?.commandCenterEnabled ?? true;
 
   return (
     <div className="admin-app">
@@ -32,6 +37,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <div className="nav-group-label">Organisation</div>
               <nav className="admin-nav">
                 <a href="/group">Overview</a>
+                {commandCenterEnabled && <a href="/group/command-center">Command Center</a>}
                 <a href="/group/branches">Branches</a>
                 <a href="/group/compare">Compare branches</a>
               </nav>

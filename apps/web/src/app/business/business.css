@@ -9,6 +9,62 @@
   grid-template-columns: repeat(4, 1fr);
 }
 
+/* Zebra striping for dense operational tables (Action Board, etc.) —
+   uses the page background against the card's white, so it reads as a
+   deliberate tint rather than a hardcoded gray that fights dark themes. */
+table.clean.striped tbody tr:nth-child(even) td {
+  background: var(--bg);
+}
+
+/* Understated text-link row for an item's secondary actions (Playbook,
+   Comments) — small caps, no icons, a colored count badge instead of an
+   emoji. Sits below the title, not crowding the primary row. */
+.action-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 7px;
+}
+.action-link {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.action-link:hover {
+  color: var(--accent);
+}
+.action-link.open {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.action-link .count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.action-link.open .count {
+  background: var(--accent);
+  color: #fff;
+}
+
 .metric-label {
   font-size: 11.5px;
   letter-spacing: 0.04em;

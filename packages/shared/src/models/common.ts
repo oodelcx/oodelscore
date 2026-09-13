@@ -14,3 +14,50 @@ export const AddressSchema = new Schema<IAddress>(
   },
   { _id: false }
 );
+
+/**
+ * Red/amber/green banding for the two headline metrics (star average, NPS)
+ * used by the Group Command Center and anywhere else a business/branch
+ * needs a traffic-light read. A value >= the green minimum is green,
+ * >= the amber minimum (but below green) is amber, otherwise red.
+ * Admin sets this once per Parent Org — every branch under it inherits the
+ * same bands — and independently per standalone business (spec: "standalone
+ * businesses will be set" with their own ranges).
+ */
+export interface IRagThresholds {
+  starGreenMin: number; // e.g. 3.7
+  starAmberMin: number; // e.g. 3.0
+  npsGreenMin: number; // e.g. 30
+  npsAmberMin: number; // e.g. 0
+}
+
+export const DEFAULT_RAG_THRESHOLDS: IRagThresholds = {
+  starGreenMin: 3.7,
+  starAmberMin: 3.0,
+  npsGreenMin: 30,
+  npsAmberMin: 0,
+};
+
+export const RagThresholdsSchema = new Schema<IRagThresholds>(
+  {
+    starGreenMin: { type: Number, default: DEFAULT_RAG_THRESHOLDS.starGreenMin },
+    starAmberMin: { type: Number, default: DEFAULT_RAG_THRESHOLDS.starAmberMin },
+    npsGreenMin: { type: Number, default: DEFAULT_RAG_THRESHOLDS.npsGreenMin },
+    npsAmberMin: { type: Number, default: DEFAULT_RAG_THRESHOLDS.npsAmberMin },
+  },
+  { _id: false }
+);
+
+export function ragBandForStar(value: number | null, thresholds: IRagThresholds): "green" | "amber" | "red" | null {
+  if (value === null) return null;
+  if (value >= thresholds.starGreenMin) return "green";
+  if (value >= thresholds.starAmberMin) return "amber";
+  return "red";
+}
+
+export function ragBandForNps(value: number | null, thresholds: IRagThresholds): "green" | "amber" | "red" | null {
+  if (value === null) return null;
+  if (value >= thresholds.npsGreenMin) return "green";
+  if (value >= thresholds.npsAmberMin) return "amber";
+  return "red";
+}
