@@ -3,6 +3,9 @@
    own visual language. Scoped under .cc-root so it never leaks into
    admin.css/business.css's light theme elsewhere in the Group portal. */
 
+.cc-root, .cc-root *, .cc-root *::before, .cc-root *::after {
+  box-sizing: border-box;
+}
 .cc-root {
   --cc-bg: #090c11;
   --cc-panel: #10151d;
@@ -20,6 +23,8 @@
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   color: var(--cc-text);
   font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .cc-band-green { color: var(--cc-green); }
@@ -98,9 +103,13 @@
 
 .cc-grid {
   display: grid;
-  grid-template-columns: 1.35fr 1fr 0.95fr;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 0.95fr);
   gap: 12px;
   align-items: start;
+  min-width: 0;
+}
+.cc-grid > * {
+  min-width: 0;
 }
 .cc-card {
   background: var(--cc-panel);
@@ -109,11 +118,15 @@
   padding: 12px 14px 14px;
   min-width: 0;
 }
+.cc-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
 .cc-card-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
 .cc-card-title { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--cc-dim); text-transform: uppercase; }
 .cc-card-sub { font-size: 10.5px; color: var(--cc-dim); }
 
-.cc-branch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cc-branch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 .cc-branch-tile { border-radius: 6px; padding: 10px 11px; border: 1px solid var(--cc-border); }
 .cc-branch-tile.green { background: linear-gradient(155deg, #0e2417, #0f151c); border-color: #1c4a30; }
 .cc-branch-tile.amber { background: linear-gradient(155deg, #2a2008, #14181c); border-color: #4a3b12; }
@@ -125,7 +138,7 @@
 .cc-bm { font-size: 14px; font-weight: 600; }
 .cc-branch-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 9.5px; color: var(--cc-dim); }
 
-.cc-matrix { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 4px; }
+.cc-matrix { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 10.5px; margin-top: 4px; }
 .cc-matrix th { text-align: left; font-weight: 500; color: var(--cc-dim); padding: 4px 6px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.03em; }
 .cc-matrix th.num, .cc-matrix td.num { text-align: center; }
 .cc-matrix td { padding: 5px 6px; color: var(--cc-text); }
