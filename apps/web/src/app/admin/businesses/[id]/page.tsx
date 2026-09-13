@@ -33,6 +33,9 @@ interface FormState {
   teamMemberSeatLimit: string;
   demographicConfig: Record<string, string>;
   accountManagerId: string;
+  compEnabled: boolean;
+  compPeriod: string;
+  compCustomExpiresAt: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -51,6 +54,17 @@ const EMPTY_FORM: FormState = {
   teamMemberSeatLimit: "",
   demographicConfig: { name: "off", email: "off", phone: "off", ageGroup: "off", gender: "off" },
   accountManagerId: "",
+  compEnabled: false,
+  compPeriod: "30_days",
+  compCustomExpiresAt: "",
+};
+
+const COMP_PERIOD_LABELS: Record<string, string> = {
+  "15_days": "15 days",
+  "30_days": "30 days",
+  "60_days": "60 days",
+  unlimited: "Unlimited",
+  custom: "Custom date",
 };
 
 export default function BusinessDetailPage() {
@@ -75,12 +89,17 @@ export default function BusinessDetailPage() {
   const [subscription, setSubscription] = useState<{
     status: string;
     isComp: boolean;
+    compPeriod: string | null;
+    compExpiresAt: string | null;
     plan: string;
     mrrValue: number;
     stripeCustomerId: string;
   } | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [editingCompPeriod, setEditingCompPeriod] = useState(false);
+  const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
+  const [compCustomDraft, setCompCustomDraft] = useState("");
 
   interface FeedbackPointRow {
     _id: string;
@@ -251,6 +270,7 @@ export default function BusinessDetailPage() {
         if (!r.ok) throw new Error(d.message ?? "Failed to load");
         const b = d.business;
         setForm({
+          ...EMPTY_FORM,
           name: b.name ?? "",
           industry: b.industry ?? "",
           parentOrgId: b.parentOrgId ?? "",
@@ -296,10 +316,24 @@ export default function BusinessDetailPage() {
     window.location.href = data.url;
   }
 
-  async function markComp() {
+  function startMarkComp() {
+    setCompPeriodDraft(subscription?.compPeriod ?? "30_days");
+    setCompCustomDraft(subscription?.compExpiresAt ? subscription.compExpiresAt.slice(0, 10) : "");
+    setEditingCompPeriod(true);
+  }
+
+  async function confirmMarkComp() {
+    if (compPeriodDraft === "custom" && !compCustomDraft) {
+      setBillingError("Pick a custom expiry date.");
+      return;
+    }
     setBillingBusy(true);
     setBillingError(null);
-    const res = await fetch(`/api/admin/businesses/${params.id}/billing/comp`, { method: "POST" });
+    const res = await fetch(`/api/admin/businesses/${params.id}/billing/comp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ period: compPeriodDraft, customExpiresAt: compCustomDraft || undefined }),
+    });
     const data = await res.json().catch(() => null);
     setBillingBusy(false);
     if (!res.ok) {
@@ -307,6 +341,7 @@ export default function BusinessDetailPage() {
       return;
     }
     setSubscription(data.subscription);
+    setEditingCompPeriod(false);
   }
 
   async function openBillingPortal() {
@@ -353,6 +388,9 @@ export default function BusinessDetailPage() {
       teamMemberSeatLimit: form.teamMemberSeatLimit.trim() ? Number(form.teamMemberSeatLimit) : null,
       demographicConfig: form.demographicConfig,
       accountManagerId: form.accountManagerId || null,
+      ...(isNew && form.compEnabled
+        ? { compPeriod: form.compPeriod, compCustomExpiresAt: form.compCustomExpiresAt || undefined }
+        : {}),
     };
 
     const res = await fetch(isNew ? "/api/admin/businesses" : `/api/admin/businesses/${params.id}`, {
@@ -371,6 +409,9 @@ export default function BusinessDetailPage() {
     if (isNew) {
       if (data.ownerInviteError) {
         alert(`Business created, but its login couldn't be created: ${data.ownerInviteError}`);
+      }
+      if (data.compError) {
+        alert(`Business created, but the comp account couldn't be set: ${data.compError}`);
       }
       router.push(`/admin/businesses/${data.business._id}`);
     }
@@ -530,6 +571,46 @@ export default function BusinessDetailPage() {
               </div>
             </div>
           )}
+          {isNew && !form.parentOrgId && form.billingAssignment === "branch_pays" && (
+            <div className="field">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.compEnabled}
+                  onChange={(e) => setForm((f) => ({ ...f, compEnabled: e.target.checked }))}
+                  style={{ marginRight: 6 }}
+                />
+                Make this a comp account (no Stripe charge)
+              </label>
+              {form.compEnabled && (
+                <div className="field-row" style={{ marginTop: 8 }}>
+                  <div className="field">
+                    <label>Comp period</label>
+                    <select
+                      value={form.compPeriod}
+                      onChange={(e) => setForm((f) => ({ ...f, compPeriod: e.target.value }))}
+                    >
+                      {Object.entries(COMP_PERIOD_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {form.compPeriod === "custom" && (
+                    <div className="field">
+                      <label>Expires on</label>
+                      <input
+                        type="date"
+                        value={form.compCustomExpiresAt}
+                        onChange={(e) => setForm((f) => ({ ...f, compCustomExpiresAt: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : isNew ? "Create business" : "Save"}
           </button>
@@ -544,7 +625,12 @@ export default function BusinessDetailPage() {
             <>
               <p className="card-sub">
                 {subscription.isComp ? (
-                  <span className="pill pill-purple">Comp</span>
+                  <>
+                    <span className="pill pill-purple">Comp</span>{" "}
+                    {subscription.compExpiresAt
+                      ? `until ${new Date(subscription.compExpiresAt).toLocaleDateString()}`
+                      : "— unlimited"}
+                  </>
                 ) : (
                   <>
                     <span className="pill pill-green">{subscription.status}</span> — {subscription.plan} — $
@@ -553,8 +639,13 @@ export default function BusinessDetailPage() {
                 )}
               </p>
               {subscription.stripeCustomerId && (
-                <button className="btn" disabled={billingBusy} onClick={openBillingPortal}>
+                <button className="btn" disabled={billingBusy} onClick={openBillingPortal} style={{ marginRight: 8 }}>
                   Manage in Stripe
+                </button>
+              )}
+              {subscription.isComp && !editingCompPeriod && (
+                <button className="btn btn-sm" disabled={billingBusy} onClick={startMarkComp}>
+                  Edit comp period
                 </button>
               )}
             </>
@@ -568,11 +659,37 @@ export default function BusinessDetailPage() {
                 <button className="btn btn-dark" disabled={billingBusy} onClick={() => startCheckout("business_yearly")}>
                   Start yearly checkout
                 </button>
-                <button className="btn" disabled={billingBusy} onClick={markComp}>
+                <button className="btn" disabled={billingBusy} onClick={startMarkComp}>
                   Mark as Comp
                 </button>
               </div>
             </>
+          )}
+          {editingCompPeriod && (
+            <div className="field-row" style={{ marginTop: 10, alignItems: "flex-end" }}>
+              <div className="field">
+                <label>Comp period</label>
+                <select value={compPeriodDraft} onChange={(e) => setCompPeriodDraft(e.target.value)}>
+                  {Object.entries(COMP_PERIOD_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {compPeriodDraft === "custom" && (
+                <div className="field">
+                  <label>Expires on</label>
+                  <input type="date" value={compCustomDraft} onChange={(e) => setCompCustomDraft(e.target.value)} />
+                </div>
+              )}
+              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={confirmMarkComp}>
+                {billingBusy ? "Saving…" : "Confirm"}
+              </button>
+              <button className="btn btn-sm" disabled={billingBusy} onClick={() => setEditingCompPeriod(false)}>
+                Cancel
+              </button>
+            </div>
           )}
         </div>
       )}

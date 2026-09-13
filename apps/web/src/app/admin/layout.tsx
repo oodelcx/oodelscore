@@ -38,6 +38,18 @@ async function getPendingFeedbackRequestCount(): Promise<number> {
   return FeedbackPointRequest.countDocuments({ status: "pending", businessId: { $in: scopedBusinessIds } });
 }
 
+/**
+ * Dev Data Tools (showcase seed / wipe) are dangerous by design — only ever
+ * shown when a staff member with the "Admin" system role is logged in AND
+ * the deploying environment has explicitly opted in via
+ * ENABLE_DEV_DATA_TOOLS=true. Never set that flag on production.
+ */
+async function canSeeDevTools(): Promise<boolean> {
+  if (process.env.ENABLE_DEV_DATA_TOOLS !== "true") return false;
+  const session = await requireStaffSession();
+  return session?.role.name === "Admin";
+}
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -45,6 +57,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   const pendingAiCount = await getPendingAiCount();
   const pendingFeedbackRequestCount = await getPendingFeedbackRequestCount();
+  const devToolsVisible = await canSeeDevTools();
 
   return (
     <div className="admin-app">
@@ -93,6 +106,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <a href="/admin/billing">Billing Oversight</a>
             <a href="/admin/cx-pulse">CX Pulse</a>
           </nav>
+
+          {devToolsVisible && (
+            <>
+              <div className="nav-group-label">Danger zone</div>
+              <nav className="admin-nav">
+                <a href="/admin/dev-tools">Dev Data Tools</a>
+              </nav>
+            </>
+          )}
         </div>
         <div className="admin-sidebar-bottom">
           <div className="biz">Oodel Score Admin</div>

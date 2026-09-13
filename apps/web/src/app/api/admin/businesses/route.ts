@@ -6,15 +6,19 @@ import {
   ParentOrganization,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
+  COMP_PERIODS,
   createInviteUser,
   expireStaleInvites,
+  markOwnerComp,
   type BillingAssignment,
+  type CompPeriod,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 import { assertStaffCanEditBusinessAdminFields, ForbiddenFieldWriteError } from "@oodelscore/shared";
 
 const BILLING_ASSIGNMENT_SET: readonly string[] = BILLING_ASSIGNMENTS;
 const BUSINESS_PLAN_SET: readonly string[] = BUSINESS_PLANS;
+const COMP_PERIOD_SET: readonly string[] = COMP_PERIODS;
 
 export async function GET() {
   const session = await requireStaffSession();
@@ -77,6 +81,12 @@ export async function POST(request: Request) {
   if (body.plan !== undefined && !BUSINESS_PLAN_SET.includes(body.plan)) {
     return NextResponse.json({ status: "error", message: "Invalid plan" }, { status: 400 });
   }
+  const compPeriod: CompPeriod | null = body.compPeriod && COMP_PERIOD_SET.includes(body.compPeriod) ? body.compPeriod : null;
+  const compCustomExpiresAt =
+    compPeriod === "custom" && typeof body.compCustomExpiresAt === "string" ? new Date(body.compCustomExpiresAt) : null;
+  if (compPeriod === "custom" && (!compCustomExpiresAt || Number.isNaN(compCustomExpiresAt.getTime()))) {
+    return NextResponse.json({ status: "error", message: "compCustomExpiresAt is required for a custom comp period" }, { status: 400 });
+  }
 
   await connectToDatabase();
 
@@ -136,5 +146,18 @@ export async function POST(request: Request) {
     console.error("[businesses] failed to create/invite owner login", err);
   }
 
-  return NextResponse.json({ status: "ok", business, ownerInviteError }, { status: 201 });
+  // A comp account only ever applies to a business with its own subscription
+  // row (billingAssignment "branch_pays") — a "group_pays" branch's cost
+  // rolls into the parent org's subscription instead (spec Section 5/bug #4),
+  // so comp there is set on the org, not the branch.
+  let compError: string | null = null;
+  if (compPeriod && business.billingAssignment === "branch_pays") {
+    try {
+      await markOwnerComp({ ownerType: "business", ownerId: business._id.toString(), period: compPeriod, customExpiresAt: compCustomExpiresAt });
+    } catch (err) {
+      compError = err instanceof Error ? err.message : "Failed to mark this business as comp";
+    }
+  }
+
+  return NextResponse.json({ status: "ok", business, ownerInviteError, compError }, { status: 201 });
 }
