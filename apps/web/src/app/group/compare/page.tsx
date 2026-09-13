@@ -6,6 +6,11 @@ interface BusinessOption {
   businessId: string;
   name: string;
 }
+interface CategoryEntry {
+  categoryId: string;
+  name: string;
+  average: number;
+}
 interface CompareBranch {
   businessId: string;
   name: string;
@@ -14,6 +19,7 @@ interface CompareBranch {
   responseCount: number;
   cxPulseLevel: number | null;
   trend: { date: string; starAverage: number | null }[];
+  categoryBreakdown: CategoryEntry[];
 }
 
 const MAX_COMPARE = 6;
@@ -40,6 +46,7 @@ export default function ComparePage() {
   const [options, setOptions] = useState<BusinessOption[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [branches, setBranches] = useState<CompareBranch[]>([]);
+  const [categoryNames, setCategoryNames] = useState<string[]>([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -51,12 +58,51 @@ export default function ComparePage() {
   useEffect(() => {
     if (selected.length === 0) {
       setBranches([]);
+      setCategoryNames([]);
       return;
     }
     fetch(`/api/group/compare?ids=${selected.join(",")}`)
       .then((res) => res.json())
-      .then((data) => setBranches(data.branches ?? []));
+      .then((data) => {
+        setBranches(data.branches ?? []);
+        setCategoryNames(data.categoryNames ?? []);
+      });
   }, [selected]);
+
+  function categoryAverage(branch: CompareBranch, name: string): number | null {
+    return branch.categoryBreakdown.find((c) => c.name === name)?.average ?? null;
+  }
+
+  // The biggest single-category gap between the top and bottom performer by
+  // overall average — "worth checking against the open Action Board item
+  // there" per the mockup's callout.
+  const gapInsight = (() => {
+    if (branches.length < 2 || categoryNames.length === 0) return null;
+    const sorted = [...branches].sort((a, b) => (b.starAverage ?? 0) - (a.starAverage ?? 0));
+    const top = sorted[0];
+    const bottom = sorted[sorted.length - 1];
+    if (top.businessId === bottom.businessId) return null;
+    let biggestGapCategory: string | null = null;
+    let biggestGap = -Infinity;
+    for (const name of categoryNames) {
+      const topVal = categoryAverage(top, name);
+      const bottomVal = categoryAverage(bottom, name);
+      if (topVal === null || bottomVal === null) continue;
+      const gap = topVal - bottomVal;
+      if (gap > biggestGap) {
+        biggestGap = gap;
+        biggestGapCategory = name;
+      }
+    }
+    if (!biggestGapCategory) return null;
+    return {
+      top,
+      bottom,
+      category: biggestGapCategory,
+      topVal: categoryAverage(top, biggestGapCategory) as number,
+      bottomVal: categoryAverage(bottom, biggestGapCategory) as number,
+    };
+  })();
 
   function addBranch(id: string) {
     if (selected.includes(id) || selected.length >= MAX_COMPARE) return;
@@ -146,6 +192,90 @@ export default function ComparePage() {
                 </span>
               ))}
             </div>
+          </div>
+
+          <div className="section-title">By category</div>
+          <p className="section-sub">Where the real gaps are, not just the overall average.</p>
+          {categoryNames.length === 0 ? (
+            <p className="subtitle">No categorized star-rating questions have responses in the last 30 days.</p>
+          ) : (
+            <div className="card" style={{ marginBottom: 24 }}>
+              {categoryNames.map((name) => (
+                <div className="grouped-bar" key={name}>
+                  <div className="glabel">{name}</div>
+                  <div className="gtrack">
+                    {branches.map((b, i) => {
+                      const value = categoryAverage(b, name);
+                      return (
+                        <div className="gseg" key={b.businessId}>
+                          <div className="gfill-track">
+                            <div
+                              className="gfill"
+                              style={{ width: `${value !== null ? (value / 5) * 100 : 0}%`, background: COLORS[i % COLORS.length] }}
+                            />
+                          </div>
+                          <div className="gval">{value !== null ? value.toFixed(1) : "—"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <div className="legend-row">
+                {branches.map((b, i) => (
+                  <span key={b.businessId}>
+                    <span className="dot" style={{ background: COLORS[i % COLORS.length] }}></span>
+                    {b.name}
+                  </span>
+                ))}
+              </div>
+              {gapInsight && (
+                <div className="callout" style={{ margin: "18px 0 0" }}>
+                  {gapInsight.bottom.name}&apos;s biggest gap vs {gapInsight.top.name} is {gapInsight.category} (
+                  {gapInsight.bottomVal.toFixed(1)} vs {gapInsight.topVal.toFixed(1)}) — worth checking against any open Action Board
+                  item there.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="section-title">Full comparison table</div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="clean">
+              <thead>
+                <tr>
+                  <th>Branch</th>
+                  <th>Average</th>
+                  <th>NPS</th>
+                  {categoryNames.map((name) => (
+                    <th key={name}>{name}</th>
+                  ))}
+                  <th>Responses</th>
+                </tr>
+              </thead>
+              <tbody>
+                {branches.map((b) => (
+                  <tr key={b.businessId}>
+                    <td>{b.name}</td>
+                    <td>
+                      <b
+                        style={{
+                          color: b.starAverage === null ? undefined : b.starAverage >= 4 ? "var(--green)" : b.starAverage >= 3.5 ? "var(--amber)" : "var(--red)",
+                        }}
+                      >
+                        {b.starAverage !== null ? `${b.starAverage}/5` : "—"}
+                      </b>
+                    </td>
+                    <td>{b.npsScore ?? "—"}</td>
+                    {categoryNames.map((name) => {
+                      const value = categoryAverage(b, name);
+                      return <td key={name}>{value !== null ? value.toFixed(1) : "—"}</td>;
+                    })}
+                    <td>{b.responseCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </>
       )}
