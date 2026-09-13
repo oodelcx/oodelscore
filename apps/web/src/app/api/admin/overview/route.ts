@@ -8,6 +8,7 @@ import {
   AiInsightReport,
   AlertRule,
   Response,
+  FeedbackPointRequest,
   expireStaleInvites,
   findBillingIntegrityIssues,
 } from "@oodelscore/shared";
@@ -75,6 +76,20 @@ export async function GET() {
     $and: [{ "answers.type": "star_1_5" }, { "answers.type": "nps_0_10" }],
   });
 
+  // Needs attention: businesses asking for a new/changed feedback point —
+  // they can't create these themselves, so this is the only signal Admin
+  // gets short of checking email.
+  let pendingFeedbackRequestIds: unknown[] = [];
+  if (role.permissions.businesses.view) {
+    const requestBusinessFilter =
+      role.permissions.businesses.scope === "assigned" ? { accountManagerId: user._id } : {};
+    const scopedBusinessIds = await Business.find(requestBusinessFilter).distinct("_id");
+    pendingFeedbackRequestIds = await FeedbackPointRequest.find({
+      status: "pending",
+      businessId: { $in: scopedBusinessIds },
+    }).distinct("_id");
+  }
+
   // Needs attention: alert-rule recipients shared across more than one owner.
   const alertRules = await AlertRule.find().select("ownerId recipients");
   const ownerIdsByRecipient = new Map<string, Set<string>>();
@@ -104,6 +119,14 @@ export async function GET() {
       issue: "Unlinked / orphaned billing data",
       severity: "amber",
       href: "/admin/billing",
+    });
+  }
+  if (pendingFeedbackRequestIds.length > 0) {
+    needsAttention.push({
+      label: `${pendingFeedbackRequestIds.length} request(s)`,
+      issue: "Business asking for a new or changed feedback point",
+      severity: "amber",
+      href: "/admin/feedback-requests",
     });
   }
   if (mixedTypeCount > 0) {

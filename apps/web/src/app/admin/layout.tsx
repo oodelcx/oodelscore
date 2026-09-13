@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
 import { requireStaffSession } from "@/lib/adminAuth";
-import { connectToDatabase, AiInsightReport, Business } from "@oodelscore/shared";
+import { connectToDatabase, AiInsightReport, Business, FeedbackPointRequest } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import "./admin.css";
 
@@ -25,12 +25,26 @@ async function getPendingAiCount(): Promise<number> {
   return AiInsightReport.countDocuments({ status: "pending", ownerType: "business", ownerId: { $in: businessIds } });
 }
 
+/** Same scoping as the Feedback Point Requests page itself. */
+async function getPendingFeedbackRequestCount(): Promise<number> {
+  const session = await requireStaffSession();
+  if (!session) return 0;
+  const { role, user } = session;
+  if (!role.permissions.businesses.view) return 0;
+
+  await connectToDatabase();
+  const businessFilter = role.permissions.businesses.scope === "assigned" ? { accountManagerId: user._id } : {};
+  const scopedBusinessIds = await Business.find(businessFilter).distinct("_id");
+  return FeedbackPointRequest.countDocuments({ status: "pending", businessId: { $in: scopedBusinessIds } });
+}
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.accountType !== "admin_staff") redirect("/dashboard");
 
   const pendingAiCount = await getPendingAiCount();
+  const pendingFeedbackRequestCount = await getPendingFeedbackRequestCount();
 
   return (
     <div className="admin-app">
@@ -67,6 +81,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <div className="section-label" style={{ margin: "14px 14px 4px" }}>Oversight</div>
           <nav className="admin-nav">
             <a href="/admin/feedback-responses">Feedback Responses</a>
+            <a href="/admin/feedback-requests" style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Feedback Point Requests</span>
+              {pendingFeedbackRequestCount > 0 && <span className="nav-badge">{pendingFeedbackRequestCount}</span>}
+            </a>
             <a href="/admin/ai-queue" style={{ display: "flex", justifyContent: "space-between" }}>
               <span>AI Insights Queue</span>
               {pendingAiCount > 0 && <span className="nav-badge">{pendingAiCount}</span>}
