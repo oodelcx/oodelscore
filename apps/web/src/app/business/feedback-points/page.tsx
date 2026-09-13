@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import { QrModal } from "@/components/qr-modal";
 
+interface DemographicConfig {
+  name: string;
+  email: string;
+  phone: string;
+  ageGroup: string;
+  gender: string;
+}
+
 interface FeedbackPointRow {
   _id: string;
   name: string;
@@ -10,6 +18,39 @@ interface FeedbackPointRow {
   qrToken: string;
   scans: number;
   active: boolean;
+  hasNps: boolean;
+  hasComments: boolean;
+  demographics: DemographicConfig;
+}
+
+const DEMOGRAPHIC_LABELS: Record<keyof DemographicConfig, string> = {
+  name: "Name",
+  email: "Email",
+  phone: "Phone",
+  ageGroup: "Age",
+  gender: "Gender",
+};
+
+function configBadges(p: FeedbackPointRow) {
+  const badges: { label: string; className: string }[] = [
+    { label: p.hasNps ? "NPS on" : "NPS off", className: p.hasNps ? "pill-accent" : "pill-gray" },
+    { label: p.hasComments ? "Comments on" : "Comments off", className: p.hasComments ? "pill-accent" : "pill-gray" },
+  ];
+  const demoEntries = (Object.keys(DEMOGRAPHIC_LABELS) as (keyof DemographicConfig)[]).filter(
+    (key) => (p.demographics?.[key] ?? "off") !== "off"
+  );
+  if (demoEntries.length === 0) {
+    badges.push({ label: "All demographics off", className: "pill-gray" });
+  } else {
+    for (const key of demoEntries) {
+      const mode = p.demographics[key];
+      badges.push({
+        label: `${DEMOGRAPHIC_LABELS[key]} ${mode}`,
+        className: mode === "mandatory" ? "pill-green" : "pill-amber",
+      });
+    }
+  }
+  return badges;
 }
 
 export default function FeedbackPointsPage() {
@@ -137,6 +178,11 @@ export default function FeedbackPointsPage() {
                 </div>
                 <div className="badge-row">
                   <span className={`pill ${p.active ? "pill-accent" : "pill-gray"}`}>{p.active ? "Active" : "Inactive"}</span>
+                  {configBadges(p).map((b, i) => (
+                    <span className={`pill ${b.className}`} key={i}>
+                      {b.label}
+                    </span>
+                  ))}
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                   <button className="btn" style={{ flex: 1 }} onClick={() => setQrPoint(p)}>

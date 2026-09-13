@@ -13,10 +13,12 @@ interface ResponseRow {
   respondentEmail: string | null;
   demographics: { ageGroup: string; gender: string };
   flagged: boolean;
+  feedbackPointId: string;
   feedbackPointName: string;
 }
 
-type FilterId = "all" | "negative" | "comment";
+type FilterId = "all" | "negative" | "comment" | string;
+type SortId = "newest" | "lowest";
 
 function starValue(r: ResponseRow): number | null {
   const star = r.answers.find((a) => a.type === "star_1_5" && typeof a.value === "number");
@@ -37,7 +39,12 @@ export default function RawFeedbackPage() {
   const [responses, setResponses] = useState<ResponseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterId>("all");
+  const [sort, setSort] = useState<SortId>("newest");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [loggingFor, setLoggingFor] = useState<string | null>(null);
+  const [actionTitle, setActionTitle] = useState("");
+  const [actionSubmitting, setActionSubmitting] = useState(false);
+  const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
 
   function load() {
     fetch("/api/business/responses")
@@ -59,11 +66,51 @@ export default function RawFeedbackPage() {
     load();
   }
 
-  const filtered = responses.filter((r) => {
-    if (filter === "negative") return (starValue(r) ?? 5) <= 2;
-    if (filter === "comment") return comment(r) !== null;
-    return true;
-  });
+  function startLogAction(r: ResponseRow) {
+    setLoggingFor(r._id);
+    setActionTitle(`Follow up: ${r.feedbackPointName}${comment(r) ? ` — "${comment(r)!.slice(0, 60)}"` : ""}`);
+  }
+
+  async function submitLogAction(r: ResponseRow) {
+    if (!actionTitle.trim()) return;
+    setActionSubmitting(true);
+    await fetch("/api/business/action-board", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: actionTitle.trim(),
+        description: comment(r) ?? "",
+        priority: (starValue(r) ?? 5) <= 2 ? "high" : "medium",
+        sourceResponseIds: [r._id],
+      }),
+    });
+    setActionSubmitting(false);
+    setLoggingFor(null);
+    setLoggedIds((prev) => new Set(prev).add(r._id));
+  }
+
+  const feedbackPoints = Array.from(
+    new Map(responses.map((r) => [r.feedbackPointId, r.feedbackPointName])).entries()
+  ).map(([id, name]) => ({ id, name }));
+
+  const filtered = responses
+    .filter((r) => {
+      if (filter === "negative") return (starValue(r) ?? 5) <= 2;
+      if (filter === "comment") return comment(r) !== null;
+      if (filter !== "all") return r.feedbackPointId === filter;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === "lowest") {
+        const av = starValue(a);
+        const bv = starValue(b);
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        return av - bv;
+      }
+      return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+    });
 
   return (
     <div>
@@ -75,6 +122,15 @@ export default function RawFeedbackPage() {
             {f === "all" ? "All" : f === "negative" ? "Negative only" : "Has comment"}
           </div>
         ))}
+        {feedbackPoints.map((fp) => (
+          <div key={fp.id} className={`chip ${filter === fp.id ? "active" : ""}`} onClick={() => setFilter(fp.id)}>
+            {fp.name}
+          </div>
+        ))}
+        <select style={{ marginLeft: "auto" }} value={sort} onChange={(e) => setSort(e.target.value as SortId)}>
+          <option value="newest">Newest first</option>
+          <option value="lowest">Lowest score first</option>
+        </select>
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}
@@ -102,10 +158,31 @@ export default function RawFeedbackPage() {
               </div>
               <div className="fb-actions">
                 <span onClick={() => toggleFlag(r)}>{r.flagged ? "Unflag" : "Flag"}</span>
+                {loggedIds.has(r._id) ? (
+                  <span style={{ color: "var(--accent)", cursor: "default" }}>✓ Action logged</span>
+                ) : (
+                  <span onClick={() => startLogAction(r)}>Log action taken</span>
+                )}
                 <span onClick={() => setExpanded(expanded === r._id ? null : r._id)}>
                   {expanded === r._id ? "Hide breakdown" : "View full breakdown"}
                 </span>
               </div>
+              {loggingFor === r._id && (
+                <div style={{ marginTop: 10, padding: 12, background: "var(--bg)", borderRadius: 8 }}>
+                  <div className="field">
+                    <label>Action item title</label>
+                    <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} autoFocus />
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button className="btn btn-dark btn-sm" disabled={actionSubmitting} onClick={() => submitLogAction(r)}>
+                      {actionSubmitting ? "Logging…" : "Add to Action Board"}
+                    </button>
+                    <button className="btn btn-sm" onClick={() => setLoggingFor(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               {expanded === r._id && (
                 <table className="clean" style={{ marginTop: 10 }}>
                   <tbody>

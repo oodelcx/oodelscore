@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 interface AnalyticsData {
+  feedbackPoints: { _id: string; name: string }[];
+  filters: { feedbackPointId: string | null; from: string; to: string };
   trend: { date: string; starAverage: number | null }[];
   npsBreakdown: { promoters: number; passives: number; detractors: number };
   categoryBreakdown: { name: string; average: number }[];
@@ -31,18 +33,38 @@ function trendSvgPoints(trend: { starAverage: number | null }[]): string {
     .join(" ");
 }
 
+function buildQuery(feedbackPointId: string, from: string, to: string): string {
+  const params = new URLSearchParams();
+  if (feedbackPointId) params.set("feedbackPointId", feedbackPointId);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [feedbackPointId, setFeedbackPointId] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   useEffect(() => {
-    fetch("/api/business/analytics")
+    setLoading(true);
+    fetch(`/api/business/analytics${buildQuery(feedbackPointId, from, to)}`)
       .then((res) => res.json())
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        // Sync the date inputs to the server-resolved default window on first load,
+        // so the pickers show the range actually being charted, not blank.
+        if (!from && d.filters?.from) setFrom(d.filters.from);
+        if (!to && d.filters?.to) setTo(d.filters.to);
+      })
       .finally(() => setLoading(false));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedbackPointId, from, to]);
 
-  if (loading) return <p className="subtitle">Loading…</p>;
+  if (loading && !data) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load analytics.</p>;
 
   const npsTotal = data.npsBreakdown.promoters + data.npsBreakdown.passives + data.npsBreakdown.detractors;
@@ -57,9 +79,22 @@ export default function AnalyticsPage() {
             Deep dive into your feedback data.
           </p>
         </div>
-        <a className="btn" href="/api/business/analytics/export">
+        <a className="btn" href={`/api/business/analytics/export${buildQuery(feedbackPointId, from, to)}`}>
           ⬇ Export CSV
         </a>
+      </div>
+
+      <div className="filters">
+        <select value={feedbackPointId} onChange={(e) => setFeedbackPointId(e.target.value)}>
+          <option value="">All feedback points</option>
+          {data.feedbackPoints.map((p) => (
+            <option key={p._id} value={p._id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
 
       <div className="grid grid-2">
