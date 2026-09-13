@@ -3,8 +3,40 @@ import { EmailTemplate, type EmailTemplateKey } from "../models/EmailTemplate";
 const RESEND_API_URL = "https://api.resend.com/emails";
 const DEFAULT_FROM = "Oodel Score <noreply@oodelscore.com>";
 
-function substituteMergeVars(text: string, vars: Record<string, string>): string {
+export function substituteMergeVars(text: string, vars: Record<string, string>): string {
   return text.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (match, key: string) => vars[key] ?? match);
+}
+
+/**
+ * Sends arbitrary subject/body straight to Resend, substituting
+ * {{merge_vars}} — used for Admin's "Send test email" (mockup:
+ * modal-send-test), which must reflect whatever is currently in the editor
+ * draft, not necessarily what's saved to `emailTemplates` yet.
+ */
+export async function sendRawEmail(to: string, subject: string, body: string, vars: Record<string, string>): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not set");
+  }
+
+  const res = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM,
+      to: [to],
+      subject: substituteMergeVars(subject, vars),
+      text: substituteMergeVars(body, vars),
+    }),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`Resend send failed (${res.status}): ${errorBody}`);
+  }
 }
 
 /**

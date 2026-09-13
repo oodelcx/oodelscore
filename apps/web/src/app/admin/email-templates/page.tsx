@@ -11,22 +11,40 @@ interface TemplateDoc {
   lastEditedAt: string | null;
 }
 
-const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string }> = {
-  welcome: { label: "Welcome", trigger: "Admin creates a business, org, or staff account" },
-  email_changed: { label: "Email Changed", trigger: "User's login email is updated" },
-  password_reset: { label: "Password Reset", trigger: "User requests a reset link" },
-  invite_to_team: { label: "Invite to Team", trigger: "Someone invites a staff or org member" },
-  alert_notification: { label: "Alert Notification", trigger: "An Alert Rule fires on a business" },
-  report_ready: { label: "Report Ready", trigger: "An AI Insights report is approved" },
-  action_assigned: { label: "Action Assigned", trigger: "Someone is assigned an item on a group's Action Board" },
-  invoice_receipt: { label: "Invoice Receipt", trigger: "A payment succeeds" },
-  payment_failed: { label: "Payment Failed", trigger: "A payment fails or goes overdue" },
-  demo_request: { label: "Demo Request", trigger: "A visitor submits \"Book a demo\" on the marketing site" },
+type CategoryId = "account" | "alerts" | "billing";
+
+const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; category: CategoryId }> = {
+  welcome: { label: "Welcome", trigger: "Admin creates a business, org, or staff account", category: "account" },
+  email_changed: { label: "Email Changed", trigger: "User's login email is updated", category: "account" },
+  password_reset: { label: "Password Reset", trigger: "User requests a reset link", category: "account" },
+  invite_to_team: { label: "Invite to Team", trigger: "Someone invites a staff or org member", category: "account" },
+  alert_notification: { label: "Alert Notification", trigger: "An Alert Rule fires on a business", category: "alerts" },
+  report_ready: { label: "Report Ready", trigger: "An AI Insights report is approved", category: "alerts" },
+  action_assigned: {
+    label: "Action Assigned",
+    trigger: "Someone is assigned an item on a group's Action Board",
+    category: "alerts",
+  },
+  invoice_receipt: { label: "Invoice Receipt", trigger: "A payment succeeds", category: "billing" },
+  payment_failed: { label: "Payment Failed", trigger: "A payment fails or goes overdue", category: "billing" },
+  demo_request: {
+    label: "Demo Request",
+    trigger: "A visitor submits \"Book a demo\" on the marketing site",
+    category: "alerts",
+  },
   feedback_point_request: {
     label: "Feedback Point Request",
     trigger: "A business requests a new feedback point or changes to one",
+    category: "alerts",
   },
 };
+
+const CATEGORY_CHIPS: { id: "all" | CategoryId; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "account", label: "Account" },
+  { id: "alerts", label: "Alerts & reports" },
+  { id: "billing", label: "Billing" },
+];
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "Never";
@@ -78,6 +96,13 @@ export default function EmailTemplatesPage() {
   const [bodyText, setBodyText] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | CategoryId>("all");
+
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testTo, setTestTo] = useState("oodelscore@gmail.com");
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -96,6 +121,29 @@ export default function EmailTemplatesPage() {
     setSubject(t.subject);
     setBodyText(t.body);
     setSavedMsg(null);
+  }
+
+  function openTestModal() {
+    setTestResult(null);
+    setShowTestModal(true);
+  }
+
+  async function sendTestEmail() {
+    if (!editing || !testTo.trim()) return;
+    setSendingTest(true);
+    setTestResult(null);
+    const res = await fetch(`/api/admin/email-templates/${editing.key}/send-test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: testTo.trim(), subject, body: bodyText }),
+    });
+    const data = await res.json().catch(() => null);
+    setSendingTest(false);
+    if (!res.ok) {
+      setTestResult(data?.message ?? "Failed to send test email");
+      return;
+    }
+    setShowTestModal(false);
   }
 
   function insertVar(v: string) {
@@ -133,12 +181,42 @@ export default function EmailTemplatesPage() {
             </p>
           </div>
           <div className="btn-group">
+            <button className="btn" onClick={openTestModal}>
+              Send test email
+            </button>
             <button className="btn" disabled={saving} onClick={save}>
               {saving ? "Saving…" : "Save"}
             </button>
           </div>
         </div>
         {savedMsg && <p style={{ color: "var(--accent, #127C57)", fontSize: 13 }}>{savedMsg}</p>}
+
+        {showTestModal && (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowTestModal(false)}>
+            <div className="modal-box narrow">
+              <div className="modal-head">
+                <h2>Send test email</h2>
+                <button className="modal-close" onClick={() => setShowTestModal(false)}>
+                  ×
+                </button>
+              </div>
+              <p className="modal-sub">Sends via Resend using the current draft and example data.</p>
+              <div className="field">
+                <label>Send to</label>
+                <input type="email" value={testTo} onChange={(e) => setTestTo(e.target.value)} />
+              </div>
+              {testResult && <p className="error-text">{testResult}</p>}
+              <div className="modal-actions">
+                <button className="btn" onClick={() => setShowTestModal(false)}>
+                  Cancel
+                </button>
+                <button className="btn btn-dark" disabled={sendingTest || !testTo.trim()} onClick={sendTestEmail}>
+                  {sendingTest ? "Sending…" : "Send"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="editor-grid">
           <div>
@@ -181,6 +259,15 @@ export default function EmailTemplatesPage() {
         Sent live via Resend. Respondents who fill out a feedback form never receive an email — these are account-side only.
       </p>
 
+      <div className="filters">
+        <input type="text" placeholder="Search templates…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        {CATEGORY_CHIPS.map((c) => (
+          <div key={c.id} className={`chip ${categoryFilter === c.id ? "active" : ""}`} onClick={() => setCategoryFilter(c.id)}>
+            {c.label}
+          </div>
+        ))}
+      </div>
+
       {loading ? (
         <p className="subtitle">Loading…</p>
       ) : (
@@ -195,7 +282,14 @@ export default function EmailTemplatesPage() {
             </tr>
           </thead>
           <tbody>
-            {templates.map((t) => {
+            {templates
+              .filter((t) => {
+                const copy = TRIGGER_COPY[t.key];
+                if (categoryFilter !== "all" && copy?.category !== categoryFilter) return false;
+                if (search.trim() && !copy?.label.toLowerCase().includes(search.trim().toLowerCase())) return false;
+                return true;
+              })
+              .map((t) => {
               const copy = TRIGGER_COPY[t.key];
               return (
                 <tr key={t.key}>
