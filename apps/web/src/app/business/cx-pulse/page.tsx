@@ -9,8 +9,23 @@ interface Dimensions {
   culture: number;
   outcome: number;
 }
+interface ScoreDoc {
+  period: string;
+  compositeScore: number;
+  level: number;
+  dimensions: Dimensions;
+}
+interface SiblingRow {
+  businessId: string;
+  name: string;
+  compositeScore: number | null;
+  level: number | null;
+}
 interface RegionData {
-  own: { compositeScore: number; level: number; dimensions: Dimensions } | null;
+  own: ScoreDoc | null;
+  ownHistory: ScoreDoc[];
+  region: string | null;
+  siblings: SiblingRow[];
   regionAverages: Record<string, number | null>;
   regionBusinessCount: number;
 }
@@ -23,6 +38,14 @@ const DIMENSION_LABELS: { key: keyof Dimensions; label: string }[] = [
   { key: "culture", label: "Culture" },
   { key: "outcome", label: "Outcome" },
 ];
+
+function trendPath(history: ScoreDoc[]): string | null {
+  if (history.length < 2) return null;
+  const width = 600;
+  const height = 90;
+  const step = width / (history.length - 1);
+  return history.map((h, i) => `${(i * step).toFixed(1)},${(height - (h.compositeScore / 100) * height).toFixed(1)}`).join(" ");
+}
 
 export default function BranchCxPulsePage() {
   const [data, setData] = useState<RegionData | null>(null);
@@ -38,10 +61,16 @@ export default function BranchCxPulsePage() {
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load CX Pulse.</p>;
 
+  const history = [...data.ownHistory].reverse();
+  const points = trendPath(history);
+
   return (
     <div>
       <h1>CX Pulse</h1>
-      <p className="subtitle">Your score, benchmarked against your region — something a standalone business can&apos;t see.</p>
+      <p className="subtitle">
+        Your score, trend, and the other branches in your region{data.region ? ` (${data.region})` : ""} — something a
+        standalone business can&apos;t see.
+      </p>
 
       <div className="grid grid-2" style={{ marginBottom: 20 }}>
         <div className="card">
@@ -56,16 +85,25 @@ export default function BranchCxPulsePage() {
         <div className="card">
           <h3>Region average</h3>
           <div className="metric-val" style={{ fontSize: 30 }}>
-            {Math.round(
-              DIMENSION_KEYS_AVG(data.regionAverages)
-            )}
+            {Math.round(DIMENSION_KEYS_AVG(data.regionAverages))}
           </div>
-          <div className="metric-note">{data.regionBusinessCount} branches</div>
+          <div className="metric-note">{data.regionBusinessCount} branches in your region</div>
         </div>
       </div>
 
+      {points && (
+        <>
+          <div className="section-title">Your trend — last {history.length} months</div>
+          <div className="card" style={{ marginBottom: 20 }}>
+            <svg viewBox="0 0 600 90" width="100%" height="110" preserveAspectRatio="none">
+              <polyline fill="none" stroke="var(--green)" strokeWidth="2" points={points} />
+            </svg>
+          </div>
+        </>
+      )}
+
       <div className="section-title">By dimension vs. your region</div>
-      <div className="card">
+      <div className="card" style={{ marginBottom: 20 }}>
         <div className="bars">
           {DIMENSION_LABELS.map((d) => (
             <div key={d.key}>
@@ -86,6 +124,43 @@ export default function BranchCxPulsePage() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="section-title">Other branches in {data.region ?? "your region"}</div>
+      <div className="card" style={{ padding: 0 }}>
+        <table className="clean">
+          <thead>
+            <tr>
+              <th>Branch</th>
+              <th>Score</th>
+              <th>Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.siblings.map((s) => (
+              <tr key={s.businessId}>
+                <td>{s.name}</td>
+                <td>{s.compositeScore ?? "—"}</td>
+                <td>
+                  {s.level ? (
+                    <span className="pill pill-blue">
+                      L{s.level} · {LEVEL_LABELS[s.level]}
+                    </span>
+                  ) : (
+                    <span className="pill pill-gray">Not scored yet</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {data.siblings.length === 0 && (
+              <tr>
+                <td colSpan={3} className="subtitle">
+                  No other branches share your region yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

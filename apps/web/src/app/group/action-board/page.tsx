@@ -14,6 +14,7 @@ interface ItemRow {
   dueDate: string | null;
   resolutionNote: string;
   resolvedAt: string | null;
+  escalated: boolean;
 }
 interface PlaybookRow {
   _id: string;
@@ -44,13 +45,6 @@ export default function ActionBoardPage() {
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState("");
-  const [businessId, setBusinessId] = useState("");
-  const [priority, setPriority] = useState("medium");
-  const [ownerId, setOwnerId] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
   const [tier, setTier] = useState<"full" | "limited" | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolutionDraft, setResolutionDraft] = useState("");
@@ -60,7 +54,8 @@ export default function ActionBoardPage() {
   const [commentsByItem, setCommentsByItem] = useState<Record<string, CommentRow[]>>({});
   const [commentDraft, setCommentDraft] = useState("");
   const [postingComment, setPostingComment] = useState(false);
-  const [filter, setFilter] = useState<"all" | "unassigned" | "overdue" | "resolved">("all");
+  const [escalating, setEscalating] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "unassigned" | "overdue" | "resolved" | "escalated">("all");
   const [regionFilter, setRegionFilter] = useState("");
 
   function load() {
@@ -75,7 +70,6 @@ export default function ActionBoardPage() {
       setTier(itemsData.tier ?? null);
       setBusinesses(businessesData.businesses ?? []);
       setTeam(teamData.team ?? []);
-      setBusinessId((current) => current || businessesData.businesses?.[0]?._id || "");
       setLoading(false);
     });
   }
@@ -112,27 +106,6 @@ export default function ActionBoardPage() {
     setResolutionError(null);
   }
 
-  async function createItem() {
-    if (!title.trim() || !businessId) return;
-    setCreating(true);
-    setError(null);
-    const res = await fetch("/api/group/action-board", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, businessId, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
-    });
-    const data = await res.json();
-    setCreating(false);
-    if (!res.ok) {
-      setError(data.message);
-      return;
-    }
-    setTitle("");
-    setOwnerId("");
-    setDueDate("");
-    load();
-  }
-
   async function updateItem(id: string, patch: Record<string, unknown>) {
     await fetch(`/api/group/action-board/${id}`, {
       method: "PATCH",
@@ -140,6 +113,12 @@ export default function ActionBoardPage() {
       body: JSON.stringify(patch),
     });
     load();
+  }
+
+  async function toggleEscalated(item: ItemRow) {
+    setEscalating(item._id);
+    await updateItem(item._id, { escalated: !item.escalated });
+    setEscalating(null);
   }
 
   async function toggleComments(id: string) {
@@ -175,6 +154,11 @@ export default function ActionBoardPage() {
     return businesses.find((b) => b._id === id)?.name ?? "—";
   }
 
+  function ownerLabel(id: string | null) {
+    if (!id) return "Unassigned";
+    return team.find((t) => t.userId === id)?.label ?? "—";
+  }
+
   function isOverdue(item: ItemRow) {
     return !!item.dueDate && new Date(item.dueDate) < new Date() && item.status !== "resolved";
   }
@@ -185,6 +169,7 @@ export default function ActionBoardPage() {
   const openCount = items.filter((i) => i.status === "open").length;
   const inProgressCount = items.filter((i) => i.status === "in_progress").length;
   const overdueCount = items.filter(isOverdue).length;
+  const escalatedCount = items.filter((i) => i.escalated).length;
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const resolved30dCount = items.filter((i) => i.status === "resolved" && i.resolvedAt && new Date(i.resolvedAt).getTime() >= thirtyDaysAgo).length;
 
@@ -196,6 +181,7 @@ export default function ActionBoardPage() {
     if (filter === "unassigned") return !item.ownerId;
     if (filter === "overdue") return isOverdue(item);
     if (filter === "resolved") return item.status === "resolved";
+    if (filter === "escalated") return item.escalated;
     return true;
   });
 
@@ -207,7 +193,7 @@ export default function ActionBoardPage() {
           <p className="subtitle">
             {isLimited
               ? "Items assigned to you — update their status as you work through them."
-              : "Work items spawned from flagged feedback across your businesses — Alert Rules create these automatically and assign them to whoever owns that category."}
+              : "Read-only oversight of every branch's Action Board — assigning and resolving items is each branch's own job. Comment on an item or flag it Escalated if it needs your attention."}
           </p>
         </div>
       </div>
@@ -235,9 +221,9 @@ export default function ActionBoardPage() {
 
       {!isLimited && (
         <div className="filters">
-          {(["all", "unassigned", "overdue", "resolved"] as const).map((f) => (
+          {(["all", "unassigned", "overdue", "resolved", "escalated"] as const).map((f) => (
             <div key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-              {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === "all" ? "All" : f === "escalated" ? `Escalated (${escalatedCount})` : f.charAt(0).toUpperCase() + f.slice(1)}
             </div>
           ))}
           {regions.length > 0 && (
@@ -253,58 +239,6 @@ export default function ActionBoardPage() {
         </div>
       )}
 
-      {!isLimited && (
-      <div className="card">
-        <h3>New action item</h3>
-        <div className="field-row">
-          <div className="field">
-            <label>Title</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-          <div className="field">
-            <label>Business</label>
-            <select value={businessId} onChange={(e) => setBusinessId(e.target.value)}>
-              {businesses.map((b) => (
-                <option key={b._id} value={b._id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Priority</label>
-            <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
-        </div>
-        <div className="field-row">
-          <div className="field">
-            <label>Owner (optional)</label>
-            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-              <option value="">Unassigned</option>
-              {team.map((t) => (
-                <option key={t.userId} value={t.userId}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Due date (optional)</label>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </div>
-        </div>
-        {error && <p className="error-text">{error}</p>}
-        <button className="btn btn-dark" disabled={creating} onClick={createItem}>
-          {creating ? "Creating…" : "+ Log action"}
-        </button>
-      </div>
-      )}
-
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <table className="clean striped">
@@ -312,8 +246,8 @@ export default function ActionBoardPage() {
             <tr>
               <th>Title</th>
               {!isLimited && <th>Business</th>}
-              {!isLimited && <th>Owner</th>}
-              {!isLimited && <th>Priority</th>}
+              <th>Owner</th>
+              <th>Priority</th>
               <th>Status</th>
               <th>Due</th>
               <th></th>
@@ -322,72 +256,61 @@ export default function ActionBoardPage() {
           <tbody>
             {(isLimited ? items : visibleItems).map((item) => {
               const playbook = playbookForCategory(item.categoryId);
-              const colCount = isLimited ? 3 : 6;
+              const colCount = isLimited ? 5 : 6;
               return (
                 <Fragment key={item._id}>
                   <tr>
                     <td>
+                      {item.escalated && (
+                        <span className="pill pill-red" style={{ marginRight: 6 }}>
+                          Escalated
+                        </span>
+                      )}
                       {item.title}
                       {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
                       <div className="action-links">
-                        {playbook && (
-                          <span
-                            className={`action-link${expandedPlaybookFor === item._id ? " open" : ""}`}
-                            onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
-                          >
-                            Playbook
-                          </span>
-                        )}
-                        <span
-                          className={`action-link${expandedCommentsFor === item._id ? " open" : ""}`}
+                        <button
+                          type="button"
+                          className={`btn btn-sm action-btn${expandedPlaybookFor === item._id ? " active" : ""}`}
+                          disabled={!playbook}
+                          title={playbook ? undefined : "No playbook set for this category"}
+                          onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
+                        >
+                          📘 Playbook
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
                           onClick={() => toggleComments(item._id)}
                         >
-                          Comments
-                          {commentsByItem[item._id] && <span className="count">{commentsByItem[item._id].length}</span>}
-                        </span>
+                          💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
+                        </button>
                       </div>
                     </td>
                     {!isLimited && <td>{businessName(item.businessId)}</td>}
-                    {!isLimited && (
-                      <td>
-                        <select value={item.ownerId ?? ""} onChange={(e) => updateItem(item._id, { ownerId: e.target.value || null })}>
-                          <option value="">Unassigned</option>
-                          {team.map((t) => (
-                            <option key={t.userId} value={t.userId}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    )}
-                    {!isLimited && (
-                      <td>
-                        <select value={item.priority} onChange={(e) => updateItem(item._id, { priority: e.target.value })}>
-                          <option value="low">Low</option>
-                          <option value="medium">Medium</option>
-                          <option value="high">High</option>
-                          <option value="critical">Critical</option>
-                        </select>
-                      </td>
-                    )}
+                    <td>{isLimited ? ownerLabel(item.ownerId) : ownerLabel(item.ownerId)}</td>
+                    <td>
+                      <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
+                        {item.priority}
+                      </span>
+                    </td>
                     <td>
                       <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>{item.status}</span>
                     </td>
-                    <td>
-                      {isLimited ? (
-                        item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"
-                      ) : (
-                        <input
-                          type="date"
-                          value={item.dueDate ? item.dueDate.slice(0, 10) : ""}
-                          onChange={(e) => updateItem(item._id, { dueDate: e.target.value || null })}
-                        />
-                      )}
-                    </td>
+                    <td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</td>
                     <td style={{ textAlign: "right" }}>
-                      {item.status !== "resolved" && resolvingId !== item._id && (
+                      {isLimited && item.status !== "resolved" && resolvingId !== item._id && (
                         <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
                           Mark resolved
+                        </button>
+                      )}
+                      {!isLimited && (
+                        <button
+                          className={`btn btn-sm${item.escalated ? " btn-dark" : ""}`}
+                          disabled={escalating === item._id}
+                          onClick={() => toggleEscalated(item)}
+                        >
+                          {item.escalated ? "Un-escalate" : "Escalate"}
                         </button>
                       )}
                     </td>
@@ -445,7 +368,7 @@ export default function ActionBoardPage() {
                       </td>
                     </tr>
                   )}
-                  {resolvingId === item._id && (
+                  {isLimited && resolvingId === item._id && (
                     <tr>
                       <td colSpan={colCount}>
                         <div className="field" style={{ margin: "6px 0" }}>
@@ -472,7 +395,7 @@ export default function ActionBoardPage() {
             })}
             {(isLimited ? items : visibleItems).length === 0 && (
               <tr>
-                <td colSpan={isLimited ? 3 : 6} className="subtitle">
+                <td colSpan={isLimited ? 5 : 6} className="subtitle">
                   {items.length === 0 ? "No action items yet." : "No items match this filter."}
                 </td>
               </tr>

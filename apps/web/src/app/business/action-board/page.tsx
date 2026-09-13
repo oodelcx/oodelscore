@@ -233,21 +233,22 @@ export default function BusinessActionBoardPage() {
                       {item.title}
                       {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
                       <div className="action-links">
-                        {playbook && (
-                          <span
-                            className={`action-link${expandedPlaybookFor === item._id ? " open" : ""}`}
-                            onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
-                          >
-                            Playbook
-                          </span>
-                        )}
-                        <span
-                          className={`action-link${expandedCommentsFor === item._id ? " open" : ""}`}
+                        <button
+                          type="button"
+                          className={`btn btn-sm action-btn${expandedPlaybookFor === item._id ? " active" : ""}`}
+                          disabled={!playbook}
+                          title={playbook ? undefined : "No playbook set for this category"}
+                          onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
+                        >
+                          📘 Playbook
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
                           onClick={() => toggleComments(item._id)}
                         >
-                          Comments
-                          {commentsByItem[item._id] && <span className="count">{commentsByItem[item._id].length}</span>}
-                        </span>
+                          💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
+                        </button>
                       </div>
                     </td>
                     {!isLimited && (

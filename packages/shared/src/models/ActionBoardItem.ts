@@ -26,6 +26,14 @@ export interface IActionBoardItem {
   resolutionNote: string;
   resolvedAt: Date | null;
   source: ActionSource;
+  // Group-level oversight signal (product decision: Group is read-only on
+  // branch Action Board items — assignment/status/priority is the branch's
+  // job — but a Group Head can flag something for attention). Distinct from
+  // `source: "escalated"`, which describes how an item was *created*, not a
+  // flag layered on top of an existing branch-owned item. Doesn't touch the
+  // Decision Log — that stays keyed off the branch's own resolution.
+  escalated: boolean;
+  escalatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +53,8 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     resolutionNote: { type: String, default: "" },
     resolvedAt: { type: Date, default: null },
     source: { type: String, enum: ACTION_SOURCES, default: "manual" },
+    escalated: { type: Boolean, default: false },
+    escalatedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

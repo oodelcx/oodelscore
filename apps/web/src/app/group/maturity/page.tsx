@@ -15,12 +15,34 @@ interface ScoreDoc {
   compositeScore: number;
   level: number;
 }
+interface BranchRow {
+  businessId: string;
+  name: string;
+  region: string | null;
+  compositeScore: number | null;
+  level: number | null;
+}
+interface ChecklistItem {
+  label: string;
+  done: boolean;
+}
 interface MaturityData {
   score: ScoreDoc | null;
   history: ScoreDoc[];
+  branches: BranchRow[];
+  groupAvgDimensions: Record<string, number | null>;
+  checklist: ChecklistItem[];
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+const LEVEL_BLURBS = [
+  "",
+  "Feedback is collected but rarely reviewed.",
+  "Managers see scores, but there's no routine action on them.",
+  "Negative feedback gets actioned reliably.",
+  "Named owners, playbooks, and closed loops on issues.",
+  "Feedback drives measurable strategy shifts.",
+];
 const DIMENSION_LABELS: { key: keyof Dimensions; label: string; color: string }[] = [
   { key: "awareness", label: "Awareness", color: "#0F6E56" },
   { key: "response", label: "Response", color: "#7F77DD" },
@@ -28,6 +50,17 @@ const DIMENSION_LABELS: { key: keyof Dimensions; label: string; color: string }[
   { key: "culture", label: "Culture", color: "#E24B4A" },
   { key: "outcome", label: "Outcome", color: "#5DCAA5" },
 ];
+
+function trendPath(history: ScoreDoc[]): string | null {
+  if (history.length < 2) return null;
+  const width = 600;
+  const height = 90;
+  const max = 100;
+  const step = width / (history.length - 1);
+  return history
+    .map((h, i) => `${(i * step).toFixed(1)},${(height - (h.compositeScore / max) * height).toFixed(1)}`)
+    .join(" ");
+}
 
 export default function MaturityPage() {
   const [data, setData] = useState<MaturityData | null>(null);
@@ -43,58 +76,148 @@ export default function MaturityPage() {
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load CX Pulse.</p>;
 
+  const history = [...data.history].reverse(); // oldest first, for a left-to-right trend
+  const points = trendPath(history);
+
   return (
     <div>
       <h1>CX Pulse</h1>
       <p className="subtitle">Your organization&apos;s maturity in acting on feedback, across five dimensions.</p>
 
-      {data.score ? (
-        <>
-          <div className="level-badge" style={{ marginBottom: 20 }}>
-            Level {data.score.level} · {LEVEL_LABELS[data.score.level]} ({data.score.compositeScore}/100)
-          </div>
-
-          {DIMENSION_LABELS.map((d) => (
-            <div className="dim-row" key={d.key}>
-              <div style={{ width: 110, flexShrink: 0, fontSize: 13.5 }}>{d.label}</div>
-              <div className="dim-track">
-                <div className="dim-fill" style={{ width: `${data.score!.dimensions[d.key]}%`, background: d.color }} />
-              </div>
-              <div style={{ width: 40, textAlign: "right", fontSize: 13 }}>{data.score!.dimensions[d.key]}</div>
-            </div>
-          ))}
-        </>
-      ) : (
+      {!data.score ? (
         <div className="card empty">
           <div className="icon">📈</div>
           <div style={{ fontWeight: 500, color: "var(--text)" }}>Not scored yet</div>
           <div style={{ fontSize: 13, marginTop: 4 }}>Runs nightly once there&apos;s enough activity to measure.</div>
         </div>
-      )}
-
-      {data.history.length > 1 && (
+      ) : (
         <>
-          <div className="section-title">History</div>
-          <table className="clean">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Composite</th>
-                <th>Level</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.history.map((h) => (
-                <tr key={h.period}>
-                  <td>{new Date(h.period).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</td>
-                  <td>{h.compositeScore}</td>
-                  <td>
-                    Level {h.level} · {LEVEL_LABELS[h.level]}
-                  </td>
-                </tr>
+          <div className="grid grid-2" style={{ marginBottom: 20, alignItems: "stretch" }}>
+            <div className="card">
+              <div className="metric-val" style={{ fontSize: 40, color: "var(--accent)" }}>
+                {data.score.compositeScore}
+                <span style={{ fontSize: 16, color: "var(--text-3)" }}>/100</span>
+              </div>
+              <div style={{ fontWeight: 600, marginTop: 6 }}>
+                Level {data.score.level} · {LEVEL_LABELS[data.score.level]}
+              </div>
+              <p className="subtitle" style={{ margin: "6px 0 0" }}>{LEVEL_BLURBS[data.score.level]}</p>
+            </div>
+            <div className="card" style={{ display: "flex", gap: 6 }}>
+              {[1, 2, 3, 4, 5].map((lvl) => (
+                <div
+                  key={lvl}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "10px 8px",
+                    borderRadius: 8,
+                    background: lvl === data.score!.level ? "var(--accent-bg)" : "var(--bg)",
+                    border: lvl === data.score!.level ? "1px solid var(--accent)" : "1px solid var(--border)",
+                  }}
+                >
+                  <div style={{ fontSize: 10.5, color: "var(--text-3)" }}>0{lvl}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: lvl === data.score!.level ? "var(--accent)" : "var(--text)" }}>
+                    {LEVEL_LABELS[lvl]}
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          {points && (
+            <>
+              <div className="section-title">Composite score — last {history.length} months</div>
+              <div className="card" style={{ marginBottom: 20 }}>
+                <svg viewBox="0 0 600 90" width="100%" height="110" preserveAspectRatio="none">
+                  <polyline fill="none" stroke="var(--accent)" strokeWidth="2" points={points} />
+                </svg>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-3)" }}>
+                  <span>{new Date(history[0].period).toLocaleDateString(undefined, { month: "short", year: "2-digit" })}</span>
+                  <span>{new Date(history[history.length - 1].period).toLocaleDateString(undefined, { month: "short", year: "2-digit" })}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="section-title">By dimension</div>
+          <div className="grid grid-4" style={{ marginBottom: 20 }}>
+            {DIMENSION_LABELS.map((d) => {
+              const value = data.score!.dimensions[d.key];
+              const groupAvg = data.groupAvgDimensions[d.key];
+              return (
+                <div className="card" key={d.key} style={{ borderTop: `3px solid ${d.color}` }}>
+                  <div className="metric-label">{d.label}</div>
+                  <div className="metric-val">{value}</div>
+                  <div className="dim-track" style={{ marginTop: 8 }}>
+                    <div className="dim-fill" style={{ width: `${value}%`, background: d.color }} />
+                  </div>
+                  <div className="metric-note" style={{ marginTop: 8 }}>
+                    Branch avg: {groupAvg !== null ? groupAvg : "—"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-2" style={{ alignItems: "start" }}>
+            <div>
+              <div className="section-title">What would move you to the next level</div>
+              <div className="card">
+                {data.checklist.map((c, i) => (
+                  <div key={i} className="config-row" style={{ padding: "6px 0", borderBottom: i === data.checklist.length - 1 ? "none" : undefined }}>
+                    <span style={{ marginRight: 8 }}>{c.done ? "✅" : "⬜"}</span>
+                    <span style={{ color: c.done ? "var(--text-3)" : "var(--text)", textDecoration: c.done ? "line-through" : undefined }}>
+                      {c.label}
+                    </span>
+                  </div>
+                ))}
+                {data.checklist.length === 0 && <p className="subtitle" style={{ margin: 0 }}>Nothing outstanding right now.</p>}
+              </div>
+            </div>
+
+            <div>
+              <div className="section-title">Branch-level maturity</div>
+              <div className="card" style={{ padding: 0 }}>
+                <table className="clean">
+                  <thead>
+                    <tr>
+                      <th>Branch</th>
+                      <th>Score</th>
+                      <th>Level</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.branches.map((b) => (
+                      <tr key={b.businessId}>
+                        <td>
+                          {b.name}
+                          {b.region && <div className="card-sub">{b.region}</div>}
+                        </td>
+                        <td>{b.compositeScore ?? "—"}</td>
+                        <td>
+                          {b.level ? (
+                            <span className="pill pill-blue">
+                              L{b.level} · {LEVEL_LABELS[b.level]}
+                            </span>
+                          ) : (
+                            <span className="pill pill-gray">Not scored</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {data.branches.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="subtitle">
+                          No branches yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>
