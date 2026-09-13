@@ -41,6 +41,15 @@ export async function GET() {
       hasNps: types.has("nps_0_10"),
       hasComments: types.has("open_text"),
       demographics,
+      // These settings are Admin-managed and can differ per feedback point
+      // (a business-wide "Survey Settings" summary would be misleading —
+      // each point can override the template/layout independently), so
+      // the Feedback Points page shows the effective value per point
+      // instead of a separate settings screen.
+      templateName: template?.name ?? "No template configured",
+      isTemplateOverridden: !!p.questionTemplateOverride,
+      effectiveFormLayout: p.formLayoutOverride ?? "single_page",
+      isLayoutOverridden: !!p.formLayoutOverride,
     };
   });
 

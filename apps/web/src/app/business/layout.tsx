@@ -43,7 +43,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <div className="nav-group-label">Setup</div>
               <nav className="admin-nav">
                 <a href="/business/feedback-points">Feedback Points</a>
-                <a href="/business/survey-settings">Survey Settings</a>
                 {!isBusinessTeamMember && <a href="/business/category-owners">Category Owners</a>}
               </nav>
 

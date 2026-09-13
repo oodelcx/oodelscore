@@ -405,6 +405,7 @@ select,
 input[type="text"],
 input[type="email"],
 input[type="number"] {
+  box-sizing: border-box;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 7px 10px;
@@ -484,6 +485,15 @@ input[type="number"] {
 .field textarea,
 .field select {
   width: 100%;
+  /* Same bug as the sidebar nav links: width:100% + padding with no
+     box-sizing means every field rendered ~24px wider than its card/
+     modal/form container under the browser's default content-box model,
+     visibly overflowing past the container edge on every page. This also
+     caused the password field specifically to render wider than a plain
+     text field next to it, since its extra right-hand padding (for the
+     eye-icon toggle) added on top of 100% instead of being absorbed
+     within it. */
+  box-sizing: border-box;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 9px 11px;

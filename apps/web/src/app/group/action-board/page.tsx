@@ -14,7 +14,6 @@ interface ItemRow {
   dueDate: string | null;
   resolutionNote: string;
   resolvedAt: string | null;
-  source: string;
 }
 interface PlaybookRow {
   _id: string;
@@ -23,13 +22,6 @@ interface PlaybookRow {
   triggerCondition: string;
   steps: string[];
 }
-
-const SOURCE_LABELS: Record<string, string> = {
-  manual: "Manual",
-  auto_suggested: "AI suggested",
-  auto_assigned: "AI auto-assigned",
-  escalated: "Escalated",
-};
 interface BusinessRow {
   _id: string;
   name: string;
@@ -176,7 +168,7 @@ export default function ActionBoardPage() {
           <p className="subtitle">
             {isLimited
               ? "Items assigned to you — update their status as you work through them."
-              : "Work items spawned from flagged feedback across your businesses, including AI-suggested ones from Alert Rules."}
+              : "Work items spawned from flagged feedback across your businesses — Alert Rules create these automatically and assign them to whoever owns that category."}
           </p>
         </div>
       </div>
@@ -283,7 +275,6 @@ export default function ActionBoardPage() {
               {!isLimited && <th>Business</th>}
               {!isLimited && <th>Owner</th>}
               {!isLimited && <th>Priority</th>}
-              <th>Source</th>
               <th>Status</th>
               <th>Due</th>
               <th></th>
@@ -292,7 +283,7 @@ export default function ActionBoardPage() {
           <tbody>
             {(isLimited ? items : visibleItems).map((item) => {
               const playbook = playbookForCategory(item.categoryId);
-              const colCount = isLimited ? 4 : 7;
+              const colCount = isLimited ? 3 : 6;
               return (
                 <Fragment key={item._id}>
                   <tr>
@@ -333,14 +324,19 @@ export default function ActionBoardPage() {
                       </td>
                     )}
                     <td>
-                      <span className={`pill ${item.source === "manual" ? "pill-gray" : "pill-purple"}`}>
-                        {SOURCE_LABELS[item.source] ?? item.source}
-                      </span>
-                    </td>
-                    <td>
                       <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>{item.status}</span>
                     </td>
-                    <td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</td>
+                    <td>
+                      {isLimited ? (
+                        item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"
+                      ) : (
+                        <input
+                          type="date"
+                          value={item.dueDate ? item.dueDate.slice(0, 10) : ""}
+                          onChange={(e) => updateItem(item._id, { dueDate: e.target.value || null })}
+                        />
+                      )}
+                    </td>
                     <td style={{ textAlign: "right" }}>
                       {item.status !== "resolved" && resolvingId !== item._id && (
                         <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
@@ -390,7 +386,7 @@ export default function ActionBoardPage() {
             })}
             {(isLimited ? items : visibleItems).length === 0 && (
               <tr>
-                <td colSpan={isLimited ? 4 : 7} className="subtitle">
+                <td colSpan={isLimited ? 3 : 6} className="subtitle">
                   {items.length === 0 ? "No action items yet." : "No items match this filter."}
                 </td>
               </tr>
