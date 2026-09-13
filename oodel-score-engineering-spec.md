@@ -358,11 +358,14 @@ Full trigger table in Section 11 — seed this collection with the defaults from
 | Billing Oversight (Stripe-level, MRR, invoices, credits) | ✓ | — | ✓ full | own subscription only, if `branch_pays` | own group invoice, payment method |
 | Email Templates / Site Content | ✓ | — | — | — | — |
 | AI Insights Queue (approve/reject) | ✓ | ✓ assigned only | — | — | — |
-| Action Board / Decision Log / Playbooks | view (oversight) | view (assigned) | — | — | ✓ full |
+| Action Board | view (oversight) | view (assigned) | — | — | ✓ full |
+| Decision Log / Playbooks | view (oversight) | view (assigned) | — | — | ✓ full |
 | Alert Rules | view all (oversight) | — | — | own business rules; view-only on inherited | own + cascade to businesses |
 | CX Pulse | portfolio view, framework config | portfolio (assigned) | — | own score | own + all child businesses |
 
 Custom roles (created via Admin's "+ New role") use the same shape as the `roles.permissions` object — any new admin-side feature must be added as a new key to that object and to this table, not left ungoverned.
+
+**Correction (post-launch product decision, not in the original spec):** Parent Org access to a branch's **Action Board** is read-only plus two exceptions — commenting on an item, and toggling an `escalated` flag for visibility — not the "✓ full" CRUD this table originally specified. Assigning owners, changing priority/status, creating items, and resolving items is exclusively the branch's own job; the Group creating or reassigning a branch's work item defeated the point of branch ownership in practice. Escalating an item does **not** create or touch a Decision Log entry — Decision Log stays keyed off the branch's own resolution, same as before. Decision Log and Playbooks are unaffected by this correction and remain "✓ full" for Parent Org as originally specified.
 
 **Deletion correction (Section 16):** only `accountType: "admin_staff"` can ever delete a Business or Parent Org record, enforced server-side regardless of any UI state. There is no delete option anywhere in the Business or Group-facing frontend, for the primary account or any Team Member at any tier — this isn't hidden behind a permission toggle, the button/route simply doesn't exist outside Admin. Deletion only happens via Admin's Danger Zone. This reads as stricter than the "own record only, read-mostly" language above for Business/Parent Org owners — the correction is intentional and takes precedence over that row.
 

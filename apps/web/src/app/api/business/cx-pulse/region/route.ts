@@ -4,7 +4,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 const DIMENSION_KEYS = ["awareness", "response", "ownership", "culture", "outcome"] as const;
 
-/** Branch mode only: this business's own dimension scores vs its region's average. */
+/** Branch mode only: this business's own dimension scores, its own trend, and its named region siblings. */
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
@@ -14,17 +14,29 @@ export async function GET() {
 
   await connectToDatabase();
   const own = await CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id }).sort({ period: -1 });
+  const ownHistory = await CxPulseScore.find({ ownerType: "business", ownerId: session.business._id })
+    .sort({ period: -1 })
+    .limit(6);
 
-  const siblings = await Business.find({
+  const siblingBusinesses = await Business.find({
     parentOrgId: session.business.parentOrgId,
     region: session.business.region,
+    active: true,
     _id: { $ne: session.business._id },
-  }).select("_id");
+  })
+    .select("name")
+    .sort({ name: 1 });
   const siblingScores = await Promise.all(
-    siblings.map((b) => CxPulseScore.findOne({ ownerType: "business", ownerId: b._id }).sort({ period: -1 }))
+    siblingBusinesses.map((b) => CxPulseScore.findOne({ ownerType: "business", ownerId: b._id }).sort({ period: -1 }))
   );
-  const validSiblingScores = siblingScores.filter((s): s is NonNullable<typeof s> => s !== null);
+  const siblings = siblingBusinesses.map((b, i) => ({
+    businessId: b._id.toString(),
+    name: b.name,
+    compositeScore: siblingScores[i]?.compositeScore ?? null,
+    level: siblingScores[i]?.level ?? null,
+  }));
 
+  const validSiblingScores = siblingScores.filter((s): s is NonNullable<typeof s> => s !== null);
   const regionAverages = Object.fromEntries(
     DIMENSION_KEYS.map((key) => [
       key,
@@ -34,5 +46,13 @@ export async function GET() {
     ])
   );
 
-  return NextResponse.json({ status: "ok", own, regionAverages, regionBusinessCount: validSiblingScores.length + 1 });
+  return NextResponse.json({
+    status: "ok",
+    own,
+    ownHistory,
+    region: session.business.region ?? null,
+    siblings,
+    regionAverages,
+    regionBusinessCount: siblings.length + 1,
+  });
 }
