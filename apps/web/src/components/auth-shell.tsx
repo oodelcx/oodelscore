@@ -30,6 +30,7 @@ function renderHeadline(headline: string, highlight: string): ReactNode {
 export function AuthShell({ children }: { children: ReactNode }) {
   const [headline, setHeadline] = useState(DEFAULT_HEADLINE);
   const [highlight, setHighlight] = useState(DEFAULT_HIGHLIGHT);
+  const [imageUrl, setImageUrl] = useState("");
 
   useEffect(() => {
     fetch("/api/login-visual")
@@ -37,13 +38,15 @@ export function AuthShell({ children }: { children: ReactNode }) {
       .then((data) => {
         if (data.headline) setHeadline(data.headline);
         if (typeof data.highlight === "string") setHighlight(data.highlight);
+        if (typeof data.imageUrl === "string") setImageUrl(data.imageUrl);
       })
       .catch(() => {});
   }, []);
 
   return (
     <div className="as-shell">
-      <div className="as-visual">
+      <div className="as-visual" style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}>
+        {imageUrl && <div className="as-visual-scrim" />}
         <div className="as-brand">
           oodel<span>.score</span>
         </div>

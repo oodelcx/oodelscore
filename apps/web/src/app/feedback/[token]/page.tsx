@@ -25,6 +25,10 @@ interface FormData {
   demographicConfig: DemographicConfig;
   questions: Question[];
 }
+interface AlreadySubmittedData {
+  alreadySubmitted: true;
+  businessName: string;
+}
 
 const AGE_GROUPS = ["18–24", "25–34", "35–44", "45–54", "55+"];
 const GENDERS = ["Female", "Male", "Other / prefer not to say"];
@@ -42,6 +46,7 @@ interface Step {
 export default function FeedbackFormPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [data, setData] = useState<FormData | null>(null);
+  const [alreadySubmitted, setAlreadySubmitted] = useState<AlreadySubmittedData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -60,6 +65,10 @@ export default function FeedbackFormPage({ params }: { params: Promise<{ token: 
           setLoadError(result.message ?? "This link isn't available");
           return;
         }
+        if (result.alreadySubmitted) {
+          setAlreadySubmitted(result);
+          return;
+        }
         setData(result);
       })
       .finally(() => setLoading(false));
@@ -70,6 +79,22 @@ export default function FeedbackFormPage({ params }: { params: Promise<{ token: 
       <div className="ff-body">
         <div className="ff-phone">
           <div className="ff-form-body">Loading…</div>
+        </div>
+      </div>
+    );
+  }
+  if (alreadySubmitted) {
+    return (
+      <div className="ff-body">
+        <div className="ff-phone">
+          <div className="ff-thankyou">
+            <div className="ff-check">✓</div>
+            <h2>You've already given feedback here</h2>
+            <p>{alreadySubmitted.businessName} received it recently — thanks again! You can share more in 24 hours.</p>
+            <div className="ff-powered" style={{ marginTop: 30 }}>
+              Powered by <b>oodel.score</b>
+            </div>
+          </div>
         </div>
       </div>
     );

@@ -134,19 +134,21 @@ function Field({
   value,
   onChange,
   textarea,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   textarea?: boolean;
+  placeholder?: string;
 }) {
   return (
     <div className="field">
       <label>{label}</label>
       {textarea ? (
-        <textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} />
+        <textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
       ) : (
-        <input type="text" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />
+        <input type="text" value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
       )}
     </div>
   );
@@ -794,12 +796,31 @@ function LegalPanel({
   );
 }
 
-function LoginHeadlinePreview({ headline, highlight }: { headline: string; highlight: string }) {
+function LoginHeadlinePreview({
+  headline,
+  highlight,
+  imageUrl,
+}: {
+  headline: string;
+  highlight: string;
+  imageUrl?: string;
+}) {
   const index = highlight ? headline.indexOf(highlight) : -1;
+  const text =
+    index === -1 ? (
+      headline
+    ) : (
+      <>
+        {headline.slice(0, index)}
+        <span style={{ color: "#3fbe8b" }}>{headline.slice(index, index + highlight.length)}</span>
+        {headline.slice(index + highlight.length)}
+      </>
+    );
+
   return (
     <div
       style={{
-        background: "#111412",
+        background: imageUrl ? `linear-gradient(0deg, rgba(0,0,0,.65), rgba(0,0,0,.15)), url(${imageUrl}) center/cover` : "#111412",
         color: "#fff",
         borderRadius: 12,
         padding: "28px 32px",
@@ -807,17 +828,12 @@ function LoginHeadlinePreview({ headline, highlight }: { headline: string; highl
         fontWeight: 700,
         lineHeight: 1.2,
         maxWidth: 420,
+        minHeight: imageUrl ? 220 : undefined,
+        display: "flex",
+        alignItems: "flex-end",
       }}
     >
-      {index === -1 ? (
-        headline
-      ) : (
-        <>
-          {headline.slice(0, index)}
-          <span style={{ color: "#3fbe8b" }}>{headline.slice(index, index + highlight.length)}</span>
-          {headline.slice(index + highlight.length)}
-        </>
-      )}
+      {text}
     </div>
   );
 }
@@ -831,14 +847,27 @@ function LoginPanel({
 }) {
   const headline = content.fields.heroHeadline ?? "";
   const highlight = content.fields.heroHighlight ?? "";
+  const imageUrl = content.fields.heroImageUrl ?? "";
   const highlightNotFound = !!highlight && !headline.includes(highlight);
 
   return (
     <div className="card">
       <h3>Sign-in screen</h3>
       <p className="card-sub">
-        Shown on the dark panel of the Login, Forgot Password, and Set Password screens.
+        Shown on the left 60% panel of the Login, Forgot Password, and Set Password screens.
       </p>
+      <Field
+        label="Background image URL (optional)"
+        value={imageUrl}
+        onChange={(v) => onFieldChange("login", "heroImageUrl", v)}
+        placeholder="https://…"
+      />
+      <div className="field-hint" style={{ marginBottom: 16 }}>
+        Recommended size: at least <b>1600 × 2000px</b> (portrait, roughly 4:5) so it covers the panel cleanly
+        from a tall narrow laptop screen up to a large desktop monitor without upscaling — it&rsquo;s cropped to
+        fill with the subject centered, so keep anything important away from the edges. JPEG or WebP, ideally
+        under 400KB. Leave blank to keep the plain dark background with the headline below.
+      </div>
       <Field label="Headline" textarea value={headline} onChange={(v) => onFieldChange("login", "heroHeadline", v)} />
       <Field
         label="Highlighted portion (shown in green)"
@@ -850,12 +879,13 @@ function LoginPanel({
       )}
       <div className="field-hint" style={{ marginBottom: 8 }}>
         Must match a portion of the headline exactly (including punctuation) to be highlighted.
+        {imageUrl && " With a background image set, the headline shows near the bottom over a darkened gradient."}
       </div>
       <div style={{ marginTop: 16 }}>
         <div className="field-hint" style={{ marginBottom: 8 }}>
           Preview
         </div>
-        <LoginHeadlinePreview headline={headline} highlight={highlight} />
+        <LoginHeadlinePreview headline={headline} highlight={highlight} imageUrl={imageUrl} />
       </div>
     </div>
   );

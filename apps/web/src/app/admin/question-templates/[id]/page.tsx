@@ -16,6 +16,8 @@ const QUESTION_TYPES = [
   ["dropdown", "Dropdown select"],
 ] as const;
 
+const OPTION_BASED_TYPES = ["multiple_choice", "multi_select", "dropdown"] as const;
+
 interface QuestionRow {
   text: string;
   type: string;
@@ -129,8 +131,18 @@ export default function QuestionTemplateBuilderPage() {
   }
 
   async function handleSave() {
-    setSaving(true);
     setError(null);
+
+    for (const q of questions) {
+      if (!OPTION_BASED_TYPES.includes(q.type as (typeof OPTION_BASED_TYPES)[number])) continue;
+      const nonEmpty = q.options.map((o) => o.trim()).filter(Boolean);
+      if (nonEmpty.length < 2) {
+        setError(`"${q.text || "Untitled question"}" needs at least 2 options`);
+        return;
+      }
+    }
+
+    setSaving(true);
 
     const body = {
       name,
@@ -141,7 +153,7 @@ export default function QuestionTemplateBuilderPage() {
         categoryId: q.categoryId || null,
         required: q.required,
         isTracker: q.isTracker,
-        options: q.options,
+        options: q.options.map((o) => o.trim()).filter(Boolean),
       })),
     };
 
@@ -284,6 +296,35 @@ export default function QuestionTemplateBuilderPage() {
                   Tracker
                 </label>
               </div>
+              {OPTION_BASED_TYPES.includes(q.type as (typeof OPTION_BASED_TYPES)[number]) && (
+                <div className="q-options" style={{ marginTop: 10 }}>
+                  <div className="field-hint" style={{ marginBottom: 6 }}>Options respondents choose from</div>
+                  {q.options.map((opt, optIndex) => (
+                    <div key={optIndex} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                      <input
+                        type="text"
+                        style={{ flex: 1 }}
+                        value={opt}
+                        placeholder={`Option ${optIndex + 1}`}
+                        onChange={(e) => {
+                          const next = [...q.options];
+                          next[optIndex] = e.target.value;
+                          updateQuestion(i, { options: next });
+                        }}
+                      />
+                      <button
+                        className="icon-btn btn-danger btn-sm"
+                        onClick={() => updateQuestion(i, { options: q.options.filter((_, idx) => idx !== optIndex) })}
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  ))}
+                  <button className="btn btn-sm" onClick={() => updateQuestion(i, { options: [...q.options, ""] })}>
+                    + Add option
+                  </button>
+                </div>
+              )}
             </div>
           ))}
           <button className="btn" style={{ width: "100%" }} onClick={addQuestion}>
