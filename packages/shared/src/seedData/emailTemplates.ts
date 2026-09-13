@@ -53,6 +53,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["name", "action_title", "due_date", "action_link"],
   },
   {
+    key: "action_comment_added",
+    subject: "New comment on: {{action_title}}",
+    body: "Hi {{name}}, {{commenter_name}} commented on an action item you're involved in: {{action_title}}.\n\n\"{{comment_body}}\"\n\nView it here: {{action_link}}",
+    availableVars: ["name", "commenter_name", "action_title", "comment_body", "action_link"],
+  },
+  {
     key: "invoice_receipt",
     subject: "Your Oodel Score payment receipt",
     body: "Hi {{name}}, we've received your payment of {{invoice_amount}}. Thank you.",

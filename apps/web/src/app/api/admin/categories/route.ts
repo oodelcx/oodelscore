@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Category, QuestionTemplate } from "@oodelscore/shared";
+import { connectToDatabase, Category, QuestionTemplate, getCategoryUsageMap } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 export async function GET() {
@@ -11,7 +11,11 @@ export async function GET() {
   }
 
   await connectToDatabase();
-  const [categories, templates] = await Promise.all([Category.find().sort({ name: 1 }), QuestionTemplate.find()]);
+  const [categories, templates, businessUsage] = await Promise.all([
+    Category.find().sort({ name: 1 }),
+    QuestionTemplate.find(),
+    getCategoryUsageMap(),
+  ]);
 
   const usageByCategory = new Map<string, { questionCount: number; templateIds: Set<string> }>();
   for (const template of templates) {
@@ -31,6 +35,10 @@ export async function GET() {
       ...c.toObject(),
       questionCount: usage?.questionCount ?? 0,
       templateCount: usage?.templateIds.size ?? 0,
+      // Which businesses/branches actually use this category today — derived
+      // live from their real surveys, not a separately-maintained list, so
+      // it can never drift from what customers are actually being asked.
+      usedByBusinesses: businessUsage[c._id.toString()] ?? [],
     };
   });
 

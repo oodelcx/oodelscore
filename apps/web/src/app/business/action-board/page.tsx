@@ -24,6 +24,12 @@ interface PlaybookRow {
   triggerCondition: string;
   steps: string[];
 }
+interface CommentRow {
+  _id: string;
+  authorLabel: string;
+  body: string;
+  createdAt: string;
+}
 
 export default function BusinessActionBoardPage() {
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -41,6 +47,10 @@ export default function BusinessActionBoardPage() {
   const [resolutionDraft, setResolutionDraft] = useState("");
   const [resolutionError, setResolutionError] = useState<string | null>(null);
   const [expandedPlaybookFor, setExpandedPlaybookFor] = useState<string | null>(null);
+  const [expandedCommentsFor, setExpandedCommentsFor] = useState<string | null>(null);
+  const [commentsByItem, setCommentsByItem] = useState<Record<string, CommentRow[]>>({});
+  const [commentDraft, setCommentDraft] = useState("");
+  const [postingComment, setPostingComment] = useState(false);
 
   function load() {
     setLoading(true);
@@ -113,6 +123,35 @@ export default function BusinessActionBoardPage() {
       body: JSON.stringify(patch),
     });
     load();
+  }
+
+  async function toggleComments(id: string) {
+    if (expandedCommentsFor === id) {
+      setExpandedCommentsFor(null);
+      return;
+    }
+    setExpandedCommentsFor(id);
+    setCommentDraft("");
+    if (!commentsByItem[id]) {
+      const data = await fetch(`/api/business/action-board/${id}/comments`).then((r) => r.json());
+      setCommentsByItem((prev) => ({ ...prev, [id]: data.comments ?? [] }));
+    }
+  }
+
+  async function postComment(id: string) {
+    if (!commentDraft.trim()) return;
+    setPostingComment(true);
+    const res = await fetch(`/api/business/action-board/${id}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: commentDraft.trim() }),
+    });
+    const data = await res.json().catch(() => null);
+    setPostingComment(false);
+    if (res.ok && data?.comment) {
+      setCommentsByItem((prev) => ({ ...prev, [id]: [...(prev[id] ?? []), data.comment] }));
+      setCommentDraft("");
+    }
   }
 
   const isLimited = tier === "limited";
@@ -196,12 +235,17 @@ export default function BusinessActionBoardPage() {
                       {playbook && (
                         <button
                           className="btn btn-sm"
-                          style={{ marginTop: 6 }}
+                          style={{ marginTop: 6, marginRight: 6 }}
                           onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
                         >
                           {expandedPlaybookFor === item._id ? "Hide playbook" : "📘 Playbook: " + playbook.title}
                         </button>
                       )}
+                      <button className="btn btn-sm" style={{ marginTop: 6 }} onClick={() => toggleComments(item._id)}>
+                        {expandedCommentsFor === item._id
+                          ? "Hide comments"
+                          : `💬 Comments${commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}`}
+                      </button>
                     </td>
                     {!isLimited && (
                       <td>
@@ -258,6 +302,45 @@ export default function BusinessActionBoardPage() {
                             <li key={i}>{step}</li>
                           ))}
                         </ul>
+                      </td>
+                    </tr>
+                  )}
+                  {expandedCommentsFor === item._id && (
+                    <tr>
+                      <td colSpan={colCount} style={{ background: "var(--bg-2, #f7f7f8)" }}>
+                        <div style={{ margin: "6px 0" }}>
+                          {(commentsByItem[item._id] ?? []).length === 0 ? (
+                            <p className="subtitle" style={{ margin: "0 0 8px" }}>
+                              No comments yet — start the trail below.
+                            </p>
+                          ) : (
+                            <ul style={{ margin: "0 0 8px", paddingLeft: 0, listStyle: "none" }}>
+                              {(commentsByItem[item._id] ?? []).map((c) => (
+                                <li key={c._id} style={{ marginBottom: 8, fontSize: "12.5px" }}>
+                                  <b>{c.authorLabel}</b>{" "}
+                                  <span style={{ color: "var(--text-3)" }}>{new Date(c.createdAt).toLocaleString()}</span>
+                                  <div style={{ color: "var(--text-2)" }}>{c.body}</div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          <div className="field-row" style={{ alignItems: "flex-end" }}>
+                            <div className="field" style={{ margin: 0, flex: 1 }}>
+                              <textarea
+                                placeholder="Add a note for whoever's on this item…"
+                                value={commentDraft}
+                                onChange={(e) => setCommentDraft(e.target.value)}
+                              />
+                            </div>
+                            <button
+                              className="btn btn-sm btn-dark"
+                              disabled={postingComment || !commentDraft.trim()}
+                              onClick={() => postComment(item._id)}
+                            >
+                              {postingComment ? "Posting…" : "Post"}
+                            </button>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   )}

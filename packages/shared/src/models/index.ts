@@ -17,6 +17,7 @@ export * from "./EmailTemplate";
 export * from "./SiteContent";
 export * from "./AiInsightReport";
 export * from "./ActionBoardItem";
+export * from "./ActionItemComment";
 export * from "./DecisionLogEntry";
 export * from "./Playbook";
 export * from "./CxPulseScore";
