@@ -5,15 +5,22 @@ import { useEffect, useState } from "react";
 interface PlaybookRow {
   _id: string;
   title: string;
+  categoryId: string | null;
   triggerCondition: string;
   steps: string[];
   usageCount: number;
 }
+interface CategoryRow {
+  _id: string;
+  name: string;
+}
 
 export default function BusinessPlaybooksPage() {
   const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [triggerCondition, setTriggerCondition] = useState("");
   const [steps, setSteps] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -23,13 +30,21 @@ export default function BusinessPlaybooksPage() {
     setLoading(true);
     fetch("/api/business/playbooks")
       .then((res) => res.json())
-      .then((data) => setPlaybooks(data.playbooks ?? []))
+      .then((data) => {
+        setPlaybooks(data.playbooks ?? []);
+        setCategories(data.categories ?? []);
+      })
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
     load();
   }, []);
+
+  function categoryName(id: string | null): string {
+    if (!id) return "Any category";
+    return categories.find((c) => c._id === id)?.name ?? "Unknown category";
+  }
 
   async function createPlaybook() {
     if (!title.trim()) return;
@@ -40,6 +55,7 @@ export default function BusinessPlaybooksPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title,
+        categoryId: categoryId || null,
         triggerCondition,
         steps: steps.split("\n").map((s) => s.trim()).filter(Boolean),
       }),
@@ -51,6 +67,7 @@ export default function BusinessPlaybooksPage() {
       return;
     }
     setTitle("");
+    setCategoryId("");
     setTriggerCondition("");
     setSteps("");
     load();
@@ -77,6 +94,17 @@ export default function BusinessPlaybooksPage() {
           <div className="field">
             <label>Title</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Category</label>
+            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              <option value="">Any category</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label>Trigger condition</label>
@@ -110,7 +138,12 @@ export default function BusinessPlaybooksPage() {
                   🗑
                 </button>
               </div>
-              <p className="card-sub">Trigger: {p.triggerCondition || "—"}</p>
+              <p className="card-sub">
+                <span className="pill pill-gray" style={{ marginRight: 8 }}>
+                  {categoryName(p.categoryId)}
+                </span>
+                Trigger: {p.triggerCondition || "—"}
+              </p>
               <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
                 {p.steps.map((step, i) => (
                   <li key={i}>{step}</li>

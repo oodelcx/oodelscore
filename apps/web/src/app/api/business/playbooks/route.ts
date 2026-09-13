@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Playbook } from "@oodelscore/shared";
+import { connectToDatabase, Playbook, Category } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 // Mirrors /api/group/playbooks, scoped to businessId instead of
@@ -10,8 +10,11 @@ export async function GET() {
 
   await connectToDatabase();
 
-  const playbooks = await Playbook.find({ businessId: session.business._id }).sort({ createdAt: -1 });
-  return NextResponse.json({ status: "ok", playbooks });
+  const [playbooks, categories] = await Promise.all([
+    Playbook.find({ businessId: session.business._id }).sort({ createdAt: -1 }),
+    Category.find().sort({ name: 1 }),
+  ]);
+  return NextResponse.json({ status: "ok", playbooks, categories });
 }
 
 export async function POST(request: Request) {
