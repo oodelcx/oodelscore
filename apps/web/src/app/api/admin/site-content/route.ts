@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, SiteContent, SITE_CONTENT_PAGES } from "@oodelscore/shared";
+import { connectToDatabase, SiteContent, SITE_CONTENT_PAGES, SEED_SITE_CONTENT } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 export async function GET() {
@@ -17,11 +17,17 @@ export async function GET() {
     status: "ok",
     pages: SITE_CONTENT_PAGES.map((page) => {
       const doc = byPage.get(page);
+      // A page that's never been saved through this CMS has no DB doc yet,
+      // but the public site still renders it via the same seed defaults
+      // (see lib/siteContent.ts's getSiteContent) — fall back to those here
+      // too, so this screen shows what's actually live instead of blank
+      // fields that would silently wipe the real copy if saved as-is.
+      const seed = SEED_SITE_CONTENT.find((s) => s.page === page);
       return {
         page,
-        navItems: doc?.navItems ?? [],
-        sections: doc?.sections ?? [],
-        fields: doc ? Object.fromEntries(doc.fields) : {},
+        navItems: doc?.navItems ?? seed?.navItems ?? [],
+        sections: doc?.sections ?? seed?.sections ?? [],
+        fields: doc ? Object.fromEntries(doc.fields) : (seed?.fields ?? {}),
       };
     }),
   });

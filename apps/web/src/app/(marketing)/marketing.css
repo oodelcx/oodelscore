@@ -158,6 +158,17 @@
 .mkt .btn-ghost:hover {
   border-color: var(--ink);
 }
+/* For a .btn-ghost sitting on a dark section (e.g. the CX Pulse section):
+   the default hover state darkens the border toward --ink, which is
+   nearly invisible against a dark background. Also fixes the button
+   losing its white text if a future edit drops the inline style override. */
+.mkt .btn-ghost.on-dark {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.mkt .btn-ghost.on-dark:hover {
+  border-color: #fff;
+}
 .mkt .built-for {
   font-size: 13px;
   color: var(--text-3);

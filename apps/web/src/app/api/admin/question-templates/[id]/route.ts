@@ -3,6 +3,7 @@ import { connectToDatabase, QuestionTemplate, Business, QUESTION_TYPES } from "@
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const QUESTION_TYPE_SET: readonly string[] = QUESTION_TYPES;
+const OPTION_BASED_TYPES = ["multiple_choice", "multi_select", "dropdown"];
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -14,6 +15,10 @@ function validateQuestions(questions: unknown): string | null {
     if (typeof question.text !== "string" || !question.text.trim()) return "each question needs text";
     if (typeof question.type !== "string" || !QUESTION_TYPE_SET.includes(question.type)) {
       return `invalid question type: ${String(question.type)}`;
+    }
+    if (OPTION_BASED_TYPES.includes(question.type)) {
+      const options = Array.isArray(question.options) ? question.options.filter((o) => typeof o === "string" && o.trim()) : [];
+      if (options.length < 2) return `"${question.text}" needs at least 2 options`;
     }
   }
   return null;

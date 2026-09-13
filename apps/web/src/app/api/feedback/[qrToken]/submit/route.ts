@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { Types } from "mongoose";
 import {
   connectToDatabase,
@@ -9,6 +9,8 @@ import {
   ScanToken,
   evaluateRealTimeAlertsForBusiness,
   classifyDevice,
+  dedupCookieName,
+  DEDUP_WINDOW_SECONDS,
   type QuestionType,
   type DemographicMode,
 } from "@oodelscore/shared";
@@ -26,7 +28,7 @@ interface SubmittedAnswer {
  * email triggers), and always triggers the real-time Alert Rules check
  * (fixed_threshold/nps_floor) after the response is recorded.
  */
-export async function POST(request: Request, { params }: RouteParams) {
+export async function POST(request: NextRequest, { params }: RouteParams) {
   const { qrToken } = await params;
   await connectToDatabase();
 
@@ -38,6 +40,16 @@ export async function POST(request: Request, { params }: RouteParams) {
   const business = await Business.findById(feedbackPoint.businessId);
   if (!business || !business.active) {
     return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+  }
+
+  // Same-device recheck (defense in depth against a client that skipped
+  // the GET route's check) — see packages/shared/src/feedback/dedup.ts.
+  const cookieName = dedupCookieName(feedbackPoint._id.toString());
+  if (request.cookies.get(cookieName)) {
+    return NextResponse.json(
+      { status: "error", message: "You've already given feedback here in the last 24 hours — thank you!" },
+      { status: 409 }
+    );
   }
 
   const templateId = feedbackPoint.questionTemplateOverride ?? business.questionTemplateId;
@@ -64,7 +76,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const answers: SubmittedAnswer[] = Array.isArray(body?.answers) ? body.answers : [];
   const respondentName = typeof body?.respondentName === "string" ? body.respondentName.trim() || null : null;
-  const respondentEmail = typeof body?.respondentEmail === "string" ? body.respondentEmail.trim() || null : null;
+  const respondentEmail = typeof body?.respondentEmail === "string" ? body.respondentEmail.trim().toLowerCase() || null : null;
   const respondentPhone = typeof body?.respondentPhone === "string" ? body.respondentPhone.trim() || null : null;
   const ageGroup = typeof body?.ageGroup === "string" ? body.ageGroup : "";
   const gender = typeof body?.gender === "string" ? body.gender : "";
@@ -89,6 +101,27 @@ export async function POST(request: Request, { params }: RouteParams) {
   for (const [label, mode, value] of demographicChecks) {
     if (mode === "mandatory" && !value) {
       return NextResponse.json({ status: "error", message: `${label} is required` }, { status: 400 });
+    }
+  }
+
+  // Device-independent recheck: if this respondent gave contact info,
+  // reusing it on a different browser/device within the window still
+  // gets caught even though the dedup cookie above wouldn't be present.
+  if (respondentEmail || respondentPhone) {
+    const windowStart = new Date(Date.now() - DEDUP_WINDOW_SECONDS * 1000);
+    const contactMatch = await Response.findOne({
+      feedbackPointId: feedbackPoint._id,
+      submittedAt: { $gte: windowStart },
+      $or: [
+        ...(respondentEmail ? [{ respondentEmail }] : []),
+        ...(respondentPhone ? [{ respondentPhone }] : []),
+      ],
+    });
+    if (contactMatch) {
+      return NextResponse.json(
+        { status: "error", message: "You've already given feedback here in the last 24 hours — thank you!" },
+        { status: 409 }
+      );
     }
   }
 
@@ -125,5 +158,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     console.error("[feedback] real-time alert evaluation failed", err)
   );
 
-  return NextResponse.json({ status: "ok" }, { status: 201 });
+  const response = NextResponse.json({ status: "ok" }, { status: 201 });
+  response.cookies.set(cookieName, "1", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: DEDUP_WINDOW_SECONDS,
+  });
+  return response;
 }

@@ -5,15 +5,16 @@
 }
 
 .as-visual {
-  flex: 0 0 75%;
+  flex: 0 0 60%;
   /* No min-width floor here — a fixed floor on the *other* flex item
-     (form panel) combined with this 75% basis is exactly what caused the
-     horizontal-scroll bug: below ~1280px, 25% of the viewport was less
-     than the old 320px form-panel floor, so the two together summed to
+     (form panel) combined with this 60% basis is exactly what caused the
+     horizontal-scroll bug: below a certain width, 40% of the viewport was
+     less than a fixed form-panel floor, so the two together summed to
      more than 100% of the viewport width. Nothing here has a hard pixel
      floor now, so the split can only ever total 100%. */
   max-width: 100%;
-  background: #111412;
+  position: relative;
+  background: #111412 center/cover no-repeat;
   color: #fff;
   padding: 32px 40px;
   display: flex;
@@ -21,6 +22,18 @@
   justify-content: space-between;
   overflow: hidden;
   box-sizing: border-box;
+}
+/* Darkens the bottom of a background image so the white headline text
+   stays legible regardless of what the image looks like underneath. */
+.as-visual-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.15) 45%, rgba(0, 0, 0, 0.35) 100%);
+  z-index: 0;
+}
+.as-visual > * {
+  position: relative;
+  z-index: 1;
 }
 
 .as-brand {
@@ -45,7 +58,7 @@
 }
 
 .as-form-panel {
-  flex: 1 1 25%;
+  flex: 1 1 40%;
   min-width: 0; /* allow shrinking freely — no artificial floor */
   display: flex;
   align-items: center;

@@ -1,11 +1,19 @@
 import { randomBytes } from "crypto";
-import { NextResponse } from "next/server";
-import { connectToDatabase, FeedbackPoint, Business, ParentOrganization, QuestionTemplate, ScanToken } from "@oodelscore/shared";
+import { NextRequest, NextResponse } from "next/server";
+import {
+  connectToDatabase,
+  FeedbackPoint,
+  Business,
+  ParentOrganization,
+  QuestionTemplate,
+  ScanToken,
+  dedupCookieName,
+} from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
 
 /** Public: fetches what the respondent-facing form needs to render. */
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   const { qrToken } = await params;
   await connectToDatabase();
 
@@ -17,6 +25,20 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const business = await Business.findById(feedbackPoint.businessId);
   if (!business || !business.active) {
     return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+  }
+
+  // One submission per person per feedback point per 24h: a cookie set on
+  // successful submit (see the submit route) — its own 24h expiry IS the
+  // dedup window, so mere presence means "already submitted recently."
+  // This only catches the same browser/device; the submit route adds a
+  // second, device-independent check against respondent email/phone.
+  const dedupCookie = request.cookies.get(dedupCookieName(feedbackPoint._id.toString()));
+  if (dedupCookie) {
+    return NextResponse.json({
+      status: "ok",
+      alreadySubmitted: true,
+      businessName: business.name,
+    });
   }
 
   const templateId = feedbackPoint.questionTemplateOverride ?? business.questionTemplateId;

@@ -13,5 +13,6 @@ export async function GET() {
     status: "ok",
     headline: content.fields.heroHeadline ?? "",
     highlight: content.fields.heroHighlight ?? "",
+    imageUrl: content.fields.heroImageUrl ?? "",
   });
 }
