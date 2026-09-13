@@ -20,7 +20,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
       <aside className="admin-sidebar">
         <div>
           <div className="admin-sidebar-top">
-            <div className="admin-brand">Oodel Score</div>
+            <img className="admin-logo" src="/oodel-logo.png" alt="Oodel Score" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
           </div>
           {isLimitedTeamMember ? (
@@ -29,30 +29,30 @@ export default async function GroupLayout({ children }: { children: ReactNode })
             </nav>
           ) : (
             <>
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Organisation</div>
+              <div className="nav-group-label">Organisation</div>
               <nav className="admin-nav">
                 <a href="/group">Overview</a>
                 <a href="/group/branches">Branches</a>
                 <a href="/group/compare">Compare branches</a>
               </nav>
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Listen</div>
+              <div className="nav-group-label">Listen</div>
               <nav className="admin-nav">
                 <a href="/group/insights">Insights</a>
                 <a href="/group/analytics">Analytics</a>
                 <a href="/group/raw-feedback">Raw feedback</a>
                 <a href="/group/alert-rules">Alert rules</a>
               </nav>
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Act</div>
+              <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
                 <a href="/group/action-board">Action board</a>
                 <a href="/group/decision-log">Decision log</a>
                 <a href="/group/playbooks">Playbooks</a>
               </nav>
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Measure</div>
+              <div className="nav-group-label">Measure</div>
               <nav className="admin-nav">
                 <a href="/group/maturity">CX Pulse</a>
               </nav>
-              <div className="section-label" style={{ margin: "14px 14px 4px" }}>Admin</div>
+              <div className="nav-group-label">Admin</div>
               <nav className="admin-nav">
                 <a href="/group/team">Team &amp; access</a>
                 {!isOrgTeamMember && <a href="/group/team-members">Team Members</a>}

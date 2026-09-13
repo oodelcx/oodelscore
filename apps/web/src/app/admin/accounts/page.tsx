@@ -81,6 +81,9 @@ export default function AccountsPage() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [businessSearch, setBusinessSearch] = useState("");
+  const [orgSearch, setOrgSearch] = useState("");
+  const [staffSearch, setStaffSearch] = useState("");
 
   function loadAll() {
     setLoading(true);
@@ -291,6 +294,10 @@ export default function AccountsPage() {
     );
   }
 
+  const filteredBusinesses = businesses.filter((b) => b.name.toLowerCase().includes(businessSearch.trim().toLowerCase()));
+  const filteredOrgs = parentOrgs.filter((o) => o.name.toLowerCase().includes(orgSearch.trim().toLowerCase()));
+  const filteredStaff = staff.filter((s) => s.email.toLowerCase().includes(staffSearch.trim().toLowerCase()));
+
   const cta =
     tab === "businesses" ? (
       <Link className="btn btn-dark" href="/admin/businesses/new">
@@ -328,6 +335,15 @@ export default function AccountsPage() {
       {loading && <p className="subtitle">Loading…</p>}
 
       {!loading && tab === "businesses" && (
+        <>
+        <div className="filters">
+          <input
+            type="text"
+            placeholder="Search businesses…"
+            value={businessSearch}
+            onChange={(e) => setBusinessSearch(e.target.value)}
+          />
+        </div>
         <table className="clean">
           <thead>
             <tr>
@@ -339,7 +355,7 @@ export default function AccountsPage() {
             </tr>
           </thead>
           <tbody>
-            {businesses.map((b) => (
+            {filteredBusinesses.map((b) => (
               <tr key={b._id}>
                 <td>{b.name}</td>
                 <td>
@@ -359,18 +375,28 @@ export default function AccountsPage() {
                 </td>
               </tr>
             ))}
-            {businesses.length === 0 && (
+            {filteredBusinesses.length === 0 && (
               <tr>
                 <td colSpan={5} className="subtitle">
-                  No businesses yet.
+                  {businesses.length === 0 ? "No businesses yet." : "No businesses match your search."}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </>
       )}
 
       {!loading && tab === "orgs" && (
+        <>
+        <div className="filters">
+          <input
+            type="text"
+            placeholder="Search organizations…"
+            value={orgSearch}
+            onChange={(e) => setOrgSearch(e.target.value)}
+          />
+        </div>
         <table className="clean">
           <thead>
             <tr>
@@ -380,7 +406,7 @@ export default function AccountsPage() {
             </tr>
           </thead>
           <tbody>
-            {parentOrgs.map((o) => (
+            {filteredOrgs.map((o) => (
               <tr key={o._id}>
                 <td>{o.name}</td>
                 <td>{loginStatusCell(o.ownerUserId, o.ownerInviteStatus)}</td>
@@ -394,18 +420,28 @@ export default function AccountsPage() {
                 </td>
               </tr>
             ))}
-            {parentOrgs.length === 0 && (
+            {filteredOrgs.length === 0 && (
               <tr>
                 <td colSpan={3} className="subtitle">
-                  No parent organizations yet.
+                  {parentOrgs.length === 0 ? "No parent organizations yet." : "No organizations match your search."}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </>
       )}
 
       {!loading && tab === "staff" && (
+        <>
+        <div className="filters">
+          <input
+            type="text"
+            placeholder="Search staff…"
+            value={staffSearch}
+            onChange={(e) => setStaffSearch(e.target.value)}
+          />
+        </div>
         <table className="clean">
           <thead>
             <tr>
@@ -416,7 +452,7 @@ export default function AccountsPage() {
             </tr>
           </thead>
           <tbody>
-            {staff.map((s) => (
+            {filteredStaff.map((s) => (
               <tr key={s._id}>
                 <td>
                   <div className="row-flex">
@@ -447,15 +483,16 @@ export default function AccountsPage() {
                 </td>
               </tr>
             ))}
-            {staff.length === 0 && (
+            {filteredStaff.length === 0 && (
               <tr>
                 <td colSpan={4} className="subtitle">
-                  No staff yet.
+                  {staff.length === 0 ? "No staff yet." : "No staff match your search."}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </>
       )}
 
       {!loading && tab === "roles" && (

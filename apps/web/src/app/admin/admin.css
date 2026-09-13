@@ -38,9 +38,16 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
+  /* oodel-score-admin-rebuild.html body{}: the three dashboards (Admin,
+     Business, Group) all use this system-font stack in their mockups —
+     distinct from the marketing site's own 'General Sans' choice — so it's
+     scoped here rather than swapped in globally via next/font in
+     apps/web/src/app/layout.tsx. */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 .admin-sidebar {
-  width: 220px;
+  /* oodel-score-admin-rebuild.html .sidebar{width:240px} */
+  width: 240px;
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
   flex-shrink: 0;
@@ -61,6 +68,14 @@
 .admin-sidebar-top {
   padding: 22px 18px 14px;
 }
+.admin-sidebar-top img.admin-logo {
+  /* oodel-score-admin-rebuild.html .sidebar-top img{width:120px;display:block;} */
+  width: 120px;
+  display: block;
+}
+/* Kept for any lingering usage — the sidebar wordmark is now the logo image
+   above (oodel-logo.png, lifted from the mockup's embedded PNG) rather than
+   text, matching "same font, logo and everything" from the mockup. */
 .admin-brand {
   color: #fff;
   font-size: 17px;
@@ -70,7 +85,21 @@
   font-size: 11px;
   letter-spacing: 0.06em;
   color: #6e7379;
-  margin-top: 2px;
+  /* oodel-score-admin-rebuild.html .brand-sub{margin-top:8px} */
+  margin-top: 8px;
+}
+/* Sidebar section headers (Platform / Accounts / Setup / Listen / …) —
+   oodel-score-admin-rebuild.html .nav-group-label{}. Previously the layouts
+   reused .section-label (built for modal form dividers) with an inline
+   margin override, which left that class's border-top + padding-top:18px
+   leaking into the sidebar. This is the mockup's actual dedicated style:
+   no border, tighter padding, its own letter-spacing/color. */
+.nav-group-label {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: #5c6167;
+  padding: 14px 14px 4px;
+  text-transform: uppercase;
 }
 .admin-nav {
   margin-top: 18px;
@@ -137,7 +166,8 @@
 .admin-main {
   flex: 1;
   padding: 32px 40px;
-  max-width: 1200px;
+  /* oodel-score-admin-rebuild.html .main{max-width:1520px} */
+  max-width: 1520px;
 }
 h1 {
   font-size: 24px;
