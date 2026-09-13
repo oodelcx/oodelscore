@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
-type TabId = "general" | "address" | "contact" | "businesses";
+type TabId = "general" | "address" | "contact" | "businesses" | "command-center";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "general", label: "General" },
   { id: "address", label: "Address & Billing" },
   { id: "contact", label: "Contact" },
   { id: "businesses", label: "Businesses & Billing" },
+  { id: "command-center", label: "Command Center" },
 ];
 
 interface FormState {
@@ -26,6 +27,8 @@ interface FormState {
   compEnabled: boolean;
   compPeriod: string;
   compCustomExpiresAt: string;
+  commandCenterEnabled: boolean;
+  ragThresholds: { starGreenMin: string; starAmberMin: string; npsGreenMin: string; npsAmberMin: string };
 }
 
 const EMPTY_FORM: FormState = {
@@ -41,6 +44,8 @@ const EMPTY_FORM: FormState = {
   compEnabled: false,
   compPeriod: "30_days",
   compCustomExpiresAt: "",
+  commandCenterEnabled: true,
+  ragThresholds: { starGreenMin: "3.7", starAmberMin: "3.0", npsGreenMin: "30", npsAmberMin: "0" },
 };
 
 const COMP_PERIOD_LABELS: Record<string, string> = {
@@ -103,6 +108,15 @@ export default function ParentOrgDetailPage() {
           contactPhone: o.contactPhone ?? "",
           branchSeatLimit: o.branchSeatLimit != null ? String(o.branchSeatLimit) : "",
           teamMemberSeatLimit: o.teamMemberSeatLimit != null ? String(o.teamMemberSeatLimit) : "",
+          commandCenterEnabled: o.commandCenterEnabled ?? true,
+          ragThresholds: o.ragThresholds
+            ? {
+                starGreenMin: String(o.ragThresholds.starGreenMin),
+                starAmberMin: String(o.ragThresholds.starAmberMin),
+                npsGreenMin: String(o.ragThresholds.npsGreenMin),
+                npsAmberMin: String(o.ragThresholds.npsAmberMin),
+              }
+            : EMPTY_FORM.ragThresholds,
         });
         setBusinesses(d.businesses ?? []);
       })
@@ -203,6 +217,17 @@ export default function ParentOrgDetailPage() {
       ...(isNew && form.compEnabled
         ? { compPeriod: form.compPeriod, compCustomExpiresAt: form.compCustomExpiresAt || undefined }
         : {}),
+      ...(!isNew
+        ? {
+            commandCenterEnabled: form.commandCenterEnabled,
+            ragThresholds: {
+              starGreenMin: Number(form.ragThresholds.starGreenMin),
+              starAmberMin: Number(form.ragThresholds.starAmberMin),
+              npsGreenMin: Number(form.ragThresholds.npsGreenMin),
+              npsAmberMin: Number(form.ragThresholds.npsAmberMin),
+            },
+          }
+        : {}),
     };
 
     const res = await fetch(isNew ? "/api/admin/parent-orgs" : `/api/admin/parent-orgs/${params.id}`, {
@@ -266,7 +291,7 @@ export default function ParentOrgDetailPage() {
           <button
             key={t.id}
             className={tab === t.id ? "active" : ""}
-            disabled={isNew && t.id === "businesses"}
+            disabled={isNew && (t.id === "businesses" || t.id === "command-center")}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -322,17 +347,20 @@ export default function ParentOrgDetailPage() {
               </div>
             </div>
           )}
+          {isNew && <div className="section-label">Comp account</div>}
           {isNew && (
             <div className="field">
-              <label>
+              <div className="field-check">
                 <input
                   type="checkbox"
+                  id="org-comp-enabled"
                   checked={form.compEnabled}
                   onChange={(e) => setForm((f) => ({ ...f, compEnabled: e.target.checked }))}
-                  style={{ marginRight: 6 }}
                 />
-                Make this a comp account (no Stripe charge)
-              </label>
+                <label htmlFor="org-comp-enabled" style={{ margin: 0 }}>
+                  Make this a comp account (no Stripe charge)
+                </label>
+              </div>
               {form.compEnabled && (
                 <div className="field-row" style={{ marginTop: 8 }}>
                   <div className="field">
@@ -559,6 +587,95 @@ export default function ParentOrgDetailPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === "command-center" && !isNew && (
+        <div className="card" style={{ maxWidth: 640 }}>
+          <div className="field">
+            <div className="field-check">
+              <input
+                type="checkbox"
+                id="command-center-enabled"
+                checked={form.commandCenterEnabled}
+                onChange={(e) => setForm((f) => ({ ...f, commandCenterEnabled: e.target.checked }))}
+              />
+              <label htmlFor="command-center-enabled" style={{ margin: 0 }}>
+                Show the Command Center to this group&rsquo;s users
+              </label>
+            </div>
+            <div className="field-hint">
+              Off hides the Command Center nav item and page entirely for this org&rsquo;s owner and team — everything
+              else in the Group portal is unaffected.
+            </div>
+          </div>
+
+          <div className="section-label">Red / Amber / Green thresholds</div>
+          <p className="field-hint" style={{ marginTop: -6, marginBottom: 12 }}>
+            Applied to this org&rsquo;s Command Center and every branch underneath it — branches don&rsquo;t set their
+            own.
+          </p>
+          <div className="field-row">
+            <div className="field">
+              <label>Star average — green at or above</label>
+              <input
+                type="number"
+                step="0.1"
+                min="1"
+                max="5"
+                value={form.ragThresholds.starGreenMin}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, ragThresholds: { ...f.ragThresholds, starGreenMin: e.target.value } }))
+                }
+              />
+            </div>
+            <div className="field">
+              <label>Star average — amber at or above</label>
+              <input
+                type="number"
+                step="0.1"
+                min="1"
+                max="5"
+                value={form.ragThresholds.starAmberMin}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, ragThresholds: { ...f.ragThresholds, starAmberMin: e.target.value } }))
+                }
+              />
+              <div className="field-hint">Below this is red.</div>
+            </div>
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>NPS — green at or above</label>
+              <input
+                type="number"
+                step="1"
+                min="-100"
+                max="100"
+                value={form.ragThresholds.npsGreenMin}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, ragThresholds: { ...f.ragThresholds, npsGreenMin: e.target.value } }))
+                }
+              />
+            </div>
+            <div className="field">
+              <label>NPS — amber at or above</label>
+              <input
+                type="number"
+                step="1"
+                min="-100"
+                max="100"
+                value={form.ragThresholds.npsAmberMin}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, ragThresholds: { ...f.ragThresholds, npsAmberMin: e.target.value } }))
+                }
+              />
+              <div className="field-hint">Below this is red.</div>
+            </div>
+          </div>
+          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+            {saving ? "Saving…" : "Save"}
+          </button>
         </div>
       )}
     </div>

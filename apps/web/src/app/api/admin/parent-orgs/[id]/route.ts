@@ -57,6 +57,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "Invalid defaultBillingMode" }, { status: 400 });
   }
 
+  // Command Center visibility and RAG banding are Admin-only decisions —
+  // same rule as billingAssignment on a Business (spec Section 4).
+  const adminOnlyFields = (["ragThresholds", "commandCenterEnabled"] as const).filter((f) => f in body);
+  if (adminOnlyFields.length > 0 && !(role.isSystemRole && role.name === "Admin")) {
+    return NextResponse.json(
+      { status: "error", message: `Not permitted to write field(s): ${adminOnlyFields.join(", ")}` },
+      { status: 403 }
+    );
+  }
+
   // Spec Section 16: never let a seat limit drop below the currently-active
   // count — that would strand active seats with no way to have been chosen.
   if (body.branchSeatLimit !== undefined && body.branchSeatLimit !== null) {
@@ -94,6 +104,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "accountManagerId",
     "branchSeatLimit",
     "teamMemberSeatLimit",
+    "ragThresholds",
+    "commandCenterEnabled",
   ] as const;
 
   for (const field of editableFields) {

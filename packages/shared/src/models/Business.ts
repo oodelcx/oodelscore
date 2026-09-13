@@ -1,5 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
-import { AddressSchema, type IAddress } from "./common";
+import { AddressSchema, type IAddress, RagThresholdsSchema, type IRagThresholds, DEFAULT_RAG_THRESHOLDS } from "./common";
 
 export const BILLING_ASSIGNMENTS = ["group_pays", "branch_pays", "unassigned"] as const;
 export type BillingAssignment = (typeof BILLING_ASSIGNMENTS)[number];
@@ -23,7 +23,7 @@ export interface IDemographicConfig {
  * API routes MUST reject writes to these from Group/Business-level requests
  * even if present in the request body.
  */
-export const BUSINESS_ADMIN_ONLY_FIELDS = ["billingAssignment", "demographicConfig", "questionTemplateId"] as const;
+export const BUSINESS_ADMIN_ONLY_FIELDS = ["billingAssignment", "demographicConfig", "questionTemplateId", "ragThresholds"] as const;
 
 export interface IBusiness {
   name: string;
@@ -42,6 +42,10 @@ export interface IBusiness {
   demographicConfig: IDemographicConfig; // ADMIN-EDITABLE ONLY, ever
   accountManagerId: Types.ObjectId | null;
   teamMemberSeatLimit: number | null; // ADMIN-EDITABLE ONLY. null = unlimited. Enforced against active team-member count.
+  // ADMIN-EDITABLE ONLY. Only meaningful/editable when parentOrgId is null — a
+  // branch always inherits its parent org's ragThresholds instead (spec: "drill
+  // down businesses will have the same what is set for the group").
+  ragThresholds: IRagThresholds;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -76,6 +80,7 @@ const BusinessSchema = new Schema<IBusiness>(
     demographicConfig: { type: DemographicConfigSchema, default: () => ({}) },
     accountManagerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     teamMemberSeatLimit: { type: Number, default: null },
+    ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

@@ -36,6 +36,7 @@ interface FormState {
   compEnabled: boolean;
   compPeriod: string;
   compCustomExpiresAt: string;
+  ragThresholds: { starGreenMin: string; starAmberMin: string; npsGreenMin: string; npsAmberMin: string };
 }
 
 const EMPTY_FORM: FormState = {
@@ -57,6 +58,7 @@ const EMPTY_FORM: FormState = {
   compEnabled: false,
   compPeriod: "30_days",
   compCustomExpiresAt: "",
+  ragThresholds: { starGreenMin: "3.7", starAmberMin: "3.0", npsGreenMin: "30", npsAmberMin: "0" },
 };
 
 const COMP_PERIOD_LABELS: Record<string, string> = {
@@ -286,6 +288,14 @@ export default function BusinessDetailPage() {
           teamMemberSeatLimit: b.teamMemberSeatLimit != null ? String(b.teamMemberSeatLimit) : "",
           demographicConfig: b.demographicConfig ?? EMPTY_FORM.demographicConfig,
           accountManagerId: b.accountManagerId ?? "",
+          ragThresholds: b.ragThresholds
+            ? {
+                starGreenMin: String(b.ragThresholds.starGreenMin),
+                starAmberMin: String(b.ragThresholds.starAmberMin),
+                npsGreenMin: String(b.ragThresholds.npsGreenMin),
+                npsAmberMin: String(b.ragThresholds.npsAmberMin),
+              }
+            : EMPTY_FORM.ragThresholds,
         });
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -388,6 +398,16 @@ export default function BusinessDetailPage() {
       teamMemberSeatLimit: form.teamMemberSeatLimit.trim() ? Number(form.teamMemberSeatLimit) : null,
       demographicConfig: form.demographicConfig,
       accountManagerId: form.accountManagerId || null,
+      ...(!isNew && !form.parentOrgId
+        ? {
+            ragThresholds: {
+              starGreenMin: Number(form.ragThresholds.starGreenMin),
+              starAmberMin: Number(form.ragThresholds.starAmberMin),
+              npsGreenMin: Number(form.ragThresholds.npsGreenMin),
+              npsAmberMin: Number(form.ragThresholds.npsAmberMin),
+            },
+          }
+        : {}),
       ...(isNew && form.compEnabled
         ? { compPeriod: form.compPeriod, compCustomExpiresAt: form.compCustomExpiresAt || undefined }
         : {}),
@@ -564,24 +584,114 @@ export default function BusinessDetailPage() {
               >
                 <option value="unassigned">Unassigned</option>
                 <option value="branch_pays">Branch pays</option>
-                <option value="group_pays">Group pays</option>
+                {form.parentOrgId && <option value="group_pays">Group pays</option>}
               </select>
               <div className="field-hint">
                 Only the Admin system role can change this — a server-side check rejects the write otherwise.
               </div>
             </div>
           )}
-          {isNew && !form.parentOrgId && form.billingAssignment === "branch_pays" && (
+          <div className="section-label">Red / Amber / Green thresholds</div>
+          {form.parentOrgId ? (
+            <div className="callout">
+              This branch uses{" "}
+              <span style={{ cursor: "pointer", textDecoration: "underline" }} onClick={() => setTab("group")}>
+                {parentOrgName ?? "its parent organization"}
+              </span>
+              &rsquo;s thresholds — set them on the org page, not per-branch.
+            </div>
+          ) : isNew ? (
+            <p className="field-hint" style={{ marginTop: -4 }}>
+              Uses the platform default (3.7 green / 3.0 amber for stars, 30 green / 0 amber for NPS) until you set
+              your own after creating this business.
+            </p>
+          ) : (
+            <>
+              <p className="field-hint" style={{ marginTop: -6, marginBottom: 12 }}>
+                Independent of any other business — this standalone business&rsquo;s own bands.
+              </p>
+              <div className="field-row">
+                <div className="field">
+                  <label>Star average — green at or above</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    value={form.ragThresholds.starGreenMin}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, ragThresholds: { ...f.ragThresholds, starGreenMin: e.target.value } }))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label>Star average — amber at or above</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    value={form.ragThresholds.starAmberMin}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, ragThresholds: { ...f.ragThresholds, starAmberMin: e.target.value } }))
+                    }
+                  />
+                  <div className="field-hint">Below this is red.</div>
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>NPS — green at or above</label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="-100"
+                    max="100"
+                    value={form.ragThresholds.npsGreenMin}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, ragThresholds: { ...f.ragThresholds, npsGreenMin: e.target.value } }))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label>NPS — amber at or above</label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="-100"
+                    max="100"
+                    value={form.ragThresholds.npsAmberMin}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, ragThresholds: { ...f.ragThresholds, npsAmberMin: e.target.value } }))
+                    }
+                  />
+                  <div className="field-hint">Below this is red.</div>
+                </div>
+              </div>
+            </>
+          )}
+          {isNew && !form.parentOrgId && (
+            <div className="section-label">Comp account</div>
+          )}
+          {isNew && !form.parentOrgId && (
             <div className="field">
-              <label>
+              <div className="field-check">
                 <input
                   type="checkbox"
+                  id="comp-enabled"
                   checked={form.compEnabled}
-                  onChange={(e) => setForm((f) => ({ ...f, compEnabled: e.target.checked }))}
-                  style={{ marginRight: 6 }}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      compEnabled: e.target.checked,
+                      billingAssignment: e.target.checked ? "branch_pays" : f.billingAssignment,
+                    }))
+                  }
                 />
-                Make this a comp account (no Stripe charge)
-              </label>
+                <label htmlFor="comp-enabled" style={{ margin: 0 }}>
+                  Make this a comp account (no Stripe charge)
+                </label>
+              </div>
               {form.compEnabled && (
                 <div className="field-row" style={{ marginTop: 8 }}>
                   <div className="field">
@@ -617,7 +727,7 @@ export default function BusinessDetailPage() {
         </div>
       )}
 
-      {tab === "address" && !isNew && form.billingAssignment === "branch_pays" && (
+      {tab === "address" && !isNew && form.billingAssignment !== "group_pays" && (
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
           <h3>Subscription</h3>
           {billingError && <p className="error-text">{billingError}</p>}
