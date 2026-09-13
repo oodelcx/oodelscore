@@ -20,6 +20,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -37,11 +38,14 @@
 }
 
 .as-center {
-  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  max-width: 640px;
 }
 .as-logo {
-  width: 100%;
-  max-width: 320px;
+  width: 220px;
+  flex-shrink: 0;
   height: auto;
   display: block;
 }
@@ -50,7 +54,7 @@
   font-weight: 500;
   line-height: 1.4;
   letter-spacing: -0.01em;
-  margin: 10px 0 0;
+  margin: 0;
   color: #fff;
 }
 .as-highlight {
