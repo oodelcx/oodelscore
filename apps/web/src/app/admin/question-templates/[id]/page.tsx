@@ -18,6 +18,59 @@ const QUESTION_TYPES = [
 
 const OPTION_BASED_TYPES = ["multiple_choice", "multi_select", "dropdown"] as const;
 
+function QuestionPreview({ q }: { q: QuestionRow }) {
+  return (
+    <div className="preview-q">
+      <div className="pq-text">
+        {q.text || "Untitled question"}
+        {q.required && <span style={{ color: "var(--red)" }}> *</span>}
+      </div>
+      {q.type === "star_1_5" && (
+        <div className="stars-preview">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <span key={n} className={n <= 4 ? "filled" : undefined}>
+              ★
+            </span>
+          ))}
+        </div>
+      )}
+      {q.type === "nps_0_10" && (
+        <div className="nps-preview">
+          {Array.from({ length: 11 }, (_, n) => (
+            <span key={n}>{n}</span>
+          ))}
+        </div>
+      )}
+      {q.type === "yes_no" && (
+        <div className="yn-preview">
+          <span>Yes</span>
+          <span>No</span>
+        </div>
+      )}
+      {q.type === "emoji_scale" && <div style={{ fontSize: 22 }}>😞 🙁 😐 🙂 😄</div>}
+      {q.type === "open_text" && <div className="text-preview">Type your answer…</div>}
+      {q.type === "slider" && <input type="range" style={{ width: "100%" }} disabled />}
+      {(q.type === "multiple_choice" || q.type === "multi_select") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {(q.options.length ? q.options : ["Option 1", "Option 2"]).map((opt, i) => (
+            <label key={i} style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}>
+              <input type={q.type === "multiple_choice" ? "radio" : "checkbox"} disabled />
+              {opt || `Option ${i + 1}`}
+            </label>
+          ))}
+        </div>
+      )}
+      {q.type === "dropdown" && (
+        <select disabled>
+          {(q.options.length ? q.options : ["Option 1", "Option 2"]).map((opt, i) => (
+            <option key={i}>{opt || `Option ${i + 1}`}</option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
 interface QuestionRow {
   text: string;
   type: string;
@@ -330,6 +383,16 @@ export default function QuestionTemplateBuilderPage() {
           <button className="btn" style={{ width: "100%" }} onClick={addQuestion}>
             + Add Question
           </button>
+        </div>
+
+        <div className="phone-frame">
+          <div className="phone-toolbar">Live preview — exactly what a customer sees when they scan the QR</div>
+          <div className="phone-body">
+            {questions.length === 0 && <p className="subtitle">Add a question to see the preview.</p>}
+            {questions.map((q, i) => (
+              <QuestionPreview key={i} q={q} />
+            ))}
+          </div>
         </div>
       </div>
     </div>

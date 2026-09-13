@@ -13,10 +13,14 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   function load() {
     setLoading(true);
@@ -28,6 +32,12 @@ export default function CategoriesPage() {
   }
 
   useEffect(load, []);
+
+  function openCreateModal() {
+    setName("");
+    setError(null);
+    setShowCreateModal(true);
+  }
 
   async function createCategory() {
     if (!name.trim()) return;
@@ -44,23 +54,31 @@ export default function CategoriesPage() {
       setError(data.message);
       return;
     }
-    setName("");
+    setShowCreateModal(false);
     load();
   }
 
-  async function saveEdit(id: string) {
-    if (!editingName.trim()) return;
-    const res = await fetch(`/api/admin/categories/${id}`, {
+  function openEditModal(cat: CategoryRow) {
+    setEditingCategory(cat);
+    setEditingName(cat.name);
+    setError(null);
+  }
+
+  async function saveEdit() {
+    if (!editingCategory || !editingName.trim()) return;
+    setSavingEdit(true);
+    const res = await fetch(`/api/admin/categories/${editingCategory._id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: editingName }),
     });
     const data = await res.json().catch(() => null);
+    setSavingEdit(false);
     if (!res.ok) {
       setError(data?.message ?? "Failed to rename category");
       return;
     }
-    setEditingId(null);
+    setEditingCategory(null);
     load();
   }
 
@@ -89,22 +107,12 @@ export default function CategoriesPage() {
             Used to tag questions across all templates (e.g. Service, Cleanliness).
           </p>
         </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 24 }}>
-        <h3>New category</h3>
-        <div className="field-row">
-          <div className="field">
-            <label>Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Communication" />
-          </div>
-        </div>
-        {error && <p className="error-text">{error}</p>}
-        <button className="btn btn-dark" disabled={creating} onClick={createCategory}>
-          {creating ? "Creating…" : "+ New Category"}
+        <button className="btn btn-dark" onClick={openCreateModal}>
+          + New Category
         </button>
       </div>
 
+      {error && <p className="error-text">{error}</p>}
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <table className="clean">
@@ -118,44 +126,19 @@ export default function CategoriesPage() {
           <tbody>
             {categories.map((c) => (
               <tr key={c._id}>
-                <td>
-                  {editingId === c._id ? (
-                    <input value={editingName} onChange={(e) => setEditingName(e.target.value)} autoFocus />
-                  ) : (
-                    c.name
-                  )}
-                </td>
+                <td>{c.name}</td>
                 <td style={{ color: c.questionCount === 0 ? "var(--text-3)" : undefined }}>
                   {c.questionCount === 0
                     ? "Not currently used"
                     : `${c.questionCount} question${c.questionCount === 1 ? "" : "s"} across ${c.templateCount} template${c.templateCount === 1 ? "" : "s"}`}
                 </td>
                 <td style={{ textAlign: "right" }}>
-                  {editingId === c._id ? (
-                    <>
-                      <button className="btn btn-sm" onClick={() => saveEdit(c._id)}>
-                        Save
-                      </button>{" "}
-                      <button className="btn btn-sm" onClick={() => setEditingId(null)}>
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span
-                        className="icon-btn"
-                        onClick={() => {
-                          setEditingId(c._id);
-                          setEditingName(c.name);
-                        }}
-                      >
-                        ✏
-                      </span>{" "}
-                      <span className="icon-btn btn-danger" onClick={() => deleteCategory(c)}>
-                        🗑
-                      </span>
-                    </>
-                  )}
+                  <span className="icon-btn" onClick={() => openEditModal(c)} style={{ cursor: "pointer" }}>
+                    ✏
+                  </span>{" "}
+                  <span className="icon-btn btn-danger" onClick={() => deleteCategory(c)} style={{ cursor: "pointer" }}>
+                    🗑
+                  </span>
                 </td>
               </tr>
             ))}
@@ -168,6 +151,69 @@ export default function CategoriesPage() {
             )}
           </tbody>
         </table>
+      )}
+
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowCreateModal(false)}>
+          <div className="modal-box narrow">
+            <div className="modal-head">
+              <h2>Create Category</h2>
+              <button className="modal-close" onClick={() => setShowCreateModal(false)}>
+                ×
+              </button>
+            </div>
+            <div className="field">
+              <input
+                type="text"
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Category name"
+                onKeyDown={(e) => e.key === "Enter" && createCategory()}
+              />
+            </div>
+            {error && <p className="error-text">{error}</p>}
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </button>
+              <button className="btn btn-dark" disabled={creating || !name.trim()} onClick={createCategory}>
+                {creating ? "Creating…" : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingCategory && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setEditingCategory(null)}>
+          <div className="modal-box narrow">
+            <div className="modal-head">
+              <h2>Edit Category</h2>
+              <button className="modal-close" onClick={() => setEditingCategory(null)}>
+                ×
+              </button>
+            </div>
+            <div className="field">
+              <input
+                type="text"
+                autoFocus
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+              />
+            </div>
+            {error && <p className="error-text">{error}</p>}
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setEditingCategory(null)}>
+                Cancel
+              </button>
+              <button className="btn btn-dark" disabled={savingEdit || !editingName.trim()} onClick={saveEdit}>
+                {savingEdit ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
