@@ -32,6 +32,7 @@ const DIMENSION_LABELS: { key: keyof Weights; label: string }[] = [
 export default function CxPulseAdminPage() {
   const [weights, setWeights] = useState<Weights | null>(null);
   const [pulseQuestions, setPulseQuestions] = useState("");
+  const [levelDescriptions, setLevelDescriptions] = useState<string[]>(["", "", "", "", ""]);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,6 +45,8 @@ export default function CxPulseAdminPage() {
     ]).then(([frameworkData, portfolioData]) => {
       setWeights(frameworkData.framework?.weights ?? null);
       setPulseQuestions((frameworkData.framework?.pulseQuestions ?? []).join("\n"));
+      const descs = frameworkData.framework?.levelDescriptions;
+      if (Array.isArray(descs) && descs.length === 5) setLevelDescriptions(descs);
       setSignals(portfolioData.signals ?? []);
       setLoading(false);
     });
@@ -59,6 +62,7 @@ export default function CxPulseAdminPage() {
       body: JSON.stringify({
         weights,
         pulseQuestions: pulseQuestions.split("\n").map((q) => q.trim()).filter(Boolean),
+        levelDescriptions,
       }),
     });
     const data = await res.json();
@@ -105,6 +109,27 @@ export default function CxPulseAdminPage() {
             value={pulseQuestions}
             onChange={(e) => setPulseQuestions(e.target.value)}
           />
+
+          <p className="field-hint" style={{ marginTop: 16 }}>
+            Maturity ladder descriptions — shown under each level on the real CX Pulse page.
+          </p>
+          {LEVEL_NAMES.map((name, i) => (
+            <div className="field" key={name} style={{ marginBottom: 8 }}>
+              <label>
+                Level {i + 1} · {name}
+              </label>
+              <input
+                value={levelDescriptions[i] ?? ""}
+                onChange={(e) =>
+                  setLevelDescriptions((prev) => {
+                    const next = [...prev];
+                    next[i] = e.target.value;
+                    return next;
+                  })
+                }
+              />
+            </div>
+          ))}
           {error && <p className="error-text">{error}</p>}
           <button className="btn btn-dark" style={{ marginTop: 12 }} disabled={saving || total !== 100} onClick={save}>
             {saving ? "Saving…" : "Save"}

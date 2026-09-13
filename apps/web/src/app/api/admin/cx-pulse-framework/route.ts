@@ -35,6 +35,13 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ status: "error", message: `Weights must sum to 100 (got ${total})` }, { status: 400 });
   }
 
+  const levelDescriptions = Array.isArray(body?.levelDescriptions)
+    ? body.levelDescriptions.slice(0, 5).map((d: unknown) => (typeof d === "string" ? d : ""))
+    : undefined;
+  if (levelDescriptions && levelDescriptions.length !== 5) {
+    return NextResponse.json({ status: "error", message: "levelDescriptions must have exactly 5 entries" }, { status: 400 });
+  }
+
   await connectToDatabase();
   const framework = await CxPulseFramework.findOneAndUpdate(
     { singletonKey: CX_PULSE_FRAMEWORK_SINGLETON_KEY },
@@ -42,6 +49,7 @@ export async function PATCH(request: Request) {
       $set: {
         weights,
         pulseQuestions: Array.isArray(body?.pulseQuestions) ? body.pulseQuestions.filter((q: unknown) => typeof q === "string") : [],
+        ...(levelDescriptions ? { levelDescriptions } : {}),
       },
     },
     { upsert: true, new: true }

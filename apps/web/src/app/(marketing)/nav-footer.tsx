@@ -16,7 +16,7 @@ export function MarketingNav({ active, navItems }: { active: string; navItems: I
     <nav className="nav">
       <div className="nav-inner">
         <Link href="/" className="nav-logo">
-          oodel<span>.score</span>
+          <img src="/oodelcx-logo-dark.webp" alt="OodelCX" />
         </Link>
         <div className="nav-links">
           {visible.map((item) => (
@@ -79,7 +79,7 @@ export function MarketingFooter({ fields }: { fields?: MenuFields }) {
         <div className="foot-grid">
           <div>
             <Link href="/" className="foot-logo">
-              oodel<span>.score</span>
+              <img src="/oodelcx-logo-dark.webp" alt="OodelCX" />
             </Link>
             <div className="foot-desc">{fields?.footerDescription}</div>
           </div>
@@ -102,7 +102,7 @@ export function MarketingFooter({ fields }: { fields?: MenuFields }) {
             ))}
           </div>
         </div>
-        <div className="foot-bottom">{fields?.copyrightText ?? "© Oodel Score. All rights reserved."}</div>
+        <div className="foot-bottom">{fields?.copyrightText ?? "© OodelCX. All rights reserved."}</div>
       </div>
     </footer>
   );

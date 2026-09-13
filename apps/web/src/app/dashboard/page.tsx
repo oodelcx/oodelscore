@@ -35,7 +35,7 @@ export default async function DashboardPage() {
 
   return (
     <main style={{ maxWidth: 480, margin: "80px auto", fontFamily: "sans-serif" }}>
-      <h1>Oodel Score</h1>
+      <h1>OodelCX</h1>
       <p>
         Logged in as <strong>{user.email}</strong>
       </p>

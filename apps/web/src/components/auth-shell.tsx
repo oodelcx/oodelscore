@@ -3,8 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import "./auth-shell.css";
 
-const DEFAULT_HEADLINE = "Every scan is someone telling you the truth.";
-const DEFAULT_HIGHLIGHT = "the truth";
+const DEFAULT_HEADLINE = "Know where you stand. Own where you are going.";
+const DEFAULT_HIGHLIGHT = "Own where you are going.";
 
 /** Splits headline on the first occurrence of highlight and wraps that
  * portion in the accent-green span — everything else renders plain white. */
@@ -47,10 +47,10 @@ export function AuthShell({ children }: { children: ReactNode }) {
     <div className="as-shell">
       <div className="as-visual" style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}>
         {imageUrl && <div className="as-visual-scrim" />}
-        <div className="as-brand">
-          oodel<span>.score</span>
+        <div className="as-center">
+          <img className="as-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
+          <p className="as-tagline">{renderHeadline(headline, highlight)}</p>
         </div>
-        <h1 className="as-headline">{renderHeadline(headline, highlight)}</h1>
       </div>
       <div className="as-form-panel">
         <div className="as-form-inner">{children}</div>

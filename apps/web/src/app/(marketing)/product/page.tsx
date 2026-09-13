@@ -7,7 +7,7 @@ import { BookDemoButton } from "../demo-modal";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Product — Oodel Score",
+  title: "Product — OodelCX",
 };
 
 export default async function ProductPage() {

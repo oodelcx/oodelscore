@@ -12,7 +12,7 @@ interface TitleBodyItem {
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Company — Oodel Score",
+  title: "Company — OodelCX",
 };
 
 export default async function CompanyPage() {

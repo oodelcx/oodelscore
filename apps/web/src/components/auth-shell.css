@@ -14,12 +14,12 @@
      floor now, so the split can only ever total 100%. */
   max-width: 100%;
   position: relative;
-  background: #111412 center/cover no-repeat;
+  background: #000 center/cover no-repeat;
   color: #fff;
   padding: 32px 40px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -36,22 +36,22 @@
   z-index: 1;
 }
 
-.as-brand {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.as-center {
+  max-width: 480px;
 }
-.as-brand span {
-  color: #3fbe8b;
+.as-logo {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  display: block;
 }
-
-.as-headline {
-  font-size: clamp(28px, 3.4vw, 42px);
-  font-weight: 700;
-  line-height: 1.15;
+.as-tagline {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
   letter-spacing: -0.01em;
-  margin: 0;
-  max-width: 32ch;
+  margin: 10px 0 0;
+  color: #fff;
 }
 .as-highlight {
   color: #3fbe8b;

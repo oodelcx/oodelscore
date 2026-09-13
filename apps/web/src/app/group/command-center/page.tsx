@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import "./command-center.css";
 
 interface BranchTile {
@@ -69,10 +70,18 @@ function sparkPoints(days: number[], w: number, h: number): string {
 }
 
 export default function CommandCenterPage() {
+  const router = useRouter();
   const [data, setData] = useState<CommandCenterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
+
+  function goToBranch(businessId: string) {
+    router.push(`/group/branches/${businessId}`);
+  }
+  function businessIdByName(name: string): string | null {
+    return data?.branchTiles.find((b) => b.name === name)?.businessId ?? null;
+  }
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -152,7 +161,11 @@ export default function CommandCenterPage() {
               </div>
               <div className="cc-branch-grid">
                 {data.branchTiles.map((b) => (
-                  <div key={b.businessId} className={`cc-branch-tile ${b.band ?? "amber"}`}>
+                  <div
+                    key={b.businessId}
+                    className={`cc-branch-tile cc-clickable ${b.band ?? "amber"}`}
+                    onClick={() => goToBranch(b.businessId)}
+                  >
                     <div className="cc-branch-name">{b.name}</div>
                     <div className="cc-branch-region">{b.region ? b.region.toUpperCase() : "—"}</div>
                     <div className="cc-branch-metrics">
@@ -189,7 +202,12 @@ export default function CommandCenterPage() {
                       <tr>
                         <th>Category</th>
                         {data.branchTiles.map((b) => (
-                          <th className="num" key={b.businessId} title={b.name}>
+                          <th
+                            className="num cc-clickable"
+                            key={b.businessId}
+                            title={b.name}
+                            onClick={() => goToBranch(b.businessId)}
+                          >
                             {shortBranchLabel(b.name)}
                           </th>
                         ))}
@@ -202,7 +220,7 @@ export default function CommandCenterPage() {
                           {data.branchTiles.map((b) => {
                             const cell = row.byBusiness[b.businessId];
                             return (
-                              <td className="num" key={b.businessId}>
+                              <td className="num cc-clickable" key={b.businessId} onClick={() => goToBranch(b.businessId)}>
                                 {cell ? <span className={`cc-cell ${cell.band ?? "amber"}`}>{cell.average.toFixed(1)}</span> : "—"}
                               </td>
                             );
@@ -212,7 +230,7 @@ export default function CommandCenterPage() {
                       <tr className="cc-matrix-extra">
                         <td>Open action items</td>
                         {data.branchTiles.map((b) => (
-                          <td className="num" key={b.businessId}>
+                          <td className="num cc-clickable" key={b.businessId} onClick={() => router.push("/group/action-board")}>
                             {b.openActionItems}
                           </td>
                         ))}
@@ -220,7 +238,7 @@ export default function CommandCenterPage() {
                       <tr className="cc-matrix-extra">
                         <td>Overdue action items</td>
                         {data.branchTiles.map((b) => (
-                          <td className="num" key={b.businessId}>
+                          <td className="num cc-clickable" key={b.businessId} onClick={() => router.push("/group/action-board")}>
                             {b.overdueActionItems}
                           </td>
                         ))}
@@ -239,8 +257,14 @@ export default function CommandCenterPage() {
               </div>
               <div className="cc-feed">
                 {data.feed.length === 0 && <p className="cc-card-sub">Nothing yet — this fills in as feedback comes in.</p>}
-                {data.feed.map((f, i) => (
-                  <div className="cc-feed-row" key={i}>
+                {data.feed.map((f, i) => {
+                  const targetId = f.businessName ? businessIdByName(f.businessName) : null;
+                  return (
+                  <div
+                    className={`cc-feed-row${targetId ? " cc-clickable" : ""}`}
+                    key={i}
+                    onClick={targetId ? () => goToBranch(targetId) : undefined}
+                  >
                     <div className={`cc-sev ${f.severity}`}></div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="cc-feed-title">{f.title}</div>
@@ -250,7 +274,8 @@ export default function CommandCenterPage() {
                     </div>
                     <div className="cc-feed-time">{timeAgo(f.at)}</div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -260,7 +285,7 @@ export default function CommandCenterPage() {
                   <div className="cc-card-title">CX Pulse · Org</div>
                 </div>
                 {data.cxPulse ? (
-                  <div className="cc-gauge-wrap">
+                  <div className="cc-gauge-wrap cc-clickable" onClick={() => router.push("/group/maturity")}>
                     <svg width="60" height="60" viewBox="0 0 70 70">
                       <circle cx="35" cy="35" r="30" fill="none" stroke="#232b38" strokeWidth="7" />
                       <circle
@@ -285,7 +310,7 @@ export default function CommandCenterPage() {
                   <p className="cc-card-sub">Not computed yet — runs on the nightly job.</p>
                 )}
                 {data.billing && (
-                  <>
+                  <div className="cc-clickable" onClick={() => router.push("/group/billing")}>
                     <div className="cc-mini-row">
                       <span>Billing</span>
                       <b>{data.billing.isComp ? "Comp" : data.billing.status}</b>
@@ -300,7 +325,7 @@ export default function CommandCenterPage() {
                         <b>{new Date(data.billing.nextPaymentDate).toLocaleDateString()}</b>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
 
@@ -310,7 +335,7 @@ export default function CommandCenterPage() {
                 </div>
                 {data.movers.length === 0 && <p className="cc-card-sub">Not enough data yet.</p>}
                 {data.movers.map((m) => (
-                  <div className="cc-mover-row" key={m.businessId}>
+                  <div className="cc-mover-row cc-clickable" key={m.businessId} onClick={() => goToBranch(m.businessId)}>
                     <span>{m.name}</span>
                     <span className={`cc-mover-delta ${(m.starDelta ?? 0) >= 0 ? "up" : "down"}`}>
                       {(m.starDelta ?? 0) >= 0 ? "▲" : "▼"} {Math.abs(m.starDelta ?? 0).toFixed(2)}★
@@ -324,7 +349,7 @@ export default function CommandCenterPage() {
                   <div className="cc-card-title">Response Volume · 7d</div>
                 </div>
                 {data.sparklines.map((s) => (
-                  <div className="cc-spark-row" key={s.businessId}>
+                  <div className="cc-spark-row cc-clickable" key={s.businessId} onClick={() => goToBranch(s.businessId)}>
                     <span className="cc-spark-name">{s.name}</span>
                     <svg width="80" height="22" viewBox="0 0 80 22">
                       <polyline points={sparkPoints(s.days, 80, 20)} fill="none" stroke="#33d17a" strokeWidth="1.6" />
@@ -338,7 +363,7 @@ export default function CommandCenterPage() {
         )}
 
         <div className="cc-footnote">
-          Red/amber/green bands and whether this page is shown at all are set by Oodel Admin on this organization&rsquo;s
+          Red/amber/green bands and whether this page is shown at all are set by OodelCX Admin on this organization&rsquo;s
           account page.
         </div>
       </div>

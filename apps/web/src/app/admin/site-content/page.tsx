@@ -868,7 +868,7 @@ function LoginPanel({
         fill with the subject centered, so keep anything important away from the edges. JPEG or WebP, ideally
         under 400KB. Leave blank to keep the plain dark background with the headline below.
       </div>
-      <Field label="Headline" textarea value={headline} onChange={(v) => onFieldChange("login", "heroHeadline", v)} />
+      <Field label="Tagline" textarea value={headline} onChange={(v) => onFieldChange("login", "heroHeadline", v)} />
       <Field
         label="Highlighted portion (shown in green)"
         value={highlight}
