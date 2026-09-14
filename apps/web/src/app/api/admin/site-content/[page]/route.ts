@@ -21,7 +21,7 @@ const MARKETING_ROUTES_BY_PAGE: Record<string, string[]> = {
   company: ["/company"],
   privacy: ["/privacy"],
   terms: ["/terms"],
-  login: [], // AuthShell fetches this live via /api/login-visual — never ISR-cached
+  login: [], // login/forgot-password/set-password are `dynamic = "force-dynamic"` — always read fresh, nothing to revalidate
 };
 
 export async function PATCH(request: Request, { params }: RouteParams) {

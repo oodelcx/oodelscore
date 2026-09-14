@@ -1,10 +1,5 @@
-"use client";
-
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import "./auth-shell.css";
-
-const DEFAULT_HEADLINE = "Know where you stand. Own where you are going.";
-const DEFAULT_HIGHLIGHT = "Own where you are going.";
 
 /** Splits headline on the first occurrence of highlight and wraps that
  * portion in the accent-green span — everything else renders plain white. */
@@ -24,25 +19,23 @@ function renderHeadline(headline: string, highlight: string): ReactNode {
 /**
  * Shared 75/25 shell for login/forgot-password/set-password — no mockup
  * ever designed these screens. The visual panel's headline is admin-editable
- * (Site Content -> Login), fetched client-side since this renders inside
- * "use client" pages.
+ * (Site Content -> Login). Fetched server-side by each page and passed down
+ * as props — this used to fetch client-side in a useEffect, which meant the
+ * hardcoded default text was always visible for a moment before the real
+ * copy replaced it on every load. Plain props means the correct copy is in
+ * the very first byte of HTML, no flash possible.
  */
-export function AuthShell({ children }: { children: ReactNode }) {
-  const [headline, setHeadline] = useState(DEFAULT_HEADLINE);
-  const [highlight, setHighlight] = useState(DEFAULT_HIGHLIGHT);
-  const [imageUrl, setImageUrl] = useState("");
-
-  useEffect(() => {
-    fetch("/api/login-visual")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.headline) setHeadline(data.headline);
-        if (typeof data.highlight === "string") setHighlight(data.highlight);
-        if (typeof data.imageUrl === "string") setImageUrl(data.imageUrl);
-      })
-      .catch(() => {});
-  }, []);
-
+export function AuthShell({
+  headline,
+  highlight,
+  imageUrl,
+  children,
+}: {
+  headline: string;
+  highlight: string;
+  imageUrl: string;
+  children: ReactNode;
+}) {
   return (
     <div className="as-shell">
       <div className="as-visual" style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}>

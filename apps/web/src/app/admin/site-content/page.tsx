@@ -286,6 +286,11 @@ function MenuPanel({
         </div>
         <Field label="Copyright text" value={content.fields.copyrightText} onChange={(v) => onFieldChange("menu", "copyrightText", v)} />
       </div>
+      <div className="card">
+        <h3>Browser tab</h3>
+        <p className="card-sub">The name shown in the browser tab and bookmarks, site-wide.</p>
+        <Field label="Site name" value={content.fields.siteName} onChange={(v) => onFieldChange("menu", "siteName", v)} />
+      </div>
     </div>
   );
 }

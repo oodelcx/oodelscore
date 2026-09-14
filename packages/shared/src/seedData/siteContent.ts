@@ -23,6 +23,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     ],
     sections: [],
     fields: {
+      siteName: "OodelCX",
       footerDescription:
         "Feedback collection, AI-written reports, and the tools to actually act on both — for one location or a thousand.",
       footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
