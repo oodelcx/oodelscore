@@ -40,6 +40,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroHeadline: "Feedback is easy to collect. Acting on it is the hard part.",
       heroSubheadline:
         "OodelCX turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
+      metaDescription:
+        "OodelCX turns customer feedback into tracked, owned work — QR-code surveys, AI-written insights, and an Action Board built for one location or a thousand.",
       heroCarouselIntervalSeconds: "3",
       heroPrimaryButton: "Book a demo",
       heroSecondaryButton: "See how it works",
@@ -98,6 +100,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heroHeadline: "Straightforward pricing, whatever your size.",
       heroSubhead: "Every plan includes AI-reviewed insights and unlimited responses.",
+      metaDescription:
+        "OodelCX pricing for single locations and multi-branch groups — every plan includes AI-reviewed insights, an Action Board, and unlimited responses.",
       plans: JSON.stringify([
         {
           name: "Business",
@@ -146,6 +150,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroHeadline: "Everything from a QR scan to a resolved decision.",
       heroSubheadline:
         "One platform for the whole loop — collecting feedback, turning it into owned work, and proving whether that work is actually changing anything.",
+      metaDescription:
+        "See how OodelCX collects feedback, turns it into owned work with the Action Board, and measures real improvement with CX Pulse.",
       listenHeadline: "Feedback in under a minute, no app required",
       listenBody: "A QR code at the table, till point, or exit. Customers answer on their own phone — no login, no download.",
       actHeadline: "A place for the work to actually happen",
@@ -167,6 +173,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroHeadline: "Built for how your organization actually works.",
       heroBody:
         "Single location, growing chain, or thousand-branch network — the same clarity, without forcing every business to look identical.",
+      metaDescription:
+        "OodelCX for single businesses, multi-location groups, and enterprise networks — regional benchmarking, per-branch billing, and custom roles.",
       singleTitle: "Everything in one view",
       singlePoints: JSON.stringify([
         "Your own feedback points, question set, and alert rules",
@@ -193,6 +201,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     sections: [],
     fields: {
       heroHeadline: "We think feedback tools stopped too early.",
+      metaDescription:
+        "OodelCX exists to turn customer feedback into action, not just a dashboard number. Learn what we build and why.",
       missionStatement:
         "Most platforms treat \"collect feedback\" as the whole job. We think that's the easy third. OodelCX exists because the harder, more valuable work — turning what customers say into something a team actually does, and knowing whether it worked — was left to spreadsheets and good intentions. We built the other two thirds.",
       howWeWorkItems: JSON.stringify([
@@ -219,6 +229,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heading: "Privacy Policy",
       lastUpdated: "September 2026",
+      metaDescription: "How OodelCX collects, uses, and retains account and customer feedback data.",
       body: JSON.stringify([
         {
           heading: "What we collect",
@@ -246,6 +257,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heading: "Terms of Service",
       lastUpdated: "September 2026",
+      metaDescription: "The terms governing use of the OodelCX platform, billing, and AI-generated insights content.",
       body: JSON.stringify([
         {
           heading: "Using OodelCX",

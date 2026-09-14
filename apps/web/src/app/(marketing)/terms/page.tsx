@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 
@@ -8,9 +9,16 @@ interface BodySection {
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: "Terms of Service — OodelCX",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const terms = await getSiteContent("terms");
+  const description = terms.fields.metaDescription;
+  return {
+    title: "Terms of Service",
+    description,
+    openGraph: { title: "Terms of Service", description, url: "/terms" },
+    twitter: { title: "Terms of Service", description },
+  };
+}
 
 export default async function TermsPage() {
   const [menu, terms] = await Promise.all([getSiteContent("menu"), getSiteContent("terms")]);

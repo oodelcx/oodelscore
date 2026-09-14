@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "./nav-footer";
 import { HeroVisual } from "./hero-visual";
@@ -22,9 +23,17 @@ interface TitleBodyItem {
 // Content edit would never show up without a redeploy.
 export const revalidate = 60;
 
-export const metadata = {
-  title: "OodelCX — Feedback that turns into action",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const home = await getSiteContent("home");
+  const title = "OodelCX — Feedback that turns into action";
+  const description = home.fields.metaDescription;
+  return {
+    title: { absolute: title },
+    description,
+    openGraph: { title, description, url: "/" },
+    twitter: { title, description },
+  };
+}
 
 export default async function MarketingHomePage() {
   const [menu, home] = await Promise.all([getSiteContent("menu"), getSiteContent("home")]);
