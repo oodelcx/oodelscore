@@ -141,13 +141,6 @@ export function HeroVisual({ intervalSeconds = DEFAULT_INTERVAL_SECONDS }: { int
     return () => clearInterval(timer);
   }, [intervalSeconds]);
 
-  function prev() {
-    setIndex((i) => (i - 1 + SLIDE_COUNT) % SLIDE_COUNT);
-  }
-  function next() {
-    setIndex((i) => (i + 1) % SLIDE_COUNT);
-  }
-
   return (
     <div className="hero-visual">
       <div className="hv-carousel">
@@ -156,12 +149,6 @@ export function HeroVisual({ intervalSeconds = DEFAULT_INTERVAL_SECONDS }: { int
           {index === 1 && <SlideLoop />}
           {index === 2 && <SlideAction />}
         </div>
-        <button type="button" className="hv-arrow hv-arrow-prev" onClick={prev} aria-label="Previous example">
-          ‹
-        </button>
-        <button type="button" className="hv-arrow hv-arrow-next" onClick={next} aria-label="Next example">
-          ›
-        </button>
       </div>
       <div className="hv-dots">
         {Array.from({ length: SLIDE_COUNT }).map((_, i) => (
