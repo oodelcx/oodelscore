@@ -13,8 +13,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Solutions",
     description,
-    openGraph: { title: "Solutions", description, url: "/solutions" },
-    twitter: { title: "Solutions", description },
+    openGraph: { title: "Solutions", description, url: "/solutions", images: ["/og-image.png"] },
+    twitter: { title: "Solutions", description, images: ["/og-image.png"] },
   };
 }
 

@@ -40,7 +40,7 @@ function SlideCommandCenter() {
   ];
   return (
     <>
-      <span className="hv-example-badge">Meridian Bank Group</span>
+      <span className="hv-example-badge">Meridian Group</span>
       <div className="hv-stats-row">
         <div className="hv-stat">
           <div className="hv-stat-num">4.7</div>
@@ -76,7 +76,7 @@ function SlideCommandCenter() {
 function SlideLoop() {
   return (
     <>
-      <span className="hv-example-badge">Bank</span>
+      <span className="hv-example-badge">Meridian Group</span>
       <div className="hv-loop">
         <div className="hv-loop-stage">
           <div className="hv-loop-icon">★</div>
@@ -107,7 +107,7 @@ function SlideLoop() {
 function SlideAction() {
   return (
     <>
-      <span className="hv-example-badge">Bank</span>
+      <span className="hv-example-badge">Meridian Group</span>
       <div className="hv-stats-row">
         <div className="hv-stat">
           <div className="hv-stat-num">4.89</div>

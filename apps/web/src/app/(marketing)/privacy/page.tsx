@@ -15,8 +15,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Privacy Policy",
     description,
-    openGraph: { title: "Privacy Policy", description, url: "/privacy" },
-    twitter: { title: "Privacy Policy", description },
+    openGraph: { title: "Privacy Policy", description, url: "/privacy", images: ["/og-image.png"] },
+    twitter: { title: "Privacy Policy", description, images: ["/og-image.png"] },
   };
 }
 

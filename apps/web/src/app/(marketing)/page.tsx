@@ -30,8 +30,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { absolute: title },
     description,
-    openGraph: { title, description, url: "/" },
-    twitter: { title, description },
+    openGraph: { title, description, url: "/", images: ["/og-image.png"] },
+    twitter: { title, description, images: ["/og-image.png"] },
   };
 }
 
