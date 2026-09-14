@@ -324,6 +324,17 @@ function HomePanel({
   return (
     <>
       <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Search &amp; social</h3>
+        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
+        <Field
+          label="Meta description"
+          textarea
+          value={content.fields.metaDescription}
+          onChange={(v) => onFieldChange("home", "metaDescription", v)}
+        />
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3>Hero</h3>
         <p className="card-sub">The first thing every visitor sees.</p>
         <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("home", "heroHeadline", v)} />
@@ -548,6 +559,16 @@ function PricingPanel({
   return (
     <>
       <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Search &amp; social</h3>
+        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
+        <Field
+          label="Meta description"
+          textarea
+          value={content.fields.metaDescription}
+          onChange={(v) => onFieldChange("pricing", "metaDescription", v)}
+        />
+      </div>
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3>Pricing hero</h3>
         <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("pricing", "heroHeadline", v)} />
         <Field label="Subhead" value={content.fields.heroSubhead} onChange={(v) => onFieldChange("pricing", "heroSubhead", v)} />
@@ -608,6 +629,16 @@ function ProductPanel({
   return (
     <>
       <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Search &amp; social</h3>
+        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
+        <Field
+          label="Meta description"
+          textarea
+          value={content.fields.metaDescription}
+          onChange={(v) => onFieldChange("product", "metaDescription", v)}
+        />
+      </div>
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3>Hero</h3>
         <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("product", "heroHeadline", v)} />
         <Field
@@ -651,6 +682,16 @@ function SolutionsPanel({
   return (
     <>
       <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Search &amp; social</h3>
+        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
+        <Field
+          label="Meta description"
+          textarea
+          value={content.fields.metaDescription}
+          onChange={(v) => onFieldChange("solutions", "metaDescription", v)}
+        />
+      </div>
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3>Hero</h3>
         <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("solutions", "heroHeadline", v)} />
         <Field label="Body" textarea value={content.fields.heroBody} onChange={(v) => onFieldChange("solutions", "heroBody", v)} />
@@ -693,6 +734,16 @@ function CompanyPanel({
   const items = parseJsonArray<TitleBodyItem>(content.fields.howWeWorkItems);
   return (
     <>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Search &amp; social</h3>
+        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
+        <Field
+          label="Meta description"
+          textarea
+          value={content.fields.metaDescription}
+          onChange={(v) => onFieldChange("company", "metaDescription", v)}
+        />
+      </div>
       <div className="card" style={{ marginBottom: 20 }}>
         <h3>Hero & mission</h3>
         <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("company", "heroHeadline", v)} />
@@ -777,7 +828,18 @@ function LegalPanel({
   }
 
   return (
-    <div className="card">
+    <>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Search &amp; social</h3>
+        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
+        <Field
+          label="Meta description"
+          textarea
+          value={content.fields.metaDescription}
+          onChange={(v) => onFieldChange(page, "metaDescription", v)}
+        />
+      </div>
+      <div className="card">
       <h3>Page heading</h3>
       <div className="field-row">
         <Field label="Heading" value={content.fields.heading} onChange={(v) => onFieldChange(page, "heading", v)} />
@@ -803,7 +865,8 @@ function LegalPanel({
       <button className="btn" onClick={() => onFieldChange(page, "body", JSON.stringify([...sections, { heading: "", text: "" }]))}>
         + Add section
       </button>
-    </div>
+      </div>
+    </>
   );
 }
 

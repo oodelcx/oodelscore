@@ -232,43 +232,15 @@
   margin-bottom: 22px;
 }
 
-/* Arrows either side of the card */
-.mkt .hv-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--border, #e6e5e1);
-  background: #fff;
-  color: var(--ink);
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 14px rgba(17, 20, 18, 0.1);
-}
-.mkt .hv-arrow:hover {
-  background: var(--paper-alt, #f6f6f4);
-}
-.mkt .hv-arrow-prev {
-  left: -17px;
-}
-.mkt .hv-arrow-next {
-  right: -17px;
-}
-
-/* Dots beneath the card */
+/* Dots beneath the card — sole navigation now that the side arrows are
+   gone, so sized up a bit from the original to stay easy to click. */
 .mkt .hv-dots {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 .mkt .hv-dot {
-  width: 8px;
-  height: 8px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   border: none;
   background: var(--border, #e6e5e1);
@@ -277,8 +249,8 @@
 }
 .mkt .hv-dot.active {
   background: var(--signal);
-  width: 20px;
-  border-radius: 4px;
+  width: 26px;
+  border-radius: 6px;
 }
 
 /* Slide: mini Command Center (score/NPS/branch stats + category matrix) */

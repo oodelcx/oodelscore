@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getSiteContent } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
@@ -6,9 +7,16 @@ import { BookDemoButton } from "../demo-modal";
 // Content edit would never show up without a redeploy.
 export const revalidate = 60;
 
-export const metadata = {
-  title: "Product — OodelCX",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const product = await getSiteContent("product");
+  const description = product.fields.metaDescription;
+  return {
+    title: "Product",
+    description,
+    openGraph: { title: "Product", description, url: "/product", images: ["/og-image.png"] },
+    twitter: { title: "Product", description, images: ["/og-image.png"] },
+  };
+}
 
 export default async function ProductPage() {
   const [menu, product] = await Promise.all([getSiteContent("menu"), getSiteContent("product")]);

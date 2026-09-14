@@ -79,7 +79,9 @@ export default function DevDataToolsPage() {
           Every business gets a question template, a feedback point, weeks of real feedback responses (some
           negative), alert rules, auto-created Action Board items with comments and resolutions, playbooks,
           category owner mappings, billing in different states (active, overdue, comp), and CX Pulse scores
-          computed from all of it.
+          computed from all of it. Also seeds sample AI Insights reports — weekly, monthly, quarterly, and
+          yearly, both approved (visible on Business/Group Insights tabs) and pending or rejected (visible in
+          the Admin AI Insights Queue) — so you can preview the feature before the real generation pipeline runs.
         </p>
         <p className="card-sub">
           Every login this creates — business owners, group owners, team members — uses the password{" "}

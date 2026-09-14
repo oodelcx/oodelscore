@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { connectToDatabase, SiteContent, SEED_SITE_CONTENT, type SiteContentPage, type INavItem } from "@oodelscore/shared";
 
 export interface ResolvedSiteContent {
@@ -16,7 +17,9 @@ function fromSeed(page: SiteContentPage): ResolvedSiteContent {
  * seed defaults (same copy `seedPlatformDefaults()` writes on boot) if the
  * DB is unreachable or the page hasn't been seeded yet.
  */
-export async function getSiteContent(page: SiteContentPage): Promise<ResolvedSiteContent> {
+export const getSiteContent = cache(async function getSiteContent(
+  page: SiteContentPage,
+): Promise<ResolvedSiteContent> {
   try {
     await connectToDatabase();
     const doc = await SiteContent.findOne({ page });
@@ -25,7 +28,7 @@ export async function getSiteContent(page: SiteContentPage): Promise<ResolvedSit
   } catch {
     return fromSeed(page);
   }
-}
+});
 
 export function parseJsonArray<T>(value: string | undefined): T[] {
   if (!value) return [];

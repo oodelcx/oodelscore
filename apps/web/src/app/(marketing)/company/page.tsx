@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
@@ -11,9 +12,16 @@ interface TitleBodyItem {
 // Content edit would never show up without a redeploy.
 export const revalidate = 60;
 
-export const metadata = {
-  title: "Company — OodelCX",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const company = await getSiteContent("company");
+  const description = company.fields.metaDescription;
+  return {
+    title: "Company",
+    description,
+    openGraph: { title: "Company", description, url: "/company", images: ["/og-image.png"] },
+    twitter: { title: "Company", description, images: ["/og-image.png"] },
+  };
+}
 
 export default async function CompanyPage() {
   const [menu, company] = await Promise.all([getSiteContent("menu"), getSiteContent("company")]);

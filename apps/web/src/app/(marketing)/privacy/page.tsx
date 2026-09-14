@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 
@@ -8,9 +9,16 @@ interface BodySection {
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: "Privacy Policy — OodelCX",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const privacy = await getSiteContent("privacy");
+  const description = privacy.fields.metaDescription;
+  return {
+    title: "Privacy Policy",
+    description,
+    openGraph: { title: "Privacy Policy", description, url: "/privacy", images: ["/og-image.png"] },
+    twitter: { title: "Privacy Policy", description, images: ["/og-image.png"] },
+  };
+}
 
 export default async function PrivacyPage() {
   const [menu, privacy] = await Promise.all([getSiteContent("menu"), getSiteContent("privacy")]);

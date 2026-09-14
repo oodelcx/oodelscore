@@ -19,6 +19,7 @@ import { CxPulseScore } from "../models/CxPulseScore";
 import { CxPulsePulseResponse } from "../models/CxPulsePulseResponse";
 import { DEFAULT_CX_PULSE_QUESTIONS } from "./cxPulseFramework";
 import { BillingSubscription } from "../models/BillingSubscription";
+import { AiInsightReport, type AiReportPeriod, type AiReportStatus } from "../models/AiInsightReport";
 import { Invoice } from "../models/Invoice";
 import { FeedbackPointRequest } from "../models/FeedbackPointRequest";
 import { DemoRequest } from "../models/DemoRequest";
@@ -51,6 +52,36 @@ function pickSome<T>(items: readonly T[], count: number): T[] {
 
 function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+}
+
+/** The most recent *complete* period of the given cadence — e.g. "weekly" is
+ * the last full Mon–Sun week before this one, matching spec Section 10's
+ * report-generation schedule (offset 1 = the period before that one, etc). */
+function periodRange(period: AiReportPeriod, offset = 0): { start: Date; end: Date } {
+  const now = new Date();
+  if (period === "weekly") {
+    const dayOfWeek = now.getDay();
+    const daysSinceMonday = (dayOfWeek + 6) % 7;
+    const thisMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday);
+    const start = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 7 * (offset + 1));
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 23, 59, 59, 999);
+    return { start, end };
+  }
+  if (period === "monthly") {
+    const start = new Date(now.getFullYear(), now.getMonth() - (offset + 1), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() - offset, 0, 23, 59, 59, 999);
+    return { start, end };
+  }
+  if (period === "quarterly") {
+    const currentQuarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    const startMonth = currentQuarterStartMonth - 3 * (offset + 1);
+    const start = new Date(now.getFullYear(), startMonth, 1);
+    const end = new Date(now.getFullYear(), startMonth + 3, 0, 23, 59, 59, 999);
+    return { start, end };
+  }
+  const start = new Date(now.getFullYear() - (offset + 1), 0, 1);
+  const end = new Date(now.getFullYear() - offset, 0, 0, 23, 59, 59, 999);
+  return { start, end };
 }
 
 async function upsertActiveUser(params: {
@@ -393,6 +424,7 @@ export interface ShowcaseSeedResult {
   invoices: number;
   feedbackPointRequests: number;
   demoRequests: number;
+  aiInsightReports: number;
 }
 
 /**
@@ -421,6 +453,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     invoices: 0,
     feedbackPointRequests: 0,
     demoRequests: 0,
+    aiInsightReports: 0,
   };
 
   // 1. Categories + industries (global reference data, upserted by name).
@@ -1045,7 +1078,136 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     result.demoRequests++;
   }
 
-  // 12. Quarterly CX Pulse self-assessment for a couple of owners, then
+  // 12. AI Insights: sample reports across every cadence, in both pending
+  // and approved states, so Admin's review queue and every dashboard's
+  // Insights tab have example content to preview instead of sitting empty
+  // until the real Claude Batch API pipeline (spec Section 10) runs.
+  // Star average and NPS are always reported as separate figures here,
+  // never blended into one number, per the known bug this rebuild fixes.
+  async function addAiReport(params: {
+    ownerType: "business" | "parentOrg";
+    ownerId: Types.ObjectId;
+    period: AiReportPeriod;
+    offset?: number;
+    bodyMarkdown: string;
+    status?: AiReportStatus;
+    showChartOnDashboard?: boolean;
+  }) {
+    const { start, end } = periodRange(params.period, params.offset ?? 0);
+    const status = params.status ?? "approved";
+    await AiInsightReport.findOneAndUpdate(
+      { ownerType: params.ownerType, ownerId: params.ownerId, period: params.period, periodStart: start },
+      {
+        $set: {
+          ownerType: params.ownerType,
+          ownerId: params.ownerId,
+          period: params.period,
+          periodStart: start,
+          periodEnd: end,
+          bodyMarkdown: params.bodyMarkdown,
+          status,
+          showChartOnDashboard: params.showChartOnDashboard ?? true,
+          generatedAt: daysAgo(1),
+          reviewedAt: status === "pending" ? null : daysAgo(1),
+          reviewedBy: status === "pending" ? null : adminUserId ?? null,
+        },
+      },
+      { upsert: true }
+    );
+    result.aiInsightReports++;
+  }
+
+  // Meridian Bank Group (parentOrg) — approved, all four cadences.
+  await addAiReport({
+    ownerType: "parentOrg",
+    ownerId: meridian.org._id,
+    period: "weekly",
+    bodyMarkdown:
+      "Meridian Bank Group collected 47 responses this week across all 3 branches (Downtown, Riverside, Uptown). Average star rating was 4.6/5, up slightly from 4.5 last week. Net Promoter Score was 58 (reported separately from the star average, as these measure different things), based on 31 respondents who answered the recommendation question. Downtown continues to lead on speed of service. Uptown's wait-time score dipped to 3.9, which triggered one alert already actioned by the regional ops lead. With only 47 responses spread across three branches, week-over-week branch comparisons should be read as directional rather than conclusive — low-confidence given the sample size.",
+  });
+  await addAiReport({
+    ownerType: "parentOrg",
+    ownerId: meridian.org._id,
+    period: "monthly",
+    bodyMarkdown:
+      "In the past month, Meridian Bank Group collected 203 responses across all branches. Average star rating held steady at 4.6/5. Net Promoter Score rose to 61 (up from 54 last month), based on 128 respondents. Riverside branch had the strongest month, with cleanliness and staff friendliness both above 4.8/5. Uptown's wait-time concerns from earlier in the month were resolved after a staffing change — its score recovered to 4.4/5 by month's end. 4 items were raised on the Action Board this month; 3 are resolved, 1 remains open past its due date and is flagged for regional ops follow-up.",
+  });
+  await addAiReport({
+    ownerType: "parentOrg",
+    ownerId: meridian.org._id,
+    period: "quarterly",
+    bodyMarkdown:
+      "Over the past quarter, Meridian Bank Group collected 612 responses. Average star rating improved from 4.4/5 to 4.6/5 across the quarter. Net Promoter Score improved from 49 to 60. All three branches are now in the \"Responding\" to \"Improving\" range on CX Pulse, up from \"Reacting\" last quarter — driven mainly by faster median time-to-resolution on flagged feedback (down from 4.1 days to 1.8 days). Riverside is the standout performer; Uptown remains the branch most in need of continued attention on wait times, though its trend line is positive.",
+  });
+  await addAiReport({
+    ownerType: "parentOrg",
+    ownerId: meridian.org._id,
+    period: "yearly",
+    bodyMarkdown:
+      "Across the past year, Meridian Bank Group collected 2,340 responses spanning all 3 branches. Average star rating rose from 4.2/5 to 4.6/5. Net Promoter Score rose from 38 to 60 — a 22-point improvement, driven primarily by faster complaint resolution and the introduction of category-owner routing in Q2. CX Pulse maturity moved the group from \"Reacting\" to \"Improving\" overall, with Riverside individually reaching \"Embedded\". The clearest opportunity for next year is closing the gap between Uptown and the other two branches, which remains the group's most volatile location on wait-time feedback.",
+  });
+
+  // Spice Route (standalone business) — approved, all four cadences.
+  await addAiReport({
+    ownerType: "business",
+    ownerId: spiceroute.business._id,
+    period: "weekly",
+    bodyMarkdown:
+      "Spice Route collected 18 responses this week. Average star rating was 4.5/5. Net Promoter Score was 47, based on 11 respondents who answered the recommendation question. Comments were largely positive about food quality; one response flagged a long wait at peak dinner service, which has been added to the Action Board. With only 18 responses this week, this summary should be treated as a low-confidence early read rather than a firm trend.",
+  });
+  await addAiReport({
+    ownerType: "business",
+    ownerId: spiceroute.business._id,
+    period: "monthly",
+    bodyMarkdown:
+      "Over the past month, Spice Route collected 74 responses. Average star rating was 4.6/5, consistent with last month. Net Promoter Score was 52, up from 44. Food quality and staff friendliness remain the two highest-rated categories; wait time at peak hours remains the most frequently mentioned area for improvement, appearing in roughly 1 in 6 responses.",
+  });
+  await addAiReport({
+    ownerType: "business",
+    ownerId: spiceroute.business._id,
+    period: "quarterly",
+    bodyMarkdown:
+      "Over the past quarter, Spice Route collected 218 responses. Average star rating improved from 4.3/5 to 4.6/5. Net Promoter Score improved from 38 to 52. The business moved from \"Responding\" to \"Improving\" on CX Pulse this quarter, with the clearest gain coming from consistently acting on wait-time feedback — 6 of 7 flagged items this quarter were resolved within a week.",
+  });
+  await addAiReport({
+    ownerType: "business",
+    ownerId: spiceroute.business._id,
+    period: "yearly",
+    bodyMarkdown:
+      "Across the past year, Spice Route collected 860 responses. Average star rating rose from 4.1/5 to 4.6/5. Net Promoter Score rose from 29 to 52. The business has been on a consistent upward trend every quarter, with no single quarter showing regression — the most sustained improvement of any standalone business in this showcase dataset.",
+  });
+
+  // Pending — awaiting Admin review, to populate the AI Insights Queue's
+  // default "Pending" tab with realistic unreviewed drafts.
+  await addAiReport({
+    ownerType: "business",
+    ownerId: zenith.business._id,
+    period: "weekly",
+    status: "pending",
+    bodyMarkdown:
+      "Zenith Fitness collected 22 responses this week. Average star rating was 4.3/5. Net Promoter Score was 41, based on 14 respondents. Several comments mentioned the new studio room positively; two responses flagged locker room cleanliness on weekend mornings. Draft — please review the locker room framing before approving, and confirm the weekend-only pattern holds once more data comes in.",
+  });
+  await addAiReport({
+    ownerType: "parentOrg",
+    ownerId: urbanmart.org._id,
+    period: "monthly",
+    status: "pending",
+    bodyMarkdown:
+      "Over the past month, UrbanMart Retail collected 156 responses across all 3 stores. Average star rating was 4.1/5. Net Promoter Score was 33, based on 98 respondents. Value-for-money comments were mixed this month following a price change — draft flags this as worth a closer look before publishing, since it's a shift from prior months' tone and may need a supporting chart.",
+  });
+
+  // Rejected — shows the queue's "Rejected" tab with a real example of why
+  // a draft might not pass review (numbers didn't reconcile with responses).
+  await addAiReport({
+    ownerType: "parentOrg",
+    ownerId: precisiondx.org._id,
+    period: "quarterly",
+    status: "rejected",
+    bodyMarkdown:
+      "Draft rejected by Admin: the NPS figure in the generated draft did not reconcile with the underlying response counts for this period (likely a batch-window boundary issue) — regenerate once the pipeline's period-boundary fix ships rather than editing by hand.",
+  });
+
+  // 12b. Quarterly CX Pulse self-assessment for a couple of owners, then
   // recompute every CX Pulse score from the real data just seeded.
   const pulseAnswerValues = [
     "Weekly, in our Monday ops review.",
@@ -1109,6 +1271,7 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("categories", () => Category.deleteMany({}));
   await del("industries", () => Industry.deleteMany({}));
   await del("demoRequests", () => DemoRequest.deleteMany({}));
+  await del("aiInsightReports", () => AiInsightReport.deleteMany({}));
   await del("businesses", () => Business.deleteMany({}));
   await del("parentOrgs", () => ParentOrganization.deleteMany({}));
   await del("users", () => User.deleteMany({ accountType: { $ne: "admin_staff" } }));
