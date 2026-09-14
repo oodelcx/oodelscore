@@ -40,6 +40,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroHeadline: "Feedback is easy to collect. Acting on it is the hard part.",
       heroSubheadline:
         "OodelCX turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
+      heroCarouselIntervalSeconds: "3",
       heroPrimaryButton: "Book a demo",
       heroSecondaryButton: "See how it works",
       heroBuiltForLine: "bank branch networks, retail chains, school trusts, and healthcare groups",

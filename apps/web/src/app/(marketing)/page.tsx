@@ -52,7 +52,7 @@ export default async function MarketingHomePage() {
               <b>Built for</b> {f.heroBuiltForLine}
             </div>
           </div>
-          <HeroVisual />
+          <HeroVisual intervalSeconds={Number(f.heroCarouselIntervalSeconds) || 3} />
         </div>
       </section>
 

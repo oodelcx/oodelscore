@@ -350,6 +350,12 @@ function HomePanel({
           value={content.fields.heroBuiltForLine}
           onChange={(v) => onFieldChange("home", "heroBuiltForLine", v)}
         />
+        <Field
+          label="Example card rotation speed (seconds)"
+          value={content.fields.heroCarouselIntervalSeconds}
+          onChange={(v) => onFieldChange("home", "heroCarouselIntervalSeconds", v)}
+          placeholder="3"
+        />
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>

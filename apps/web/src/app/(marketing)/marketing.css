@@ -183,20 +183,42 @@
   position: relative;
   height: 460px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 16px;
+}
+.mkt .hv-carousel {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 /* Deliberately dark/frosted — distinct from the light card style used
    elsewhere on the page, so this reads as a sample product screenshot
-   rather than a testimonial card. No named company, no quote: just a
-   labeled example score. */
+   rather than a testimonial card. No named business, no quote, no
+   fabricated review: three labeled example views of the real product
+   (multi-branch oversight, the Listen/Act/Measure loop, and a live
+   Action Board item), auto-rotating. */
 .mkt .hv-example {
   width: 400px;
+  min-height: 260px;
   padding: 34px 32px;
   border-radius: 18px;
   background: linear-gradient(160deg, #0f4230, #111412);
   color: #fff;
   box-shadow: 0 30px 60px -20px rgba(17, 20, 18, 0.35);
+  box-sizing: border-box;
+  animation: hv-fade-in 0.4s ease;
+}
+@keyframes hv-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .mkt .hv-example-badge {
   display: inline-block;
@@ -207,24 +229,208 @@
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(6px);
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
-.mkt .hv-example-score {
-  font-size: 54px;
+
+/* Arrows either side of the card */
+.mkt .hv-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border, #e6e5e1);
+  background: #fff;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(17, 20, 18, 0.1);
+}
+.mkt .hv-arrow:hover {
+  background: var(--paper-alt, #f6f6f4);
+}
+.mkt .hv-arrow-prev {
+  left: -17px;
+}
+.mkt .hv-arrow-next {
+  right: -17px;
+}
+
+/* Dots beneath the card */
+.mkt .hv-dots {
+  display: flex;
+  gap: 8px;
+}
+.mkt .hv-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border, #e6e5e1);
+  cursor: pointer;
+  padding: 0;
+}
+.mkt .hv-dot.active {
+  background: var(--signal);
+  width: 20px;
+  border-radius: 4px;
+}
+
+/* Slide: mini Command Center (score/NPS/branch stats + category matrix) */
+.mkt .hv-stats-row {
+  display: flex;
+  gap: 22px;
+}
+.mkt .hv-stat-num {
+  font-size: 30px;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
-.mkt .hv-example-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
+.mkt .hv-stat-label {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   margin-top: 2px;
 }
-.mkt .hv-spark {
-  margin-top: 16px;
+.mkt .hv-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 18px;
 }
+.mkt .hv-matrix-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mkt .hv-matrix-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  width: 78px;
+  flex-shrink: 0;
+}
+.mkt .hv-matrix-cells {
+  display: flex;
+  gap: 5px;
+}
+.mkt .hv-cell {
+  width: 30px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+.mkt .hv-cell-green {
+  background: rgba(63, 190, 139, 0.25);
+  color: #7fe0b8;
+}
+.mkt .hv-cell-amber {
+  background: rgba(242, 183, 5, 0.22);
+  color: #f7cd52;
+}
+.mkt .hv-cell-red {
+  background: rgba(242, 73, 92, 0.22);
+  color: #f78b98;
+}
+
+/* Slide: the Listen/Act/Measure loop */
+.mkt .hv-loop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 22px;
+}
+.mkt .hv-loop-stage {
+  text-align: center;
+  flex: 1;
+}
+.mkt .hv-loop-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin: 0 auto 8px;
+}
+.mkt .hv-loop-label {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+.mkt .hv-loop-sub {
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 1px;
+}
+.mkt .hv-loop-arrow {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 16px;
+  margin: 0 -4px 22px;
+}
+.mkt .hv-loop-score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.mkt .hv-loop-score {
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.mkt .hv-loop-level {
+  font-size: 12px;
+  color: #7fe0b8;
+  font-weight: 600;
+}
+
+/* Slide: score + a live Action Board item */
+.mkt .hv-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 20px 0 16px;
+}
+.mkt .hv-action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+}
+.mkt .hv-action-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f78b98;
+  flex-shrink: 0;
+}
+.mkt .hv-action-title {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.85);
+}
+.mkt .hv-action-owner {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
 @media (max-width: 960px) {
   .mkt .hero-visual {
-    height: 360px;
+    height: 400px;
     transform: scale(0.88);
     transform-origin: top left;
   }
