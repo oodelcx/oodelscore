@@ -34,7 +34,7 @@ export function HeroVisual() {
   return (
     <div className="hero-visual">
       <div className="hv-example">
-        <span className="hv-example-badge">Example dashboard</span>
+        <span className="hv-example-badge">Bank</span>
         <div className="hv-example-score">{score}</div>
         <div className="hv-example-label">average score, 141 responses</div>
         <svg className="hv-spark" width="100%" height="46" viewBox="0 0 280 46">
