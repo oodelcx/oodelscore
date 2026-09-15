@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ThemeIntelligenceCard } from "@/components/theme-intelligence-card";
 import { DriverAnalysisCard } from "@/components/driver-analysis-card";
 
 interface AnalyticsData {
@@ -139,6 +140,10 @@ export default function GroupAnalyticsPage() {
 
       <div style={{ marginTop: 16 }}>
         <DriverAnalysisCard apiPath="/api/group/driver-analysis" />
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <ThemeIntelligenceCard apiPath="/api/group/theme-intelligence" analyzeApiPath="/api/group/theme-intelligence/analyze" />
       </div>
     </div>
   );

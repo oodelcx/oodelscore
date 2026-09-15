@@ -8,6 +8,7 @@ import {
   Response,
   ScanToken,
   evaluateRealTimeAlertsForBusiness,
+  analyzeThemeSentiment,
   classifyDevice,
   dedupCookieName,
   DEDUP_WINDOW_SECONDS,
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     };
   });
 
-  await Response.create({
+  const createdResponse = await Response.create({
     feedbackPointId: feedbackPoint._id,
     businessId: business._id,
     answers: responseAnswers,
@@ -157,6 +158,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   await evaluateRealTimeAlertsForBusiness(business._id, triggeringComment).catch((err) =>
     console.error("[feedback] real-time alert evaluation failed", err)
   );
+
+  // Theme & Sentiment Intelligence (CX roadmap Phase 2) — deliberately NOT
+  // awaited: a respondent filling out a form shouldn't wait on a Claude
+  // call before seeing "thank you". Runs after the response is already
+  // saved and updates it in place once the analysis finishes.
+  if (triggeringComment) {
+    analyzeThemeSentiment(triggeringComment)
+      .then((result) =>
+        Response.findByIdAndUpdate(createdResponse._id, {
+          sentiment: result.sentiment,
+          themes: result.themes,
+          sentimentAnalyzedAt: new Date(),
+        })
+      )
+      .catch((err) => console.error("[feedback] theme/sentiment analysis failed", err));
+  }
 
   const response = NextResponse.json({ status: "ok" }, { status: 201 });
   response.cookies.set(cookieName, "1", {
