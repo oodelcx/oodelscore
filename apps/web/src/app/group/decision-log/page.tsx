@@ -85,6 +85,7 @@ export default function DecisionLogPage() {
   const [editImplementationDate, setEditImplementationDate] = useState("");
   const [editOutcomeMetricDescription, setEditOutcomeMetricDescription] = useState("");
   const [editAffectedBusinessIds, setEditAffectedBusinessIds] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
 
   function load() {
     setLoading(true);
@@ -329,9 +330,29 @@ export default function DecisionLogPage() {
         </button>
       </div>
 
+      {!loading && entries.length > 0 && (
+        <div className="btn-group" style={{ marginBottom: 16 }}>
+          {(["all", "planned", "in_progress", "implemented"] as const).map((s) => {
+            const count = s === "all" ? entries.length : entries.filter((e) => e.status === s).length;
+            const label = s === "all" ? "All" : s === "in_progress" ? "In progress" : s.charAt(0).toUpperCase() + s.slice(1);
+            return (
+              <button
+                key={s}
+                className={`btn btn-sm${statusFilter === s ? " btn-dark" : ""}`}
+                onClick={() => setStatusFilter(s)}
+              >
+                {label} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading && <p className="subtitle">Loading…</p>}
       {!loading &&
-        entries.map((e) => {
+        entries
+          .filter((e) => statusFilter === "all" || e.status === statusFilter)
+          .map((e) => {
           const delta = outcomeDelta(e);
           return (
             <div className="decision-card" key={e._id}>
@@ -435,8 +456,11 @@ export default function DecisionLogPage() {
               {measuringId === e._id && (
                 <div style={{ marginTop: 10, padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
                   <p className="card-sub" style={{ marginTop: 0 }}>
-                    Pick what to measure — OodelCX compares the 30 days before implementation to the period since,
-                    using real feedback data. Needs at least 14 days since implementation.
+                    Pick what to measure — OodelCX compares the average across everyone who responded in the 30 days
+                    before implementation to everyone who&apos;s responded since, using real feedback data. This
+                    tracks whether the metric moved overall, not whether any one customer&apos;s complaint was
+                    personally resolved — most feedback is anonymous. Needs at least 14 days since implementation;
+                    once eligible, this also gets checked automatically once a day.
                   </p>
                   <div className="field-row">
                     <div className="field">
@@ -506,6 +530,11 @@ export default function DecisionLogPage() {
           );
         })}
       {!loading && entries.length === 0 && <p className="subtitle">No decisions logged yet.</p>}
+      {!loading &&
+        entries.length > 0 &&
+        entries.filter((e) => statusFilter === "all" || e.status === statusFilter).length === 0 && (
+          <p className="subtitle">No decisions with this status.</p>
+        )}
     </div>
   );
 }

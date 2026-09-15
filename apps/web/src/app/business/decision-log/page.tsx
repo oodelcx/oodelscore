@@ -61,6 +61,7 @@ export default function BusinessDecisionLogPage() {
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState("");
   const [triggerDraft, setTriggerDraft] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
 
   function load() {
     setLoading(true);
@@ -213,6 +214,24 @@ export default function BusinessDecisionLogPage() {
         </button>
       </div>
 
+      {!loading && entries.length > 0 && (
+        <div className="btn-group" style={{ marginBottom: 16 }}>
+          {(["all", "planned", "in_progress", "implemented"] as const).map((s) => {
+            const count = s === "all" ? entries.length : entries.filter((e) => e.status === s).length;
+            const label = s === "all" ? "All" : s === "in_progress" ? "In progress" : s.charAt(0).toUpperCase() + s.slice(1);
+            return (
+              <button
+                key={s}
+                className={`btn btn-sm${statusFilter === s ? " btn-dark" : ""}`}
+                onClick={() => setStatusFilter(s)}
+              >
+                {label} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <table className="clean">
@@ -226,7 +245,9 @@ export default function BusinessDecisionLogPage() {
             </tr>
           </thead>
           <tbody>
-            {entries.map((e) => (
+            {entries
+              .filter((e) => statusFilter === "all" || e.status === statusFilter)
+              .map((e) => (
               <Fragment key={e._id}>
                 <tr>
                   <td>{e.title}</td>
@@ -291,8 +312,12 @@ export default function BusinessDecisionLogPage() {
                     <td colSpan={5}>
                       <div style={{ margin: "6px 0", padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
                         <p className="card-sub" style={{ marginTop: 0 }}>
-                          Pick what to measure — OodelCX compares the 30 days before implementation to the period
-                          since, using your real feedback data. Needs at least 14 days since implementation.
+                          Pick what to measure — OodelCX compares the average across everyone who responded in the 30
+                          days before implementation to everyone who&apos;s responded since, using your real feedback
+                          data. This tracks whether the metric moved overall, not whether any one customer&apos;s
+                          complaint was personally resolved — most feedback is anonymous. Needs at least 14 days since
+                          implementation; once eligible, this also gets checked automatically once a day, so you don&apos;t
+                          have to remember to come back and click it.
                         </p>
                         <div className="field-row">
                           <div className="field">
@@ -374,6 +399,13 @@ export default function BusinessDecisionLogPage() {
               <tr>
                 <td colSpan={5} className="subtitle">
                   No decisions logged yet.
+                </td>
+              </tr>
+            )}
+            {entries.length > 0 && entries.filter((e) => statusFilter === "all" || e.status === statusFilter).length === 0 && (
+              <tr>
+                <td colSpan={5} className="subtitle">
+                  No decisions with this status.
                 </td>
               </tr>
             )}
