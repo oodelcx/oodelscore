@@ -139,7 +139,7 @@ export default function GroupAnalyticsPage() {
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <DriverAnalysisCard apiPath="/api/group/driver-analysis" />
+        <DriverAnalysisCard apiPath="/api/group/driver-analysis" rootCauseApiPath="/api/group/root-cause-analysis" canCreateAction={false} />
       </div>
 
       <div style={{ marginTop: 16 }}>
