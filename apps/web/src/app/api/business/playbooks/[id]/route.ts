@@ -16,6 +16,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const body = await request.json().catch(() => null);
   if (typeof body?.title === "string") playbook.title = body.title;
+  if ("categoryId" in (body ?? {})) playbook.categoryId = typeof body.categoryId === "string" && body.categoryId ? body.categoryId : null;
   if (typeof body?.triggerCondition === "string") playbook.triggerCondition = body.triggerCondition;
   if (Array.isArray(body?.steps)) playbook.steps = body.steps.filter((s: unknown) => typeof s === "string");
   if ("triggerMetric" in (body ?? {})) playbook.triggerMetric = PLAYBOOK_TRIGGER_METRICS.includes(body.triggerMetric) ? body.triggerMetric : null;

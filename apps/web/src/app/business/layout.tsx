@@ -75,6 +75,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 {!isBusinessTeamMember && <a href="/business/team-members">Team Members</a>}
                 <a href="/business/messages">Messages</a>
                 {!isBusinessTeamMember && <a href="/business/billing">Billing</a>}
+                <a href="/business/security">Security</a>
               </nav>
             </>
           )}

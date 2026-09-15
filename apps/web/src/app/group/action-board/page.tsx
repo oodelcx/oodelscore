@@ -15,6 +15,7 @@ interface ItemRow {
   resolutionNote: string;
   resolvedAt: string | null;
   escalated: boolean;
+  escalationNote: string;
 }
 interface PlaybookRow {
   _id: string;
@@ -55,6 +56,8 @@ export default function ActionBoardPage() {
   const [commentDraft, setCommentDraft] = useState("");
   const [postingComment, setPostingComment] = useState(false);
   const [escalating, setEscalating] = useState<string | null>(null);
+  const [escalatingId, setEscalatingId] = useState<string | null>(null);
+  const [escalationNoteDraft, setEscalationNoteDraft] = useState("");
   const [filter, setFilter] = useState<"all" | "unassigned" | "overdue" | "resolved" | "escalated">("all");
   const [regionFilter, setRegionFilter] = useState("");
 
@@ -115,9 +118,22 @@ export default function ActionBoardPage() {
     load();
   }
 
-  async function toggleEscalated(item: ItemRow) {
+  function startEscalate(id: string) {
+    setEscalatingId(id);
+    setEscalationNoteDraft("");
+  }
+
+  async function confirmEscalate(id: string) {
+    setEscalating(id);
+    await updateItem(id, { escalated: true, escalationNote: escalationNoteDraft.trim() });
+    setEscalating(null);
+    setEscalatingId(null);
+    setEscalationNoteDraft("");
+  }
+
+  async function unEscalate(item: ItemRow) {
     setEscalating(item._id);
-    await updateItem(item._id, { escalated: !item.escalated });
+    await updateItem(item._id, { escalated: false });
     setEscalating(null);
   }
 
@@ -262,11 +278,16 @@ export default function ActionBoardPage() {
                   <tr>
                     <td>
                       {item.escalated && (
-                        <span className="pill pill-red" style={{ marginRight: 6 }}>
+                        <span className="pill pill-red" style={{ marginRight: 6 }} title={item.escalationNote || undefined}>
                           Escalated
                         </span>
                       )}
                       {item.title}
+                      {item.escalated && item.escalationNote && (
+                        <div className="card-sub" style={{ margin: "2px 0 0" }}>
+                          Escalation note: {item.escalationNote}
+                        </div>
+                      )}
                       {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
                       <div className="action-links">
                         <button
@@ -308,13 +329,38 @@ export default function ActionBoardPage() {
                         <button
                           className={`btn btn-sm${item.escalated ? " btn-dark" : ""}`}
                           disabled={escalating === item._id}
-                          onClick={() => toggleEscalated(item)}
+                          onClick={() => (item.escalated ? unEscalate(item) : startEscalate(item._id))}
                         >
                           {item.escalated ? "Un-escalate" : "Escalate"}
                         </button>
                       )}
                     </td>
                   </tr>
+                  {escalatingId === item._id && (
+                    <tr>
+                      <td colSpan={colCount}>
+                        <div style={{ margin: "6px 0", padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
+                          <p className="card-sub" style={{ marginTop: 0 }}>
+                            Escalating notifies{" "}
+                            <b>
+                              {item.ownerId ? ownerLabel(item.ownerId) : `${businessName(item.businessId)}'s owner`}
+                            </b>{" "}
+                            by email right now, flagging this item as needing their attention. Add a note so they know why.
+                          </p>
+                          <div className="field">
+                            <label>Note (optional, included in the email)</label>
+                            <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
+                          </div>
+                          <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
+                            {escalating === item._id ? "Escalating…" : "Send escalation"}
+                          </button>{" "}
+                          <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {expandedPlaybookFor === item._id && playbook && (
                     <tr>
                       <td colSpan={colCount} style={{ background: "var(--bg-2, #f7f7f8)" }}>

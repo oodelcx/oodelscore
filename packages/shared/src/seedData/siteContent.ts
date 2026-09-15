@@ -134,7 +134,6 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           features: [
             "Dedicated account manager",
             "Custom roles & permissions",
-            "SSO & custom data retention",
             "Quarterly business reviews",
           ],
         },

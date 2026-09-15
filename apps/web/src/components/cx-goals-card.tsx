@@ -51,6 +51,13 @@ export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; c
   const [targetDate, setTargetDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editTargetValue, setEditTargetValue] = useState("");
+  const [editTargetDate, setEditTargetDate] = useState("");
+  const [editStatus, setEditStatus] = useState<GoalRow["status"]>("active");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   function load() {
     fetch(apiPath)
@@ -97,6 +104,39 @@ export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; c
   async function removeGoal(id: string) {
     if (!confirm("Delete this goal?")) return;
     await fetch(`${apiPath}/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  function startEdit(g: GoalRow) {
+    setEditingId(g._id);
+    setEditLabel(g.label);
+    setEditTargetValue(String(g.targetValue));
+    setEditTargetDate(g.targetDate.slice(0, 10));
+    setEditStatus(g.status);
+    setEditError(null);
+  }
+
+  async function saveEdit(id: string) {
+    if (!editLabel.trim() || !editTargetValue.trim() || !editTargetDate) return;
+    setEditSaving(true);
+    setEditError(null);
+    const res = await fetch(`${apiPath}/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        label: editLabel.trim(),
+        targetValue: Number(editTargetValue),
+        targetDate: editTargetDate,
+        status: editStatus,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setEditSaving(false);
+    if (!res.ok) {
+      setEditError(data?.message ?? "Failed to save changes");
+      return;
+    }
+    setEditingId(null);
     load();
   }
 
@@ -167,37 +207,84 @@ export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; c
       {goals !== null &&
         goals.map((g) => (
           <div key={g._id} style={{ marginBottom: 14 }}>
-            <div className="page-head" style={{ marginBottom: 4 }}>
-              <div>
-                <b>{g.label}</b>
-                <span className="subtitle" style={{ marginLeft: 8 }}>
-                  {formatValue(g.metric, g.currentValue)} → {formatValue(g.metric, g.targetValue)}
-                </span>
+            {editingId === g._id ? (
+              <div style={{ padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8, marginBottom: 4 }}>
+                <div className="field-row">
+                  <div className="field">
+                    <label>Label</label>
+                    <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Status</label>
+                    <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as GoalRow["status"])}>
+                      <option value="active">Active</option>
+                      <option value="achieved">Achieved</option>
+                      <option value="missed">Missed</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="field-row">
+                  <div className="field">
+                    <label>Target value</label>
+                    <input type="number" step="0.1" value={editTargetValue} onChange={(e) => setEditTargetValue(e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Target date</label>
+                    <input type="date" value={editTargetDate} onChange={(e) => setEditTargetDate(e.target.value)} />
+                  </div>
+                </div>
+                <p className="subtitle" style={{ marginTop: 0 }}>
+                  Metric ({METRIC_LABELS[g.metric]}) can&apos;t be changed after creation — delete and recreate the goal to track a different metric.
+                </p>
+                {editError && <p className="error-text">{editError}</p>}
+                <div className="btn-group">
+                  <button className="btn btn-dark btn-sm" disabled={editSaving} onClick={() => saveEdit(g._id)}>
+                    {editSaving ? "Saving…" : "Save changes"}
+                  </button>
+                  <button className="btn btn-sm" onClick={() => setEditingId(null)}>
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="btn-group">
-                {g.status === "active" && g.onTrack !== null && (
-                  <span className={`pill ${g.onTrack ? "pill-green" : "pill-amber"}`}>{g.onTrack ? "On track" : "Behind pace"}</span>
-                )}
-                {g.status !== "active" && <span className="pill">{g.status}</span>}
-                <span className="icon-btn btn-danger" onClick={() => removeGoal(g._id)}>
-                  🗑
-                </span>
-              </div>
-            </div>
-            <div className="bar-track">
-              <div
-                className="bar-fill"
-                style={{
-                  width: `${Math.max(0, Math.min(100, g.progressPercent ?? 0))}%`,
-                  background: g.progressPercent !== null && g.progressPercent >= 100 ? "var(--green)" : "var(--accent)",
-                }}
-              />
-            </div>
-            <div className="subtitle">
-              {g.progressPercent === null
-                ? "Not enough data yet"
-                : `${g.progressPercent}% of the way there · ${g.daysRemaining >= 0 ? `${g.daysRemaining} days left` : "past target date"}`}
-            </div>
+            ) : (
+              <>
+                <div className="page-head" style={{ marginBottom: 4 }}>
+                  <div>
+                    <b>{g.label}</b>
+                    <span className="subtitle" style={{ marginLeft: 8 }}>
+                      {formatValue(g.metric, g.currentValue)} → {formatValue(g.metric, g.targetValue)}
+                    </span>
+                  </div>
+                  <div className="btn-group">
+                    {g.status === "active" && g.onTrack !== null && (
+                      <span className={`pill ${g.onTrack ? "pill-green" : "pill-amber"}`}>{g.onTrack ? "On track" : "Behind pace"}</span>
+                    )}
+                    {g.status !== "active" && <span className="pill">{g.status}</span>}
+                    <span className="icon-btn" onClick={() => startEdit(g)} title="Edit goal">
+                      ✎
+                    </span>
+                    <span className="icon-btn btn-danger" onClick={() => removeGoal(g._id)}>
+                      🗑
+                    </span>
+                  </div>
+                </div>
+                <div className="bar-track">
+                  <div
+                    className="bar-fill"
+                    style={{
+                      width: `${Math.max(0, Math.min(100, g.progressPercent ?? 0))}%`,
+                      background: g.progressPercent !== null && g.progressPercent >= 100 ? "var(--green)" : "var(--accent)",
+                    }}
+                  />
+                </div>
+                <div className="subtitle">
+                  {g.progressPercent === null
+                    ? "Not enough data yet"
+                    : `${g.progressPercent}% of the way there · ${g.daysRemaining >= 0 ? `${g.daysRemaining} days left` : "past target date"}`}
+                </div>
+              </>
+            )}
           </div>
         ))}
     </div>

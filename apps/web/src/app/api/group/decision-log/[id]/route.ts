@@ -16,6 +16,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!entry) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => null);
+  if (typeof body?.title === "string" && body.title.trim()) entry.title = body.title.trim();
+  if (typeof body?.trigger === "string") entry.trigger = body.trigger.trim();
   if (DECISION_STATUSES.includes(body?.status)) entry.status = body.status;
   if (typeof body?.implementationDate === "string") entry.implementationDate = new Date(body.implementationDate);
   if (typeof body?.outcomeMetricDescription === "string") entry.outcomeMetricDescription = body.outcomeMetricDescription;

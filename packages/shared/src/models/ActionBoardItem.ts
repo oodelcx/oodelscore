@@ -34,6 +34,10 @@ export interface IActionBoardItem {
   // Decision Log — that stays keyed off the branch's own resolution.
   escalated: boolean;
   escalatedAt: Date | null;
+  // Set when a Group user escalates — why they flagged it, shown to whoever
+  // gets the item_escalated email (the item's assigned owner, or the
+  // branch's owner if nobody's assigned yet) so the flag isn't a mystery.
+  escalationNote: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +59,7 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     source: { type: String, enum: ACTION_SOURCES, default: "manual" },
     escalated: { type: Boolean, default: false },
     escalatedAt: { type: Date, default: null },
+    escalationNote: { type: String, default: "" },
   },
   { timestamps: true }
 );

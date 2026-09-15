@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, User, Role, sendTemplatedEmail, hasStaffPermission } from "@oodelscore/shared";
+import { connectToDatabase, User, Role, sendTemplatedEmail, hasStaffPermission, logAuditEvent } from "@oodelscore/shared";
 import { getCurrentUser } from "@/lib/session";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -41,11 +41,22 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "A user with this email already exists" }, { status: 409 });
   }
 
+  const oldEmail = user.email;
   user.email = newEmail;
   user.tokenVersion += 1; // invalidate any sessions issued under the old email
   await user.save();
 
   await sendTemplatedEmail("email_changed", newEmail, { name: newEmail, email: newEmail });
+
+  await logAuditEvent({
+    actor: currentUser,
+    action: "user.email_changed",
+    targetType: "User",
+    targetId: user._id.toString(),
+    targetLabel: newEmail,
+    before: { email: oldEmail },
+    after: { email: newEmail },
+  });
 
   return NextResponse.json({ status: "ok" });
 }

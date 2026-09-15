@@ -23,6 +23,9 @@ import { AiInsightReport, type AiReportPeriod, type AiReportStatus } from "../mo
 import { Invoice } from "../models/Invoice";
 import { FeedbackPointRequest } from "../models/FeedbackPointRequest";
 import { DemoRequest } from "../models/DemoRequest";
+import { CxGoal, type CxGoalMetric, type CxGoalStatus } from "../models/CxGoal";
+import { PlaybookRun } from "../models/PlaybookRun";
+import { AuditLogEntry } from "../models/AuditLogEntry";
 import { hashPassword } from "../auth/password";
 import { markOwnerComp } from "../stripe/billing";
 import { recomputeAllCxPulseScores } from "../cxpulse/compute";
@@ -129,6 +132,32 @@ const CATEGORY_NAMES = [
   "Digital Experience",
 ] as const;
 type CategoryName = (typeof CATEGORY_NAMES)[number];
+
+// Deterministic stand-in for what ai/themeSentiment.ts would tag a comment
+// with — seeding never calls the real API, so Theme Intelligence has real
+// (not empty-state) data to show without needing ANTHROPIC_API_KEY.
+const THEMES_BY_CATEGORY: Record<CategoryName, string[]> = {
+  "Staff Friendliness": ["staff friendliness", "staff attitude"],
+  Cleanliness: ["cleanliness", "restroom cleanliness"],
+  "Service Speed": ["wait time", "slow service"],
+  "Value for Money": ["value for money", "pricing"],
+  Communication: ["communication", "staff communication"],
+  Facilities: ["facilities", "seating"],
+  "Product Quality": ["product quality", "food quality"],
+  "Digital Experience": ["app experience", "checkout experience"],
+};
+
+function deriveSentimentAndThemes(
+  mood: "bad" | "neutral" | "good",
+  categoryName: CategoryName | null,
+  hasComment: boolean
+): { sentiment: "positive" | "neutral" | "negative" | null; themes: string[] } {
+  if (!hasComment) return { sentiment: null, themes: [] };
+  const sentiment = mood === "bad" ? "negative" : mood === "good" ? "positive" : "neutral";
+  const pool = categoryName ? THEMES_BY_CATEGORY[categoryName] : null;
+  const themes = pool && Math.random() < 0.85 ? pickSome(pool, randomInt(1, pool.length)) : [];
+  return { sentiment, themes };
+}
 
 interface QuestionDef {
   text: string;
@@ -425,6 +454,9 @@ export interface ShowcaseSeedResult {
   feedbackPointRequests: number;
   demoRequests: number;
   aiInsightReports: number;
+  cxGoals: number;
+  playbookRuns: number;
+  auditLogEntries: number;
 }
 
 /**
@@ -454,6 +486,9 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     feedbackPointRequests: 0,
     demoRequests: 0,
     aiInsightReports: 0,
+    cxGoals: 0,
+    playbookRuns: 0,
+    auditLogEntries: 0,
   };
 
   // 1. Categories + industries (global reference data, upserted by name).
@@ -687,8 +722,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     trigger: string;
     steps: string[];
     escalationContactId: Types.ObjectId | null;
-  }) {
-    await Playbook.findOneAndUpdate(
+  }): Promise<InstanceType<typeof Playbook>> {
+    const playbook = await Playbook.findOneAndUpdate(
       { title: params.title },
       {
         $set: {
@@ -701,12 +736,13 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
           escalationContactId: params.escalationContactId,
         },
       },
-      { upsert: true }
+      { upsert: true, new: true }
     );
     result.playbooks++;
+    return playbook;
   }
 
-  await addPlaybook({
+  const staffFriendlinessPlaybook = await addPlaybook({
     parentOrgId: meridian.org._id,
     businessId: null,
     title: "Staff Friendliness Recovery",
@@ -720,7 +756,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     ],
     escalationContactId: meridian.teamStaff[1]._id,
   });
-  await addPlaybook({
+  const foodQualityPlaybook = await addPlaybook({
     parentOrgId: null,
     businessId: dailygrind.business._id,
     title: "Food Quality Escalation",
@@ -798,6 +834,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   });
 
   // 8. Responses — spread over the last 60 days, weighted toward positive.
+  const categoryNameByIdForThemes = new Map<string, CategoryName>();
+  for (const [name, id] of categoryByName) categoryNameByIdForThemes.set(id.toString(), name);
   const commentPoolTeam = new Map<string, InstanceType<typeof User>[]>();
   for (const info of businesses) {
     commentPoolTeam.set(info.business._id.toString(), [info.ownerUser, ...(info.teamFull ? [info.teamFull] : [])]);
@@ -843,6 +881,10 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
         const hasName = Math.random() < 0.35;
         const hasEmail = Math.random() < 0.25;
 
+        const themeCategoryName =
+          lowestStarCategoryId === null ? null : categoryNameByIdForThemes.get(String(lowestStarCategoryId)) ?? null;
+        const { sentiment, themes } = deriveSentimentAndThemes(mood, themeCategoryName, !!openTextComment);
+
         const response = await FeedbackResponse.create({
           feedbackPointId: fp._id,
           businessId: info.business._id,
@@ -854,6 +896,9 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
           submittedAt,
           deviceType: pick(["mobile", "mobile", "mobile", "desktop", "tablet"] as const),
           flagged: false,
+          sentiment,
+          themes,
+          sentimentAnalyzedAt: sentiment ? submittedAt : null,
         });
         result.responses++;
 
@@ -1230,6 +1275,209 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
 
   await recomputeAllCxPulseScores();
 
+  // 13. CX Goals — a mix of active/on-track, active/behind-pace, and
+  // achieved, across an org and a couple of standalone businesses, so the
+  // CX Goals card never shows an empty state in the showcase.
+  async function addGoal(params: {
+    ownerType: "parentOrg" | "business";
+    ownerId: Types.ObjectId;
+    label: string;
+    metric: CxGoalMetric;
+    categoryId?: Types.ObjectId | null;
+    startValue: number | null;
+    targetValue: number;
+    targetDate: Date;
+    status: CxGoalStatus;
+    createdBy: Types.ObjectId | null;
+  }) {
+    await CxGoal.findOneAndUpdate(
+      { ownerType: params.ownerType, ownerId: params.ownerId, label: params.label },
+      {
+        $set: {
+          ownerType: params.ownerType,
+          ownerId: params.ownerId,
+          label: params.label,
+          metric: params.metric,
+          categoryId: params.categoryId ?? null,
+          startValue: params.startValue,
+          targetValue: params.targetValue,
+          targetDate: params.targetDate,
+          status: params.status,
+          createdBy: params.createdBy,
+        },
+      },
+      { upsert: true }
+    );
+    result.cxGoals++;
+  }
+
+  await addGoal({
+    ownerType: "parentOrg",
+    ownerId: meridian.org._id,
+    label: "Lift overall score network-wide",
+    metric: "starAverage",
+    startValue: 4.1,
+    targetValue: 4.5,
+    targetDate: daysAgo(-60),
+    status: "active",
+    createdBy: meridian.teamStaff[0]._id,
+  });
+  await addGoal({
+    ownerType: "parentOrg",
+    ownerId: meridian.org._id,
+    label: "Improve staff friendliness across branches",
+    metric: "categoryAverage",
+    categoryId: categoryByName.get("Staff Friendliness"),
+    startValue: 3.8,
+    targetValue: 4.3,
+    targetDate: daysAgo(-30),
+    status: "active",
+    createdBy: meridian.teamStaff[0]._id,
+  });
+  await addGoal({
+    ownerType: "business",
+    ownerId: dailygrind.business._id,
+    label: "Raise NPS above 50",
+    metric: "nps",
+    startValue: 38,
+    targetValue: 50,
+    targetDate: daysAgo(-45),
+    status: "active",
+    createdBy: dailygrind.ownerUser._id,
+  });
+  await addGoal({
+    ownerType: "business",
+    ownerId: zenith.business._id,
+    label: "Clear the overdue action backlog",
+    metric: "overdueActionsCount",
+    startValue: 6,
+    targetValue: 0,
+    targetDate: daysAgo(10), // already past — demonstrates a "missed" goal
+    status: "missed",
+    createdBy: zenith.ownerUser._id,
+  });
+  await addGoal({
+    ownerType: "business",
+    ownerId: dailygrind.business._id,
+    label: "Reach CX Pulse Level 3 (Improving)",
+    metric: "cxPulseLevel",
+    startValue: 2,
+    targetValue: 3,
+    targetDate: daysAgo(5),
+    status: "achieved",
+    createdBy: dailygrind.ownerUser._id,
+  });
+
+  // 14. Playbook run history — one completed (so usageCount shows a real
+  // number instead of 0) and one active (so the checklist UI has something
+  // to render), instead of every playbook always looking unused.
+  const existingCompletedRun = await PlaybookRun.findOne({
+    playbookId: staffFriendlinessPlaybook._id,
+    ownerType: "parentOrg",
+    ownerId: meridian.org._id,
+    status: "completed",
+  });
+  if (!existingCompletedRun) {
+    await PlaybookRun.create({
+      playbookId: staffFriendlinessPlaybook._id,
+      ownerType: "parentOrg",
+      ownerId: meridian.org._id,
+      steps: staffFriendlinessPlaybook.steps,
+      completedStepIndexes: staffFriendlinessPlaybook.steps.map((_: string, i: number) => i),
+      status: "completed",
+      startedAt: daysAgo(18),
+      completedAt: daysAgo(11),
+    });
+    await Playbook.updateOne({ _id: staffFriendlinessPlaybook._id }, { $inc: { usageCount: 1 } });
+    result.playbookRuns++;
+  }
+
+  const existingActiveRun = await PlaybookRun.findOne({
+    playbookId: foodQualityPlaybook._id,
+    ownerType: "business",
+    ownerId: dailygrind.business._id,
+    status: "active",
+  });
+  if (!existingActiveRun) {
+    await PlaybookRun.create({
+      playbookId: foodQualityPlaybook._id,
+      ownerType: "business",
+      ownerId: dailygrind.business._id,
+      steps: foodQualityPlaybook.steps,
+      completedStepIndexes: [0],
+      status: "active",
+      startedAt: daysAgo(2),
+      completedAt: null,
+    });
+    result.playbookRuns++;
+  }
+
+  // 15. Sample Audit Log entries — enough for the Admin viewer to show real
+  // rows across the action types logAuditEvent is actually called with,
+  // rather than an empty table until someone happens to trigger one.
+  const adminActor = adminUserId ? await User.findById(adminUserId) : await User.findOne({ accountType: "admin_staff" });
+  if (adminActor) {
+    const auditSamples = [
+      {
+        action: "role.permissions_changed",
+        targetType: "Role",
+        targetLabel: "Support Staff",
+        before: { permissions: { billingOversight: { edit: false } } },
+        after: { permissions: { billingOversight: { edit: true } } },
+        createdAt: daysAgo(6),
+      },
+      {
+        action: "billing.comp_granted",
+        targetType: "Business",
+        targetLabel: dailygrind.business.name,
+        before: null,
+        after: { period: "unlimited" },
+        createdAt: daysAgo(14),
+      },
+      {
+        action: "user.email_changed",
+        targetType: "User",
+        targetLabel: meridian.teamStaff[0].email,
+        before: { email: "old.contact@showcase.oodel.test" },
+        after: { email: meridian.teamStaff[0].email },
+        createdAt: daysAgo(20),
+      },
+      {
+        action: "team_member.access_tier_changed",
+        targetType: "User",
+        targetLabel: dailygrind.teamFull!.email,
+        before: { tier: "limited" },
+        after: { tier: "full" },
+        createdAt: daysAgo(3),
+      },
+      {
+        action: "user.2fa_enabled",
+        targetType: "User",
+        targetLabel: adminActor.email,
+        before: null,
+        after: null,
+        createdAt: daysAgo(1),
+      },
+    ];
+    for (const sample of auditSamples) {
+      const exists = await AuditLogEntry.findOne({ action: sample.action, targetLabel: sample.targetLabel });
+      if (exists) continue;
+      await AuditLogEntry.create({
+        actorUserId: adminActor._id,
+        actorEmail: adminActor.email,
+        actorAccountType: adminActor.accountType,
+        action: sample.action,
+        targetType: sample.targetType,
+        targetId: null,
+        targetLabel: sample.targetLabel,
+        before: sample.before,
+        after: sample.after,
+        createdAt: sample.createdAt,
+      });
+      result.auditLogEntries++;
+    }
+  }
+
   return result;
 }
 
@@ -1256,6 +1504,8 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("actionItemComments", () => ActionItemComment.deleteMany({}));
   await del("actionBoardItems", () => ActionBoardItem.deleteMany({}));
   await del("decisionLogEntries", () => DecisionLogEntry.deleteMany({}));
+  await del("cxGoals", () => CxGoal.deleteMany({}));
+  await del("playbookRuns", () => PlaybookRun.deleteMany({}));
   await del("playbooks", () => Playbook.deleteMany({}));
   await del("categoryOwnerMappings", () => CategoryOwnerMapping.deleteMany({}));
   await del("alertActivity", () => AlertActivity.deleteMany({}));

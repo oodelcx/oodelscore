@@ -28,6 +28,13 @@ export interface IUser {
   // Brute-force lockout (spec Section 3).
   failedLoginAttempts: number;
   lockedUntil: Date | null;
+  // Two-factor auth (TOTP). twoFactorSecret is only set once the user
+  // scans the QR code and confirms a code — until then it's a pending
+  // secret from /api/auth/2fa/setup that hasn't been verified yet, kept
+  // separate so a half-finished setup never silently enables 2FA.
+  twoFactorEnabled: boolean;
+  twoFactorSecret: string | null;
+  twoFactorPendingSecret: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +57,9 @@ const UserSchema = new Schema<IUser>(
     tokenVersion: { type: Number, default: 0 },
     failedLoginAttempts: { type: Number, default: 0 },
     lockedUntil: { type: Date, default: null },
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String, default: null },
+    twoFactorPendingSecret: { type: String, default: null },
   },
   { timestamps: true }
 );

@@ -58,6 +58,9 @@ export default function BusinessDecisionLogPage() {
   const [measureError, setMeasureError] = useState<string | null>(null);
   const [outcomeBeforeDraft, setOutcomeBeforeDraft] = useState("");
   const [outcomeAfterDraft, setOutcomeAfterDraft] = useState("");
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [triggerDraft, setTriggerDraft] = useState("");
 
   function load() {
     setLoading(true);
@@ -106,6 +109,23 @@ export default function BusinessDecisionLogPage() {
   async function removeEntry(id: string) {
     if (!confirm("Delete this decision log entry?")) return;
     await fetch(`/api/business/decision-log/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  function startEditTitle(entry: EntryRow) {
+    setEditingTitleId(entry._id);
+    setTitleDraft(entry.title);
+    setTriggerDraft(entry.trigger);
+  }
+
+  async function saveTitle(id: string) {
+    if (!titleDraft.trim()) return;
+    await fetch(`/api/business/decision-log/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: titleDraft.trim(), trigger: triggerDraft }),
+    });
+    setEditingTitleId(null);
     load();
   }
 
@@ -231,6 +251,9 @@ export default function BusinessDecisionLogPage() {
                     )}
                   </td>
                   <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startEditTitle(e)}>
+                      Edit
+                    </button>
                     <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startMeasure(e)}>
                       Measure outcome
                     </button>
@@ -239,6 +262,30 @@ export default function BusinessDecisionLogPage() {
                     </button>
                   </td>
                 </tr>
+                {editingTitleId === e._id && (
+                  <tr>
+                    <td colSpan={5}>
+                      <div style={{ margin: "6px 0", padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
+                        <div className="field-row">
+                          <div className="field">
+                            <label>Title</label>
+                            <input value={titleDraft} onChange={(ev) => setTitleDraft(ev.target.value)} />
+                          </div>
+                          <div className="field">
+                            <label>Trigger</label>
+                            <input value={triggerDraft} onChange={(ev) => setTriggerDraft(ev.target.value)} />
+                          </div>
+                        </div>
+                        <button className="btn btn-dark btn-sm" onClick={() => saveTitle(e._id)}>
+                          Save
+                        </button>{" "}
+                        <button className="btn btn-sm" onClick={() => setEditingTitleId(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {measuringId === e._id && (
                   <tr>
                     <td colSpan={5}>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Role } from "@oodelscore/shared";
+import { connectToDatabase, Role, logAuditEvent } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -22,6 +22,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const role = await Role.findById(id);
   if (!role) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
+  const before = { description: role.description, permissions: role.permissions };
+
   // name/isSystemRole are immutable — a system role's name is how the rest
   // of the app (seed data, Admin-role checks) identifies it.
   if (typeof body.description === "string") role.description = body.description;
@@ -30,6 +32,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await role.save();
+
+  await logAuditEvent({
+    actor: session.user,
+    action: "role.permissions_changed",
+    targetType: "Role",
+    targetId: role._id.toString(),
+    targetLabel: role.name,
+    before,
+    after: { description: role.description, permissions: role.permissions },
+  });
+
   return NextResponse.json({ status: "ok", role });
 }
 

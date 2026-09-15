@@ -78,6 +78,14 @@ export default function DecisionLogPage() {
   const [verdict, setVerdict] = useState<string | null>(null);
   const [measureError, setMeasureError] = useState<string | null>(null);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editTrigger, setEditTrigger] = useState("");
+  const [editOwnerId, setEditOwnerId] = useState("");
+  const [editImplementationDate, setEditImplementationDate] = useState("");
+  const [editOutcomeMetricDescription, setEditOutcomeMetricDescription] = useState("");
+  const [editAffectedBusinessIds, setEditAffectedBusinessIds] = useState<string[]>([]);
+
   function load() {
     setLoading(true);
     Promise.all([
@@ -198,6 +206,34 @@ export default function DecisionLogPage() {
     load();
   }
 
+  function startEdit(e: EntryRow) {
+    setEditingId(e._id);
+    setEditTitle(e.title);
+    setEditTrigger(e.trigger);
+    setEditOwnerId(e.ownerId ?? "");
+    setEditImplementationDate(e.implementationDate ? e.implementationDate.slice(0, 10) : "");
+    setEditOutcomeMetricDescription(e.outcomeMetricDescription);
+    setEditAffectedBusinessIds(e.affectedBusinessIds);
+    setMeasuringId(null);
+  }
+
+  function toggleEditAffected(id: string) {
+    setEditAffectedBusinessIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  }
+
+  async function saveEdit(id: string) {
+    if (!editTitle.trim()) return;
+    await patch(id, {
+      title: editTitle.trim(),
+      trigger: editTrigger,
+      ownerId: editOwnerId || null,
+      implementationDate: editImplementationDate || null,
+      outcomeMetricDescription: editOutcomeMetricDescription,
+      affectedBusinessIds: editAffectedBusinessIds,
+    });
+    setEditingId(null);
+  }
+
   function businessName(id: string) {
     return businesses.find((b) => b._id === id)?.name ?? "—";
   }
@@ -299,6 +335,62 @@ export default function DecisionLogPage() {
           const delta = outcomeDelta(e);
           return (
             <div className="decision-card" key={e._id}>
+              {editingId === e._id ? (
+                <div style={{ padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8, marginBottom: 10 }}>
+                  <div className="field-row">
+                    <div className="field">
+                      <label>Decision title</label>
+                      <input value={editTitle} onChange={(ev) => setEditTitle(ev.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>Decision owner</label>
+                      <select value={editOwnerId} onChange={(ev) => setEditOwnerId(ev.target.value)}>
+                        <option value="">Unassigned</option>
+                        {team.map((t) => (
+                          <option key={t.userId} value={t.userId}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label>Trigger</label>
+                    <textarea value={editTrigger} onChange={(ev) => setEditTrigger(ev.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Branches affected</label>
+                    <div className="chip-select">
+                      {businesses.map((b) => (
+                        <div
+                          key={b._id}
+                          className={`chip ${editAffectedBusinessIds.includes(b._id) ? "active" : ""}`}
+                          onClick={() => toggleEditAffected(b._id)}
+                        >
+                          {b.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="field-row">
+                    <div className="field">
+                      <label>Implementation date</label>
+                      <input type="date" value={editImplementationDate} onChange={(ev) => setEditImplementationDate(ev.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>How will you know it worked?</label>
+                      <input value={editOutcomeMetricDescription} onChange={(ev) => setEditOutcomeMetricDescription(ev.target.value)} />
+                    </div>
+                  </div>
+                  <button className="btn btn-dark btn-sm" onClick={() => saveEdit(e._id)}>
+                    Save changes
+                  </button>{" "}
+                  <button className="btn btn-sm" onClick={() => setEditingId(null)}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <>
               <div className="decision-title">{e.title}</div>
               <div className="decision-meta">
                 {e.implementationDate ? new Date(e.implementationDate).toLocaleDateString() : "No date set"} · {ownerLabel(e.ownerId)}
@@ -401,10 +493,15 @@ export default function DecisionLogPage() {
                 </div>
               )}
               <div style={{ textAlign: "right", marginTop: 8 }}>
+                <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startEdit(e)}>
+                  Edit
+                </button>
                 <button className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
                   🗑
                 </button>
               </div>
+                </>
+              )}
             </div>
           );
         })}
