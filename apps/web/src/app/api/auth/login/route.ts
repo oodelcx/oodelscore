@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { connectToDatabase, User, verifyPassword, signSessionToken } from "@oodelscore/shared";
+import { connectToDatabase, User, verifyPassword, signSessionToken, signPending2faToken } from "@oodelscore/shared";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/session";
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -67,6 +67,15 @@ export async function POST(request: Request) {
 
   user.failedLoginAttempts = 0;
   user.lockedUntil = null;
+  await user.save();
+
+  // Password was correct, but 2FA is on — hold off on lastLoginAt and the
+  // real session cookie until /api/auth/2fa/login-verify confirms the code.
+  if (user.twoFactorEnabled) {
+    const pendingToken = signPending2faToken({ sub: user._id.toString(), tokenVersion: user.tokenVersion });
+    return NextResponse.json({ status: "2fa_required", pendingToken });
+  }
+
   user.lastLoginAt = new Date();
   await user.save();
 

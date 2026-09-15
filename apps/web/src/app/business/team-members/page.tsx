@@ -20,6 +20,9 @@ export default function BusinessTeamMembersPage() {
   const [tier, setTier] = useState<"full" | "limited">("full");
   const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editRole, setEditRole] = useState("");
+  const [editTier, setEditTier] = useState<"full" | "limited">("full");
 
   function load() {
     setLoading(true);
@@ -60,6 +63,24 @@ export default function BusinessTeamMembersPage() {
     if (!confirm("Remove this team member's access?")) return;
     const res = await fetch(`/api/business/team-members/${id}`, { method: "DELETE" });
     if (res.ok) load();
+  }
+
+  function startEdit(m: MemberRow) {
+    setEditingId(m._id);
+    setEditRole(m.teamRole);
+    setEditTier(m.tier);
+  }
+
+  async function saveEdit(id: string) {
+    const res = await fetch(`/api/business/team-members/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamRole: editRole, tier: editTier }),
+    });
+    if (res.ok) {
+      setEditingId(null);
+      load();
+    }
   }
 
   const atLimit = seatLimit !== null && activeCount >= seatLimit;
@@ -128,21 +149,50 @@ export default function BusinessTeamMembersPage() {
             </tr>
           </thead>
           <tbody>
-            {members.map((m) => (
-              <tr key={m._id}>
-                <td>{m.email}</td>
-                <td>{m.teamRole || "—"}</td>
-                <td>{m.tier === "full" ? "Full" : "Limited"}</td>
-                <td>
-                  <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  <button className="icon-btn btn-danger" onClick={() => remove(m._id)}>
-                    🗑
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {members.map((m) =>
+              editingId === m._id ? (
+                <tr key={m._id}>
+                  <td>{m.email}</td>
+                  <td>
+                    <input value={editRole} onChange={(e) => setEditRole(e.target.value)} placeholder="e.g. Shift Lead" />
+                  </td>
+                  <td>
+                    <select value={editTier} onChange={(e) => setEditTier(e.target.value as "full" | "limited")}>
+                      <option value="full">Full</option>
+                      <option value="limited">Limited</option>
+                    </select>
+                  </td>
+                  <td>
+                    <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => saveEdit(m._id)}>
+                      Save
+                    </button>
+                    <button className="btn btn-sm" onClick={() => setEditingId(null)}>
+                      Cancel
+                    </button>
+                  </td>
+                </tr>
+              ) : (
+                <tr key={m._id}>
+                  <td>{m.email}</td>
+                  <td>{m.teamRole || "—"}</td>
+                  <td>{m.tier === "full" ? "Full" : "Limited"}</td>
+                  <td>
+                    <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="icon-btn" style={{ marginRight: 4 }} onClick={() => startEdit(m)} title="Edit role/access">
+                      ✎
+                    </button>
+                    <button className="icon-btn btn-danger" onClick={() => remove(m._id)}>
+                      🗑
+                    </button>
+                  </td>
+                </tr>
+              )
+            )}
             {members.length === 0 && (
               <tr>
                 <td colSpan={5} className="subtitle">

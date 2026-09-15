@@ -5,6 +5,8 @@ export * from "./auth/tokens";
 export * from "./auth/inviteStatus";
 export * from "./auth/createInviteUser";
 export * from "./auth/jwt";
+export * from "./auth/twoFactor";
+export * from "./audit/log";
 export * from "./auth/permissions";
 export * from "./email/resend";
 export * from "./seedData/demoAccounts";

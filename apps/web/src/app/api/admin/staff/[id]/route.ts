@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, User } from "@oodelscore/shared";
+import { connectToDatabase, User, logAuditEvent } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -21,6 +21,14 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   await connectToDatabase();
   const removed = await User.findOneAndDelete({ _id: id, accountType: "admin_staff" });
   if (!removed) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+
+  await logAuditEvent({
+    actor: session.user,
+    action: "staff.access_removed",
+    targetType: "User",
+    targetId: removed._id.toString(),
+    targetLabel: removed.email,
+  });
 
   return NextResponse.json({ status: "ok" });
 }

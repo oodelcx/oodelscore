@@ -105,6 +105,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <a href="/admin/alert-rules">Alert Rules</a>
             <a href="/admin/billing">Billing Oversight</a>
             <a href="/admin/cx-pulse">CX Pulse</a>
+            <a href="/admin/audit-log">Audit Log</a>
+          </nav>
+
+          <div className="nav-group-label">Account</div>
+          <nav className="admin-nav">
+            <a href="/admin/security">Security</a>
           </nav>
 
           {devToolsVisible && (

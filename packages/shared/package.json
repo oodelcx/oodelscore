@@ -19,6 +19,7 @@
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.9.0",
+    "otplib": "^13.5.0",
     "qrcode": "^1.5.4",
     "stripe": "^22.6.2"
   },

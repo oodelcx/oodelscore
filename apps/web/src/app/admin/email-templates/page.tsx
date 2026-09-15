@@ -30,6 +30,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "Someone comments on an Action Board item",
     category: "alerts",
   },
+  item_escalated: {
+    label: "Item Escalated",
+    trigger: "A Group user escalates a branch's Action Board item",
+    category: "alerts",
+  },
   invoice_receipt: { label: "Invoice Receipt", trigger: "A payment succeeds", category: "billing" },
   payment_failed: { label: "Payment Failed", trigger: "A payment fails or goes overdue", category: "billing" },
   demo_request: {

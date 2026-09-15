@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, markOwnerComp, COMP_PERIODS, type CompPeriod } from "@oodelscore/shared";
+import { connectToDatabase, markOwnerComp, ParentOrganization, COMP_PERIODS, logAuditEvent, type CompPeriod } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 import { billingErrorResponse } from "@/lib/billingErrorResponse";
 
@@ -24,6 +24,15 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   try {
     const subscription = await markOwnerComp({ ownerType: "parentOrg", ownerId: id, period, customExpiresAt });
+    const org = await ParentOrganization.findById(id);
+    await logAuditEvent({
+      actor: session.user,
+      action: "billing.comp_granted",
+      targetType: "ParentOrganization",
+      targetId: id,
+      targetLabel: org?.name ?? id,
+      after: { period, customExpiresAt },
+    });
     return NextResponse.json({ status: "ok", subscription });
   } catch (err) {
     return billingErrorResponse(err);

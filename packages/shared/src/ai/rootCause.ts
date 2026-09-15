@@ -27,11 +27,10 @@ export interface RootCauseAnalysis {
  * field in the evidence, and the result is explicitly labeled likely/
  * inferred/uncertain, never stated as settled fact.
  *
- * Uses Sonnet, not Haiku — unlike the templated-summarization and
- * classification tasks elsewhere in this codebase, reasoning across
- * several evidence signals into one coherent explanation is worth the
- * extra cost, especially since this runs far less often (triggered, not
- * scheduled) than the Haiku-driven insights/sentiment pipelines.
+ * Uses Haiku, same as every other AI call site in this codebase — kept
+ * consistent for cost predictability. The evidence-gated prompt does the
+ * real work here (every claim must trace back to a field in the evidence
+ * bundle), so the smaller model still produces a well-grounded explanation.
  */
 export async function analyzeRootCause(evidence: RootCauseEvidence): Promise<RootCauseAnalysis> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -40,7 +39,7 @@ export async function analyzeRootCause(evidence: RootCauseEvidence): Promise<Roo
   try {
     const client = new Anthropic({ apiKey });
     const message = await client.messages.create({
-      model: "claude-sonnet-5",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 700,
       system:
         "You explain a customer-experience problem using ONLY the evidence given to you — never invent a fact, number, or cause not present in the evidence. " +
