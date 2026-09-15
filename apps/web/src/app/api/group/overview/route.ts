@@ -5,6 +5,7 @@ import {
   AlertActivity,
   CxPulseScore,
   computeNetworkSummaries,
+  computePeriodComparisons,
   groupByRegion,
   findNeedsAttention,
 } from "@oodelscore/shared";
@@ -23,6 +24,10 @@ export async function GET() {
     Business.find({ parentOrgId: session.org._id, active: true }).select("_id"),
     CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ period: -1 }),
   ]);
+  const comparisons = await computePeriodComparisons(
+    businesses.map((b) => b._id),
+    now
+  );
 
   const flaggedActivity = await AlertActivity.find({
     businessId: { $in: businesses.map((b) => b._id) },
@@ -48,6 +53,7 @@ export async function GET() {
     networkAverage,
     networkNps,
     cxPulseLevel: orgScore?.level ?? null,
+    comparisons,
     regions,
     needsAttention,
     topPerformers,

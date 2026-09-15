@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+type OutcomeMetric = "starAverage" | "nps" | "categoryAverage";
+
 interface EntryRow {
   _id: string;
   title: string;
@@ -12,6 +14,8 @@ interface EntryRow {
   affectedBusinessIds: string[];
   linkedActionIds: string[];
   outcomeMetricDescription: string;
+  outcomeMetric: OutcomeMetric | null;
+  outcomeCategoryId: string | null;
   outcomeBefore: number | null;
   outcomeAfter: number | null;
   outcomeMeasuredAt: string | null;
@@ -28,6 +32,24 @@ interface ActionRow {
   _id: string;
   title: string;
 }
+interface CategoryOption {
+  _id: string;
+  name: string;
+}
+
+const METRIC_LABELS: Record<OutcomeMetric, string> = {
+  starAverage: "Overall score (stars)",
+  nps: "NPS",
+  categoryAverage: "Category score",
+};
+
+const VERDICT_LABELS: Record<string, string> = {
+  positive: "Improvement appears to have had a positive impact",
+  negative: "Score went down after this decision",
+  no_change: "No meaningful change detected",
+  not_ready: "Too soon to measure — check back in a couple of weeks",
+  insufficient_data: "Not enough response data to measure yet",
+};
 
 export default function DecisionLogPage() {
   const [entries, setEntries] = useState<EntryRow[]>([]);
@@ -49,6 +71,12 @@ export default function DecisionLogPage() {
   const [measuringId, setMeasuringId] = useState<string | null>(null);
   const [beforeDraft, setBeforeDraft] = useState("");
   const [afterDraft, setAfterDraft] = useState("");
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [metricDraft, setMetricDraft] = useState<OutcomeMetric>("starAverage");
+  const [categoryDraft, setCategoryDraft] = useState("");
+  const [autoMeasuring, setAutoMeasuring] = useState(false);
+  const [verdict, setVerdict] = useState<string | null>(null);
+  const [measureError, setMeasureError] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -57,11 +85,13 @@ export default function DecisionLogPage() {
       fetch("/api/group/businesses").then((r) => r.json()),
       fetch("/api/group/team").then((r) => r.json()),
       fetch("/api/group/action-board").then((r) => r.json()),
-    ]).then(([entriesData, businessesData, teamData, actionsData]) => {
+      fetch("/api/group/category-owners").then((r) => r.json()),
+    ]).then(([entriesData, businessesData, teamData, actionsData, categoriesData]) => {
       setEntries(entriesData.entries ?? []);
       setBusinesses(businessesData.businesses ?? []);
       setTeam(teamData.team ?? []);
       setActions((actionsData.items ?? []).map((i: { _id: string; title: string }) => ({ _id: i._id, title: i.title })));
+      setCategories(categoriesData.categories ?? []);
       setLoading(false);
     });
   }
@@ -123,6 +153,10 @@ export default function DecisionLogPage() {
     setMeasuringId(entry._id);
     setBeforeDraft(entry.outcomeBefore !== null ? String(entry.outcomeBefore) : "");
     setAfterDraft(entry.outcomeAfter !== null ? String(entry.outcomeAfter) : "");
+    setMetricDraft(entry.outcomeMetric ?? "starAverage");
+    setCategoryDraft(entry.outcomeCategoryId ?? "");
+    setVerdict(null);
+    setMeasureError(null);
   }
 
   async function saveMeasurement(id: string) {
@@ -131,6 +165,31 @@ export default function DecisionLogPage() {
     if (afterDraft.trim()) body.outcomeAfter = Number(afterDraft);
     await patch(id, body);
     setMeasuringId(null);
+  }
+
+  async function runAutoMeasure(entry: EntryRow) {
+    if (!entry.implementationDate) {
+      setMeasureError("Set an implementation date on this decision first");
+      return;
+    }
+    setAutoMeasuring(true);
+    setMeasureError(null);
+    const res = await fetch(`/api/group/decision-log/${entry._id}/measure`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        outcomeMetric: metricDraft,
+        outcomeCategoryId: metricDraft === "categoryAverage" ? categoryDraft : undefined,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setAutoMeasuring(false);
+    if (!res.ok) {
+      setMeasureError(data?.message ?? "Failed to measure outcome");
+      return;
+    }
+    setVerdict(data.verdict);
+    load();
   }
 
   async function removeEntry(id: string) {
@@ -282,23 +341,63 @@ export default function DecisionLogPage() {
                 </button>
               </div>
               {measuringId === e._id && (
-                <div className="field-row" style={{ marginTop: 10 }}>
-                  <div className="field">
-                    <label>Before</label>
-                    <input type="number" step="0.01" value={beforeDraft} onChange={(ev) => setBeforeDraft(ev.target.value)} />
+                <div style={{ marginTop: 10, padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
+                  <p className="card-sub" style={{ marginTop: 0 }}>
+                    Pick what to measure — OodelCX compares the 30 days before implementation to the period since,
+                    using real feedback data. Needs at least 14 days since implementation.
+                  </p>
+                  <div className="field-row">
+                    <div className="field">
+                      <label>Metric</label>
+                      <select value={metricDraft} onChange={(ev) => setMetricDraft(ev.target.value as OutcomeMetric)}>
+                        {Object.entries(METRIC_LABELS).map(([key, lbl]) => (
+                          <option key={key} value={key}>
+                            {lbl}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {metricDraft === "categoryAverage" && (
+                      <div className="field">
+                        <label>Category</label>
+                        <select value={categoryDraft} onChange={(ev) => setCategoryDraft(ev.target.value)}>
+                          <option value="">Select…</option>
+                          {categories.map((c) => (
+                            <option key={c._id} value={c._id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
-                  <div className="field">
-                    <label>After</label>
-                    <input type="number" step="0.01" value={afterDraft} onChange={(ev) => setAfterDraft(ev.target.value)} />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
-                    <button className="btn btn-dark btn-sm" onClick={() => saveMeasurement(e._id)}>
-                      Save
+                  {measureError && <p className="error-text">{measureError}</p>}
+                  {verdict && <p className="callout">{VERDICT_LABELS[verdict] ?? verdict}</p>}
+                  <button className="btn btn-dark btn-sm" disabled={autoMeasuring} onClick={() => runAutoMeasure(e)}>
+                    {autoMeasuring ? "Measuring…" : "Auto-measure"}
+                  </button>{" "}
+                  <button className="btn btn-sm" onClick={() => setMeasuringId(null)}>
+                    Close
+                  </button>
+
+                  <details style={{ marginTop: 10 }}>
+                    <summary className="subtitle" style={{ cursor: "pointer" }}>
+                      Or enter before/after numbers manually
+                    </summary>
+                    <div className="field-row" style={{ margin: "8px 0" }}>
+                      <div className="field">
+                        <label>Before</label>
+                        <input type="number" step="0.01" value={beforeDraft} onChange={(ev) => setBeforeDraft(ev.target.value)} />
+                      </div>
+                      <div className="field">
+                        <label>After</label>
+                        <input type="number" step="0.01" value={afterDraft} onChange={(ev) => setAfterDraft(ev.target.value)} />
+                      </div>
+                    </div>
+                    <button className="btn btn-sm" onClick={() => saveMeasurement(e._id)}>
+                      Save manually
                     </button>
-                    <button className="btn btn-sm" onClick={() => setMeasuringId(null)}>
-                      Cancel
-                    </button>
-                  </div>
+                  </details>
                 </div>
               )}
               <div style={{ textAlign: "right", marginTop: 8 }}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CxGoalsCard } from "@/components/cx-goals-card";
 
 interface ReportRow {
   _id: string;
@@ -29,6 +30,11 @@ export default function GroupInsightsPage() {
     <div>
       <h1>Insights</h1>
       <p className="subtitle">Plain-English performance reports for your organization.</p>
+
+      <div style={{ marginBottom: 20 }}>
+        <CxGoalsCard apiPath="/api/group/goals" categoriesApiPath="/api/group/category-owners" />
+      </div>
+
       <div className="filters">
         {PERIODS.map((p) => (
           <div key={p} className={`chip ${period === p ? "active" : ""}`} onClick={() => setPeriod(p)}>

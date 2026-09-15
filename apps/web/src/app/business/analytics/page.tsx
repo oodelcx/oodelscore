@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DriverAnalysisCard } from "@/components/driver-analysis-card";
 
 interface AnalyticsData {
   feedbackPoints: { _id: string; name: string }[];
@@ -176,6 +177,10 @@ export default function AnalyticsPage() {
             {data.commentTags.length === 0 && <p className="subtitle">No comments yet.</p>}
           </div>
         </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <DriverAnalysisCard apiPath="/api/business/driver-analysis" />
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
