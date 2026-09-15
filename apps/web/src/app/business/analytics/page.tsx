@@ -181,7 +181,12 @@ export default function AnalyticsPage() {
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <DriverAnalysisCard apiPath="/api/business/driver-analysis" />
+        <DriverAnalysisCard
+          apiPath="/api/business/driver-analysis"
+          rootCauseApiPath="/api/business/root-cause-analysis"
+          canCreateAction
+          createActionApiPath="/api/business/action-board"
+        />
       </div>
 
       <div style={{ marginTop: 16 }}>
