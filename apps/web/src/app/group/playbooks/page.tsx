@@ -1,15 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PlaybookRunPanel } from "@/components/playbook-run-panel";
+
+type TriggerMetric = "categoryAverage" | "negativeMentionCount";
 
 interface PlaybookRow {
   _id: string;
   title: string;
   categoryId: string | null;
   triggerCondition: string;
+  triggerMetric: TriggerMetric | null;
+  triggerComparator: "below" | "above" | null;
+  triggerThreshold: number | null;
+  triggerWindowDays: number | null;
   steps: string[];
   escalationContactId: string | null;
   usageCount: number;
+  triggerStatus: { isTriggered: boolean; currentValue: number | null; description: string } | null;
+  activeRun: { _id: string; steps: string[]; completedStepIndexes: number[]; status: "active" | "completed" | "abandoned" } | null;
 }
 interface CategoryRow {
   _id: string;
@@ -32,6 +41,10 @@ export default function PlaybooksPage() {
   const [escalationContactId, setEscalationContactId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [triggerMetric, setTriggerMetric] = useState<"" | TriggerMetric>("");
+  const [triggerComparator, setTriggerComparator] = useState<"below" | "above">("below");
+  const [triggerThreshold, setTriggerThreshold] = useState("");
+  const [triggerWindowDays, setTriggerWindowDays] = useState("14");
 
   function load() {
     setLoading(true);
@@ -64,6 +77,10 @@ export default function PlaybooksPage() {
         triggerCondition,
         steps: steps.split("\n").map((s) => s.trim()).filter(Boolean),
         escalationContactId: escalationContactId || null,
+        triggerMetric: triggerMetric || undefined,
+        triggerComparator: triggerMetric ? triggerComparator : undefined,
+        triggerThreshold: triggerThreshold.trim() ? Number(triggerThreshold) : undefined,
+        triggerWindowDays: triggerMetric === "negativeMentionCount" && triggerWindowDays.trim() ? Number(triggerWindowDays) : undefined,
       }),
     });
     const data = await res.json();
@@ -77,6 +94,8 @@ export default function PlaybooksPage() {
     setTriggerCondition("");
     setSteps("");
     setEscalationContactId("");
+    setTriggerMetric("");
+    setTriggerThreshold("");
     load();
   }
 
@@ -146,6 +165,37 @@ export default function PlaybooksPage() {
             ))}
           </select>
         </div>
+        <div className="field-row">
+          <div className="field">
+            <label>Auto-check trigger against (optional)</label>
+            <select value={triggerMetric} onChange={(e) => setTriggerMetric(e.target.value as TriggerMetric | "")}>
+              <option value="">Just descriptive text above, don&apos;t evaluate</option>
+              <option value="categoryAverage">Category average falls below/above a number</option>
+              <option value="negativeMentionCount">Negative-sentiment mentions in a window</option>
+            </select>
+          </div>
+          {triggerMetric === "categoryAverage" && (
+            <div className="field">
+              <label>Comparator</label>
+              <select value={triggerComparator} onChange={(e) => setTriggerComparator(e.target.value as "below" | "above")}>
+                <option value="below">Falls below</option>
+                <option value="above">Rises above</option>
+              </select>
+            </div>
+          )}
+          {triggerMetric && (
+            <div className="field">
+              <label>{triggerMetric === "categoryAverage" ? "Threshold (1-5)" : "Mention count"}</label>
+              <input type="number" step="0.1" value={triggerThreshold} onChange={(e) => setTriggerThreshold(e.target.value)} />
+            </div>
+          )}
+          {triggerMetric === "negativeMentionCount" && (
+            <div className="field">
+              <label>Window (days)</label>
+              <input type="number" value={triggerWindowDays} onChange={(e) => setTriggerWindowDays(e.target.value)} />
+            </div>
+          )}
+        </div>
         {error && <p className="error-text">{error}</p>}
         <button className="btn btn-dark" disabled={creating} onClick={createPlaybook}>
           {creating ? "Creating…" : "+ Create playbook"}
@@ -170,13 +220,21 @@ export default function PlaybooksPage() {
                 </button>
               </div>
               <ol style={{ fontSize: 13, paddingLeft: 18, margin: 0 }}>
-                {p.steps.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
+                {!p.activeRun &&
+                  p.steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
               </ol>
               {contactLabel(p.escalationContactId) && (
                 <div className="metric-note" style={{ marginTop: 10 }}>Escalation contact: {contactLabel(p.escalationContactId)}</div>
               )}
+              <PlaybookRunPanel
+                triggerStatus={p.triggerStatus}
+                activeRun={p.activeRun}
+                startPath={`/api/group/playbooks/${p._id}/start`}
+                runsPath="/api/group/playbook-runs"
+                onChange={load}
+              />
             </div>
           ))}
           {playbooks.length === 0 && <p className="subtitle">No playbooks yet.</p>}

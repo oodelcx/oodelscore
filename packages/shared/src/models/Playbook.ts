@@ -1,5 +1,11 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 
+export const PLAYBOOK_TRIGGER_METRICS = ["categoryAverage", "negativeMentionCount"] as const;
+export type PlaybookTriggerMetric = (typeof PLAYBOOK_TRIGGER_METRICS)[number];
+
+export const PLAYBOOK_TRIGGER_COMPARATORS = ["below", "above"] as const;
+export type PlaybookTriggerComparator = (typeof PLAYBOOK_TRIGGER_COMPARATORS)[number];
+
 export interface IPlaybook {
   // Exactly one of these is set, enforced at the API layer (not here) — see
   // the identical DecisionLogEntry fix: a standalone business (no parent
@@ -8,10 +14,19 @@ export interface IPlaybook {
   businessId: Types.ObjectId | null;
   title: string;
   categoryId: Types.ObjectId | null;
-  triggerCondition: string; // e.g. "3+ mentions in 2 weeks"
+  triggerCondition: string; // human-readable label, e.g. "3+ mentions in 2 weeks" — shown even when no structured trigger is set below
+  // Structured trigger (CX intelligence roadmap Phase 4 — "operational
+  // guidance, not just documents"): when set, evaluatePlaybookTrigger can
+  // actually check this against real data instead of the condition living
+  // only as descriptive text. All optional — a playbook with no structured
+  // trigger still works purely as a checklist template.
+  triggerMetric: PlaybookTriggerMetric | null;
+  triggerComparator: PlaybookTriggerComparator | null;
+  triggerThreshold: number | null;
+  triggerWindowDays: number | null; // only meaningful for negativeMentionCount
   steps: string[];
   escalationContactId: Types.ObjectId | null;
-  usageCount: number; // increment whenever an actionBoardItem references this playbook
+  usageCount: number; // incremented when a PlaybookRun against this playbook completes
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +38,10 @@ const PlaybookSchema = new Schema<IPlaybook>(
     title: { type: String, required: true },
     categoryId: { type: Schema.Types.ObjectId, ref: "Category", default: null },
     triggerCondition: { type: String, default: "" },
+    triggerMetric: { type: String, enum: PLAYBOOK_TRIGGER_METRICS, default: null },
+    triggerComparator: { type: String, enum: PLAYBOOK_TRIGGER_COMPARATORS, default: null },
+    triggerThreshold: { type: Number, default: null },
+    triggerWindowDays: { type: Number, default: null },
     steps: { type: [String], default: [] },
     escalationContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     usageCount: { type: Number, default: 0 },

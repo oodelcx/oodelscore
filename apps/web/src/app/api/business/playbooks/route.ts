@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Playbook, Category } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  Playbook,
+  Category,
+  PlaybookRun,
+  evaluatePlaybookTrigger,
+  PLAYBOOK_TRIGGER_METRICS,
+  PLAYBOOK_TRIGGER_COMPARATORS,
+} from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 // Mirrors /api/group/playbooks, scoped to businessId instead of
@@ -14,7 +22,24 @@ export async function GET() {
     Playbook.find({ businessId: session.business._id }).sort({ createdAt: -1 }),
     Category.find().sort({ name: 1 }),
   ]);
-  return NextResponse.json({ status: "ok", playbooks, categories });
+
+  const activeRuns = await PlaybookRun.find({
+    playbookId: { $in: playbooks.map((p) => p._id) },
+    ownerType: "business",
+    ownerId: session.business._id,
+    status: "active",
+  });
+  const activeRunByPlaybookId = new Map(activeRuns.map((r) => [r.playbookId.toString(), r]));
+
+  const enriched = await Promise.all(
+    playbooks.map(async (playbook) => ({
+      ...playbook.toObject(),
+      triggerStatus: await evaluatePlaybookTrigger(playbook, [session.business._id]),
+      activeRun: activeRunByPlaybookId.get(playbook._id.toString()) ?? null,
+    }))
+  );
+
+  return NextResponse.json({ status: "ok", playbooks: enriched, categories });
 }
 
 export async function POST(request: Request) {
@@ -27,11 +52,20 @@ export async function POST(request: Request) {
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!title) return NextResponse.json({ status: "error", message: "title is required" }, { status: 400 });
 
+  const triggerMetric = PLAYBOOK_TRIGGER_METRICS.includes(body?.triggerMetric) ? body.triggerMetric : null;
+  const triggerComparator = PLAYBOOK_TRIGGER_COMPARATORS.includes(body?.triggerComparator) ? body.triggerComparator : null;
+  const triggerThreshold = typeof body?.triggerThreshold === "number" ? body.triggerThreshold : null;
+  const triggerWindowDays = typeof body?.triggerWindowDays === "number" ? body.triggerWindowDays : null;
+
   const playbook = await Playbook.create({
     businessId: session.business._id,
     title,
     categoryId: typeof body?.categoryId === "string" ? body.categoryId : null,
     triggerCondition: typeof body?.triggerCondition === "string" ? body.triggerCondition : "",
+    triggerMetric,
+    triggerComparator,
+    triggerThreshold,
+    triggerWindowDays,
     steps: Array.isArray(body?.steps) ? body.steps.filter((s: unknown) => typeof s === "string") : [],
     escalationContactId: typeof body?.escalationContactId === "string" ? body.escalationContactId : null,
   });

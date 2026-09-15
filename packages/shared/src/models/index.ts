@@ -28,3 +28,4 @@ export * from "./CategoryOwnerMapping";
 export * from "./ScanToken";
 export * from "./FeedbackPointRequest";
 export * from "./CxGoal";
+export * from "./PlaybookRun";
