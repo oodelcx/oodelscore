@@ -16,6 +16,9 @@ export interface IDemographics {
 export const DEVICE_TYPES = ["mobile", "tablet", "desktop", "unknown"] as const;
 export type DeviceType = (typeof DEVICE_TYPES)[number];
 
+export const SENTIMENTS = ["positive", "neutral", "negative"] as const;
+export type Sentiment = (typeof SENTIMENTS)[number];
+
 /**
  * Raw feedback submissions.
  *
@@ -35,6 +38,13 @@ export interface IResponse {
   submittedAt: Date;
   deviceType: DeviceType; // derived server-side from the submitting request's User-Agent
   flagged: boolean; // Business/Group "Flag" action on Raw Feedback
+  // Theme & Sentiment Intelligence (CX roadmap Phase 2): set from the
+  // open_text answer, if any, by analyzeThemeSentiment. Null/[] until
+  // analyzed — a response with no open-text answer is never analyzed and
+  // stays null forever, which is the correct state, not a pending one.
+  sentiment: Sentiment | null;
+  themes: string[];
+  sentimentAnalyzedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +79,9 @@ const ResponseSchema = new Schema<IResponse>(
     submittedAt: { type: Date, required: true, default: Date.now },
     deviceType: { type: String, enum: DEVICE_TYPES, default: "unknown" },
     flagged: { type: Boolean, default: false },
+    sentiment: { type: String, enum: SENTIMENTS, default: null },
+    themes: { type: [String], default: [] },
+    sentimentAnalyzedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
