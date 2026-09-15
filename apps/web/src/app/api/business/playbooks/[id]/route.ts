@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Playbook } from "@oodelscore/shared";
+import { connectToDatabase, Playbook, PLAYBOOK_TRIGGER_METRICS, PLAYBOOK_TRIGGER_COMPARATORS } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -18,6 +18,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (typeof body?.title === "string") playbook.title = body.title;
   if (typeof body?.triggerCondition === "string") playbook.triggerCondition = body.triggerCondition;
   if (Array.isArray(body?.steps)) playbook.steps = body.steps.filter((s: unknown) => typeof s === "string");
+  if ("triggerMetric" in (body ?? {})) playbook.triggerMetric = PLAYBOOK_TRIGGER_METRICS.includes(body.triggerMetric) ? body.triggerMetric : null;
+  if ("triggerComparator" in (body ?? {}))
+    playbook.triggerComparator = PLAYBOOK_TRIGGER_COMPARATORS.includes(body.triggerComparator) ? body.triggerComparator : null;
+  if ("triggerThreshold" in (body ?? {})) playbook.triggerThreshold = typeof body.triggerThreshold === "number" ? body.triggerThreshold : null;
+  if ("triggerWindowDays" in (body ?? {})) playbook.triggerWindowDays = typeof body.triggerWindowDays === "number" ? body.triggerWindowDays : null;
   await playbook.save();
 
   return NextResponse.json({ status: "ok", playbook });

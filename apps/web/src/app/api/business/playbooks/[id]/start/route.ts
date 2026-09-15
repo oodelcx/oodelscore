@@ -1,0 +1,30 @@
+import { NextResponse } from "next/server";
+import { connectToDatabase, Playbook, PlaybookRun } from "@oodelscore/shared";
+import { requireBusinessOwner } from "@/lib/ownerAuth";
+
+type RouteParams = { params: Promise<{ id: string }> };
+
+/** Starts a checklist run against this playbook, or returns the already-active one — never two active runs at once. */
+export async function POST(_request: Request, { params }: RouteParams) {
+  const session = await requireBusinessOwner();
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+
+  await connectToDatabase();
+  const { id } = await params;
+  const playbook = await Playbook.findOne({ _id: id, businessId: session.business._id });
+  if (!playbook) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+
+  const existing = await PlaybookRun.findOne({ playbookId: playbook._id, ownerType: "business", ownerId: session.business._id, status: "active" });
+  if (existing) return NextResponse.json({ status: "ok", run: existing });
+
+  const run = await PlaybookRun.create({
+    playbookId: playbook._id,
+    ownerType: "business",
+    ownerId: session.business._id,
+    steps: playbook.steps,
+    completedStepIndexes: [],
+    status: "active",
+  });
+
+  return NextResponse.json({ status: "ok", run }, { status: 201 });
+}

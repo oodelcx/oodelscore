@@ -21,6 +21,7 @@ export * from "./scoring/decisionOutcome";
 export * from "./scoring/device";
 export * from "./scoring/themeIntelligence";
 export * from "./scoring/rootCauseEvidence";
+export * from "./scoring/playbookTrigger";
 export * from "./alerts/evaluate";
 export * from "./ai/triage";
 export * from "./ai/themeSentiment";
