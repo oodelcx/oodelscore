@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 
 interface Comparison {
   starAverage: number | null;
@@ -154,23 +155,7 @@ export default function BusinessDashboardPage() {
         </div>
       </div>
 
-      <div className="section-title">Comparative performance</div>
-      <div className="grid grid-4" style={{ marginBottom: 8 }}>
-        {(["week", "month", "quarter", "year"] as const).map((period) => {
-          const c = data.comparisons[period];
-          return (
-            <div className="card" key={period}>
-              <div className="metric-label">This {period}</div>
-              <div className="metric-val">{c.starAverage !== null ? `${c.starAverage}/5` : "—"}</div>
-              <div className={`metric-note ${c.changePercent !== null ? (c.changePercent >= 0 ? "up" : "down") : ""}`}>
-                {c.changePercent === null
-                  ? "No prior period data yet"
-                  : `${c.changePercent >= 0 ? "↑" : "↓"} ${Math.abs(c.changePercent)}% vs last ${period} · ${c.responseCount} responses`}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <PeriodComparisonCards comparisons={data.comparisons} />
 
       <div className="grid grid-2" style={{ marginTop: 20 }}>
         <div className="card">

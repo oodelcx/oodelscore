@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PeriodComparisonCards, type Comparisons } from "@/components/period-comparison-cards";
 
 interface RegionRow {
   region: string;
@@ -10,6 +11,7 @@ interface RegionRow {
   starAverage: number | null;
   npsScore: number | null;
   flaggedCount: number;
+  confidence: "strong" | "directional" | "insufficient";
 }
 interface OutlierRow {
   businessId: string;
@@ -29,6 +31,7 @@ interface OverviewData {
   networkAverage: number | null;
   networkNps: number | null;
   cxPulseLevel: number | null;
+  comparisons: Comparisons;
   regions: RegionRow[];
   needsAttention: OutlierRow[];
   topPerformers: TopRow[];
@@ -128,6 +131,8 @@ export default function GroupOverviewPage() {
         </div>
       </div>
 
+      <PeriodComparisonCards comparisons={data.comparisons} />
+
       <div className="callout">
         Outliers and regions are surfaced here first — every branch is always fully searchable in detail on Branches,
         regardless of network size.
@@ -155,7 +160,10 @@ export default function GroupOverviewPage() {
                 </div>
               </td>
               <td>{r.businessCount}</td>
-              <td>{r.starAverage !== null ? `${r.starAverage}/5` : "—"}</td>
+              <td>
+                {r.starAverage !== null ? `${r.starAverage}/5` : "—"}
+                {r.confidence === "insufficient" && <span className="subtitle"> (low sample)</span>}
+              </td>
               <td>{r.npsScore !== null ? formatSigned(r.npsScore) : "—"}</td>
               <td>
                 <span className={`pill ${r.flaggedCount > 0 ? "pill-red" : "pill-green"}`}>{r.flaggedCount}</span>
