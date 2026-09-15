@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import { Business } from "../models/Business";
-import type { DecisionOutcomeMetric } from "../models/DecisionLogEntry";
+import { DecisionLogEntry, type DecisionOutcomeMetric } from "../models/DecisionLogEntry";
 import { computeStarAndNps, computeCategoryAverage } from "./goals";
 
 const BEFORE_WINDOW_DAYS = 30;
@@ -84,4 +84,51 @@ export async function computeDecisionOutcome(entry: DecisionOutcomeRef, now: Dat
   const verdict = delta > deadZone ? "positive" : delta < -deadZone ? "negative" : "no_change";
 
   return { outcomeBefore, outcomeAfter, verdict, daysSinceImplementation };
+}
+
+/**
+ * Sweeps every decision that has a metric + implementation date but hasn't
+ * been measured yet, and measures the ones that have crossed the 14-day
+ * MIN_DAYS_AFTER mark — the same computation the manual "Auto-measure"
+ * button runs, just on a schedule instead of a click. Pure arithmetic, same
+ * as computeDecisionOutcome above: no AI call, so it costs nothing to run
+ * and never depends on ANTHROPIC_API_KEY being set.
+ *
+ * Meant to be called once a day (see /api/cron/measure-decisions) — not
+ * from a page request, for the same fan-out-cost reason CX Pulse's nightly
+ * compute isn't either. A decision that isn't eligible yet (not_ready) or
+ * still can't be measured (insufficient_data) is left alone and re-checked
+ * on the next run rather than being marked failed.
+ */
+export async function autoMeasurePendingDecisions(now: Date = new Date()): Promise<{ checked: number; measured: number }> {
+  const candidates = await DecisionLogEntry.find({
+    implementationDate: { $ne: null },
+    outcomeMetric: { $ne: null },
+    outcomeMeasuredAt: null,
+  });
+
+  let measured = 0;
+  for (const entry of candidates) {
+    const result = await computeDecisionOutcome(
+      {
+        businessId: entry.businessId,
+        parentOrgId: entry.parentOrgId,
+        affectedBusinessIds: entry.affectedBusinessIds,
+        implementationDate: entry.implementationDate,
+        outcomeMetric: entry.outcomeMetric,
+        outcomeCategoryId: entry.outcomeCategoryId,
+      },
+      now
+    );
+
+    if (result.verdict === "not_ready" || result.verdict === "insufficient_data") continue;
+
+    entry.outcomeBefore = result.outcomeBefore;
+    entry.outcomeAfter = result.outcomeAfter;
+    entry.outcomeMeasuredAt = now;
+    await entry.save();
+    measured++;
+  }
+
+  return { checked: candidates.length, measured };
 }
