@@ -2,14 +2,38 @@
 
 import { Fragment, useEffect, useState } from "react";
 
+type OutcomeMetric = "starAverage" | "nps" | "categoryAverage";
+
 interface EntryRow {
   _id: string;
   title: string;
   trigger: string;
   status: string;
+  implementationDate: string | null;
+  outcomeMetric: OutcomeMetric | null;
+  outcomeCategoryId: string | null;
   outcomeBefore: number | null;
   outcomeAfter: number | null;
 }
+
+interface CategoryOption {
+  _id: string;
+  name: string;
+}
+
+const METRIC_LABELS: Record<OutcomeMetric, string> = {
+  starAverage: "Overall score (stars)",
+  nps: "NPS",
+  categoryAverage: "Category score",
+};
+
+const VERDICT_LABELS: Record<string, string> = {
+  positive: "Improvement appears to have had a positive impact",
+  negative: "Score went down after this decision",
+  no_change: "No meaningful change detected",
+  not_ready: "Too soon to measure — check back in a couple of weeks",
+  insufficient_data: "Not enough response data to measure yet",
+};
 
 function outcomeDelta(entry: EntryRow): string | null {
   if (entry.outcomeBefore === null || entry.outcomeAfter === null) return null;
@@ -19,12 +43,19 @@ function outcomeDelta(entry: EntryRow): string | null {
 
 export default function BusinessDecisionLogPage() {
   const [entries, setEntries] = useState<EntryRow[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [trigger, setTrigger] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [measuringId, setMeasuringId] = useState<string | null>(null);
+  const [implementationDateDraft, setImplementationDateDraft] = useState("");
+  const [metricDraft, setMetricDraft] = useState<OutcomeMetric>("starAverage");
+  const [categoryDraft, setCategoryDraft] = useState("");
+  const [measuring, setMeasuring] = useState(false);
+  const [verdict, setVerdict] = useState<string | null>(null);
+  const [measureError, setMeasureError] = useState<string | null>(null);
   const [outcomeBeforeDraft, setOutcomeBeforeDraft] = useState("");
   const [outcomeAfterDraft, setOutcomeAfterDraft] = useState("");
 
@@ -38,6 +69,9 @@ export default function BusinessDecisionLogPage() {
 
   useEffect(() => {
     load();
+    fetch("/api/business/category-owners")
+      .then((res) => res.json())
+      .then((d) => setCategories(d.categories ?? []));
   }, []);
 
   async function createEntry() {
@@ -77,11 +111,46 @@ export default function BusinessDecisionLogPage() {
 
   function startMeasure(entry: EntryRow) {
     setMeasuringId(entry._id);
+    setImplementationDateDraft(entry.implementationDate ? entry.implementationDate.slice(0, 10) : "");
+    setMetricDraft(entry.outcomeMetric ?? "starAverage");
+    setCategoryDraft(entry.outcomeCategoryId ?? "");
     setOutcomeBeforeDraft(entry.outcomeBefore !== null ? String(entry.outcomeBefore) : "");
     setOutcomeAfterDraft(entry.outcomeAfter !== null ? String(entry.outcomeAfter) : "");
+    setVerdict(null);
+    setMeasureError(null);
   }
 
-  async function saveOutcome(id: string) {
+  async function runAutoMeasure(id: string) {
+    if (!implementationDateDraft) {
+      setMeasureError("Set the implementation date first");
+      return;
+    }
+    setMeasuring(true);
+    setMeasureError(null);
+    await fetch(`/api/business/decision-log/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ implementationDate: implementationDateDraft }),
+    });
+    const res = await fetch(`/api/business/decision-log/${id}/measure`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        outcomeMetric: metricDraft,
+        outcomeCategoryId: metricDraft === "categoryAverage" ? categoryDraft : undefined,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setMeasuring(false);
+    if (!res.ok) {
+      setMeasureError(data?.message ?? "Failed to measure outcome");
+      return;
+    }
+    setVerdict(data.verdict);
+    load();
+  }
+
+  async function saveOutcomeManually(id: string) {
     const patch: Record<string, number> = {};
     if (outcomeBeforeDraft.trim()) patch.outcomeBefore = Number(outcomeBeforeDraft);
     if (outcomeAfterDraft.trim()) patch.outcomeAfter = Number(outcomeAfterDraft);
@@ -173,32 +242,82 @@ export default function BusinessDecisionLogPage() {
                 {measuringId === e._id && (
                   <tr>
                     <td colSpan={5}>
-                      <div className="field-row" style={{ margin: "6px 0" }}>
-                        <div className="field">
-                          <label>Outcome before</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            value={outcomeBeforeDraft}
-                            onChange={(ev) => setOutcomeBeforeDraft(ev.target.value)}
-                          />
+                      <div style={{ margin: "6px 0", padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
+                        <p className="card-sub" style={{ marginTop: 0 }}>
+                          Pick what to measure — OodelCX compares the 30 days before implementation to the period
+                          since, using your real feedback data. Needs at least 14 days since implementation.
+                        </p>
+                        <div className="field-row">
+                          <div className="field">
+                            <label>Implementation date</label>
+                            <input
+                              type="date"
+                              value={implementationDateDraft}
+                              onChange={(ev) => setImplementationDateDraft(ev.target.value)}
+                            />
+                          </div>
+                          <div className="field">
+                            <label>Metric</label>
+                            <select value={metricDraft} onChange={(ev) => setMetricDraft(ev.target.value as OutcomeMetric)}>
+                              {Object.entries(METRIC_LABELS).map(([key, lbl]) => (
+                                <option key={key} value={key}>
+                                  {lbl}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {metricDraft === "categoryAverage" && (
+                            <div className="field">
+                              <label>Category</label>
+                              <select value={categoryDraft} onChange={(ev) => setCategoryDraft(ev.target.value)}>
+                                <option value="">Select…</option>
+                                {categories.map((c) => (
+                                  <option key={c._id} value={c._id}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
-                        <div className="field">
-                          <label>Outcome after</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            value={outcomeAfterDraft}
-                            onChange={(ev) => setOutcomeAfterDraft(ev.target.value)}
-                          />
-                        </div>
+                        {measureError && <p className="error-text">{measureError}</p>}
+                        {verdict && <p className="callout">{VERDICT_LABELS[verdict] ?? verdict}</p>}
+                        <button className="btn btn-dark btn-sm" disabled={measuring} onClick={() => runAutoMeasure(e._id)}>
+                          {measuring ? "Measuring…" : "Auto-measure"}
+                        </button>{" "}
+                        <button className="btn btn-sm" onClick={() => setMeasuringId(null)}>
+                          Close
+                        </button>
+
+                        <details style={{ marginTop: 10 }}>
+                          <summary className="subtitle" style={{ cursor: "pointer" }}>
+                            Or enter before/after numbers manually
+                          </summary>
+                          <div className="field-row" style={{ margin: "8px 0" }}>
+                            <div className="field">
+                              <label>Outcome before</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={outcomeBeforeDraft}
+                                onChange={(ev) => setOutcomeBeforeDraft(ev.target.value)}
+                              />
+                            </div>
+                            <div className="field">
+                              <label>Outcome after</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={outcomeAfterDraft}
+                                onChange={(ev) => setOutcomeAfterDraft(ev.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <button className="btn btn-sm" onClick={() => saveOutcomeManually(e._id)}>
+                            Save manually
+                          </button>
+                        </details>
                       </div>
-                      <button className="btn btn-dark btn-sm" onClick={() => saveOutcome(e._id)}>
-                        Save outcome
-                      </button>{" "}
-                      <button className="btn btn-sm" onClick={() => setMeasuringId(null)}>
-                        Cancel
-                      </button>
                     </td>
                   </tr>
                 )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DriverAnalysisCard } from "@/components/driver-analysis-card";
 
 interface AnalyticsData {
   trend: { date: string; starAverage: number | null }[];
@@ -134,6 +135,10 @@ export default function GroupAnalyticsPage() {
             {data.commentTags.length === 0 && <p className="subtitle">No comments yet.</p>}
           </div>
         </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <DriverAnalysisCard apiPath="/api/group/driver-analysis" />
       </div>
     </div>
   );

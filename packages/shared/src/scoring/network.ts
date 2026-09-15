@@ -2,6 +2,21 @@ import { Types } from "mongoose";
 import { Business } from "../models/Business";
 import { computeBusinessMetrics } from "./aggregate";
 
+// Below this many responses, a score is noise, not a signal — never assert
+// a branch is "materially below average" or rank it against peers on this
+// few data points. Mirrors the same discipline AI Insights reports already
+// apply to small-sample periods (spec Section 10).
+const RELIABLE_SAMPLE_SIZE = 20;
+const DIRECTIONAL_SAMPLE_SIZE = 5;
+
+export type BenchmarkConfidence = "strong" | "directional" | "insufficient";
+
+export function confidenceForSampleSize(responseCount: number): BenchmarkConfidence {
+  if (responseCount >= RELIABLE_SAMPLE_SIZE) return "strong";
+  if (responseCount >= DIRECTIONAL_SAMPLE_SIZE) return "directional";
+  return "insufficient";
+}
+
 export interface BusinessSummary {
   businessId: string;
   name: string;
@@ -10,6 +25,7 @@ export interface BusinessSummary {
   starAverage: number | null;
   npsScore: number | null;
   responseCount: number;
+  confidence: BenchmarkConfidence;
 }
 
 /**
@@ -31,6 +47,7 @@ export async function computeNetworkSummaries(parentOrgId: Types.ObjectId | stri
         starAverage: metrics.starAverage,
         npsScore: metrics.npsScore,
         responseCount: metrics.responseCount,
+        confidence: confidenceForSampleSize(metrics.responseCount),
       };
     })
   );
@@ -42,6 +59,7 @@ export interface RegionSummary {
   starAverage: number | null;
   npsScore: number | null;
   flaggedCount: number;
+  confidence: BenchmarkConfidence;
 }
 
 /** Groups business summaries by region, per the Overview page's region rollup table. */
@@ -57,6 +75,7 @@ export function groupByRegion(summaries: BusinessSummary[], flaggedBusinessIds: 
   return Array.from(byRegion.entries()).map(([region, list]) => {
     const withScores = list.filter((s) => s.starAverage !== null);
     const npsWithScores = list.filter((s) => s.npsScore !== null);
+    const totalResponses = list.reduce((sum, s) => sum + s.responseCount, 0);
     return {
       region,
       businessCount: list.length,
@@ -65,6 +84,7 @@ export function groupByRegion(summaries: BusinessSummary[], flaggedBusinessIds: 
       npsScore:
         npsWithScores.length === 0 ? null : Math.round(npsWithScores.reduce((sum, s) => sum + (s.npsScore as number), 0) / npsWithScores.length),
       flaggedCount: list.filter((s) => flaggedBusinessIds.has(s.businessId)).length,
+      confidence: confidenceForSampleSize(totalResponses),
     };
   });
 }
@@ -77,7 +97,13 @@ export interface OutlierResult {
   sigmaBelowRegion: number;
 }
 
-/** Businesses scoring meaningfully (1+ std dev) below their own region's average — the Overview "Needs attention" list. */
+/**
+ * Businesses scoring meaningfully (1+ std dev) below their own region's
+ * average — the Overview "Needs attention" list. A branch with too few
+ * responses to be "strong" or "directional" confidence is never flagged
+ * here, even if its raw average happens to be low — that's false precision
+ * from noise, not a real signal (same rule the network-benchmark plan uses).
+ */
 export function findNeedsAttention(summaries: BusinessSummary[]): OutlierResult[] {
   const byRegion = new Map<string, BusinessSummary[]>();
   for (const s of summaries) {
@@ -97,7 +123,7 @@ export function findNeedsAttention(summaries: BusinessSummary[]): OutlierResult[
     if (stdDev === 0) continue;
 
     for (const business of list) {
-      if (business.starAverage === null) continue;
+      if (business.starAverage === null || business.confidence === "insufficient") continue;
       const sigma = (mean - business.starAverage) / stdDev;
       if (sigma >= 1) {
         results.push({
