@@ -104,7 +104,7 @@ export default async function SolutionsPage() {
         </div>
       </section>
 
-      <MarketingFooter fields={menu.fields} />
+      <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
   );
 }

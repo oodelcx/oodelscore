@@ -62,7 +62,7 @@ export default async function CompanyPage() {
         </p>
       </div>
 
-      <MarketingFooter fields={menu.fields} />
+      <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
   );
 }

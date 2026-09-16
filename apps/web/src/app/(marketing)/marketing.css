@@ -1560,95 +1560,57 @@
   gap: 10px 24px;
 }
 
-/* ===== INDUSTRIES: SECTOR TABS ===== */
-.mkt .sector-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin: 8px 0 48px;
+/* ===== HOW IT WORKS: NUMBERED STEP SEQUENCE ===== */
+.mkt .how-steps-section {
+  padding: 20px 0 90px;
 }
-.mkt .sector-pill {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  padding: 9px 18px;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  background: #fff;
-  cursor: pointer;
-  color: var(--text-2);
-}
-.mkt .sector-pill:hover {
-  border-color: var(--ink);
-  color: var(--ink);
-}
-.mkt .sector-pill.active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
-}
-.mkt .sector-panel {
-  background: var(--paper-alt);
-  border-radius: 20px;
-  padding: 48px 54px;
-  max-width: 720px;
+.mkt .how-steps {
+  max-width: 760px;
   margin: 0 auto;
 }
-@media (max-width: 860px) {
-  .mkt .sector-panel {
-    padding: 32px 26px;
-  }
-}
-.mkt .sector-panel h2 {
-  font-size: clamp(24px, 2.8vw, 32px);
-  letter-spacing: -0.02em;
-  margin: 0 0 20px;
-}
-.mkt .sector-col-label {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--signal);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
-}
-.mkt .sector-panel ul {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 22px;
-  font-size: 14px;
-  color: var(--text-2);
-  line-height: 1.6;
-}
-.mkt .sector-panel ul li {
-  padding: 8px 0;
+.mkt .how-step {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 26px;
+  padding: 34px 0;
   border-top: 1px solid var(--line);
 }
-.mkt .sector-panel ul li:first-child {
+.mkt .how-step:first-child {
   border-top: none;
+  padding-top: 8px;
 }
-.mkt .sector-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.mkt .sector-stat {
+.mkt .how-step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--paper-alt);
   border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 12px;
-  padding: 10px 16px;
-}
-.mkt .sector-stat-value {
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
   font-weight: 600;
+  font-size: 15px;
+  color: var(--signal);
+  flex-shrink: 0;
 }
-.mkt .sector-stat-label {
-  font-size: 10.5px;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-top: 2px;
+.mkt .how-step h3 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 4px 0 10px;
+}
+.mkt .how-step p {
+  font-size: 14.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .mkt .how-step {
+    grid-template-columns: 36px 1fr;
+    gap: 16px;
+  }
 }
 
 /* ===== PRICING: LOOP STRIP ===== */

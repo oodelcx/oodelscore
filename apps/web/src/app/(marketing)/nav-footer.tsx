@@ -5,7 +5,7 @@ import { BookDemoButton } from "./demo-modal";
 const PATH_BY_KEY: Record<string, string> = {
   product: "/product",
   solutions: "/solutions",
-  industries: "/industries",
+  "how-it-works": "/how-it-works",
   pricing: "/pricing",
   company: "/company",
 };
@@ -66,25 +66,47 @@ function parseList(value: string | undefined): string[] {
 }
 
 // Every footer link routes to a real page — nothing here is a dead anchor.
+// "How it works" (Product column) is a distinct, older link straight to
+// /product's overview — not the same thing as the "The mechanism" link
+// below, which points at the deeper step-by-step /how-it-works page. Two
+// different labels, two different URLs, on purpose.
 const FOOTER_LINK_HREF: Record<string, string> = {
   "How it works": "/product",
+  "The mechanism": "/how-it-works",
   "CX Pulse": "/#cx-pulse",
   Pricing: "/pricing",
   Solutions: "/solutions",
-  Industries: "/industries",
+  Industries: "/how-it-works",
   About: "/company",
   "Privacy policy": "/privacy",
   Terms: "/terms",
 };
 
-function FooterLink({ label, fallback }: { label: string; fallback: string }) {
+// Reverse of PATH_BY_KEY — lets a footer link's resolved href be matched
+// back to the nav item that gates the page it points to, so a footer link
+// can be skipped the same way the nav link already is when an admin hides
+// that page (Admin → Site Content → Menu & Footer).
+const NAV_KEY_BY_PATH: Record<string, string> = Object.fromEntries(
+  Object.entries(PATH_BY_KEY).map(([key, path]) => [path, key])
+);
+
+function isHiddenByNav(href: string, navItems: INavItem[]): boolean {
+  const navKey = NAV_KEY_BY_PATH[href];
+  if (!navKey) return false; // not a gated marketing page (About/Privacy/Terms/CX Pulse anchor, etc.) — always show
+  const item = navItems.find((n) => n.key === navKey);
+  return item?.visible === false;
+}
+
+function FooterLink({ label, fallback, navItems }: { label: string; fallback: string; navItems: INavItem[] }) {
   if (label.includes("@")) return <a href={`mailto:${label}`}>{label}</a>;
-  return <Link href={FOOTER_LINK_HREF[label] ?? fallback}>{label}</Link>;
+  const href = FOOTER_LINK_HREF[label] ?? fallback;
+  if (isHiddenByNav(href, navItems)) return null;
+  return <Link href={href}>{label}</Link>;
 }
 
 /** Same full 4-column footer on every marketing page — this is the site's
  * one standard footer, not something that varies page to page. */
-export function MarketingFooter({ fields }: { fields?: MenuFields }) {
+export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; navItems: INavItem[] }) {
   return (
     <footer>
       <div className="wrap">
@@ -98,19 +120,19 @@ export function MarketingFooter({ fields }: { fields?: MenuFields }) {
           <div className="foot-col">
             <h4>Product</h4>
             {parseList(fields?.footerProductLinks).map((label, i) => (
-              <FooterLink key={i} label={label} fallback="/product" />
+              <FooterLink key={i} label={label} fallback="/product" navItems={navItems} />
             ))}
           </div>
           <div className="foot-col">
             <h4>Solutions</h4>
             {parseList(fields?.footerSolutionsLinks).map((label, i) => (
-              <FooterLink key={i} label={label} fallback="/solutions" />
+              <FooterLink key={i} label={label} fallback="/solutions" navItems={navItems} />
             ))}
           </div>
           <div className="foot-col">
             <h4>Company</h4>
             {parseList(fields?.footerCompanyLinks).map((label, i) => (
-              <FooterLink key={i} label={label} fallback="/company" />
+              <FooterLink key={i} label={label} fallback="/company" navItems={navItems} />
             ))}
           </div>
         </div>

@@ -233,7 +233,7 @@ export default async function MarketingHomePage() {
         </div>
       </section>
 
-      <MarketingFooter fields={menu.fields} />
+      <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
   );
 }

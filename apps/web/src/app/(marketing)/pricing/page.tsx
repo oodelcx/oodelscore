@@ -95,7 +95,7 @@ export default async function PricingPage() {
         </div>
       </div>
 
-      <MarketingFooter fields={menu.fields} />
+      <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
   );
 }
