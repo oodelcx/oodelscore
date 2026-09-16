@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
+import { Reveal } from "../scroll-reveal";
 
 // Otherwise Next statically prerenders this at build time and a Site
 // Content edit would never show up without a redeploy.
@@ -20,6 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SolutionsPage() {
   const [menu, solutions] = await Promise.all([getSiteContent("menu"), getSiteContent("solutions")]);
+  if (menu.navItems.find((n) => n.key === "solutions")?.visible === false) notFound();
   const f = solutions.fields;
   const singlePoints = parseJsonArray<string>(f.singlePoints);
   const groupPoints = parseJsonArray<string>(f.groupPoints);
@@ -36,54 +39,60 @@ export default async function SolutionsPage() {
         </div>
       </section>
 
-      <div className="wrap">
-        <div className="sol-grid">
-          <div className="sol-panel">
-            <div>
-              <div className="sol-tag">Single business</div>
-              <h3>{f.singleTitle}</h3>
-              <p>No setup beyond your QR code. See every response, trend, and flagged issue in one dashboard from day one.</p>
-            </div>
-            <ul>
-              {singlePoints.map((point, i) => (
-                <li key={i}>{point}</li>
-              ))}
-            </ul>
+      <section className="fork">
+        <div className="wrap">
+          <div className="fork-grid">
+            <Reveal>
+              <div className="fork-card light hover-lift">
+                <div className="fork-eyebrow">Standalone</div>
+                <h2>{f.singleTitle}</h2>
+                <p>No setup beyond your QR code. See every response, trend, and flagged issue in one dashboard from day one.</p>
+                <ul>
+                  {singlePoints.map((point, i) => (
+                    <li key={i}>{point}</li>
+                  ))}
+                </ul>
+                <span className="fork-cta">One business, one dashboard →</span>
+              </div>
+            </Reveal>
+            <Reveal delay={100}>
+              <div className="fork-card dark hover-lift">
+                <div className="fork-eyebrow">Multi-Branch / Group</div>
+                <h2>{f.groupTitle}</h2>
+                <p>A parent organization sees every branch at once — and decides, branch by branch, how much runs centrally versus locally.</p>
+                <ul>
+                  {groupPoints.map((point, i) => (
+                    <li key={i}>{point}</li>
+                  ))}
+                </ul>
+                <span className="fork-cta">Every branch, one view →</span>
+              </div>
+            </Reveal>
           </div>
-          <div className="sol-panel dark">
-            <div>
-              <div className="sol-tag">Multi-location groups</div>
-              <h3>{f.groupTitle}</h3>
-              <p>A parent organization sees every branch at once — and decides, branch by branch, how much runs centrally versus locally.</p>
+
+          <Reveal delay={160}>
+            <div className="ent-strip hover-lift">
+              <div>
+                <div className="fork-eyebrow">Enterprise</div>
+                <h3 style={{ margin: 0, fontSize: 20 }}>{f.entTitle}</h3>
+              </div>
+              <ul>
+                {entPoints.map((point, i) => (
+                  <li key={i}>· {point}</li>
+                ))}
+              </ul>
             </div>
-            <ul>
-              {groupPoints.map((point, i) => (
-                <li key={i}>{point}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="sol-panel">
-            <div>
-              <div className="sol-tag">Enterprise</div>
-              <h3>{f.entTitle}</h3>
-              <p>Networks of 100+ branches get dedicated support and finance-grade billing controls.</p>
-            </div>
-            <ul>
-              {entPoints.map((point, i) => (
-                <li key={i}>{point}</li>
-              ))}
-            </ul>
-          </div>
+          </Reveal>
         </div>
-      </div>
+      </section>
 
       <section className="final-cta">
         <div className="wrap">
           <h2>Tell us how your organization is structured.</h2>
           <p>We&rsquo;ll show you exactly how it maps onto OodelCX.</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
-            <a className="btn-ghost" href="/pricing">
+            <BookDemoButton className="btn-primary hover-lift">Book a demo</BookDemoButton>
+            <a className="btn-ghost hover-lift" href="/pricing">
               See pricing
             </a>
           </div>

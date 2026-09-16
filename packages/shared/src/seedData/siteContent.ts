@@ -18,16 +18,17 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     navItems: [
       { key: "product", label: "Product", visible: true, order: 0 },
       { key: "solutions", label: "Solutions", visible: true, order: 1 },
-      { key: "pricing", label: "Pricing", visible: true, order: 2 },
-      { key: "company", label: "Company", visible: true, order: 3 },
+      { key: "industries", label: "Industries", visible: true, order: 2 },
+      { key: "pricing", label: "Pricing", visible: true, order: 3 },
+      { key: "company", label: "Company", visible: true, order: 4 },
     ],
     sections: [],
     fields: {
       siteName: "OodelCX",
       footerDescription:
-        "Feedback collection, AI-written reports, and the tools to actually act on both — for one location or a thousand.",
+        "Feedback collection, OCX Intelligence reports, and the tools to actually act on both — for one location or a thousand.",
       footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
-      footerSolutionsLinks: JSON.stringify(["Single business", "Multi-location groups", "Enterprise"]),
+      footerSolutionsLinks: JSON.stringify(["Single business", "Multi-location groups", "Enterprise", "Industries"]),
       footerCompanyLinks: JSON.stringify(["About", "Privacy policy", "Terms"]),
       copyrightText: "© OodelCX. All rights reserved.",
     },
@@ -41,7 +42,14 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroSubheadline:
         "OodelCX turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
       metaDescription:
-        "OodelCX turns customer feedback into tracked, owned work — QR-code surveys, AI-written insights, and an Action Board built for one location or a thousand.",
+        "OodelCX turns customer feedback into tracked, owned work — QR-code surveys, OCX Intelligence reports, and an Action Board built for one location or a thousand.",
+      loopHeadline: "Listen. Understand. Act. Measure.",
+      loopStages: JSON.stringify([
+        { label: "Listen", title: "Collect", body: "A QR scan, a short survey, no app or login." },
+        { label: "Understand", title: "Make sense of it", body: "Themes, root causes, and drivers surfaced automatically." },
+        { label: "Act", title: "Do something", body: "An owned task on the Action Board, not a comment nobody reads." },
+        { label: "Measure", title: "Know if it worked", body: "CX Pulse tracks whether the loop is actually closing." },
+      ]),
       heroCarouselIntervalSeconds: "3",
       heroPrimaryButton: "Book a demo",
       heroSecondaryButton: "See how it works",
@@ -80,7 +88,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       whyItems: JSON.stringify([
         {
           title: "Nothing reaches a dashboard unchecked",
-          body: "Every AI-written report is reviewed by a person before it publishes.",
+          body: "Every OCX Intelligence report is reviewed by a person before it publishes.",
         },
         {
           title: "Built for the org chart you actually have",
@@ -99,9 +107,16 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     sections: [],
     fields: {
       heroHeadline: "Straightforward pricing, whatever your size.",
-      heroSubhead: "Every plan includes AI-reviewed insights and unlimited responses.",
+      heroSubhead: "Every plan includes OCX Intelligence reporting and unlimited responses.",
       metaDescription:
-        "OodelCX pricing for single locations and multi-branch groups — every plan includes AI-reviewed insights, an Action Board, and unlimited responses.",
+        "OodelCX pricing for single locations and multi-branch groups — every plan includes OCX Intelligence reporting, an Action Board, and unlimited responses.",
+      loopStripHeadline: "Every plan is the whole loop, not a slice of it.",
+      loopStripItems: JSON.stringify([
+        { label: "Listen", body: "Unlimited QR feedback points and responses" },
+        { label: "Understand", body: "Themes and root causes surfaced automatically" },
+        { label: "Act", body: "Action Board, Decision Log, and Playbooks included" },
+        { label: "Measure", body: "CX Pulse scoring on every plan tier" },
+      ]),
       plans: JSON.stringify([
         {
           name: "Business",
@@ -109,7 +124,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           priceNote: "per month, one location",
           featured: false,
           cta: "Start free trial",
-          features: ["Up to 3 feedback points", "Weekly & monthly AI insights", "Action board & alert rules", "Email support"],
+          features: ["Up to 3 feedback points", "Weekly & monthly OCX Intelligence reports", "Action board & alert rules", "Email support"],
         },
         {
           name: "Group",
@@ -151,17 +166,38 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         "One platform for the whole loop — collecting feedback, turning it into owned work, and proving whether that work is actually changing anything.",
       metaDescription:
         "See how OodelCX collects feedback, turns it into owned work with the Action Board, and measures real improvement with CX Pulse.",
-      listenHeadline: "Feedback in under a minute, no app required",
-      listenBody: "A QR code at the table, till point, or exit. Customers answer on their own phone — no login, no download.",
-      actHeadline: "A place for the work to actually happen",
-      actBody:
-        "Flagged feedback becomes a tracked item with an owner and a due date — not a comment that gets read once and forgotten.",
-      measureHeadline: "CX Pulse: the score that tracks whether you're improving",
-      measureBody:
-        "Five dimensions — awareness, response speed, ownership, culture, and measured outcomes — rolled into one number your whole team can rally around.",
-      aiHeadline: "Written for you, checked by a person",
-      aiBody:
-        "Weekly and monthly reports summarize what changed and why — but nothing reaches your dashboard until a human at OodelCX has reviewed it.",
+      features: JSON.stringify([
+        {
+          tag: "CX Pulse",
+          headline: "The score that tracks whether you're improving",
+          body: "Five dimensions — awareness, response speed, ownership, culture, and measured outcomes — rolled into one number your whole team can rally around. Not a satisfaction score. A measure of whether feedback is actually shaping decisions.",
+        },
+        {
+          tag: "Theme Intelligence",
+          headline: "What customers keep bringing up, without reading every comment",
+          body: "Open-text responses are grouped into recurring themes automatically, so a spike in \"wait time\" complaints surfaces the moment it starts, instead of three weeks and forty comments later.",
+        },
+        {
+          tag: "Root Cause Analysis",
+          headline: "Not just what's wrong — why",
+          body: "Related flagged responses are traced back to a shared cause across shifts, branches, or time periods, so the fix targets the actual problem instead of the loudest symptom.",
+        },
+        {
+          tag: "Driver Analysis",
+          headline: "The categories actually moving your score",
+          body: "See which rated categories correlate most with overall satisfaction and NPS, so effort goes where it changes the number — not just wherever feedback happens to be loudest.",
+        },
+        {
+          tag: "Action Board",
+          headline: "A place for the work to actually happen",
+          body: "Flagged feedback becomes a tracked item with an owner and a due date — not a comment that gets read once and forgotten.",
+        },
+        {
+          tag: "Decision Log",
+          headline: "Did the change actually work?",
+          body: "Bigger changes get logged with the trigger that caused them and a measured before/after outcome — so \"we fixed it\" is something you can prove, not just claim.",
+        },
+      ]),
     },
   },
   {
@@ -177,7 +213,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       singleTitle: "Everything in one view",
       singlePoints: JSON.stringify([
         "Your own feedback points, question set, and alert rules",
-        "Weekly and monthly AI-written reports",
+        "Weekly and monthly OCX Intelligence reports",
         "Your own Action Board, Decision Log, and Playbooks",
         "Your own CX Pulse score, tracked over time",
       ]),
@@ -195,6 +231,131 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     },
   },
   {
+    page: "industries",
+    navItems: [],
+    sections: [],
+    fields: {
+      heroHeadline: "Built for the sector you actually run.",
+      heroBody: "Pick your industry — the pain points and what OodelCX does about them are specific, not generic.",
+      metaDescription:
+        "How OodelCX applies to banking, education, diagnostics, retail, restaurants, fitness, and automotive — feedback collection, OCX Intelligence, and tracked follow-through by sector.",
+      sectors: JSON.stringify([
+        {
+          key: "banking",
+          label: "Banking",
+          painPoints: [
+            "Branch experience varies widely and head office only hears about the worst cases",
+            "Compliance and service-quality feedback get collected in different, disconnected places",
+          ],
+          outcomes: [
+            "Surfaces recurring complaints by branch and by service line",
+            "Routes flagged feedback to a branch manager with a due date and an audit trail",
+          ],
+          stats: [
+            { label: "Question types", value: "9" },
+            { label: "Branch rollup", value: "Regional" },
+          ],
+        },
+        {
+          key: "education",
+          label: "Education",
+          painPoints: [
+            "Parent and student feedback is scattered across emails, forms, and hallway conversations",
+            "A school trust with multiple campuses has no shared view of where issues are concentrated",
+          ],
+          outcomes: [
+            "One feedback point per campus, rolled up for the whole trust",
+            "Recurring themes (e.g. communication, facilities) tracked over a term, not just a snapshot",
+          ],
+          stats: [
+            { label: "Campuses", value: "Unlimited" },
+            { label: "Reporting", value: "Weekly" },
+          ],
+        },
+        {
+          key: "diagnostics",
+          label: "Diagnostics / Healthcare",
+          painPoints: [
+            "Wait times and result-communication issues are the most common complaints, but rarely tracked systematically",
+            "Multi-site labs and clinics need oversight without slowing down front-line staff",
+          ],
+          outcomes: [
+            "Short, anonymous-by-default surveys that don't add friction to a patient visit",
+            "Root Cause Analysis links a wait-time spike to a specific shift or site instead of guessing",
+          ],
+          stats: [
+            { label: "Avg. survey time", value: "<1 min" },
+            { label: "Anonymous by default", value: "Yes" },
+          ],
+        },
+        {
+          key: "retail",
+          label: "Retail",
+          painPoints: [
+            "Store-level service quality is hard to compare across a chain",
+            "Seasonal spikes in complaints get lost in the noise of everyday feedback",
+          ],
+          outcomes: [
+            "Branch-vs-branch comparison so underperforming stores are visible, not buried",
+            "Action Board turns a recurring complaint into an owned task for a store manager",
+          ],
+          stats: [
+            { label: "Branch comparison", value: "Live" },
+            { label: "Alert rules", value: "Custom" },
+          ],
+        },
+        {
+          key: "restaurant",
+          label: "Restaurant",
+          painPoints: [
+            "Table-side feedback is inconsistent — a bad night can go entirely unreported",
+            "Front-of-house issues (wait time, order accuracy) repeat without a clear owner",
+          ],
+          outcomes: [
+            "A QR code at the table or till, answered in under a minute on a customer's own phone",
+            "Theme Intelligence flags a recurring issue (e.g. \"cold food\") before it becomes a pattern of reviews",
+          ],
+          stats: [
+            { label: "Setup", value: "QR code only" },
+            { label: "Question types", value: "9" },
+          ],
+        },
+        {
+          key: "fitness",
+          label: "Fitness",
+          painPoints: [
+            "Member churn signals (equipment, cleanliness, class quality) often surface too late to act on",
+            "Multi-location gyms and studios lack a shared view of which sites need attention",
+          ],
+          outcomes: [
+            "Driver Analysis shows which categories actually correlate with overall satisfaction",
+            "CX Pulse tracks whether a location is improving, not just what today's score is",
+          ],
+          stats: [
+            { label: "Locations", value: "Unlimited" },
+            { label: "Scoring", value: "CX Pulse" },
+          ],
+        },
+        {
+          key: "automotive",
+          label: "Automotive",
+          painPoints: [
+            "Service-bay and sales-floor feedback are usually tracked separately, if at all",
+            "Dealership groups need per-branch accountability without losing group-wide oversight",
+          ],
+          outcomes: [
+            "One dashboard for service and sales feedback across every location",
+            "Decision Log measures whether a service-process change actually moved the score",
+          ],
+          stats: [
+            { label: "Departments covered", value: "Service + Sales" },
+            { label: "Group rollup", value: "Yes" },
+          ],
+        },
+      ]),
+    },
+  },
+  {
     page: "company",
     navItems: [],
     sections: [],
@@ -206,7 +367,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         "Most platforms treat \"collect feedback\" as the whole job. We think that's the easy third. OodelCX exists because the harder, more valuable work — turning what customers say into something a team actually does, and knowing whether it worked — was left to spreadsheets and good intentions. We built the other two thirds.",
       howWeWorkItems: JSON.stringify([
         {
-          title: "We review the AI, not just ship it",
+          title: "We review OCX Intelligence, not just ship it",
           body: "Every automated report is checked by a person before a customer ever sees it.",
         },
         {
@@ -236,7 +397,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         },
         {
           heading: "How we use it",
-          text: "Account data is used to operate your dashboard, generate AI-written insights reports, and send the account-side emails described in your Email Templates. Feedback response data belongs to the business or organization that collected it.",
+          text: "Account data is used to operate your dashboard, generate OCX Intelligence insights reports, and send the account-side emails described in your Email Templates. Feedback response data belongs to the business or organization that collected it.",
         },
         {
           heading: "Data retention",
@@ -256,7 +417,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heading: "Terms of Service",
       lastUpdated: "September 2026",
-      metaDescription: "The terms governing use of the OodelCX platform, billing, and AI-generated insights content.",
+      metaDescription: "The terms governing use of the OodelCX platform, billing, and OCX Intelligence content.",
       body: JSON.stringify([
         {
           heading: "Using OodelCX",
@@ -267,8 +428,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           text: "Plans are billed per the pricing shown at signup or agreed with your account manager. Branch and team-seat limits are enforced per your plan tier.",
         },
         {
-          heading: "AI-generated content",
-          text: "Insights reports are drafted with AI assistance and reviewed by a person before publication, but OodelCX does not guarantee the accuracy of AI-generated summaries.",
+          heading: "OCX Intelligence content",
+          text: "Insights reports are drafted with OCX Intelligence and reviewed by a person before publication, but OodelCX does not guarantee the accuracy of OCX Intelligence summaries.",
         },
         {
           heading: "Contact",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
@@ -25,6 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function CompanyPage() {
   const [menu, company] = await Promise.all([getSiteContent("menu"), getSiteContent("company")]);
+  if (menu.navItems.find((n) => n.key === "company")?.visible === false) notFound();
   const f = company.fields;
   const items = parseJsonArray<TitleBodyItem>(f.howWeWorkItems);
 
@@ -32,41 +34,36 @@ export default async function CompanyPage() {
     <>
       <MarketingNav active="company" navItems={menu.navItems} />
 
-      <section className="inner-hero">
+      <section className="quiet-hero">
         <div className="wrap">
           <h1>{f.heroHeadline}</h1>
         </div>
       </section>
 
-      <div className="mission-block">
+      <div className="quiet-mission">
         <p>{f.missionStatement}</p>
       </div>
 
-      <section className="why" style={{ paddingTop: 0 }}>
+      <div className="quiet-list">
         <div className="wrap">
-          <div className="narrative-head">
-            <h2>How we work</h2>
-          </div>
-          <div className="why-grid">
-            {items.map((item, i) => (
-              <div className="why-item" key={i}>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </div>
-            ))}
-          </div>
+          {items.map((item, i) => (
+            <div className="quiet-list-item" key={i}>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </div>
+          ))}
         </div>
-      </section>
+      </div>
 
-      <section className="final-cta">
-        <div className="wrap">
-          <h2>Want to talk to us directly?</h2>
-          <p>{f.contactEmail}</p>
-          <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
-          </div>
-        </div>
-      </section>
+      <div className="mission-block" style={{ paddingTop: 0, paddingBottom: 90 }}>
+        <p style={{ fontSize: 15, color: "var(--text-2)" }}>
+          Want to talk to us directly? <a href={`mailto:${f.contactEmail}`}>{f.contactEmail}</a> or{" "}
+          <BookDemoButton className="link-cta" style={{ color: "var(--signal)", fontWeight: 500, cursor: "pointer" }}>
+            book a demo
+          </BookDemoButton>
+          .
+        </p>
+      </div>
 
       <MarketingFooter fields={menu.fields} />
     </>

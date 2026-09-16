@@ -5,6 +5,7 @@ import { BookDemoButton } from "./demo-modal";
 const PATH_BY_KEY: Record<string, string> = {
   product: "/product",
   solutions: "/solutions",
+  industries: "/industries",
   pricing: "/pricing",
   company: "/company",
 };
@@ -60,6 +61,7 @@ const FOOTER_LINK_HREF: Record<string, string> = {
   "Single business": "/solutions",
   "Multi-location groups": "/solutions",
   Enterprise: "/solutions",
+  Industries: "/industries",
   About: "/company",
   "Privacy policy": "/privacy",
   Terms: "/terms",
