@@ -88,7 +88,7 @@ export function DemoModalProvider({ children }: { children: ReactNode }) {
             ) : (
               <>
                 <h3>Book a demo</h3>
-                <p className="demo-modal-sub">Twenty minutes, your own data — no generic demo script.</p>
+                <p className="demo-modal-sub">Twenty minutes, a live walkthrough of real workflows — not a canned script.</p>
                 <form onSubmit={handleSubmit}>
                   <div className="demo-field">
                     <label>Name</label>

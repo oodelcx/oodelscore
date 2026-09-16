@@ -126,7 +126,7 @@ export default async function ProductPage() {
 
   return (
     <>
-      <MarketingNav active="product" navItems={menu.navItems} />
+      <MarketingNav active="product" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="product-intro">
         <div className="wrap">
@@ -152,8 +152,8 @@ export default async function ProductPage() {
 
       <section className="final-cta">
         <div className="wrap">
-          <h2>See the whole loop in your own data.</h2>
-          <p>Twenty minutes, no generic demo script.</p>
+          <h2>See the whole loop, start to finish.</h2>
+          <p>Twenty minutes, a live walkthrough of real workflows — not a canned script.</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
             <BookDemoButton className="btn-primary hover-lift">Book a demo</BookDemoButton>
             <a className="btn-ghost hover-lift" href="/login">

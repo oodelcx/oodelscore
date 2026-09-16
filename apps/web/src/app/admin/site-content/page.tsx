@@ -45,6 +45,7 @@ export default function SiteContentPage() {
   const [activeTab, setActiveTab] = useState("menu");
   const [saving, setSaving] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [resetting, setResetting] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/site-content")
@@ -79,6 +80,34 @@ export default function SiteContentPage() {
     });
     setSaving(null);
     if (res.ok) setSavedMsg(`${page} saved — live on oodelscore.com`);
+  }
+
+  /**
+   * Completely overwrites this page's DB content with the latest platform
+   * seed defaults — the only way pending copy changes made in the codebase
+   * (not this UI) ever reach the live site, since an existing DB doc is
+   * never auto-refreshed from the seed. Destructive to any manual edits
+   * made here since the last save, hence the confirm.
+   */
+  async function resetToDefaults(page: string) {
+    if (
+      !window.confirm(
+        `Reset "${page}" to the latest platform defaults?\n\nThis overwrites ALL current content on this page — including any manual edits made here — with the built-in defaults. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setResetting(page);
+    setSavedMsg(null);
+    const res = await fetch(`/api/admin/site-content/${page}/reset`, { method: "POST" });
+    setResetting(null);
+    if (res.ok) {
+      const data = await res.json();
+      setPages((prev) => ({ ...prev, [page]: data.page }));
+      setSavedMsg(`${page} reset to latest defaults — live on oodelscore.com`);
+    } else {
+      setSavedMsg(`Failed to reset ${page}`);
+    }
   }
 
   if (loading) return <p className="subtitle">Loading…</p>;
@@ -121,7 +150,16 @@ export default function SiteContentPage() {
       {current && activeTab === "login" && <LoginPanel content={current} onFieldChange={updateField} />}
 
       {current && (
-        <div style={{ marginTop: 16, textAlign: "right" }}>
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button
+            className="btn"
+            style={{ color: "var(--danger, #c24a3f)" }}
+            disabled={resetting === activeTab}
+            onClick={() => resetToDefaults(activeTab)}
+            title="Overwrites all current content on this page with the latest built-in defaults"
+          >
+            {resetting === activeTab ? "Resetting…" : "Reset to latest defaults"}
+          </button>
           <button className="btn btn-dark" disabled={saving === activeTab} onClick={() => save(activeTab)}>
             {saving === activeTab ? "Saving…" : "Save"}
           </button>
@@ -292,6 +330,17 @@ function MenuPanel({
         <h3>Browser tab</h3>
         <p className="card-sub">The name shown in the browser tab and bookmarks, site-wide.</p>
         <Field label="Site name" value={content.fields.siteName} onChange={(v) => onFieldChange("menu", "siteName", v)} />
+      </div>
+      <div className="card">
+        <h3>Header style</h3>
+        <p className="card-sub">Applies to the top navigation bar across every marketing page. Defaults to Light if unset.</p>
+        <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5 }}>
+          <span
+            className={`toggle ${content.fields.headerStyle === "dark" ? "on" : ""}`}
+            onClick={() => onFieldChange("menu", "headerStyle", content.fields.headerStyle === "dark" ? "light" : "dark")}
+          />
+          {content.fields.headerStyle === "dark" ? "Dark background" : "Light background"}
+        </label>
       </div>
     </div>
   );
