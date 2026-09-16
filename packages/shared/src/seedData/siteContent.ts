@@ -16,7 +16,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
   {
     page: "menu",
     navItems: [
-      { key: "product", label: "Product", visible: true, order: 0 },
+      { key: "product", label: "The Platform", visible: true, order: 0 },
       { key: "solutions", label: "Solutions", visible: true, order: 1 },
       { key: "how-it-works", label: "How it works", visible: true, order: 2 },
       { key: "pricing", label: "Pricing", visible: true, order: 3 },

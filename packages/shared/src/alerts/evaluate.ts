@@ -9,6 +9,8 @@ import { User } from "../models/User";
 import { computeBusinessMetrics } from "../scoring/aggregate";
 import { sendTemplatedEmail } from "../email/resend";
 import { generateTriageSuggestion } from "../ai/triage";
+import { gatherRootCauseEvidence } from "../scoring/rootCauseEvidence";
+import { analyzeRootCause } from "../ai/rootCause";
 
 const METRIC_WINDOW_DAYS = 30;
 
@@ -73,6 +75,25 @@ async function autoTriageAndCreateActionItem(
   // on each Action Board item) is unrelated and still works as before.
   const ownerId = mapping?.defaultOwnerId ?? null;
 
+  // Same evidence-gated approach Root Cause Analysis already uses (see
+  // ai/rootCause.ts): only ever hand Haiku a real computed evidence bundle,
+  // never the raw comment/rule text to free-associate from. Only possible
+  // when triage matched a real category — with no category there's nothing
+  // to gather evidence for, so the item is created without a suggestion
+  // rather than guessing one.
+  const suggestedAction = suggestion.categoryId
+    ? await (async () => {
+        try {
+          const evidence = await gatherRootCauseEvidence([business._id], suggestion.categoryId as string);
+          const analysis = await analyzeRootCause(evidence);
+          return analysis.recommendation.description;
+        } catch (err) {
+          console.error("[alerts] suggested-action evidence gathering failed", err);
+          return "";
+        }
+      })()
+    : "";
+
   const item = await ActionBoardItem.create({
     parentOrgId: business.parentOrgId ?? null,
     businessId: business._id,
@@ -82,6 +103,7 @@ async function autoTriageAndCreateActionItem(
     priority: suggestion.priority,
     ownerId,
     source: mapping ? "auto_assigned" : "auto_suggested",
+    suggestedAction,
   });
 
   // Notify the owner that they've been assigned this item — no confirmation

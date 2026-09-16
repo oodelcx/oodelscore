@@ -26,6 +26,12 @@ export interface IActionBoardItem {
   resolutionNote: string;
   resolvedAt: Date | null;
   source: ActionSource;
+  // Set only for auto-created items (source auto_suggested/auto_assigned):
+  // a short, evidence-grounded recommended next step, generated the same
+  // evidence-gated way Root Cause Analysis is (see ai/rootCause.ts) — never
+  // free-form guessing. Empty string when there wasn't enough evidence to
+  // generate one, or after it's been dismissed.
+  suggestedAction: string;
   // Group-level oversight signal (product decision: Group is read-only on
   // branch Action Board items — assignment/status/priority is the branch's
   // job — but a Group Head can flag something for attention). Distinct from
@@ -57,6 +63,7 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     resolutionNote: { type: String, default: "" },
     resolvedAt: { type: Date, default: null },
     source: { type: String, enum: ACTION_SOURCES, default: "manual" },
+    suggestedAction: { type: String, default: "" },
     escalated: { type: Boolean, default: false },
     escalatedAt: { type: Date, default: null },
     escalationNote: { type: String, default: "" },

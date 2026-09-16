@@ -19,10 +19,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const product = await getSiteContent("product");
   const description = product.fields.metaDescription;
   return {
-    title: "Product",
+    title: "The Platform",
     description,
-    openGraph: { title: "Product", description, url: "/product", images: ["/og-image.png"] },
-    twitter: { title: "Product", description, images: ["/og-image.png"] },
+    openGraph: { title: "The Platform", description, url: "/product", images: ["/og-image.png"] },
+    twitter: { title: "The Platform", description, images: ["/og-image.png"] },
   };
 }
 

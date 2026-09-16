@@ -12,6 +12,7 @@ interface ItemRow {
   status: string;
   dueDate: string | null;
   resolutionNote: string;
+  suggestedAction: string;
 }
 interface TeamRow {
   userId: string;
@@ -232,6 +233,33 @@ export default function BusinessActionBoardPage() {
                     <td>
                       {item.title}
                       {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
+                      {item.suggestedAction && (
+                        <div
+                          className="card-sub"
+                          style={{ margin: "6px 0 0", padding: "6px 8px", background: "var(--bg-2, #f7f7f8)", borderRadius: 6 }}
+                        >
+                          <b>Suggested:</b> {item.suggestedAction}
+                          {!isLimited && (
+                            <div style={{ marginTop: 4 }}>
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                onClick={() =>
+                                  updateItem(item._id, {
+                                    description: item.description ? `${item.description}\n\n${item.suggestedAction}` : item.suggestedAction,
+                                    suggestedAction: "",
+                                  })
+                                }
+                              >
+                                Accept
+                              </button>{" "}
+                              <button type="button" className="btn btn-sm" onClick={() => updateItem(item._id, { suggestedAction: "" })}>
+                                Dismiss
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <div className="action-links">
                         <button
                           type="button"

@@ -16,6 +16,7 @@ interface ItemRow {
   resolvedAt: string | null;
   escalated: boolean;
   escalationNote: string;
+  suggestedAction: string;
 }
 interface PlaybookRow {
   _id: string;
@@ -289,6 +290,14 @@ export default function ActionBoardPage() {
                         </div>
                       )}
                       {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
+                      {item.suggestedAction && (
+                        <div
+                          className="card-sub"
+                          style={{ margin: "6px 0 0", padding: "6px 8px", background: "var(--bg-2, #f7f7f8)", borderRadius: 6 }}
+                        >
+                          <b>Suggested:</b> {item.suggestedAction}
+                        </div>
+                      )}
                       <div className="action-links">
                         <button
                           type="button"

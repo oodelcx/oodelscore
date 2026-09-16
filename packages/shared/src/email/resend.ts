@@ -1,4 +1,7 @@
+import type { Types } from "mongoose";
 import { EmailTemplate, type EmailTemplateKey } from "../models/EmailTemplate";
+import { User } from "../models/User";
+import type { BillingOwnerType } from "../models/BillingSubscription";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const DEFAULT_FROM = "OodelCX <noreply@oodelscore.com>";
@@ -37,6 +40,22 @@ export async function sendRawEmail(to: string, subject: string, body: string, va
     const errorBody = await res.text();
     throw new Error(`Resend send failed (${res.status}): ${errorBody}`);
   }
+}
+
+/**
+ * Resolves the login email for a `BillingOwnerType`-keyed owner ("business"
+ * or "parentOrg") — same account-lookup the rest of the codebase already
+ * uses (see e.g. cxpulse/compute.ts's computeCxPulseForOwner, or
+ * group/action-board/[id]/route.ts's escalation recipient). Used wherever a
+ * notification needs to reach whoever logs into that account, keyed off the
+ * same ownerType/ownerId pair AiInsightReport and BillingSubscription use.
+ * Returns null if no login exists yet for that owner (e.g. account not
+ * fully set up) — callers should just skip the send in that case.
+ */
+export async function resolveOwnerLoginEmail(ownerType: BillingOwnerType, ownerId: Types.ObjectId | string): Promise<string | null> {
+  const accountType = ownerType === "business" ? "business" : "parent_org";
+  const owner = await User.findOne({ accountType, parentId: ownerId }).select("email");
+  return owner?.email ?? null;
 }
 
 /**
