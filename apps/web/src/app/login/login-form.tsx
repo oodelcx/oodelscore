@@ -108,7 +108,6 @@ export function LoginForm() {
   return (
     <>
       <div className="auth-brand">Sign in</div>
-      <p className="auth-subtitle">Welcome back — sign in to your dashboard.</p>
       <form className="auth-form" onSubmit={handleSubmit}>
         <div className="field">
           <label>Email</label>

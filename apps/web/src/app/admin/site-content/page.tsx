@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type TextareaHTMLAttributes } from "react";
 
 interface NavItem {
   key: string;
@@ -169,6 +169,52 @@ export default function SiteContentPage() {
   );
 }
 
+/**
+ * A textarea that always fills its container's width and grows to fit its
+ * content instead of starting cramped with a manual drag-handle. Uses the
+ * `field-sizing: content` CSS property where supported, with an
+ * onInput-driven height reset as a fallback for browsers that don't support
+ * it yet (the resize-then-grow pattern below still fires even when
+ * field-sizing is active — it's a harmless no-op in that case).
+ */
+function AutoTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  function resize(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  useEffect(() => {
+    resize(ref.current);
+  }, [props.value]);
+
+  const { style, onInput, ...rest } = props;
+  // `field-sizing` isn't in React's CSSProperties typings yet — cast at the
+  // boundary so the rest of the object stays type-checked normally.
+  const mergedStyle = {
+    width: "100%",
+    boxSizing: "border-box",
+    resize: "vertical",
+    overflow: "hidden",
+    fieldSizing: "content",
+    ...style,
+  } as CSSProperties;
+
+  return (
+    <textarea
+      {...rest}
+      ref={ref}
+      style={mergedStyle}
+      onInput={(e) => {
+        resize(e.currentTarget);
+        onInput?.(e);
+      }}
+    />
+  );
+}
+
 function Field({
   label,
   value,
@@ -186,7 +232,7 @@ function Field({
     <div className="field">
       <label>{label}</label>
       {textarea ? (
-        <textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+        <AutoTextarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
       ) : (
         <input type="text" value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
       )}
@@ -305,6 +351,12 @@ function MenuPanel({
         <Field label="Tagline" value={content.fields.footerDescription} onChange={(v) => onFieldChange("menu", "footerDescription", v)} />
         <div style={{ marginBottom: 14 }}>
           <b style={{ fontSize: 12.5 }}>Product links</b>
+          <Field
+            label="Column heading"
+            value={content.fields.footerProductHeading}
+            onChange={(v) => onFieldChange("menu", "footerProductHeading", v)}
+            placeholder="Product"
+          />
           <StringListEditor
             items={parseJsonArray<string>(content.fields.footerProductLinks)}
             onChange={(items) => onFieldChange("menu", "footerProductLinks", JSON.stringify(items))}
@@ -312,6 +364,12 @@ function MenuPanel({
         </div>
         <div style={{ marginBottom: 14 }}>
           <b style={{ fontSize: 12.5 }}>Solutions links</b>
+          <Field
+            label="Column heading"
+            value={content.fields.footerSolutionsHeading}
+            onChange={(v) => onFieldChange("menu", "footerSolutionsHeading", v)}
+            placeholder="Solutions"
+          />
           <StringListEditor
             items={parseJsonArray<string>(content.fields.footerSolutionsLinks)}
             onChange={(items) => onFieldChange("menu", "footerSolutionsLinks", JSON.stringify(items))}
@@ -319,6 +377,12 @@ function MenuPanel({
         </div>
         <div style={{ marginBottom: 14 }}>
           <b style={{ fontSize: 12.5 }}>Company links</b>
+          <Field
+            label="Column heading"
+            value={content.fields.footerCompanyHeading}
+            onChange={(v) => onFieldChange("menu", "footerCompanyHeading", v)}
+            placeholder="Company"
+          />
           <StringListEditor
             items={parseJsonArray<string>(content.fields.footerCompanyLinks)}
             onChange={(items) => onFieldChange("menu", "footerCompanyLinks", JSON.stringify(items))}
@@ -464,7 +528,7 @@ function HomePanel({
                 🗑
               </span>
             </div>
-            <textarea
+            <AutoTextarea
               value={step.body}
               onChange={(e) => {
                 const next = [...steps];
@@ -565,7 +629,7 @@ function HomePanel({
                 🗑
               </span>
             </div>
-            <textarea
+            <AutoTextarea
               value={item.body}
               onChange={(e) => {
                 const next = [...whyItems];
@@ -680,7 +744,7 @@ function PricingPanel({
               </span>
             </div>
             <div style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0" }}>Features (one per line)</div>
-            <textarea
+            <AutoTextarea
               style={{ minHeight: 80 }}
               value={plan.features.join("\n")}
               onChange={(e) => updatePlan(i, { features: e.target.value.split("\n") })}
@@ -782,7 +846,7 @@ function ProductPanel({
                 🗑
               </span>
             </div>
-            <textarea placeholder="Body" value={feature.body} onChange={(e) => updateFeature(i, { body: e.target.value })} />
+            <AutoTextarea placeholder="Body" value={feature.body} onChange={(e) => updateFeature(i, { body: e.target.value })} />
           </div>
         ))}
         <button
@@ -912,7 +976,7 @@ function HowItWorksPanel({
               </span>
             </div>
             <div style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0" }}>Body</div>
-            <textarea value={step.body} onChange={(e) => updateStep(i, { body: e.target.value })} />
+            <AutoTextarea value={step.body} onChange={(e) => updateStep(i, { body: e.target.value })} />
           </div>
         ))}
         <button
@@ -950,6 +1014,17 @@ function CompanyPanel({
         <h3>Hero & mission</h3>
         <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("company", "heroHeadline", v)} />
         <Field
+          label="Highlighted portion (shown in italic accent green)"
+          value={content.fields.heroHighlight}
+          onChange={(v) => onFieldChange("company", "heroHighlight", v)}
+        />
+        {!!content.fields.heroHighlight && !content.fields.heroHeadline?.includes(content.fields.heroHighlight) && (
+          <p className="error-text">This text doesn&rsquo;t appear in the headline above, so nothing will be highlighted.</p>
+        )}
+        <div className="field-hint" style={{ marginBottom: 8 }}>
+          Must match a portion of the headline exactly (including punctuation) to be highlighted.
+        </div>
+        <Field
           label="Mission statement"
           textarea
           value={content.fields.missionStatement}
@@ -978,7 +1053,7 @@ function CompanyPanel({
                 🗑
               </span>
             </div>
-            <textarea
+            <AutoTextarea
               value={item.body}
               onChange={(e) => {
                 const next = [...items];
@@ -1061,7 +1136,7 @@ function LegalPanel({
               🗑
             </span>
           </div>
-          <textarea style={{ minHeight: 70 }} value={section.text} onChange={(e) => updateSection(i, { text: e.target.value })} />
+          <AutoTextarea style={{ minHeight: 70 }} value={section.text} onChange={(e) => updateSection(i, { text: e.target.value })} />
         </div>
       ))}
       <button className="btn" onClick={() => onFieldChange(page, "body", JSON.stringify([...sections, { heading: "", text: "" }]))}>

@@ -52,6 +52,9 @@ interface MenuFields {
   footerProductLinks?: string;
   footerSolutionsLinks?: string;
   footerCompanyLinks?: string;
+  footerProductHeading?: string;
+  footerSolutionsHeading?: string;
+  footerCompanyHeading?: string;
   copyrightText?: string;
 }
 
@@ -118,19 +121,19 @@ export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; nav
             <div className="foot-desc">{fields?.footerDescription}</div>
           </div>
           <div className="foot-col">
-            <h4>Product</h4>
+            <h4>{fields?.footerProductHeading || "Product"}</h4>
             {parseList(fields?.footerProductLinks).map((label, i) => (
               <FooterLink key={i} label={label} fallback="/product" navItems={navItems} />
             ))}
           </div>
           <div className="foot-col">
-            <h4>Solutions</h4>
+            <h4>{fields?.footerSolutionsHeading || "Solutions"}</h4>
             {parseList(fields?.footerSolutionsLinks).map((label, i) => (
               <FooterLink key={i} label={label} fallback="/solutions" navItems={navItems} />
             ))}
           </div>
           <div className="foot-col">
-            <h4>Company</h4>
+            <h4>{fields?.footerCompanyHeading || "Company"}</h4>
             {parseList(fields?.footerCompanyLinks).map((label, i) => (
               <FooterLink key={i} label={label} fallback="/company" navItems={navItems} />
             ))}
