@@ -33,29 +33,19 @@ export function SectorTabs({ sectors }: { sectors: Sector[] }) {
       </div>
 
       <div className="sector-panel" role="tabpanel">
-        <div>
-          <h2>{current.label}</h2>
-          <div className="sector-col-label">Where it breaks down</div>
-          <ul>
-            {current.painPoints.map((point, i) => (
-              <li key={i}>{point}</li>
-            ))}
-          </ul>
-          <div className="sector-col-label">What OodelCX does</div>
-          <ul>
-            {current.outcomes.map((point, i) => (
-              <li key={i}>{point}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="sector-stats">
-          {current.stats.map((stat, i) => (
-            <div className="sector-stat" key={i}>
-              <div className="sector-stat-value">{stat.value}</div>
-              <div className="sector-stat-label">{stat.label}</div>
-            </div>
+        <h2>{current.label}</h2>
+        <div className="sector-col-label">Where it breaks down</div>
+        <ul>
+          {current.painPoints.map((point, i) => (
+            <li key={i}>{point}</li>
           ))}
-        </div>
+        </ul>
+        <div className="sector-col-label">What OodelCX does</div>
+        <ul>
+          {current.outcomes.map((point, i) => (
+            <li key={i}>{point}</li>
+          ))}
+        </ul>
       </div>
     </>
   );

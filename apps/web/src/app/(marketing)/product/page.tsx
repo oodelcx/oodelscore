@@ -82,15 +82,15 @@ function FeatureVisual({ tag }: { tag: string }) {
       <div className="mock-card">
         <div className="mock-qtype-row">
           <span>Wait time</span>
-          <span className="tag">0.71 corr.</span>
+          <span className="tag">Strong link</span>
         </div>
         <div className="mock-qtype-row">
           <span>Cleanliness</span>
-          <span className="tag">0.44 corr.</span>
+          <span className="tag">Moderate link</span>
         </div>
         <div className="mock-qtype-row">
           <span>Staff friendliness</span>
-          <span className="tag">0.22 corr.</span>
+          <span className="tag">Weak link</span>
         </div>
       </div>
     );

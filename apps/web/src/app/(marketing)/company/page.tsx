@@ -58,10 +58,7 @@ export default async function CompanyPage() {
       <div className="mission-block" style={{ paddingTop: 0, paddingBottom: 90 }}>
         <p style={{ fontSize: 15, color: "var(--text-2)" }}>
           Want to talk to us directly? <a href={`mailto:${f.contactEmail}`}>{f.contactEmail}</a> or{" "}
-          <BookDemoButton className="link-cta" style={{ color: "var(--signal)", fontWeight: 500, cursor: "pointer" }}>
-            book a demo
-          </BookDemoButton>
-          .
+          <BookDemoButton className="btn-green-inline">Book a demo</BookDemoButton>
         </p>
       </div>
 
