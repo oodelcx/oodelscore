@@ -30,6 +30,9 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
       footerSolutionsLinks: JSON.stringify(["Solutions", "The mechanism", "Pricing"]),
       footerCompanyLinks: JSON.stringify(["About", "Privacy policy", "Terms"]),
+      footerProductHeading: "Product",
+      footerSolutionsHeading: "Solutions",
+      footerCompanyHeading: "Company",
       copyrightText: "© OodelCX. All rights reserved.",
     },
   },
@@ -278,6 +281,12 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     sections: [],
     fields: {
       heroHeadline: "We think feedback tools stopped too early.",
+      // Must be an exact substring of heroHeadline — same convention as the
+      // login page's heroHighlight — the portion shown in italic accent
+      // green. Kept independently editable so a future headline edit
+      // doesn't silently break the accent (the Admin panel warns if it
+      // stops matching).
+      heroHighlight: "too early.",
       metaDescription:
         "OodelCX exists to turn customer feedback into action, not just a dashboard number. Learn what we build and why.",
       missionStatement:
