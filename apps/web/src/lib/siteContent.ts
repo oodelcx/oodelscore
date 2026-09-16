@@ -25,7 +25,7 @@ function fromSeed(page: SiteContentPage): ResolvedSiteContent {
  * DB doc DOES have — including an explicit `visible: false` — is left
  * exactly as the admin set it.
  */
-function mergeNavItems(dbItems: INavItem[], seedItems: INavItem[]): INavItem[] {
+export function mergeNavItems(dbItems: INavItem[], seedItems: INavItem[]): INavItem[] {
   const present = new Set(dbItems.map((item) => item.key));
   const missing = seedItems.filter((item) => !present.has(item.key));
   return [...dbItems, ...missing];

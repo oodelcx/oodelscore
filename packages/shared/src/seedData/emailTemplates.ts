@@ -88,4 +88,10 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     body: "{{business_name}} ({{requester_email}}) requested a new feedback point.\n\nNote: {{note}}",
     availableVars: ["business_name", "requester_email", "note"],
   },
+  {
+    key: "decision_outcome_measured",
+    subject: "Outcome measured: {{decision_title}} — {{verdict}}",
+    body: "Hi {{name}}, the decision \"{{decision_title}}\" has a measured outcome: {{verdict}}. {{metric_label}} went from {{outcome_before}} to {{outcome_after}}. View it here: {{decision_link}}",
+    availableVars: ["name", "decision_title", "verdict", "metric_label", "outcome_before", "outcome_after", "decision_link"],
+  },
 ];

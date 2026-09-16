@@ -60,6 +60,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (ACTION_STATUSES.includes(body?.status)) item.status = body.status;
     if (body?.status === "resolved") item.resolvedAt = new Date();
     if (typeof body?.resolutionNote === "string") item.resolutionNote = body.resolutionNote;
+    if (typeof body?.suggestedAction === "string") item.suggestedAction = body.suggestedAction;
     await item.save();
     if (body?.status === "resolved" && typeof body?.resolutionNote === "string" && body.resolutionNote.trim()) {
       await logDecisionForResolution(item, session, body.resolutionNote.trim());
@@ -79,6 +80,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (typeof body?.resolutionNote === "string") item.resolutionNote = body.resolutionNote;
   }
   if (typeof body?.dueDate === "string") item.dueDate = new Date(body.dueDate);
+  // Accept/dismiss on the auto-suggested action: "accept" folds it into the
+  // item's description and clears the suggestion slot, "dismiss" just
+  // clears it — both are just an ordinary field edit, no separate workflow.
+  if (typeof body?.suggestedAction === "string") item.suggestedAction = body.suggestedAction;
   if ("ownerId" in (body ?? {})) {
     item.ownerId = typeof body.ownerId === "string" ? new Types.ObjectId(body.ownerId) : null;
   }

@@ -1,7 +1,15 @@
 import { Types } from "mongoose";
 import { Business } from "../models/Business";
+import { User } from "../models/User";
 import { DecisionLogEntry, type DecisionOutcomeMetric } from "../models/DecisionLogEntry";
 import { computeStarAndNps, computeCategoryAverage } from "./goals";
+import { sendTemplatedEmail, resolveOwnerLoginEmail } from "../email/resend";
+
+const METRIC_LABELS: Record<DecisionOutcomeMetric, string> = {
+  starAverage: "Star average",
+  nps: "NPS",
+  categoryAverage: "Category average",
+};
 
 const BEFORE_WINDOW_DAYS = 30;
 // Give a change time to show up in real feedback before calling it either
@@ -87,6 +95,57 @@ export async function computeDecisionOutcome(entry: DecisionOutcomeRef, now: Dat
 }
 
 /**
+ * Resolves who should hear that a decision got a real verdict: the entry's
+ * own `ownerId` if it has one (whoever is logged as responsible for it),
+ * otherwise the same business/group owner login used for the Action Board
+ * escalation email (see group/action-board/[id]/route.ts) — a decision
+ * with no explicit owner still belongs to somebody's account.
+ */
+async function resolveDecisionRecipientEmail(entry: {
+  ownerId: Types.ObjectId | null;
+  businessId: Types.ObjectId | null;
+  parentOrgId: Types.ObjectId | null;
+}): Promise<string | null> {
+  if (entry.ownerId) {
+    const owner = await User.findById(entry.ownerId).select("email");
+    if (owner) return owner.email;
+  }
+  if (entry.businessId) return resolveOwnerLoginEmail("business", entry.businessId);
+  if (entry.parentOrgId) return resolveOwnerLoginEmail("parentOrg", entry.parentOrgId);
+  return null;
+}
+
+/**
+ * Closes the loop for real: an entry that just got a real verdict (not
+ * not_ready/insufficient_data — same gate autoMeasurePendingDecisions
+ * already applies before saving) emails whoever owns it, with the verdict
+ * and the real before/after numbers, instead of only the number changing
+ * silently in the Decision Log. Fire-and-forget with logging, same as every
+ * other templated send in this codebase — a failed email must never break
+ * the measurement itself.
+ */
+async function notifyDecisionOutcomeMeasured(
+  entry: { title: string; ownerId: Types.ObjectId | null; businessId: Types.ObjectId | null; parentOrgId: Types.ObjectId | null },
+  result: DecisionOutcomeResult,
+  metric: DecisionOutcomeMetric
+): Promise<void> {
+  const recipient = await resolveDecisionRecipientEmail(entry);
+  if (!recipient) return;
+
+  const decisionLink = `${process.env.APP_URL ?? ""}${entry.parentOrgId && !entry.businessId ? "/group/decision-log" : "/business/decision-log"}`;
+
+  await sendTemplatedEmail("decision_outcome_measured", recipient, {
+    name: recipient,
+    decision_title: entry.title,
+    verdict: result.verdict.replace(/_/g, " "),
+    metric_label: METRIC_LABELS[metric],
+    outcome_before: result.outcomeBefore !== null ? String(result.outcomeBefore) : "—",
+    outcome_after: result.outcomeAfter !== null ? String(result.outcomeAfter) : "—",
+    decision_link: decisionLink,
+  }).catch((err) => console.error("[decision-outcome] failed to send decision_outcome_measured", err));
+}
+
+/**
  * Sweeps every decision that has a metric + implementation date but hasn't
  * been measured yet, and measures the ones that have crossed the 14-day
  * MIN_DAYS_AFTER mark — the same computation the manual "Auto-measure"
@@ -128,6 +187,12 @@ export async function autoMeasurePendingDecisions(now: Date = new Date()): Promi
     entry.outcomeMeasuredAt = now;
     await entry.save();
     measured++;
+
+    await notifyDecisionOutcomeMeasured(
+      { title: entry.title, ownerId: entry.ownerId, businessId: entry.businessId, parentOrgId: entry.parentOrgId },
+      result,
+      entry.outcomeMetric as DecisionOutcomeMetric
+    );
   }
 
   return { checked: candidates.length, measured };

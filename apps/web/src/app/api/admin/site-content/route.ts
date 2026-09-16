@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, SiteContent, SITE_CONTENT_PAGES, SEED_SITE_CONTENT } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+import { mergeNavItems } from "@/lib/siteContent";
 
 export async function GET() {
   const session = await requireStaffSession();
@@ -23,9 +24,15 @@ export async function GET() {
       // too, so this screen shows what's actually live instead of blank
       // fields that would silently wipe the real copy if saved as-is.
       const seed = SEED_SITE_CONTENT.find((s) => s.page === page);
+      // Same self-healing merge the public marketing nav uses (see
+      // lib/siteContent.ts's getSiteContent / mergeNavItems) — without it, a
+      // DB doc that predates a newly-seeded nav key (e.g. "how-it-works")
+      // never shows up here as a manageable toggle even though it correctly
+      // renders on the live site via the seed fallback.
+      const navItems = doc ? (seed ? mergeNavItems(doc.navItems, seed.navItems) : doc.navItems) : (seed?.navItems ?? []);
       return {
         page,
-        navItems: doc?.navItems ?? seed?.navItems ?? [],
+        navItems,
         sections: doc?.sections ?? seed?.sections ?? [],
         fields: doc ? Object.fromEntries(doc.fields) : (seed?.fields ?? {}),
       };
