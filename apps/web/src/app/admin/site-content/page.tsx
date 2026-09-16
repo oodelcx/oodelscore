@@ -24,6 +24,7 @@ const TABS: { id: string; label: string }[] = [
   { id: "solutions", label: "Solutions" },
   { id: "how-it-works", label: "How it works" },
   { id: "company", label: "Company" },
+  { id: "contact", label: "Contact" },
   { id: "privacy", label: "Privacy Policy" },
   { id: "terms", label: "Terms of Service" },
   { id: "login", label: "Login" },
@@ -144,6 +145,7 @@ export default function SiteContentPage() {
       {current && activeTab === "solutions" && <SolutionsPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "how-it-works" && <HowItWorksPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "company" && <CompanyPanel content={current} onFieldChange={updateField} />}
+      {current && activeTab === "contact" && <ContactPanel content={current} onFieldChange={updateField} />}
       {current && (activeTab === "privacy" || activeTab === "terms") && (
         <LegalPanel content={current} page={activeTab} onFieldChange={updateField} />
       )}
@@ -1076,6 +1078,62 @@ function CompanyPanel({
           label="Contact email shown on page"
           value={content.fields.contactEmail}
           onChange={(v) => onFieldChange("company", "contactEmail", v)}
+        />
+      </div>
+    </>
+  );
+}
+
+function ContactPanel({
+  content,
+  onFieldChange,
+}: {
+  content: PageContent;
+  onFieldChange: (page: string, key: string, value: string) => void;
+}) {
+  return (
+    <>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Search &amp; social</h3>
+        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
+        <Field
+          label="Meta description"
+          textarea
+          value={content.fields.metaDescription}
+          onChange={(v) => onFieldChange("contact", "metaDescription", v)}
+        />
+      </div>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Hero</h3>
+        <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("contact", "heroHeadline", v)} />
+        <Field
+          label="Subhead"
+          textarea
+          value={content.fields.heroSubhead}
+          onChange={(v) => onFieldChange("contact", "heroSubhead", v)}
+        />
+      </div>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Success message</h3>
+        <p className="card-sub">Shown in place of the form once a message is sent.</p>
+        <Field
+          label="Headline"
+          value={content.fields.successHeadline}
+          onChange={(v) => onFieldChange("contact", "successHeadline", v)}
+        />
+        <Field
+          label="Body"
+          textarea
+          value={content.fields.successBody}
+          onChange={(v) => onFieldChange("contact", "successBody", v)}
+        />
+      </div>
+      <div className="card">
+        <h3>Contact</h3>
+        <Field
+          label="Contact email (for reference — not shown on the page)"
+          value={content.fields.contactEmail}
+          onChange={(v) => onFieldChange("contact", "contactEmail", v)}
         />
       </div>
     </>

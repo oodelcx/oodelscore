@@ -876,7 +876,11 @@
 }
 .mkt .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* auto-fit collapses unused tracks instead of reserving a 3rd column, so
+     deleting a plan (down to 2, or even 1) re-centers the remaining cards
+     via justify-content rather than leaving them stuck on the left. */
+  grid-template-columns: repeat(auto-fit, 360px);
+  justify-content: center;
   gap: 20px;
   padding: 60px 0 40px;
 }
@@ -1284,6 +1288,51 @@
   color: var(--text-2);
   line-height: 1.6;
   margin: 0;
+}
+
+/* ===== CONTACT PAGE ===== */
+/* Reuses the same .demo-field input/label/button treatment as the Book a
+   Demo modal (see above) rather than inventing new form styling. */
+.mkt .contact-form-section {
+  padding: 10px 0 100px;
+}
+.mkt .contact-form-card {
+  max-width: 480px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 36px 34px;
+}
+.mkt .contact-form-card .demo-field input,
+.mkt .contact-form-card .demo-field textarea {
+  background: #fdfdfc;
+}
+.mkt .contact-form-success h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.mkt .contact-form-success p {
+  font-size: 14.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+  margin: 0;
+}
+/* Standard accessible-hiding technique for the honeypot field — kept in
+   the layout (not display:none/visibility:hidden, which some bots skip
+   entirely) but placed off-screen and out of the tab/AT order for
+   everyone else. See apps/web/src/app/api/contact/route.ts for the
+   server-side check this pairs with. */
+.mkt .contact-form-honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  left: -9999px;
 }
 
 /* ===== HOME: LOOP HERO (replaces the old hero-visual carousel) ===== */
@@ -1736,10 +1785,9 @@
 }
 .mkt .quiet-list-index {
   font-family: var(--font-mono);
-  font-style: italic;
   font-size: 34px;
   font-weight: 600;
-  color: var(--signal);
+  color: var(--ink);
   line-height: 1;
 }
 .mkt .quiet-list-item h3 {

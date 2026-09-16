@@ -89,6 +89,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <nav className="admin-nav">
             <a href="/admin/email-templates">Email Templates</a>
             <a href="/admin/site-content">Site Content</a>
+            <a href="/admin/contact-messages">Contact Messages</a>
           </nav>
 
           <div className="nav-group-label">Oversight</div>

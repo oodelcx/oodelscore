@@ -21,6 +21,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       { key: "how-it-works", label: "How it works", visible: true, order: 2 },
       { key: "pricing", label: "Pricing", visible: true, order: 3 },
       { key: "company", label: "Company", visible: true, order: 4 },
+      { key: "contact", label: "Contact", visible: true, order: 5 },
     ],
     sections: [],
     fields: {
@@ -29,7 +30,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         "Feedback collection, OCX Intelligence reports, and the tools to actually act on both — for one location or a thousand.",
       footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
       footerSolutionsLinks: JSON.stringify(["Solutions", "The mechanism", "Pricing"]),
-      footerCompanyLinks: JSON.stringify(["About", "Privacy policy", "Terms"]),
+      footerCompanyLinks: JSON.stringify(["About", "Contact", "Privacy policy", "Terms"]),
       footerProductHeading: "Product",
       footerSolutionsHeading: "Solutions",
       footerCompanyHeading: "Company",
@@ -305,6 +306,21 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "When you email us, a person who understands the product answers.",
         },
       ]),
+      contactEmail: "hello@oodelscore.com",
+    },
+  },
+  {
+    page: "contact",
+    navItems: [],
+    sections: [],
+    fields: {
+      heroHeadline: "Get in touch.",
+      heroSubhead:
+        "Questions about OodelCX, a demo request, or something else entirely — send us a message and a person will get back to you.",
+      metaDescription:
+        "Contact the OodelCX team — questions, demo requests, or anything else. Send a message and a person will get back to you.",
+      successHeadline: "Thanks — we'll be in touch.",
+      successBody: "Someone from our team will reply soon, usually within a business day.",
       contactEmail: "hello@oodelscore.com",
     },
   },
