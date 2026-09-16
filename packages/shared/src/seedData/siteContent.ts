@@ -18,7 +18,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     navItems: [
       { key: "product", label: "Product", visible: true, order: 0 },
       { key: "solutions", label: "Solutions", visible: true, order: 1 },
-      { key: "industries", label: "Industries", visible: true, order: 2 },
+      { key: "how-it-works", label: "How it works", visible: true, order: 2 },
       { key: "pricing", label: "Pricing", visible: true, order: 3 },
       { key: "company", label: "Company", visible: true, order: 4 },
     ],
@@ -28,7 +28,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       footerDescription:
         "Feedback collection, OCX Intelligence reports, and the tools to actually act on both — for one location or a thousand.",
       footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
-      footerSolutionsLinks: JSON.stringify(["Solutions", "Industries", "Pricing"]),
+      footerSolutionsLinks: JSON.stringify(["Solutions", "The mechanism", "Pricing"]),
       footerCompanyLinks: JSON.stringify(["About", "Privacy policy", "Terms"]),
       copyrightText: "© OodelCX. All rights reserved.",
     },
@@ -231,126 +231,43 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     },
   },
   {
-    page: "industries",
+    page: "how-it-works",
     navItems: [],
     sections: [],
     fields: {
-      heroHeadline: "Built for the sector you actually run.",
-      heroBody: "Pick your industry — the pain points and what OodelCX does about them are specific, not generic.",
+      heroHeadline: "From a QR scan to a measured result — the actual sequence.",
+      heroBody:
+        "Not a feature list. This is the path a single piece of feedback actually takes through OodelCX, start to finish.",
       metaDescription:
-        "How OodelCX applies to banking, education, diagnostics, retail, restaurants, fitness, and automotive — feedback collection, OCX Intelligence, and tracked follow-through by sector.",
-      sectors: JSON.stringify([
+        "The step-by-step mechanism behind OodelCX — from a QR code scan through OCX Intelligence tagging, alerts, the Action Board, the Decision Log, and CX Pulse.",
+      steps: JSON.stringify([
         {
-          key: "banking",
-          label: "Banking",
-          painPoints: [
-            "Branch experience varies widely and head office only hears about the worst cases",
-            "Compliance and service-quality feedback get collected in different, disconnected places",
-          ],
-          outcomes: [
-            "Surfaces recurring complaints by branch and by service line",
-            "Routes flagged feedback to a branch manager with a due date and an audit trail",
-          ],
-          stats: [
-            { label: "Question types", value: "9" },
-            { label: "Branch rollup", value: "Regional" },
-          ],
+          title: "A QR code goes up at the point of service",
+          body: "A till, a table, a service counter, a branch exit — the feedback point is placed where the interaction actually happened, not emailed out later when the moment has passed.",
         },
         {
-          key: "education",
-          label: "Education",
-          painPoints: [
-            "Parent and student feedback is scattered across emails, forms, and hallway conversations",
-            "A school trust with multiple campuses has no shared view of where issues are concentrated",
-          ],
-          outcomes: [
-            "One feedback point per campus, rolled up for the whole trust",
-            "Recurring themes (e.g. communication, facilities) tracked over a term, not just a snapshot",
-          ],
-          stats: [
-            { label: "Campuses", value: "Unlimited" },
-            { label: "Reporting", value: "Weekly" },
-          ],
+          title: "A customer scans it and answers a short survey",
+          body: "No app to install, no account to create. Star ratings, NPS, and open comments on the customer's own phone, answered in under a minute.",
         },
         {
-          key: "diagnostics",
-          label: "Diagnostics / Healthcare",
-          painPoints: [
-            "Wait times and result-communication issues are the most common complaints, but rarely tracked systematically",
-            "Multi-site labs and clinics need oversight without slowing down front-line staff",
-          ],
-          outcomes: [
-            "Short, anonymous-by-default surveys that don't add friction to a patient visit",
-            "Root Cause Analysis links a wait-time spike to a specific shift or site instead of guessing",
-          ],
-          stats: [
-            { label: "Avg. survey time", value: "<1 min" },
-            { label: "Anonymous by default", value: "Yes" },
-          ],
+          title: "The response lands in the dashboard, already tagged",
+          body: "OCX Intelligence reads the response as it arrives — sentiment, and which recurring theme it belongs to (via Theme Intelligence) — so nothing sits in a raw, unread queue.",
         },
         {
-          key: "retail",
-          label: "Retail",
-          painPoints: [
-            "Store-level service quality is hard to compare across a chain",
-            "Seasonal spikes in complaints get lost in the noise of everyday feedback",
-          ],
-          outcomes: [
-            "Branch-vs-branch comparison so underperforming stores are visible, not buried",
-            "Action Board turns a recurring complaint into an owned task for a store manager",
-          ],
-          stats: [
-            { label: "Branch comparison", value: "Live" },
-            { label: "Alert rules", value: "Custom" },
-          ],
+          title: "Alert rules flag what actually needs attention",
+          body: "A low score, a flagged theme, or a pattern crossing a threshold triggers an alert to the right person — instead of every response getting equal, unfiltered attention.",
         },
         {
-          key: "restaurant",
-          label: "Restaurant",
-          painPoints: [
-            "Table-side feedback is inconsistent — a bad night can go entirely unreported",
-            "Front-of-house issues (wait time, order accuracy) repeat without a clear owner",
-          ],
-          outcomes: [
-            "A QR code at the table or till, answered in under a minute on a customer's own phone",
-            "Theme Intelligence flags a recurring issue (e.g. \"cold food\") before it becomes a pattern of reviews",
-          ],
-          stats: [
-            { label: "Setup", value: "QR code only" },
-            { label: "Question types", value: "9" },
-          ],
+          title: "The Action Board turns it into an owned task",
+          body: "A flagged response becomes a tracked item with an owner and a due date. Recurring issues can be handled with a Playbook, so the same fix doesn't get reinvented every time.",
         },
         {
-          key: "fitness",
-          label: "Fitness",
-          painPoints: [
-            "Member churn signals (equipment, cleanliness, class quality) often surface too late to act on",
-            "Multi-location gyms and studios lack a shared view of which sites need attention",
-          ],
-          outcomes: [
-            "Driver Analysis shows which categories actually correlate with overall satisfaction",
-            "CX Pulse tracks whether a location is improving, not just what today's score is",
-          ],
-          stats: [
-            { label: "Locations", value: "Unlimited" },
-            { label: "Scoring", value: "CX Pulse" },
-          ],
+          title: "The Decision Log measures whether the fix worked",
+          body: "Bigger changes get logged with the trigger that caused them and a before/after outcome — so \"we fixed it\" is something you can prove, not just claim.",
         },
         {
-          key: "automotive",
-          label: "Automotive",
-          painPoints: [
-            "Service-bay and sales-floor feedback are usually tracked separately, if at all",
-            "Dealership groups need per-branch accountability without losing group-wide oversight",
-          ],
-          outcomes: [
-            "One dashboard for service and sales feedback across every location",
-            "Decision Log measures whether a service-process change actually moved the score",
-          ],
-          stats: [
-            { label: "Departments covered", value: "Service + Sales" },
-            { label: "Group rollup", value: "Yes" },
-          ],
+          title: "CX Pulse tracks the whole cycle's maturity over time",
+          body: "Not just today's score — whether the organization is actually getting better at closing the loop: awareness, response speed, ownership, culture, and measured outcomes.",
         },
       ]),
     },

@@ -3,6 +3,7 @@ import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "./nav-footer";
 import { BookDemoButton } from "./demo-modal";
 import { Reveal } from "./scroll-reveal";
+import { LoopAnimation } from "./loop-animation";
 
 interface NarrativeStep {
   label: string;
@@ -104,6 +105,8 @@ export default async function MarketingHomePage() {
           <div className="built-for">
             <b>Built for</b> {f.heroBuiltForLine}
           </div>
+
+          <LoopAnimation />
 
           <div className="loop-stages">
             {loopStages.map((stage, i) => (
@@ -233,7 +236,7 @@ export default async function MarketingHomePage() {
         </div>
       </section>
 
-      <MarketingFooter fields={menu.fields} />
+      <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
   );
 }

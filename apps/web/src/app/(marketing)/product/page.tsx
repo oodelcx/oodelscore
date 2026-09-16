@@ -163,7 +163,7 @@ export default async function ProductPage() {
         </div>
       </section>
 
-      <MarketingFooter fields={menu.fields} />
+      <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
   );
 }

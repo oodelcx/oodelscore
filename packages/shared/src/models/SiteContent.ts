@@ -6,7 +6,7 @@ export const SITE_CONTENT_PAGES = [
   "pricing",
   "product",
   "solutions",
-  "industries",
+  "how-it-works",
   "company",
   "privacy",
   "terms",

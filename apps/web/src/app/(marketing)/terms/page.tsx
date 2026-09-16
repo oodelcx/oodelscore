@@ -45,7 +45,7 @@ export default async function TermsPage() {
         ))}
       </div>
 
-      <MarketingFooter fields={menu.fields} />
+      <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
   );
 }

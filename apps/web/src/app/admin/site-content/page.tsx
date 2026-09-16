@@ -22,7 +22,7 @@ const TABS: { id: string; label: string }[] = [
   { id: "pricing", label: "Pricing" },
   { id: "product", label: "Product" },
   { id: "solutions", label: "Solutions" },
-  { id: "industries", label: "Industries" },
+  { id: "how-it-works", label: "How it works" },
   { id: "company", label: "Company" },
   { id: "privacy", label: "Privacy Policy" },
   { id: "terms", label: "Terms of Service" },
@@ -142,7 +142,7 @@ export default function SiteContentPage() {
       {current && activeTab === "pricing" && <PricingPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "product" && <ProductPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "solutions" && <SolutionsPanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "industries" && <IndustriesPanel content={current} onFieldChange={updateField} />}
+      {current && activeTab === "how-it-works" && <HowItWorksPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "company" && <CompanyPanel content={current} onFieldChange={updateField} />}
       {current && (activeTab === "privacy" || activeTab === "terms") && (
         <LegalPanel content={current} page={activeTab} onFieldChange={updateField} />
@@ -849,27 +849,24 @@ function SolutionsPanel({
   );
 }
 
-interface Sector {
-  key: string;
-  label: string;
-  painPoints: string[];
-  outcomes: string[];
-  stats: { label: string; value: string }[];
+interface HowItWorksStep {
+  title: string;
+  body: string;
 }
 
-function IndustriesPanel({
+function HowItWorksPanel({
   content,
   onFieldChange,
 }: {
   content: PageContent;
   onFieldChange: (page: string, key: string, value: string) => void;
 }) {
-  const sectors = parseJsonArray<Sector>(content.fields.sectors);
+  const steps = parseJsonArray<HowItWorksStep>(content.fields.steps);
 
-  function updateSector(i: number, patch: Partial<Sector>) {
-    const next = [...sectors];
+  function updateStep(i: number, patch: Partial<HowItWorksStep>) {
+    const next = [...steps];
     next[i] = { ...next[i], ...patch };
-    onFieldChange("industries", "sectors", JSON.stringify(next));
+    onFieldChange("how-it-works", "steps", JSON.stringify(next));
   }
 
   return (
@@ -881,82 +878,48 @@ function IndustriesPanel({
           label="Meta description"
           textarea
           value={content.fields.metaDescription}
-          onChange={(v) => onFieldChange("industries", "metaDescription", v)}
+          onChange={(v) => onFieldChange("how-it-works", "metaDescription", v)}
         />
       </div>
       <div className="card" style={{ marginBottom: 20 }}>
         <h3>Hero</h3>
-        <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("industries", "heroHeadline", v)} />
-        <Field label="Body" textarea value={content.fields.heroBody} onChange={(v) => onFieldChange("industries", "heroBody", v)} />
+        <Field
+          label="Headline"
+          value={content.fields.heroHeadline}
+          onChange={(v) => onFieldChange("how-it-works", "heroHeadline", v)}
+        />
+        <Field label="Body" textarea value={content.fields.heroBody} onChange={(v) => onFieldChange("how-it-works", "heroBody", v)} />
       </div>
       <div className="card">
-        <h3>Sectors (shown as tabs, in this order)</h3>
-        <p className="card-sub">Keep pain points and outcomes short — a few sentences, not a full feature list.</p>
-        {sectors.map((sector, i) => (
-          <div className="qrow" key={sector.key || i} style={{ marginBottom: 18, paddingBottom: 18, borderBottom: "1px solid var(--border,#e4e2dc)" }}>
+        <h3>Steps (shown in this order, numbered automatically)</h3>
+        <p className="card-sub">The actual sequence a business goes through — QR code to measured result. Keep each step concrete.</p>
+        {steps.map((step, i) => (
+          <div className="qrow" key={i} style={{ marginBottom: 18, paddingBottom: 18, borderBottom: "1px solid var(--border,#e4e2dc)" }}>
             <div className="qrow-top">
+              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text-3)", marginRight: 4 }}>{i + 1}.</span>
               <input
                 type="text"
                 style={{ flex: 1, fontWeight: 600 }}
-                placeholder="Label (e.g. Banking)"
-                value={sector.label}
-                onChange={(e) => updateSector(i, { label: e.target.value, key: sector.key || e.target.value.toLowerCase() })}
+                placeholder="Step title"
+                value={step.title}
+                onChange={(e) => updateStep(i, { title: e.target.value })}
               />
               <span
                 className="icon-btn btn-danger"
-                onClick={() => onFieldChange("industries", "sectors", JSON.stringify(sectors.filter((_, idx) => idx !== i)))}
+                onClick={() => onFieldChange("how-it-works", "steps", JSON.stringify(steps.filter((_, idx) => idx !== i)))}
               >
                 🗑
               </span>
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0" }}>Pain points (one per line)</div>
-            <textarea
-              value={sector.painPoints.join("\n")}
-              onChange={(e) => updateSector(i, { painPoints: e.target.value.split("\n") })}
-            />
-            <div style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0" }}>What OodelCX does (one per line)</div>
-            <textarea value={sector.outcomes.join("\n")} onChange={(e) => updateSector(i, { outcomes: e.target.value.split("\n") })} />
-            <div style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0" }}>Stat chips</div>
-            {sector.stats.map((stat, j) => (
-              <div className="field-row" key={j}>
-                <input
-                  type="text"
-                  placeholder="Value (e.g. 9)"
-                  value={stat.value}
-                  onChange={(e) => {
-                    const nextStats = [...sector.stats];
-                    nextStats[j] = { ...nextStats[j], value: e.target.value };
-                    updateSector(i, { stats: nextStats });
-                  }}
-                />
-                <input
-                  type="text"
-                  placeholder="Label (e.g. Question types)"
-                  value={stat.label}
-                  onChange={(e) => {
-                    const nextStats = [...sector.stats];
-                    nextStats[j] = { ...nextStats[j], label: e.target.value };
-                    updateSector(i, { stats: nextStats });
-                  }}
-                />
-              </div>
-            ))}
-            <button className="btn btn-sm" onClick={() => updateSector(i, { stats: [...sector.stats, { label: "", value: "" }] })}>
-              + Add stat
-            </button>
+            <div style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0" }}>Body</div>
+            <textarea value={step.body} onChange={(e) => updateStep(i, { body: e.target.value })} />
           </div>
         ))}
         <button
           className="btn"
-          onClick={() =>
-            onFieldChange(
-              "industries",
-              "sectors",
-              JSON.stringify([...sectors, { key: "", label: "New sector", painPoints: [], outcomes: [], stats: [] }])
-            )
-          }
+          onClick={() => onFieldChange("how-it-works", "steps", JSON.stringify([...steps, { title: "New step", body: "" }]))}
         >
-          + Add sector
+          + Add step
         </button>
       </div>
     </>

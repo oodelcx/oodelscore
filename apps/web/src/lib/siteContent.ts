@@ -14,7 +14,7 @@ function fromSeed(page: SiteContentPage): ResolvedSiteContent {
 
 /**
  * A live DB `menu` doc predates a nav entry added later in the seed (e.g.
- * "industries" was just added here but an old doc has no such entry at
+ * "how-it-works" was just added here but an old doc has no such entry at
  * all) — a missing entry must default to visible, not hidden, or a newly
  * added page silently 404s (each gated page checks
  * `navItems.find(...)?.visible === false`, which already fails open for a
