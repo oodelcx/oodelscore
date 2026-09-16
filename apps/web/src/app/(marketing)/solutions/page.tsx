@@ -30,7 +30,7 @@ export default async function SolutionsPage() {
 
   return (
     <>
-      <MarketingNav active="solutions" navItems={menu.navItems} />
+      <MarketingNav active="solutions" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="inner-hero">
         <div className="wrap">

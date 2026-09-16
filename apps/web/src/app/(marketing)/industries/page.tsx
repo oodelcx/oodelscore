@@ -36,7 +36,7 @@ export default async function IndustriesPage() {
 
   return (
     <>
-      <MarketingNav active="industries" navItems={menu.navItems} />
+      <MarketingNav active="industries" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="inner-hero">
         <div className="wrap">

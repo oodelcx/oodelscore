@@ -89,7 +89,7 @@ export default async function MarketingHomePage() {
 
   return (
     <>
-      <MarketingNav active="home" navItems={menu.navItems} />
+      <MarketingNav active="home" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="loop-hero">
         <div className="wrap">
@@ -223,7 +223,7 @@ export default async function MarketingHomePage() {
       <section className="final-cta" id="demo">
         <div className="wrap">
           <h2>See what your customers are already telling you.</h2>
-          <p>Twenty minutes, your own data — no generic demo script.</p>
+          <p>Twenty minutes, a live walkthrough of real workflows — not a canned script.</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
             <BookDemoButton className="btn-primary hover-lift">Book a demo</BookDemoButton>
             <a className="btn-ghost hover-lift" href="/login">

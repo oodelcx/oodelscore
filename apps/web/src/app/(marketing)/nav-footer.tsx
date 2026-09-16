@@ -10,14 +10,26 @@ const PATH_BY_KEY: Record<string, string> = {
   company: "/company",
 };
 
-export function MarketingNav({ active, navItems }: { active: string; navItems: INavItem[] }) {
+export function MarketingNav({
+  active,
+  navItems,
+  headerStyle,
+}: {
+  active: string;
+  navItems: INavItem[];
+  /** "menu" Site Content field, admin-toggleable in Admin → Site Content →
+   * Menu & Footer. Absent/anything but "dark" falls back to "light" (the
+   * original look), so nothing breaks before an admin sets it. */
+  headerStyle?: string;
+}) {
   const visible = [...navItems].filter((n) => n.visible).sort((a, b) => a.order - b.order);
+  const isDark = headerStyle === "dark";
 
   return (
-    <nav className="nav">
+    <nav className={`nav ${isDark ? "nav-dark" : "nav-light"}`}>
       <div className="nav-inner">
         <Link href="/" className="nav-logo">
-          <img src="/oodelcx-logo-dark.webp" alt="OodelCX" />
+          <img src={isDark ? "/oodelcx-logo-white.webp" : "/oodelcx-logo-dark.webp"} alt="OodelCX" />
         </Link>
         <div className="nav-links">
           {visible.map((item) => (

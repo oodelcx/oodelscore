@@ -42,7 +42,7 @@ export default async function PricingPage() {
 
   return (
     <>
-      <MarketingNav active="pricing" navItems={menu.navItems} />
+      <MarketingNav active="pricing" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="pricing-hero">
         <div className="wrap">

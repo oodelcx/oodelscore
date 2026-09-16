@@ -32,7 +32,7 @@ export default async function CompanyPage() {
 
   return (
     <>
-      <MarketingNav active="company" navItems={menu.navItems} />
+      <MarketingNav active="company" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="quiet-hero">
         <div className="wrap">

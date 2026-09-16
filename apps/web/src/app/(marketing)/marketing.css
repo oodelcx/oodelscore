@@ -18,18 +18,18 @@
   --blue: #3f5fd1;
   --purple: #6b4fd6;
   --red: #c24a3f;
-  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
-  --font-body: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-ibm-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+  /* Site-wide font (matches the OodelCX logo, a geometric grotesque sans).
+   * Inter itself is loaded once, globally, in the root layout
+   * (`app/layout.tsx`, `next/font/google`) and applied via a class on
+   * `<html>`, so it's already inherited here — these variables just alias
+   * it for the distinct type-scale roles ("serif"/"mono" headline vs. tag
+   * treatments below) that used to point at separate webfonts.
+   */
+  --font-serif: inherit;
+  --font-mono: inherit;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-}
-.mkt h1,
-.mkt h2,
-.mkt h3 {
-  font-family: var(--font-serif);
 }
 .mkt .feature-tag,
 .mkt .sol-tag,
@@ -166,6 +166,39 @@
   .mkt .nav-links {
     display: none;
   }
+}
+
+/* Admin-toggleable header style ("menu" Site Content field `headerStyle`,
+ * default "light" — today's white nav, unchanged above). "dark" swaps the
+ * background to near-black with the white wordmark and lightened text —
+ * link/button contrast is set explicitly here rather than a blanket
+ * color-invert, so the primary CTA and "Sign in" stay legible on black. */
+.mkt .nav.nav-light {
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid var(--line);
+}
+.mkt .nav.nav-dark {
+  background: rgba(17, 20, 18, 0.94);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.mkt .nav.nav-dark .nav-links {
+  color: rgba(255, 255, 255, 0.72);
+}
+.mkt .nav.nav-dark .nav-links a:hover,
+.mkt .nav.nav-dark .nav-links a.active {
+  color: #fff;
+}
+.mkt .nav.nav-dark .nav-right {
+  color: #fff;
+}
+.mkt .nav.nav-dark .btn-primary {
+  background: #fff;
+  color: var(--ink);
+}
+.mkt .nav.nav-dark .btn-primary:hover {
+  background: var(--signal-bright);
+  color: var(--signal-deep);
 }
 
 /* ===== HERO ===== */

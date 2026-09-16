@@ -27,7 +27,7 @@ export default async function TermsPage() {
 
   return (
     <>
-      <MarketingNav active="terms" navItems={menu.navItems} />
+      <MarketingNav active="terms" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="inner-hero">
         <div className="wrap">
