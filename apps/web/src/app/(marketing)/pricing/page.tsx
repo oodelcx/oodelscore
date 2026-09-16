@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
+import { Reveal } from "../scroll-reveal";
 
 interface Plan {
   name: string;
@@ -10,6 +12,10 @@ interface Plan {
   featured: boolean;
   cta: string;
   features: string[];
+}
+interface LoopStripItem {
+  label: string;
+  body: string;
 }
 
 // Otherwise Next statically prerenders this at build time and a Site
@@ -29,8 +35,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PricingPage() {
   const [menu, pricing] = await Promise.all([getSiteContent("menu"), getSiteContent("pricing")]);
+  if (menu.navItems.find((n) => n.key === "pricing")?.visible === false) notFound();
   const f = pricing.fields;
   const plans = parseJsonArray<Plan>(f.plans);
+  const loopItems = parseJsonArray<LoopStripItem>(f.loopStripItems);
 
   return (
     <>
@@ -44,9 +52,24 @@ export default async function PricingPage() {
       </section>
 
       <div className="wrap">
+        {loopItems.length > 0 && (
+          <Reveal>
+            <div className="loop-strip">
+              <h2>{f.loopStripHeadline}</h2>
+              <div className="loop-strip-row">
+                {loopItems.map((item, i) => (
+                  <div className="loop-strip-item hover-lift" key={i}>
+                    <div className="loop-strip-label">{item.label}</div>
+                    <p>{item.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        )}
         <div className="pricing-grid">
           {plans.map((plan, i) => (
-            <div className={`plan ${plan.featured ? "featured" : ""}`} key={i}>
+            <div className={`plan hover-lift ${plan.featured ? "featured" : ""}`} key={i}>
               <div className="plan-name">{plan.name}</div>
               <div className="plan-price">{plan.price}</div>
               <div className="plan-unit">{plan.priceNote}</div>
