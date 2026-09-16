@@ -8,6 +8,7 @@ const PATH_BY_KEY: Record<string, string> = {
   "how-it-works": "/how-it-works",
   pricing: "/pricing",
   company: "/company",
+  contact: "/contact",
 };
 
 export function MarketingNav({
@@ -81,6 +82,7 @@ const FOOTER_LINK_HREF: Record<string, string> = {
   Solutions: "/solutions",
   Industries: "/how-it-works",
   About: "/company",
+  Contact: "/contact",
   "Privacy policy": "/privacy",
   Terms: "/terms",
 };

@@ -42,6 +42,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A visitor submits \"Book a demo\" on the marketing site",
     category: "alerts",
   },
+  contact_form_submission: {
+    label: "Contact Form Submission",
+    trigger: "A visitor submits the Contact page form",
+    category: "alerts",
+  },
   feedback_point_request: {
     label: "Feedback Point Request",
     trigger: "A business requests a new feedback point or changes to one",

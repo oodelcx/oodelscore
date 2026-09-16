@@ -24,6 +24,7 @@ export * from "./CxPulseScore";
 export * from "./CxPulseFramework";
 export * from "./CxPulsePulseResponse";
 export * from "./DemoRequest";
+export * from "./ContactMessage";
 export * from "./CategoryOwnerMapping";
 export * from "./ScanToken";
 export * from "./FeedbackPointRequest";

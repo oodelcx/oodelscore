@@ -8,6 +8,7 @@ export const SITE_CONTENT_PAGES = [
   "solutions",
   "how-it-works",
   "company",
+  "contact",
   "privacy",
   "terms",
   "login",

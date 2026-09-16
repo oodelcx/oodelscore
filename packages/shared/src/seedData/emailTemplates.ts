@@ -83,6 +83,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["requester_name", "requester_email", "requester_company", "requester_message"],
   },
   {
+    key: "contact_form_submission",
+    subject: "New contact form message: {{sender_name}}",
+    body: "{{sender_name}} ({{sender_email}}) at {{sender_company}} sent a message via the Contact page.\n\nMessage: {{sender_message}}",
+    availableVars: ["sender_name", "sender_email", "sender_company", "sender_message"],
+  },
+  {
     key: "feedback_point_request",
     subject: "New feedback point request from {{business_name}}",
     body: "{{business_name}} ({{requester_email}}) requested a new feedback point.\n\nNote: {{note}}",
