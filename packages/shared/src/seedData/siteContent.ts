@@ -28,7 +28,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       footerDescription:
         "Feedback collection, OCX Intelligence reports, and the tools to actually act on both — for one location or a thousand.",
       footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
-      footerSolutionsLinks: JSON.stringify(["Single business", "Multi-location groups", "Enterprise", "Industries"]),
+      footerSolutionsLinks: JSON.stringify(["Solutions", "Industries", "Pricing"]),
       footerCompanyLinks: JSON.stringify(["About", "Privacy policy", "Terms"]),
       copyrightText: "© OodelCX. All rights reserved.",
     },

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
@@ -52,7 +53,9 @@ export default async function SolutionsPage() {
                     <li key={i}>{point}</li>
                   ))}
                 </ul>
-                <span className="fork-cta">One business, one dashboard →</span>
+                <Link href="/pricing" className="fork-cta">
+                  See standalone pricing →
+                </Link>
               </div>
             </Reveal>
             <Reveal delay={100}>
@@ -65,7 +68,9 @@ export default async function SolutionsPage() {
                     <li key={i}>{point}</li>
                   ))}
                 </ul>
-                <span className="fork-cta">Every branch, one view →</span>
+                <Link href="/pricing" className="fork-cta">
+                  See group pricing →
+                </Link>
               </div>
             </Reveal>
           </div>
