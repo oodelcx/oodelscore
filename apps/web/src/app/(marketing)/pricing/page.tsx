@@ -73,15 +73,11 @@ export default async function PricingPage() {
               <div className="plan-name">{plan.name}</div>
               <div className="plan-price">{plan.price}</div>
               <div className="plan-unit">{plan.priceNote}</div>
-              {plan.cta === "Start free trial" ? (
-                // Self-serve signup/trial flow doesn't exist yet — a real
-                // product decision, not wired here (see PR description).
-                <a className="plan-cta" href="#">
-                  {plan.cta}
-                </a>
-              ) : (
-                <BookDemoButton className="plan-cta">{plan.cta}</BookDemoButton>
-              )}
+              {/* Every plan CTA opens the demo modal, whatever its label
+                  says — self-serve signup doesn't exist yet, so a dead
+                  href="#" was always a bug, not something tied to specific
+                  button text. */}
+              <BookDemoButton className="plan-cta">{plan.cta}</BookDemoButton>
               {plan.features.map((feat, j) => (
                 <div className="plan-feat" key={j}>
                   {feat}

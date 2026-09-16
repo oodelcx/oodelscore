@@ -876,7 +876,11 @@
 }
 .mkt .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* auto-fit collapses unused tracks instead of reserving a 3rd column, so
+     deleting a plan (down to 2, or even 1) re-centers the remaining cards
+     via justify-content rather than leaving them stuck on the left. */
+  grid-template-columns: repeat(auto-fit, 360px);
+  justify-content: center;
   gap: 20px;
   padding: 60px 0 40px;
 }
@@ -1736,10 +1740,9 @@
 }
 .mkt .quiet-list-index {
   font-family: var(--font-mono);
-  font-style: italic;
   font-size: 34px;
   font-weight: 600;
-  color: var(--signal);
+  color: var(--ink);
   line-height: 1;
 }
 .mkt .quiet-list-item h3 {
