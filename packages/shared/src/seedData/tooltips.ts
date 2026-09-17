@@ -181,4 +181,112 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       },
     ],
   },
+  {
+    screenKey: "business-dashboard",
+    screenLabel: "Business Dashboard",
+    tooltips: [
+      {
+        key: "total-responses",
+        label: "Total Responses",
+        text: "Number of feedback responses received in the selected period.",
+      },
+      {
+        key: "average-score",
+        label: "Average Score",
+        text: "Average star rating (1–5) across all responses in the selected period.",
+      },
+      {
+        key: "nps",
+        label: "NPS",
+        text: "Net Promoter Score, from -100 to 100. Calculated from how likely customers say they'd recommend you — Promoters (9–10) minus Detractors (0–6), as a percentage of all respondents.",
+      },
+      {
+        key: "cx-pulse",
+        label: "CX Pulse",
+        text: "CX Pulse measures how well your team turns feedback into action — not just how happy customers are, but whether you're actually responding, fixing issues, and improving over time. Scored out of 100.",
+      },
+      {
+        key: "conversion-rate",
+        label: "Conversion Rate",
+        text: "Percentage of QR code scans that turned into a completed feedback response.",
+      },
+      {
+        key: "response-trend",
+        label: "Response Trend",
+        text: "How your average score has moved over time — use this to spot whether things are improving or slipping.",
+      },
+      {
+        key: "rating-distribution",
+        label: "Rating Distribution",
+        text: "A breakdown of how many responses fell into each star rating, so you can see if scores are clustered high, low, or spread out.",
+      },
+    ],
+  },
+  {
+    screenKey: "feedback-points",
+    screenLabel: "Feedback Points",
+    tooltips: [
+      {
+        key: "scans",
+        label: "Scans",
+        text: "Number of times this feedback point's QR code has been scanned.",
+      },
+      {
+        key: "responses",
+        label: "Responses",
+        text: "Number of completed feedback responses from this feedback point.",
+      },
+      {
+        key: "conversion",
+        label: "Conversion",
+        text: "Percentage of scans that turned into a completed response — a low number may mean the survey is too long or placed somewhere inconvenient for customers.",
+      },
+      {
+        key: "active-status",
+        label: "Active",
+        text: "Whether this feedback point is currently live and collecting responses. An inactive point's QR code won't accept new submissions.",
+      },
+      {
+        key: "request-feedback-point",
+        label: "Request a Feedback Point",
+        text: "New feedback points and question changes are set up by your account manager to keep every survey error-free — submit what you need here and they'll action it, usually within one business day.",
+      },
+    ],
+  },
+  {
+    screenKey: "action-board",
+    screenLabel: "Action Board",
+    tooltips: [
+      {
+        key: "item-title",
+        label: "Title",
+        text: "A short name for the task — what needs to be done.",
+      },
+      {
+        key: "priority",
+        label: "Priority",
+        text: "How urgent this item is. Higher-priority items should be tackled first.",
+      },
+      {
+        key: "owner",
+        label: "Owner",
+        text: "Who's responsible for resolving this item.",
+      },
+      {
+        key: "due-date",
+        label: "Due Date",
+        text: "When this item should be resolved by.",
+      },
+      {
+        key: "status",
+        label: "Status",
+        text: "Where this item currently stands — e.g. open, in progress, or resolved.",
+      },
+      {
+        key: "resolution-note",
+        label: "What did you do about this?",
+        text: "A short note on the fix or action taken — this becomes part of your record of what was done and why, useful later when reviewing whether it actually worked.",
+      },
+    ],
+  },
 ];
