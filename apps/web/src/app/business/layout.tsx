@@ -32,7 +32,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
-              <a href="/business/action-board">My Action Items</a>
+              <a href="/business/cases">My Cases</a>
             </nav>
           ) : (
             <>
@@ -56,9 +56,8 @@ export default async function BusinessLayout({ children }: { children: ReactNode
 
               <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
-                <a href="/business/action-board">Action Board</a>
+                <a href="/business/cases">Case Management</a>
                 <a href="/business/decision-log">Decision Log</a>
-                <a href="/business/playbooks">Playbooks</a>
               </nav>
 
               {isBranch && (
@@ -75,6 +74,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 {!isBusinessTeamMember && <a href="/business/team-members">Team Members</a>}
                 <a href="/business/messages">Messages</a>
                 {!isBusinessTeamMember && <a href="/business/billing">Billing</a>}
+                <a href="/business/playbooks">Playbook Library</a>
                 <a href="/business/security">Security</a>
               </nav>
             </>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
 
 type OutcomeMetric = "starAverage" | "nps" | "categoryAverage";
@@ -59,6 +60,15 @@ const VERDICT_LABELS: Record<string, string> = {
 };
 
 export default function DecisionLogClient({ tooltips }: { tooltips: Record<string, string> }) {
+  return (
+    <Suspense fallback={<p className="subtitle">Loading…</p>}>
+      <DecisionLogInner tooltips={tooltips} />
+    </Suspense>
+  );
+}
+
+function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
+  const searchParams = useSearchParams();
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [team, setTeam] = useState<TeamRow[]>([]);
@@ -115,6 +125,19 @@ export default function DecisionLogClient({ tooltips }: { tooltips: Record<strin
 
   useEffect(() => {
     load();
+  }, []);
+
+  // Pre-fill the "Log a decision" form when arriving from Case Management's
+  // pattern-nudge callout, e.g. /group/decision-log?new=1&title=...&trigger=...&linkedCaseId=...
+  useEffect(() => {
+    if (searchParams?.get("new") !== "1") return;
+    const qTitle = searchParams.get("title");
+    const qTrigger = searchParams.get("trigger");
+    const qLinkedCaseId = searchParams.get("linkedCaseId");
+    if (qTitle) setTitle(qTitle);
+    if (qTrigger) setTrigger(qTrigger);
+    if (qLinkedCaseId) setLinkedActionIds((cur) => (cur.includes(qLinkedCaseId) ? cur : [...cur, qLinkedCaseId]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function toggleAffected(id: string) {
@@ -276,6 +299,9 @@ export default function DecisionLogClient({ tooltips }: { tooltips: Record<strin
 
       <div className="card">
         <h3>Log a decision</h3>
+        {linkedActionIds.length > 0 && searchParams?.get("new") === "1" && (
+          <p className="card-sub">Pre-filled from a Case Management playbook — this entry will link back to that case.</p>
+        )}
         <div className="field-row">
           <div className="field">
             <label>Decision title</label>
