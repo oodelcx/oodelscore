@@ -104,6 +104,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
   const [editAffectedBusinessIds, setEditAffectedBusinessIds] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
   const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   function load() {
     setLoading(true);
@@ -137,6 +138,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
     if (qTitle) setTitle(qTitle);
     if (qTrigger) setTrigger(qTrigger);
     if (qLinkedCaseId) setLinkedActionIds((cur) => (cur.includes(qLinkedCaseId) ? cur : [...cur, qLinkedCaseId]));
+    setShowForm(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -177,6 +179,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
     setAffectedBusinessIds([]);
     setLinkedActionIds([]);
     setOutcomeMetricDescription("");
+    setShowForm(false);
     load();
   }
 
@@ -295,9 +298,15 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
           </h1>
           <p className="subtitle">What actually changed because of what customers told you, and whether it worked.</p>
         </div>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <button className="btn btn-dark" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Cancel" : "+ New decision"}
+          </button>
+        </div>
       </div>
 
-      <div className="card">
+      {showForm && (
+      <div className="card" style={{ marginBottom: 18 }}>
         <h3>Log a decision</h3>
         {linkedActionIds.length > 0 && searchParams?.get("new") === "1" && (
           <p className="card-sub">Pre-filled from a Case Management playbook — this entry will link back to that case.</p>
@@ -371,10 +380,16 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
           </div>
         </div>
         {error && <p className="error-text">{error}</p>}
-        <button className="btn btn-dark" disabled={creating} onClick={createEntry}>
-          {creating ? "Logging…" : "+ Log decision"}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-dark" disabled={creating} onClick={createEntry}>
+            {creating ? "Logging…" : "+ Log decision"}
+          </button>
+          <button className="btn" onClick={() => setShowForm(false)} disabled={creating}>
+            Cancel
+          </button>
+        </div>
       </div>
+      )}
 
       {!loading && entries.length > 0 && (
         <div className="filters">

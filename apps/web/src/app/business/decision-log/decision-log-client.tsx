@@ -81,6 +81,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
   const [triggerDraft, setTriggerDraft] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
   const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   function load() {
     setLoading(true);
@@ -107,6 +108,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     if (qTitle) setTitle(qTitle);
     if (qTrigger) setTrigger(qTrigger);
     if (qLinkedCaseId) setLinkedCaseId(qLinkedCaseId);
+    setShowForm(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -128,6 +130,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     setTitle("");
     setTrigger("");
     setLinkedCaseId(null);
+    setShowForm(false);
     load();
   }
 
@@ -227,33 +230,45 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
         <div>
           <h1>Decision Log</h1>
           <p className="subtitle">
-            Track decisions and changes made in response to feedback, and measure the outcome. Resolving an Action
-            Board item with a note logs one here automatically.
+            Track decisions and changes made in response to feedback, and measure the outcome. Resolving a case in
+            Case Management with a note logs one here automatically.
           </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <button className="btn btn-dark" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Cancel" : "+ New decision"}
+          </button>
         </div>
       </div>
 
-      <div className="card">
-        <h3>New entry</h3>
-        {linkedCaseId && <p className="card-sub">Pre-filled from a Case Management playbook — this entry will link back to that case.</p>}
-        <div className="field-row">
-          <div className="field">
-            <label>Title</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} />
+      {showForm && (
+        <div className="card" style={{ marginBottom: 18 }}>
+          <h3>New entry</h3>
+          {linkedCaseId && <p className="card-sub">Pre-filled from a Case Management playbook — this entry will link back to that case.</p>}
+          <div className="field-row">
+            <div className="field">
+              <label>Title</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>
+                Trigger
+                <InfoTip text={tooltips["trigger"]} />
+              </label>
+              <input value={trigger} onChange={(e) => setTrigger(e.target.value)} />
+            </div>
           </div>
-          <div className="field">
-            <label>
-              Trigger
-              <InfoTip text={tooltips["trigger"]} />
-            </label>
-            <input value={trigger} onChange={(e) => setTrigger(e.target.value)} />
+          {error && <p className="error-text">{error}</p>}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-dark" disabled={creating} onClick={createEntry}>
+              {creating ? "Creating…" : "+ Log decision"}
+            </button>
+            <button className="btn" onClick={() => setShowForm(false)} disabled={creating}>
+              Cancel
+            </button>
           </div>
         </div>
-        {error && <p className="error-text">{error}</p>}
-        <button className="btn btn-dark" disabled={creating} onClick={createEntry}>
-          {creating ? "Creating…" : "+ Log decision"}
-        </button>
-      </div>
+      )}
 
       {!loading && entries.length > 0 && (
         <div className="filters">

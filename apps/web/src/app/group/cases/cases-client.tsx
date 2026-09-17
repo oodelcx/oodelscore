@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
+import { OwnerBadge } from "@/components/owner-badge";
 import { PlaybookRunPanelSlideout } from "@/components/playbook-run-panel-slideout";
 
 interface PlaybookRunSummary {
@@ -107,6 +108,13 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
   const [categoryFilter, setCategoryFilter] = useState("");
   const [expandedDescriptionFor, setExpandedDescriptionFor] = useState<string | null>(null);
   const [openRunFor, setOpenRunFor] = useState<{ itemId: string; runId: string } | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
   function load() {
     setLoading(true);
@@ -256,6 +264,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
     if (filter === "overdue") return isOverdue(item);
     if (filter === "resolved") return item.status === "resolved";
     if (filter === "escalated") return item.escalated;
+    if (search && !`${item.title} ${item.description}`.toLowerCase().includes(search)) return false;
     return true;
   });
 
@@ -272,6 +281,11 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
               ? "Cases assigned to you — update their status as you work through them."
               : "Read-only oversight of every branch's Case Management — assigning and resolving cases is each branch's own job. Comment on a case or flag it Escalated if it needs your attention."}
           </p>
+        </div>
+        <div className="page-head-actions">
+          <a className="link-action" href="/group/playbooks">
+            ⚙ Playbook Library
+          </a>
         </div>
       </div>
 
@@ -330,6 +344,13 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
               ))}
             </select>
           )}
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search cases by title or description…"
+            style={{ minWidth: 220 }}
+          />
         </div>
       )}
 
@@ -370,10 +391,6 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                         </span>
                       )}
                       <span>
-                        Owner: <b>{ownerLabel(item.ownerId)}</b>
-                        <InfoTip text={tooltips["owner"]} />
-                      </span>
-                      <span>
                         Due: <b>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</b>
                       </span>
                     </div>
@@ -407,41 +424,45 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                         Mark resolved
                       </button>
                     )}
-                    {!isLimited && (
-                      <button
-                        className={`btn btn-sm${item.escalated ? " btn-dark" : ""}`}
-                        disabled={escalating === item._id}
-                        onClick={() => (item.escalated ? unEscalate(item) : startEscalate(item._id))}
-                      >
-                        {item.escalated ? "Un-escalate" : "Escalate"}
-                      </button>
-                    )}
                   </div>
                 </div>
 
-                <div className="action-links">
-                  {run ? (
-                    <div className="pb-chip" onClick={() => setOpenRunFor({ itemId: item._id, runId: run.id })}>
-                      <span>
-                        Playbook: {run.stepsCompleted} of {run.stepsTotal} steps
-                      </span>
-                      <span className="pb-chip-track">
-                        <span
-                          className="pb-chip-fill"
-                          style={{ width: `${run.stepsTotal ? Math.round((run.stepsCompleted / run.stepsTotal) * 100) : 0}%` }}
-                        />
-                      </span>
-                    </div>
-                  ) : item.categoryId ? (
-                    <span className="pb-no-playbook">No playbook set</span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className={`btn btn-sm action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
-                    onClick={() => toggleComments(item._id)}
-                  >
-                    💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
-                  </button>
+                <div className="case-footer">
+                  <div className="case-footer-actions">
+                    {run ? (
+                      <div className="pb-chip" onClick={() => setOpenRunFor({ itemId: item._id, runId: run.id })}>
+                        <span>
+                          Playbook: {run.stepsCompleted} of {run.stepsTotal} steps
+                        </span>
+                        <span className="pb-chip-track">
+                          <span
+                            className="pb-chip-fill"
+                            style={{ width: `${run.stepsTotal ? Math.round((run.stepsCompleted / run.stepsTotal) * 100) : 0}%` }}
+                          />
+                        </span>
+                      </div>
+                    ) : item.categoryId ? (
+                      <span className="pb-no-playbook">No playbook set</span>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={`case-action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
+                      onClick={() => toggleComments(item._id)}
+                    >
+                      💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
+                    </button>
+                    {!isLimited && (
+                      <button
+                        type="button"
+                        className={`case-action-btn${item.escalated ? " active" : ""}`}
+                        disabled={escalating === item._id}
+                        onClick={() => (item.escalated ? unEscalate(item) : startEscalate(item._id))}
+                      >
+                        {item.escalated ? "↩ Un-escalate" : "↗ Escalate"}
+                      </button>
+                    )}
+                  </div>
+                  <OwnerBadge label={item.ownerId ? ownerLabel(item.ownerId) : null} tip={tooltips["owner"]} />
                 </div>
 
                 {escalatingId === item._id && (

@@ -470,6 +470,95 @@ table.clean.striped tbody tr:nth-child(even) td {
   text-decoration: underline;
 }
 
+/* Case Management page-head — the low-emphasis "Playbook Library" link and
+   the primary "+ New case" button that sit to the right of the title. */
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.link-action {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  text-decoration: none;
+}
+.link-action:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* Case card footer — a left-aligned row of pill-style action buttons
+   (playbook chip, Comments, Escalate) all sharing the same size, with the
+   case owner (avatar + name) pinned to the right of that same row. */
+.case-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.case-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.case-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.case-action-btn:hover {
+  border-color: #bfbeb8;
+}
+.case-action-btn.active {
+  background: var(--sidebar-bg);
+  color: #fff;
+  border-color: var(--sidebar-bg);
+}
+.case-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.case-owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.case-owner-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--purple-bg);
+  color: var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.case-owner-avatar.unassigned {
+  background: var(--bg-2, #f1f0ec);
+  color: var(--text-3);
+}
+.case-owner-name {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
 /* Side panel / bottom sheet — the Case Management playbook-run detail
    view. Right-side fixed panel at desktop width; becomes a bottom sheet
    sliding up from the bottom at phone width via the media query below,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase, Response, FeedbackPoint } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { computeResponseStats } from "@/lib/responseStats";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
   await connectToDatabase();
   const match = buildMatch(session.business._id, filter);
 
-  const [total, rows, feedbackPoints] = await Promise.all([
+  const [total, rows, feedbackPoints, stats] = await Promise.all([
     Response.countDocuments(match),
     sort === "lowest"
       ? Response.aggregate([
@@ -67,6 +68,7 @@ export async function GET(request: Request) {
         ])
       : Response.find(match).sort({ submittedAt: -1 }).skip(skip).limit(limit).lean(),
     FeedbackPoint.find({ businessId: session.business._id }).select("_id name"),
+    computeResponseStats(match),
   ]);
 
   const feedbackPointNameById = new Map(feedbackPoints.map((fp) => [fp._id.toString(), fp.name]));
@@ -88,5 +90,6 @@ export async function GET(request: Request) {
     limit,
     total,
     totalPages: Math.max(1, Math.ceil(total / limit)),
+    stats,
   });
 }

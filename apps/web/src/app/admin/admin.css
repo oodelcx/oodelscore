@@ -295,6 +295,13 @@ h1 {
   color: var(--text-2);
   margin-top: 6px;
 }
+/* A comfortable reading width for content-forward card lists (e.g. Raw
+   Feedback) that would otherwise stretch to .admin-main's full 1520px and
+   float in a large empty canvas — the stat strip/filter bar above can still
+   span the full width, only the card list itself is capped. */
+.content-narrow {
+  max-width: 820px;
+}
 .card {
   background: var(--card);
   border: 1px solid var(--border);
