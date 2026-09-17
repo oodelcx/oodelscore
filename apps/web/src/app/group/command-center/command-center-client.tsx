@@ -379,9 +379,9 @@ export default function GroupCommandCenterClient({ tooltips }: { tooltips: Recor
                     </div>
                     <div className="cc-mini-row">
                       <span>
-                        Group MRR <InfoTip text={tooltips["billing-mrr"]} />
+                        Your subscription <InfoTip text={tooltips["billing-mrr"]} />
                       </span>
-                      <b>${data.billing.mrrValue.toFixed(2)}</b>
+                      <b>${data.billing.mrrValue.toFixed(2)}/mo</b>
                     </div>
                     {data.billing.nextPaymentDate && (
                       <div className="cc-mini-row">

@@ -151,8 +151,8 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       },
       {
         key: "billing-mrr",
-        label: "MRR",
-        text: "Total monthly recurring revenue across all paying clients.",
+        label: "Your subscription",
+        text: "What your organization pays OodelCX each month for this account — not revenue you've earned. Based on your current plan and branch count.",
       },
       {
         key: "movers",
