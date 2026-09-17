@@ -23,11 +23,23 @@ import { evaluatePlaybookTrigger } from "./playbookTrigger";
 export async function autoAttachPlaybook(item: HydratedDocument<IActionBoardItem>): Promise<void> {
   if (!item.categoryId) return;
 
+  const businessPlaybook = await Playbook.findOne({ businessId: item.businessId, categoryId: item.categoryId });
   const playbook =
-    (await Playbook.findOne({ businessId: item.businessId, categoryId: item.categoryId })) ??
+    businessPlaybook ??
     (item.parentOrgId ? await Playbook.findOne({ parentOrgId: item.parentOrgId, categoryId: item.categoryId }) : null);
 
   if (!playbook) return;
+
+  // The run's owner scope must match whichever Playbook actually matched —
+  // not always "business". A branch's own case can attach the org-wide
+  // fallback Playbook, and that run then belongs to the parentOrg, not the
+  // branch: /api/group/playbook-runs/[id] looks it up by
+  // {ownerType:"parentOrg", ownerId: org._id}, so a run mis-tagged
+  // ownerType:"business" 404s there ("Couldn't load this playbook run")
+  // even though the case card's chip (which doesn't filter by owner) shows
+  // it fine — that mismatch is exactly what this fixes.
+  const ownerType = businessPlaybook ? "business" : "parentOrg";
+  const ownerId = businessPlaybook ? item.businessId : item.parentOrgId!;
 
   // Defensive: this only ever runs once, right after ActionBoardItem.create,
   // but guard against a double-call (or a future second call site) ever
@@ -46,8 +58,8 @@ export async function autoAttachPlaybook(item: HydratedDocument<IActionBoardItem
 
   await PlaybookRun.create({
     playbookId: playbook._id,
-    ownerType: "business",
-    ownerId: item.businessId,
+    ownerType,
+    ownerId,
     actionBoardItemId: item._id,
     steps: playbook.steps,
     completedStepIndexes: [],

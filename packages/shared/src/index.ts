@@ -30,6 +30,7 @@ export * from "./alerts/evaluate";
 export * from "./ai/triage";
 export * from "./ai/themeSentiment";
 export * from "./ai/rootCause";
+export * from "./ai/insightsGeneration";
 export * from "./cxpulse/compute";
 export * from "./cxpulse/portfolio";
 export * from "./qr/generate";

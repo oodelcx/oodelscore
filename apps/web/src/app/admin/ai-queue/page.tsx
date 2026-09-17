@@ -11,7 +11,6 @@ interface ReportRow {
   periodEnd: string;
   bodyMarkdown: string;
   status: "pending" | "approved" | "rejected";
-  showChartOnDashboard: boolean;
 }
 
 type TabId = "pending" | "approved" | "rejected" | "all";
@@ -22,6 +21,30 @@ export default function AiInsightsQueuePage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("pending");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [generating, setGenerating] = useState(false);
+  const [generateResult, setGenerateResult] = useState<string | null>(null);
+
+  async function runGenerate() {
+    if (
+      !confirm(
+        "This calls Claude to write a fresh weekly/monthly/quarterly/yearly report for every business and organization that has feedback this period — real API calls, real cost. Already-generated reports for the current period aren't regenerated. Continue?"
+      )
+    ) {
+      return;
+    }
+    setGenerating(true);
+    setGenerateResult(null);
+    setError(null);
+    const res = await fetch("/api/admin/ai-insights/generate", { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setGenerating(false);
+    if (!res.ok) {
+      setError(data?.message ?? "Failed to generate reports");
+      return;
+    }
+    setGenerateResult(`${data.reportsCreated} report(s) created, ${data.reportsSkipped} skipped (already existed or nothing to report).`);
+    load();
+  }
 
   function load() {
     setLoading(true);
@@ -74,7 +97,16 @@ export default function AiInsightsQueuePage() {
             Nothing reaches a dashboard without your approval.
           </p>
         </div>
+        <button className="btn btn-dark" disabled={generating} onClick={runGenerate}>
+          {generating ? "Generating…" : "Generate now"}
+        </button>
       </div>
+
+      {generateResult && (
+        <div className="callout" style={{ marginBottom: 14 }}>
+          {generateResult}
+        </div>
+      )}
 
       <div className="subtabs">
         {(["pending", "approved", "rejected", "all"] as TabId[]).map((t) => (
@@ -89,9 +121,9 @@ export default function AiInsightsQueuePage() {
 
       {!loading && reports.length === 0 && (
         <p className="subtitle">
-          No reports {tab === "all" ? "" : `with status "${tab}" `}yet. The Claude Batch API insight-generation pipeline (spec
-          Section 10) hasn&apos;t populated this collection yet — this queue is wired to the real{" "}
-          <code>aiInsightReports</code> collection and will show reports as soon as something writes to it.
+          No reports {tab === "all" ? "" : `with status "${tab}" `}yet. Reports generate automatically every Monday
+          (weekly), the 1st of the month (monthly), the 1st of the quarter (quarterly), and Jan 1st (yearly) — or
+          click &quot;Generate now&quot; above to run it immediately.
         </p>
       )}
 
@@ -131,14 +163,7 @@ export default function AiInsightsQueuePage() {
               value={drafts[r._id] ?? ""}
               onChange={(e) => setDrafts((d) => ({ ...d, [r._id]: e.target.value }))}
             />
-            <div className="page-head" style={{ marginTop: 10, marginBottom: 0 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-                <span
-                  className={`toggle ${r.showChartOnDashboard ? "on" : ""}`}
-                  onClick={() => updateReport(r._id, { showChartOnDashboard: !r.showChartOnDashboard })}
-                />
-                Show chart on dashboard
-              </label>
+            <div className="page-head" style={{ marginTop: 10, marginBottom: 0, justifyContent: "flex-end" }}>
               <button className="btn" onClick={() => updateReport(r._id, { bodyMarkdown: drafts[r._id] })}>
                 Save Edits
               </button>
