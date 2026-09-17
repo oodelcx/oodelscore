@@ -14,10 +14,11 @@ const LINKS: { href: string; label: string }[] = [
 /**
  * Mobile-only header for the auth pages (login/forgot-password/set-password)
  * — these sit outside the marketing (marketing) route group and its
- * MarketingNav, so on narrow viewports (where AuthShell hides the black
- * visual panel entirely, auth-shell.css) there was previously no branding
- * and no way back to the marketing site at all. CSS-hidden above 900px,
- * matching the breakpoint AuthShell already hides .as-visual at.
+ * MarketingNav, so on narrow viewports there was previously no way back to
+ * the marketing site at all. Just the hamburger toggle, right-aligned to
+ * match every other page's mobile nav — the brand mark lives above the
+ * form content instead (AuthShell's .as-mobile-brand), not duplicated up
+ * here in the bar.
  */
 export function AuthMobileNav() {
   const [open, setOpen] = useState(false);
@@ -36,10 +37,6 @@ export function AuthMobileNav() {
           <span />
           <span />
         </button>
-        <Link href="/" className="as-mobile-logo">
-          <img src="/oodelcx-logo-dark.webp" alt="OodelCX" />
-        </Link>
-        <span className="as-mobile-toggle-spacer" />
       </div>
       {open && (
         <div className="as-mobile-panel">

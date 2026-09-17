@@ -48,7 +48,13 @@ export function AuthShell({
         </div>
       </div>
       <div className="as-form-panel">
-        <div className="as-form-inner">{children}</div>
+        <div className="as-form-inner">
+          {/* Mobile-only — .as-visual (with the white wordmark) is hidden
+              below 900px, so this is the only branding on the page there.
+              Hidden on desktop, where the visual panel already has it. */}
+          <img className="as-mobile-brand" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
+          {children}
+        </div>
       </div>
     </div>
   );
