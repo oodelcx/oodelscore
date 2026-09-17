@@ -43,6 +43,12 @@ const METRIC_LABELS: Record<OutcomeMetric, string> = {
   categoryAverage: "Category score",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  planned: "Planned",
+  in_progress: "In progress",
+  implemented: "Implemented",
+};
+
 const VERDICT_LABELS: Record<string, string> = {
   positive: "Improvement appears to have had a positive impact",
   negative: "Score went down after this decision",
@@ -86,6 +92,7 @@ export default function DecisionLogPage() {
   const [editOutcomeMetricDescription, setEditOutcomeMetricDescription] = useState("");
   const [editAffectedBusinessIds, setEditAffectedBusinessIds] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
+  const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -166,6 +173,7 @@ export default function DecisionLogPage() {
     setCategoryDraft(entry.outcomeCategoryId ?? "");
     setVerdict(null);
     setMeasureError(null);
+    setEditingId(null);
   }
 
   async function saveMeasurement(id: string) {
@@ -242,11 +250,16 @@ export default function DecisionLogPage() {
     if (!id) return "Unassigned";
     return team.find((t) => t.userId === id)?.label ?? "—";
   }
+  function linkedActionTitle(id: string) {
+    return actions.find((a) => a._id === id)?.title ?? "—";
+  }
 
   function outcomeDelta(e: EntryRow): { text: string; positive: boolean } | null {
     if (e.outcomeBefore === null || e.outcomeAfter === null) return null;
     return { text: `${e.outcomeBefore} → ${e.outcomeAfter}`, positive: e.outcomeAfter > e.outcomeBefore };
   }
+
+  const visibleEntries = entries.filter((e) => statusFilter === "all" || e.status === statusFilter);
 
   return (
     <div>
@@ -331,210 +344,236 @@ export default function DecisionLogPage() {
       </div>
 
       {!loading && entries.length > 0 && (
-        <div className="btn-group" style={{ marginBottom: 16 }}>
+        <div className="filters">
           {(["all", "planned", "in_progress", "implemented"] as const).map((s) => {
             const count = s === "all" ? entries.length : entries.filter((e) => e.status === s).length;
-            const label = s === "all" ? "All" : s === "in_progress" ? "In progress" : s.charAt(0).toUpperCase() + s.slice(1);
             return (
-              <button
-                key={s}
-                className={`btn btn-sm${statusFilter === s ? " btn-dark" : ""}`}
-                onClick={() => setStatusFilter(s)}
-              >
-                {label} ({count})
-              </button>
+              <div key={s} className={`chip ${statusFilter === s ? "active" : ""}`} onClick={() => setStatusFilter(s)}>
+                {s === "all" ? "All" : STATUS_LABELS[s]} ({count})
+              </div>
             );
           })}
         </div>
       )}
 
       {loading && <p className="subtitle">Loading…</p>}
-      {!loading &&
-        entries
-          .filter((e) => statusFilter === "all" || e.status === statusFilter)
-          .map((e) => {
-          const delta = outcomeDelta(e);
-          return (
-            <div className="decision-card" key={e._id}>
-              {editingId === e._id ? (
-                <div style={{ padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8, marginBottom: 10 }}>
-                  <div className="field-row">
-                    <div className="field">
-                      <label>Decision title</label>
-                      <input value={editTitle} onChange={(ev) => setEditTitle(ev.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>Decision owner</label>
-                      <select value={editOwnerId} onChange={(ev) => setEditOwnerId(ev.target.value)}>
-                        <option value="">Unassigned</option>
-                        {team.map((t) => (
-                          <option key={t.userId} value={t.userId}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="field">
-                    <label>Trigger</label>
-                    <textarea value={editTrigger} onChange={(ev) => setEditTrigger(ev.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label>Branches affected</label>
-                    <div className="chip-select">
-                      {businesses.map((b) => (
-                        <div
-                          key={b._id}
-                          className={`chip ${editAffectedBusinessIds.includes(b._id) ? "active" : ""}`}
-                          onClick={() => toggleEditAffected(b._id)}
-                        >
-                          {b.name}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="field-row">
-                    <div className="field">
-                      <label>Implementation date</label>
-                      <input type="date" value={editImplementationDate} onChange={(ev) => setEditImplementationDate(ev.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>How will you know it worked?</label>
-                      <input value={editOutcomeMetricDescription} onChange={(ev) => setEditOutcomeMetricDescription(ev.target.value)} />
-                    </div>
-                  </div>
-                  <button className="btn btn-dark btn-sm" onClick={() => saveEdit(e._id)}>
-                    Save changes
-                  </button>{" "}
-                  <button className="btn btn-sm" onClick={() => setEditingId(null)}>
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <>
-              <div className="decision-title">{e.title}</div>
-              <div className="decision-meta">
-                {e.implementationDate ? new Date(e.implementationDate).toLocaleDateString() : "No date set"} · {ownerLabel(e.ownerId)}
-              </div>
-              {e.trigger && (
-                <div className="decision-row">
-                  <div>
-                    <div className="k">Trigger</div>
-                    {e.trigger}
-                  </div>
-                </div>
-              )}
-              <div className="decision-row">
-                <div>
-                  <div className="k">Affected</div>
-                  {e.affectedBusinessIds.length > 0 ? e.affectedBusinessIds.map(businessName).join(", ") : "Not specified"}
-                </div>
-                <div>
-                  <div className="k">Status</div>
-                  <select value={e.status} onChange={(ev) => patch(e._id, { status: ev.target.value })}>
-                    <option value="planned">Planned</option>
-                    <option value="in_progress">In progress</option>
-                    <option value="implemented">Implemented</option>
-                  </select>
-                </div>
-              </div>
-              <div className="outcome-bar">
-                <div className="k">Outcome</div>
-                {delta ? (
-                  <div className="ov" style={{ color: delta.positive ? "var(--green)" : "var(--red)" }}>
-                    {e.outcomeMetricDescription || "Score"} {delta.text}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: "var(--text-3)" }}>
-                    {e.outcomeMetricDescription ? `Measuring: ${e.outcomeMetricDescription}` : "Not measured yet"}
-                  </div>
-                )}
-                <button className="btn btn-sm" style={{ marginLeft: "auto" }} onClick={() => startMeasure(e)}>
-                  {delta ? "Update measurement" : "Record measurement"}
-                </button>
-              </div>
-              {measuringId === e._id && (
-                <div style={{ marginTop: 10, padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
-                  <p className="card-sub" style={{ marginTop: 0 }}>
-                    Pick what to measure — OodelCX compares the average across everyone who responded in the 30 days
-                    before implementation to everyone who&apos;s responded since, using real feedback data. This
-                    tracks whether the metric moved overall, not whether any one customer&apos;s complaint was
-                    personally resolved — most feedback is anonymous. Needs at least 14 days since implementation;
-                    once eligible, this also gets checked automatically once a day.
-                  </p>
-                  <div className="field-row">
-                    <div className="field">
-                      <label>Metric</label>
-                      <select value={metricDraft} onChange={(ev) => setMetricDraft(ev.target.value as OutcomeMetric)}>
-                        {Object.entries(METRIC_LABELS).map(([key, lbl]) => (
-                          <option key={key} value={key}>
-                            {lbl}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {metricDraft === "categoryAverage" && (
+      {!loading && (
+        <div className="ab-list">
+          {visibleEntries.map((e) => {
+            const delta = outcomeDelta(e);
+            const triggerExpanded = expandedTriggerFor === e._id;
+            const triggerIsLong = e.trigger.length > 160;
+            return (
+              <div className="card ab-card" key={e._id}>
+                {editingId === e._id ? (
+                  <div className="ab-panel" style={{ margin: 0 }}>
+                    <div className="field-row">
                       <div className="field">
-                        <label>Category</label>
-                        <select value={categoryDraft} onChange={(ev) => setCategoryDraft(ev.target.value)}>
-                          <option value="">Select…</option>
-                          {categories.map((c) => (
-                            <option key={c._id} value={c._id}>
-                              {c.name}
+                        <label>Decision title</label>
+                        <input value={editTitle} onChange={(ev) => setEditTitle(ev.target.value)} />
+                      </div>
+                      <div className="field">
+                        <label>Decision owner</label>
+                        <select value={editOwnerId} onChange={(ev) => setEditOwnerId(ev.target.value)}>
+                          <option value="">Unassigned</option>
+                          {team.map((t) => (
+                            <option key={t.userId} value={t.userId}>
+                              {t.label}
                             </option>
                           ))}
                         </select>
                       </div>
-                    )}
-                  </div>
-                  {measureError && <p className="error-text">{measureError}</p>}
-                  {verdict && <p className="callout">{VERDICT_LABELS[verdict] ?? verdict}</p>}
-                  <button className="btn btn-dark btn-sm" disabled={autoMeasuring} onClick={() => runAutoMeasure(e)}>
-                    {autoMeasuring ? "Measuring…" : "Auto-measure"}
-                  </button>{" "}
-                  <button className="btn btn-sm" onClick={() => setMeasuringId(null)}>
-                    Close
-                  </button>
-
-                  <details style={{ marginTop: 10 }}>
-                    <summary className="subtitle" style={{ cursor: "pointer" }}>
-                      Or enter before/after numbers manually
-                    </summary>
-                    <div className="field-row" style={{ margin: "8px 0" }}>
-                      <div className="field">
-                        <label>Before</label>
-                        <input type="number" step="0.01" value={beforeDraft} onChange={(ev) => setBeforeDraft(ev.target.value)} />
-                      </div>
-                      <div className="field">
-                        <label>After</label>
-                        <input type="number" step="0.01" value={afterDraft} onChange={(ev) => setAfterDraft(ev.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>Trigger</label>
+                      <textarea value={editTrigger} onChange={(ev) => setEditTrigger(ev.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>Branches affected</label>
+                      <div className="chip-select">
+                        {businesses.map((b) => (
+                          <div
+                            key={b._id}
+                            className={`chip ${editAffectedBusinessIds.includes(b._id) ? "active" : ""}`}
+                            onClick={() => toggleEditAffected(b._id)}
+                          >
+                            {b.name}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <button className="btn btn-sm" onClick={() => saveMeasurement(e._id)}>
-                      Save manually
+                    <div className="field-row">
+                      <div className="field">
+                        <label>Implementation date</label>
+                        <input type="date" value={editImplementationDate} onChange={(ev) => setEditImplementationDate(ev.target.value)} />
+                      </div>
+                      <div className="field">
+                        <label>How will you know it worked?</label>
+                        <input value={editOutcomeMetricDescription} onChange={(ev) => setEditOutcomeMetricDescription(ev.target.value)} />
+                      </div>
+                    </div>
+                    <button className="btn btn-dark btn-sm" onClick={() => saveEdit(e._id)}>
+                      Save changes
+                    </button>{" "}
+                    <button className="btn btn-sm" onClick={() => setEditingId(null)}>
+                      Cancel
                     </button>
-                  </details>
-                </div>
-              )}
-              <div style={{ textAlign: "right", marginTop: 8 }}>
-                <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startEdit(e)}>
-                  Edit
-                </button>
-                <button className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
-                  🗑
-                </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="ab-card-head">
+                      <div className="ab-title-block">
+                        <div className="ab-badges">
+                          <span className={`pill ${e.status === "implemented" ? "pill-green" : e.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
+                            {STATUS_LABELS[e.status] ?? e.status}
+                          </span>
+                          {delta && (
+                            <span className={`pill ${delta.positive ? "pill-green" : "pill-red"}`}>
+                              {delta.positive ? "Improved" : "Declined"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="ab-title">{e.title}</div>
+                        <div className="ab-meta-row">
+                          <span>
+                            Implemented: <b>{e.implementationDate ? new Date(e.implementationDate).toLocaleDateString() : "No date set"}</b>
+                          </span>
+                          <span>
+                            Owner: <b>{ownerLabel(e.ownerId)}</b>
+                          </span>
+                          <span>
+                            Status:{" "}
+                            <select value={e.status} onChange={(ev) => patch(e._id, { status: ev.target.value })} style={{ marginLeft: 4 }}>
+                              <option value="planned">Planned</option>
+                              <option value="in_progress">In progress</option>
+                              <option value="implemented">Implemented</option>
+                            </select>
+                          </span>
+                        </div>
+                        {e.trigger && (
+                          <>
+                            <div className={`ab-desc${triggerExpanded ? " expanded" : ""}`}>
+                              <b>Trigger:</b> {e.trigger}
+                            </div>
+                            {triggerIsLong && (
+                              <span
+                                className="ab-show-more"
+                                onClick={() => setExpandedTriggerFor(triggerExpanded ? null : e._id)}
+                              >
+                                {triggerExpanded ? "Show less" : "Show more"}
+                              </span>
+                            )}
+                          </>
+                        )}
+                        <div className="ab-callout">
+                          <b>Affected:</b>{" "}
+                          {e.affectedBusinessIds.length > 0 ? e.affectedBusinessIds.map(businessName).join(", ") : "Not specified"}
+                        </div>
+                        {e.linkedActionIds.length > 0 && (
+                          <div className="ab-callout">
+                            <b>Linked Action Board items:</b> {e.linkedActionIds.map(linkedActionTitle).join(", ")}
+                          </div>
+                        )}
+                        <div className="ab-callout">
+                          <b>Outcome:</b>{" "}
+                          {delta
+                            ? `${e.outcomeMetricDescription || "Score"} ${delta.text}`
+                            : e.outcomeMetricDescription
+                              ? `Measuring: ${e.outcomeMetricDescription}`
+                              : "Not measured yet"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="action-links">
+                      <button type="button" className="btn btn-sm action-btn" onClick={() => startEdit(e)}>
+                        ✎ Edit
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm action-btn${measuringId === e._id ? " active" : ""}`}
+                        onClick={() => (measuringId === e._id ? setMeasuringId(null) : startMeasure(e))}
+                      >
+                        📏 {delta ? "Update measurement" : "Record measurement"}
+                      </button>
+                      <button type="button" className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
+                        🗑
+                      </button>
+                    </div>
+
+                    {measuringId === e._id && (
+                      <div className="ab-panel">
+                        <p className="card-sub" style={{ marginTop: 0 }}>
+                          Pick what to measure — OodelCX compares the average across everyone who responded in the 30 days
+                          before implementation to everyone who&apos;s responded since, using real feedback data. This
+                          tracks whether the metric moved overall, not whether any one customer&apos;s complaint was
+                          personally resolved — most feedback is anonymous. Needs at least 14 days since implementation;
+                          once eligible, this also gets checked automatically once a day.
+                        </p>
+                        <div className="field-row">
+                          <div className="field">
+                            <label>Metric</label>
+                            <select value={metricDraft} onChange={(ev) => setMetricDraft(ev.target.value as OutcomeMetric)}>
+                              {Object.entries(METRIC_LABELS).map(([key, lbl]) => (
+                                <option key={key} value={key}>
+                                  {lbl}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {metricDraft === "categoryAverage" && (
+                            <div className="field">
+                              <label>Category</label>
+                              <select value={categoryDraft} onChange={(ev) => setCategoryDraft(ev.target.value)}>
+                                <option value="">Select…</option>
+                                {categories.map((c) => (
+                                  <option key={c._id} value={c._id}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                        {measureError && <p className="error-text">{measureError}</p>}
+                        {verdict && <p className="callout">{VERDICT_LABELS[verdict] ?? verdict}</p>}
+                        <button className="btn btn-dark btn-sm" disabled={autoMeasuring} onClick={() => runAutoMeasure(e)}>
+                          {autoMeasuring ? "Measuring…" : "Auto-measure"}
+                        </button>{" "}
+                        <button className="btn btn-sm" onClick={() => setMeasuringId(null)}>
+                          Close
+                        </button>
+
+                        <details style={{ marginTop: 10 }}>
+                          <summary className="subtitle" style={{ cursor: "pointer" }}>
+                            Or enter before/after numbers manually
+                          </summary>
+                          <div className="field-row" style={{ margin: "8px 0" }}>
+                            <div className="field">
+                              <label>Before</label>
+                              <input type="number" step="0.01" value={beforeDraft} onChange={(ev) => setBeforeDraft(ev.target.value)} />
+                            </div>
+                            <div className="field">
+                              <label>After</label>
+                              <input type="number" step="0.01" value={afterDraft} onChange={(ev) => setAfterDraft(ev.target.value)} />
+                            </div>
+                          </div>
+                          <button className="btn btn-sm" onClick={() => saveMeasurement(e._id)}>
+                            Save manually
+                          </button>
+                        </details>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-      {!loading && entries.length === 0 && <p className="subtitle">No decisions logged yet.</p>}
-      {!loading &&
-        entries.length > 0 &&
-        entries.filter((e) => statusFilter === "all" || e.status === statusFilter).length === 0 && (
-          <p className="subtitle">No decisions with this status.</p>
-        )}
+            );
+          })}
+          {visibleEntries.length === 0 && (
+            <div className="ab-empty">{entries.length === 0 ? "No decisions logged yet." : "No decisions with this status."}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

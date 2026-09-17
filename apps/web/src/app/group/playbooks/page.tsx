@@ -58,6 +58,7 @@ export default function PlaybooksPage() {
   const [editTriggerWindowDays, setEditTriggerWindowDays] = useState("14");
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [expandedFor, setExpandedFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -130,6 +131,7 @@ export default function PlaybooksPage() {
     setEditTriggerThreshold(p.triggerThreshold !== null ? String(p.triggerThreshold) : "");
     setEditTriggerWindowDays(p.triggerWindowDays !== null ? String(p.triggerWindowDays) : "14");
     setEditError(null);
+    setExpandedFor(null);
   }
 
   async function saveEdit(id: string) {
@@ -168,6 +170,16 @@ export default function PlaybooksPage() {
   function contactLabel(id: string | null) {
     if (!id) return null;
     return team.find((t) => t.userId === id)?.label ?? null;
+  }
+
+  function triggerSummary(p: PlaybookRow): string {
+    if (!p.triggerMetric) return p.triggerCondition || "No automatic trigger set";
+    const metricLabel = p.triggerMetric === "categoryAverage" ? "Category average" : "Negative mentions";
+    const comparator = p.triggerComparator === "above" ? "rises above" : "falls below";
+    if (p.triggerMetric === "negativeMentionCount") {
+      return `${metricLabel} reaches ${p.triggerThreshold ?? "—"} in ${p.triggerWindowDays ?? "—"} days`;
+    }
+    return `${metricLabel} ${comparator} ${p.triggerThreshold ?? "—"}`;
   }
 
   return (
@@ -260,11 +272,11 @@ export default function PlaybooksPage() {
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <div className="grid grid-2">
+        <div className="ab-list">
           {playbooks.map((p) => (
-            <div className="playbook-card" key={p._id}>
+            <div className="card ab-card" key={p._id}>
               {editingId === p._id ? (
-                <div>
+                <div className="ab-panel" style={{ margin: 0 }}>
                   <div className="field">
                     <label>Playbook title</label>
                     <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
@@ -342,44 +354,81 @@ export default function PlaybooksPage() {
                 </div>
               ) : (
                 <>
-                  <div className="page-head" style={{ marginBottom: 0 }}>
-                    <div>
-                      <h3 style={{ margin: 0 }}>{p.title}</h3>
-                      <p className="card-sub">
-                        {p.steps.length} step{p.steps.length === 1 ? "" : "s"} · used {p.usageCount} time{p.usageCount === 1 ? "" : "s"}
-                        {categoryName(p.categoryId) ? ` · ${categoryName(p.categoryId)}` : ""}
-                      </p>
+                  <div className="ab-card-head">
+                    <div className="ab-title-block">
+                      <div className="ab-badges">
+                        {categoryName(p.categoryId) && <span className="pill pill-gray">{categoryName(p.categoryId)}</span>}
+                        <span className="pill pill-purple">
+                          {p.usageCount} use{p.usageCount === 1 ? "" : "s"}
+                        </span>
+                        {p.triggerStatus && (
+                          <span className={`pill ${p.triggerStatus.isTriggered ? "pill-red" : "pill-green"}`}>
+                            {p.triggerStatus.isTriggered ? "Triggered now" : "Not triggered"}
+                          </span>
+                        )}
+                        {p.activeRun && <span className="pill pill-amber">Run in progress</span>}
+                      </div>
+                      <div className="ab-title">{p.title}</div>
+                      <div className="ab-meta-row">
+                        <span>
+                          Steps: <b>{p.steps.length}</b>
+                        </span>
+                        {contactLabel(p.escalationContactId) && (
+                          <span>
+                            Escalation contact: <b>{contactLabel(p.escalationContactId)}</b>
+                          </span>
+                        )}
+                      </div>
+                      <div className="ab-desc">
+                        <b>Trigger:</b> {triggerSummary(p)}
+                      </div>
+                      {p.triggerStatus?.description && (
+                        <div className="ab-callout">{p.triggerStatus.description}</div>
+                      )}
                     </div>
-                    <div className="btn-group">
+                    <div className="ab-actions-col">
                       <button className="icon-btn" onClick={() => startEdit(p)} title="Edit playbook">
                         ✎
                       </button>
-                      <button className="icon-btn btn-danger" onClick={() => removePlaybook(p._id)}>
+                      <button className="icon-btn btn-danger" onClick={() => removePlaybook(p._id)} title="Delete playbook">
                         🗑
                       </button>
                     </div>
                   </div>
-                  <ol style={{ fontSize: 13, paddingLeft: 18, margin: 0 }}>
-                    {!p.activeRun &&
-                      p.steps.map((step, i) => (
-                        <li key={i}>{step}</li>
-                      ))}
-                  </ol>
-                  {contactLabel(p.escalationContactId) && (
-                    <div className="metric-note" style={{ marginTop: 10 }}>Escalation contact: {contactLabel(p.escalationContactId)}</div>
+
+                  <div className="action-links">
+                    <button
+                      type="button"
+                      className={`btn btn-sm action-btn${expandedFor === p._id ? " active" : ""}`}
+                      onClick={() => setExpandedFor(expandedFor === p._id ? null : p._id)}
+                    >
+                      📘 {p.activeRun ? "Continue run" : "Steps & run"}
+                    </button>
+                  </div>
+
+                  {expandedFor === p._id && (
+                    <div className="ab-panel">
+                      {!p.activeRun && (
+                        <ol style={{ margin: 0, paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
+                          {p.steps.map((step, i) => (
+                            <li key={i}>{step}</li>
+                          ))}
+                        </ol>
+                      )}
+                      <PlaybookRunPanel
+                        triggerStatus={p.triggerStatus}
+                        activeRun={p.activeRun}
+                        startPath={`/api/group/playbooks/${p._id}/start`}
+                        runsPath="/api/group/playbook-runs"
+                        onChange={load}
+                      />
+                    </div>
                   )}
-                  <PlaybookRunPanel
-                    triggerStatus={p.triggerStatus}
-                    activeRun={p.activeRun}
-                    startPath={`/api/group/playbooks/${p._id}/start`}
-                    runsPath="/api/group/playbook-runs"
-                    onChange={load}
-                  />
                 </>
               )}
             </div>
           ))}
-          {playbooks.length === 0 && <p className="subtitle">No playbooks yet.</p>}
+          {playbooks.length === 0 && <div className="ab-empty">No playbooks yet.</div>}
         </div>
       )}
     </div>

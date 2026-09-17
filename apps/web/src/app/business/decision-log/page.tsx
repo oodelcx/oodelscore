@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type OutcomeMetric = "starAverage" | "nps" | "categoryAverage";
 
@@ -25,6 +25,12 @@ const METRIC_LABELS: Record<OutcomeMetric, string> = {
   starAverage: "Overall score (stars)",
   nps: "NPS",
   categoryAverage: "Category score",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  planned: "Planned",
+  in_progress: "In progress",
+  implemented: "Implemented",
 };
 
 const VERDICT_LABELS: Record<string, string> = {
@@ -58,10 +64,11 @@ export default function BusinessDecisionLogPage() {
   const [measureError, setMeasureError] = useState<string | null>(null);
   const [outcomeBeforeDraft, setOutcomeBeforeDraft] = useState("");
   const [outcomeAfterDraft, setOutcomeAfterDraft] = useState("");
-  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState("");
   const [triggerDraft, setTriggerDraft] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
+  const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -114,9 +121,10 @@ export default function BusinessDecisionLogPage() {
   }
 
   function startEditTitle(entry: EntryRow) {
-    setEditingTitleId(entry._id);
+    setEditingId(entry._id);
     setTitleDraft(entry.title);
     setTriggerDraft(entry.trigger);
+    setMeasuringId(null);
   }
 
   async function saveTitle(id: string) {
@@ -126,7 +134,7 @@ export default function BusinessDecisionLogPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: titleDraft.trim(), trigger: triggerDraft }),
     });
-    setEditingTitleId(null);
+    setEditingId(null);
     load();
   }
 
@@ -139,6 +147,7 @@ export default function BusinessDecisionLogPage() {
     setOutcomeAfterDraft(entry.outcomeAfter !== null ? String(entry.outcomeAfter) : "");
     setVerdict(null);
     setMeasureError(null);
+    setEditingId(null);
   }
 
   async function runAutoMeasure(id: string) {
@@ -184,6 +193,8 @@ export default function BusinessDecisionLogPage() {
     load();
   }
 
+  const visibleEntries = entries.filter((e) => statusFilter === "all" || e.status === statusFilter);
+
   return (
     <div>
       <div className="page-head">
@@ -215,18 +226,13 @@ export default function BusinessDecisionLogPage() {
       </div>
 
       {!loading && entries.length > 0 && (
-        <div className="btn-group" style={{ marginBottom: 16 }}>
+        <div className="filters">
           {(["all", "planned", "in_progress", "implemented"] as const).map((s) => {
             const count = s === "all" ? entries.length : entries.filter((e) => e.status === s).length;
-            const label = s === "all" ? "All" : s === "in_progress" ? "In progress" : s.charAt(0).toUpperCase() + s.slice(1);
             return (
-              <button
-                key={s}
-                className={`btn btn-sm${statusFilter === s ? " btn-dark" : ""}`}
-                onClick={() => setStatusFilter(s)}
-              >
-                {label} ({count})
-              </button>
+              <div key={s} className={`chip ${statusFilter === s ? "active" : ""}`} onClick={() => setStatusFilter(s)}>
+                {s === "all" ? "All" : STATUS_LABELS[s]} ({count})
+              </div>
             );
           })}
         </div>
@@ -234,90 +240,111 @@ export default function BusinessDecisionLogPage() {
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <table className="clean">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Trigger</th>
-              <th>Status</th>
-              <th>Outcome</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries
-              .filter((e) => statusFilter === "all" || e.status === statusFilter)
-              .map((e) => (
-              <Fragment key={e._id}>
-                <tr>
-                  <td>{e.title}</td>
-                  <td>{e.trigger || "—"}</td>
-                  <td>
-                    <select value={e.status} onChange={(ev) => updateStatus(e._id, ev.target.value)}>
-                      <option value="planned">Planned</option>
-                      <option value="in_progress">In progress</option>
-                      <option value="implemented">Implemented</option>
-                    </select>
-                  </td>
-                  <td>
-                    {e.outcomeBefore !== null && e.outcomeAfter !== null ? (
-                      <>
-                        {e.outcomeBefore} → {e.outcomeAfter}{" "}
-                        <span className={`pill ${(outcomeDelta(e) ?? "").startsWith("+") ? "pill-green" : "pill-red"}`}>
-                          {outcomeDelta(e)}
-                        </span>
-                      </>
-                    ) : (
-                      "not measured yet"
-                    )}
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startEditTitle(e)}>
-                      Edit
-                    </button>
-                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startMeasure(e)}>
-                      Measure outcome
-                    </button>
-                    <button className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
-                      🗑
-                    </button>
-                  </td>
-                </tr>
-                {editingTitleId === e._id && (
-                  <tr>
-                    <td colSpan={5}>
-                      <div style={{ margin: "6px 0", padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
-                        <div className="field-row">
-                          <div className="field">
-                            <label>Title</label>
-                            <input value={titleDraft} onChange={(ev) => setTitleDraft(ev.target.value)} />
-                          </div>
-                          <div className="field">
-                            <label>Trigger</label>
-                            <input value={triggerDraft} onChange={(ev) => setTriggerDraft(ev.target.value)} />
-                          </div>
-                        </div>
-                        <button className="btn btn-dark btn-sm" onClick={() => saveTitle(e._id)}>
-                          Save
-                        </button>{" "}
-                        <button className="btn btn-sm" onClick={() => setEditingTitleId(null)}>
-                          Cancel
-                        </button>
+        <div className="ab-list">
+          {visibleEntries.map((e) => {
+            const delta = outcomeDelta(e);
+            const triggerExpanded = expandedTriggerFor === e._id;
+            const triggerIsLong = e.trigger.length > 160;
+            return (
+              <div className="card ab-card" key={e._id}>
+                {editingId === e._id ? (
+                  <div className="ab-panel" style={{ margin: 0 }}>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>Title</label>
+                        <input value={titleDraft} onChange={(ev) => setTitleDraft(ev.target.value)} />
                       </div>
-                    </td>
-                  </tr>
-                )}
-                {measuringId === e._id && (
-                  <tr>
-                    <td colSpan={5}>
-                      <div style={{ margin: "6px 0", padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
+                      <div className="field">
+                        <label>Trigger</label>
+                        <input value={triggerDraft} onChange={(ev) => setTriggerDraft(ev.target.value)} />
+                      </div>
+                    </div>
+                    <button className="btn btn-dark btn-sm" onClick={() => saveTitle(e._id)}>
+                      Save
+                    </button>{" "}
+                    <button className="btn btn-sm" onClick={() => setEditingId(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="ab-card-head">
+                      <div className="ab-title-block">
+                        <div className="ab-badges">
+                          <span className={`pill ${e.status === "implemented" ? "pill-green" : e.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
+                            {STATUS_LABELS[e.status] ?? e.status}
+                          </span>
+                          {delta && (
+                            <span className={`pill ${delta.startsWith("+") ? "pill-green" : "pill-red"}`}>
+                              {delta.startsWith("+") ? "Improved " : "Declined "}
+                              {delta}
+                            </span>
+                          )}
+                        </div>
+                        <div className="ab-title">{e.title}</div>
+                        <div className="ab-meta-row">
+                          <span>
+                            Status:{" "}
+                            <select
+                              value={e.status}
+                              onChange={(ev) => updateStatus(e._id, ev.target.value)}
+                              style={{ marginLeft: 4 }}
+                            >
+                              <option value="planned">Planned</option>
+                              <option value="in_progress">In progress</option>
+                              <option value="implemented">Implemented</option>
+                            </select>
+                          </span>
+                        </div>
+                        {e.trigger && (
+                          <>
+                            <div className={`ab-desc${triggerExpanded ? " expanded" : ""}`}>
+                              <b>Trigger:</b> {e.trigger}
+                            </div>
+                            {triggerIsLong && (
+                              <span
+                                className="ab-show-more"
+                                onClick={() => setExpandedTriggerFor(triggerExpanded ? null : e._id)}
+                              >
+                                {triggerExpanded ? "Show less" : "Show more"}
+                              </span>
+                            )}
+                          </>
+                        )}
+                        <div className="ab-callout">
+                          <b>Outcome:</b>{" "}
+                          {e.outcomeBefore !== null && e.outcomeAfter !== null
+                            ? `${e.outcomeBefore} → ${e.outcomeAfter} (${delta})`
+                            : "not measured yet"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="action-links">
+                      <button type="button" className="btn btn-sm action-btn" onClick={() => startEditTitle(e)}>
+                        ✎ Edit
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm action-btn${measuringId === e._id ? " active" : ""}`}
+                        onClick={() => (measuringId === e._id ? setMeasuringId(null) : startMeasure(e))}
+                      >
+                        📏 Measure outcome
+                      </button>
+                      <button type="button" className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
+                        🗑
+                      </button>
+                    </div>
+
+                    {measuringId === e._id && (
+                      <div className="ab-panel">
                         <p className="card-sub" style={{ marginTop: 0 }}>
                           Pick what to measure — OodelCX compares the average across everyone who responded in the 30
                           days before implementation to everyone who&apos;s responded since, using your real feedback
                           data. This tracks whether the metric moved overall, not whether any one customer&apos;s
                           complaint was personally resolved — most feedback is anonymous. Needs at least 14 days since
-                          implementation; once eligible, this also gets checked automatically once a day, so you don&apos;t
-                          have to remember to come back and click it.
+                          implementation; once eligible, this also gets checked automatically once a day, so you
+                          don&apos;t have to remember to come back and click it.
                         </p>
                         <div className="field-row">
                           <div className="field">
@@ -390,27 +417,16 @@ export default function BusinessDecisionLogPage() {
                           </button>
                         </details>
                       </div>
-                    </td>
-                  </tr>
+                    )}
+                  </>
                 )}
-              </Fragment>
-            ))}
-            {entries.length === 0 && (
-              <tr>
-                <td colSpan={5} className="subtitle">
-                  No decisions logged yet.
-                </td>
-              </tr>
-            )}
-            {entries.length > 0 && entries.filter((e) => statusFilter === "all" || e.status === statusFilter).length === 0 && (
-              <tr>
-                <td colSpan={5} className="subtitle">
-                  No decisions with this status.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              </div>
+            );
+          })}
+          {visibleEntries.length === 0 && (
+            <div className="ab-empty">{entries.length === 0 ? "No decisions logged yet." : "No decisions with this status."}</div>
+          )}
+        </div>
       )}
     </div>
   );
