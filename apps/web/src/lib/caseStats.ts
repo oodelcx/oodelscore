@@ -1,5 +1,5 @@
 import type { HydratedDocument } from "mongoose";
-import { PlaybookRun, type IActionBoardItem, type IPlaybook, type IPlaybookRun } from "@oodelscore/shared";
+import { PlaybookRun, Response, type IActionBoardItem, type IPlaybook, type IPlaybookRun } from "@oodelscore/shared";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -112,4 +112,33 @@ export async function attachPlaybookRunsToItems(
     const chosen = active ?? mostRecentFinished ?? null;
     return { ...item.toObject(), playbookRun: chosen ? toSummary(chosen) : null };
   });
+}
+
+/**
+ * The star rating to show on a case card — the star_1_5 answer from the
+ * case's source Response that matches its own category, falling back to
+ * that response's first star_1_5 answer. Batch-fetches every source
+ * Response in one query rather than N+1.
+ */
+export async function ratingsForItems(items: HydratedDocument<IActionBoardItem>[]): Promise<Map<string, number | null>> {
+  const responseIds = items.map((item) => item.sourceResponseIds?.[0]).filter((id): id is NonNullable<typeof id> => !!id);
+  const responses = responseIds.length > 0 ? await Response.find({ _id: { $in: responseIds } }) : [];
+  const responseById = new Map(responses.map((r) => [r._id.toString(), r]));
+
+  const map = new Map<string, number | null>();
+  for (const item of items) {
+    const respId = item.sourceResponseIds?.[0];
+    const response = respId ? responseById.get(respId.toString()) : undefined;
+    if (!response) {
+      map.set(item._id.toString(), null);
+      continue;
+    }
+    const starAnswers = response.answers.filter((a) => a.type === "star_1_5" && typeof a.value === "number");
+    const matching = item.categoryId
+      ? starAnswers.find((a) => a.categoryId?.toString() === item.categoryId!.toString())
+      : undefined;
+    const chosen = matching ?? starAnswers[0];
+    map.set(item._id.toString(), typeof chosen?.value === "number" ? chosen.value : null);
+  }
+  return map;
 }

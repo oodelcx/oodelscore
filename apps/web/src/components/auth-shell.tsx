@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AuthMobileNav } from "./auth-mobile-nav";
 import "./auth-shell.css";
 
 /** Splits headline on the first occurrence of highlight and wraps that
@@ -38,6 +39,7 @@ export function AuthShell({
 }) {
   return (
     <div className="as-shell">
+      <AuthMobileNav />
       <div className="as-visual" style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}>
         {imageUrl && <div className="as-visual-scrim" />}
         <div className="as-center">

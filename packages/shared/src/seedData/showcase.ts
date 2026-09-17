@@ -15,6 +15,7 @@ import { ActionItemComment } from "../models/ActionItemComment";
 import { DecisionLogEntry } from "../models/DecisionLogEntry";
 import { Playbook } from "../models/Playbook";
 import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
+import { autoAttachPlaybook } from "../scoring/caseAutoAttach";
 import { CxPulseScore } from "../models/CxPulseScore";
 import { CxPulsePulseResponse } from "../models/CxPulsePulseResponse";
 import { DEFAULT_CX_PULSE_QUESTIONS } from "./cxPulseFramework";
@@ -1003,6 +1004,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       createdAt: event.submittedAt,
     });
     result.actionBoardItems++;
+    await autoAttachPlaybook(item);
 
     if (status === "resolved") {
       await DecisionLogEntry.create({
