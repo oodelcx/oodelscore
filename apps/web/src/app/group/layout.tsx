@@ -43,9 +43,13 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               </nav>
               <div className="nav-group-label">Listen</div>
               <nav className="admin-nav">
+                <a href="/group/raw-feedback">Raw feedback</a>
+              </nav>
+
+              <div className="nav-group-label">Understand</div>
+              <nav className="admin-nav">
                 <a href="/group/insights">Insights</a>
                 <a href="/group/analytics">Analytics</a>
-                <a href="/group/raw-feedback">Raw feedback</a>
                 <a href="/group/alert-rules">Alert rules</a>
               </nav>
               <div className="nav-group-label">Act</div>
