@@ -9,7 +9,7 @@ import {
   autoAttachPlaybook,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
-import { buildCaseStats, attachPlaybookRunsToItems } from "@/lib/caseStats";
+import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/lib/caseStats";
 
 /**
  * Standalone business's own single-business Action Board (spec Section 16
@@ -35,9 +35,16 @@ export async function GET() {
   ]);
 
   const stats = buildCaseStats(items);
-  const itemsWithRuns = await attachPlaybookRunsToItems(items, playbooks);
+  const [itemsWithRuns, ratingByItemId] = await Promise.all([
+    attachPlaybookRunsToItems(items, playbooks),
+    ratingsForItems(items),
+  ]);
+  const itemsWithRatings = itemsWithRuns.map((item) => ({
+    ...item,
+    rating: ratingByItemId.get(String((item as unknown as { _id: unknown })._id)) ?? null,
+  }));
 
-  return NextResponse.json({ status: "ok", items: itemsWithRuns, playbooks, tier: session.tier, stats });
+  return NextResponse.json({ status: "ok", items: itemsWithRatings, playbooks, tier: session.tier, stats });
 }
 
 export async function POST(request: Request) {

@@ -32,6 +32,7 @@ interface ItemRow {
   escalated: boolean;
   escalationNote: string;
   suggestedAction: string;
+  rating: number | null;
   playbookRun?: PlaybookRunSummary | null;
 }
 interface BusinessRow {
@@ -82,6 +83,18 @@ function ageBadge(item: ItemRow): { label: string; overdue: boolean } {
     return { label: `Overdue by ${formatSpan(Date.now() - new Date(item.dueDate).getTime())}`, overdue: true };
   }
   return { label: `Open ${formatSpan(Date.now() - new Date(item.createdAt).getTime())}`, overdue: false };
+}
+
+// The star rating from the case's source feedback response — null when the
+// case wasn't generated from a rated response (e.g. logged manually).
+function Stars({ rating }: { rating: number | null }) {
+  if (rating === null) return null;
+  return (
+    <span className="case-stars" aria-label={`${rating} of 5 stars`}>
+      {"★".repeat(rating)}
+      <span className="case-stars-empty">{"★".repeat(5 - rating)}</span>
+    </span>
+  );
 }
 
 export default function CasesClient({ tooltips }: { tooltips: Record<string, string> }) {
@@ -290,7 +303,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
       </div>
 
       {!isLimited && (
-        <div className="grid grid-6" style={{ marginBottom: 20 }}>
+        <div className="grid grid-6 kpi-strip" style={{ marginBottom: 20 }}>
           <div className="card">
             <div className="metric-label">Open</div>
             <div className="metric-val">{openCount}</div>
@@ -377,6 +390,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                   <div className="ab-title-block">
                     <div className="ab-title">{item.title}</div>
                     <div className="ab-meta-row">
+                      <Stars rating={item.rating} />
                       {!isLimited && (
                         <span>
                           Business: <b>{businessName(item.businessId)}</b>
