@@ -4,18 +4,90 @@ import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { QrModal } from "@/components/qr-modal";
+import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 
-type TabId = "general" | "address" | "contact" | "settings" | "feedback-points" | "group";
+type TabId = "general" | "performance" | "address" | "contact" | "settings" | "feedback-points" | "group";
 
 const BASE_TABS: { id: TabId; label: string }[] = [
   { id: "general", label: "General" },
+  { id: "performance", label: "Performance" },
   { id: "address", label: "Address & Billing" },
   { id: "contact", label: "Contact" },
   { id: "settings", label: "Settings" },
   { id: "feedback-points", label: "Feedback Points" },
 ];
 
+const VALID_TAB_IDS: readonly TabId[] = ["general", "performance", "address", "contact", "settings", "feedback-points", "group"];
+
 const DEMOGRAPHIC_FIELDS = ["name", "email", "phone", "ageGroup", "gender"] as const;
+
+const CX_PULSE_LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+
+function formatSigned(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function trendSvgPoints(trend: { date: string; starAverage: number | null }[]): string {
+  const values = trend.map((t) => t.starAverage);
+  const known = values.filter((v): v is number => v !== null);
+  if (known.length === 0) return "";
+  const min = 0;
+  const max = 5;
+  const width = 360;
+  const height = 110;
+  const step = width / Math.max(trend.length - 1, 1);
+  return trend
+    .map((point, i) => {
+      const v = point.starAverage ?? known[known.length - 1];
+      const y = height - ((v - min) / (max - min)) * height;
+      return `${(i * step + 20).toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function RatingDonut({ distribution }: { distribution: { highPercent: number; midPercent: number; lowPercent: number } }) {
+  const circumference = 2 * Math.PI * 15.9;
+  const high = (distribution.highPercent / 100) * circumference;
+  const mid = (distribution.midPercent / 100) * circumference;
+  const low = (distribution.lowPercent / 100) * circumference;
+  return (
+    <svg width="120" height="120" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#EAF3DE" strokeWidth="4" />
+      <circle
+        cx="18"
+        cy="18"
+        r="15.9"
+        fill="none"
+        stroke="#639922"
+        strokeWidth="4"
+        strokeDasharray={`${high} ${circumference - high}`}
+        transform="rotate(-90 18 18)"
+      />
+      <circle
+        cx="18"
+        cy="18"
+        r="15.9"
+        fill="none"
+        stroke="#EF9F27"
+        strokeWidth="4"
+        strokeDasharray={`${mid} ${circumference - mid}`}
+        strokeDashoffset={-high}
+        transform="rotate(-90 18 18)"
+      />
+      <circle
+        cx="18"
+        cy="18"
+        r="15.9"
+        fill="none"
+        stroke="#E24B4A"
+        strokeWidth="4"
+        strokeDasharray={`${low} ${circumference - low}`}
+        strokeDashoffset={-(high + mid)}
+        transform="rotate(-90 18 18)"
+      />
+    </svg>
+  );
+}
 
 interface FormState {
   name: string;
@@ -75,8 +147,10 @@ export default function BusinessDetailPage() {
   const searchParams = useSearchParams();
   const isNew = params.id === "new";
   const presetParentOrgId = searchParams.get("parentOrgId");
+  const requestedTab = searchParams.get("tab");
+  const initialTab: TabId = requestedTab && (VALID_TAB_IDS as readonly string[]).includes(requestedTab) ? (requestedTab as TabId) : "general";
 
-  const [tab, setTab] = useState<TabId>("general");
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [form, setForm] = useState<FormState>(
     presetParentOrgId ? { ...EMPTY_FORM, parentOrgId: presetParentOrgId } : EMPTY_FORM
   );
@@ -122,6 +196,47 @@ export default function BusinessDetailPage() {
   const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [expandedFieldsId, setExpandedFieldsId] = useState<string | null>(null);
+
+  interface Comparison {
+    starAverage: number | null;
+    npsScore: number | null;
+    responseCount: number;
+    changePercent: number | null;
+  }
+  interface TrendPoint {
+    date: string;
+    starAverage: number | null;
+  }
+  interface PerformanceData {
+    businessName: string;
+    totalResponses: number;
+    starAverage: number | null;
+    npsScore: number | null;
+    comparisons: { week: Comparison; month: Comparison; quarter: Comparison; year: Comparison };
+    trend: TrendPoint[];
+    distribution: { highPercent: number; midPercent: number; lowPercent: number };
+    cxPulseLevel: number | null;
+    actionBoard: { openCount: number; overdueCount: number };
+  }
+  const [performance, setPerformance] = useState<PerformanceData | null>(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
+  const [performanceError, setPerformanceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isNew || tab !== "performance" || performance || performanceLoading) return;
+    setPerformanceLoading(true);
+    setPerformanceError(null);
+    fetch(`/api/admin/performance/business/${params.id}`)
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.message ?? "Failed to load performance");
+        return d as PerformanceData;
+      })
+      .then(setPerformance)
+      .catch((err) => setPerformanceError(err instanceof Error ? err.message : "Failed to load performance"))
+      .finally(() => setPerformanceLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, tab, params.id]);
 
   function loadFeedbackPoints() {
     if (isNew) return;
@@ -472,7 +587,7 @@ export default function BusinessDetailPage() {
           <button
             key={t.id}
             className={tab === t.id ? "active" : ""}
-            disabled={isNew && (t.id === "feedback-points" || t.id === "group")}
+            disabled={isNew && (t.id === "feedback-points" || t.id === "group" || t.id === "performance")}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -531,6 +646,89 @@ export default function BusinessDetailPage() {
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : isNew ? "Create business" : "Save"}
           </button>
+        </div>
+      )}
+
+      {tab === "performance" && !isNew && (
+        <div>
+          {performanceLoading && <p className="subtitle">Loading…</p>}
+          {performanceError && <p className="error-text">{performanceError}</p>}
+          {performance && (
+            <>
+              <div className="grid grid-4" style={{ marginBottom: 20 }}>
+                <div className="card">
+                  <div className="metric-label">Total responses</div>
+                  <div className="metric-val">{performance.totalResponses}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">Average score</div>
+                  <div className="metric-val">{performance.starAverage !== null ? `${performance.starAverage}/5` : "—"}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">NPS</div>
+                  <div className="metric-val">{performance.npsScore !== null ? formatSigned(performance.npsScore) : "—"}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">CX Pulse</div>
+                  <div className="metric-val" style={{ fontSize: 18 }}>
+                    {performance.cxPulseLevel ? `Level ${performance.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[performance.cxPulseLevel]}` : "Not yet scored"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-2" style={{ marginBottom: 20 }}>
+                <div className="card">
+                  <div className="metric-label">Open action items</div>
+                  <div className="metric-val">{performance.actionBoard.openCount}</div>
+                </div>
+                <div className="card" style={{ background: performance.actionBoard.overdueCount > 0 ? "var(--red-bg)" : undefined }}>
+                  <div className="metric-label" style={{ color: performance.actionBoard.overdueCount > 0 ? "var(--red)" : undefined }}>
+                    Overdue action items
+                  </div>
+                  <div className="metric-val" style={{ color: performance.actionBoard.overdueCount > 0 ? "var(--red)" : undefined }}>
+                    {performance.actionBoard.overdueCount}
+                  </div>
+                </div>
+              </div>
+
+              <PeriodComparisonCards comparisons={performance.comparisons} />
+
+              <div className="grid grid-2" style={{ marginTop: 20 }}>
+                <div className="card">
+                  <h3>Response trend</h3>
+                  <p className="card-sub">Daily average score over the last {performance.trend.length} days.</p>
+                  <svg viewBox="0 0 400 140" width="100%" height="140">
+                    <line x1="30" y1="10" x2="30" y2="120" stroke="#E6E5E1" />
+                    <line x1="30" y1="120" x2="390" y2="120" stroke="#E6E5E1" />
+                    <text x="8" y="14" fontSize="9" fill="#9A9A97">5</text>
+                    <text x="8" y="67" fontSize="9" fill="#9A9A97">2.5</text>
+                    <text x="8" y="123" fontSize="9" fill="#9A9A97">0</text>
+                    {trendSvgPoints(performance.trend) && (
+                      <polyline fill="none" stroke="#0F6E56" strokeWidth="2" points={trendSvgPoints(performance.trend)} />
+                    )}
+                  </svg>
+                </div>
+                <div className="card">
+                  <h3>Rating distribution</h3>
+                  <p className="card-sub">Last 30 days.</p>
+                  <div className="donut-wrap">
+                    <RatingDonut distribution={performance.distribution} />
+                    <div className="legend">
+                      <div>
+                        <span className="dot" style={{ background: "#639922" }}></span>4–5 stars · {performance.distribution.highPercent}%
+                      </div>
+                      <div>
+                        <span className="dot" style={{ background: "#EF9F27" }}></span>3 stars · {performance.distribution.midPercent}%
+                      </div>
+                      <div>
+                        <span className="dot" style={{ background: "#E24B4A" }}></span>1–2 stars · {performance.distribution.lowPercent}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 

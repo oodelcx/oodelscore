@@ -82,7 +82,11 @@ export default function AdminCommandCenterClient({ tooltips }: { tooltips: Recor
   const [now, setNow] = useState(new Date());
 
   function goToClient(tile: ClientTile) {
-    router.push(tile.ownerType === "business" ? `/admin/businesses/${tile.businessId}` : `/admin/parent-orgs/${tile.businessId}`);
+    router.push(
+      tile.ownerType === "business"
+        ? `/admin/businesses/${tile.businessId}?tab=performance`
+        : `/admin/parent-orgs/${tile.businessId}?tab=performance`
+    );
   }
   function clientByName(name: string): ClientTile | null {
     return data?.clientTiles.find((t) => t.name === name) ?? null;
