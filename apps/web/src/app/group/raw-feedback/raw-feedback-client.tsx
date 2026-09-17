@@ -77,32 +77,36 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}
-      {!loading &&
-        responses.map((r) => {
-          const star = starValue(r);
-          const text = comment(r);
-          return (
-            <div className="fb-card" key={r._id}>
-              <div className="fb-top">
-                <div className="fb-meta">
-                  <span className="pill pill-blue">{r.businessName}</span>
-                  {new Date(r.submittedAt).toLocaleString()}
+      {!loading && (
+        <div className="ab-list">
+          {responses.map((r) => {
+            const star = starValue(r);
+            const text = comment(r);
+            return (
+              <div className="card ab-card" key={r._id}>
+                <div className="ab-card-head">
+                  <div className="ab-title-block">
+                    <div className="ab-badges">
+                      {r.flagged && <span className="pill pill-red">Flagged</span>}
+                      {r.flagged && <InfoTip text={tooltips["flagged"]} />}
+                      {!text && <span className="pill pill-gray">No comment left</span>}
+                    </div>
+                    <div className="ab-title" style={{ fontSize: 20, color: scoreColor(star) }}>
+                      {star !== null ? `${"★".repeat(Math.round(star))}${"☆".repeat(5 - Math.round(star))} ${star.toFixed(1)}/5` : "No rating"}
+                    </div>
+                    <div className="ab-meta-row">
+                      <span className="pill pill-blue">{r.businessName}</span>
+                      <span>{new Date(r.submittedAt).toLocaleString()}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="fb-score" style={{ color: scoreColor(star) }}>
-                  {star !== null ? `${star.toFixed(1)}/5` : "—"}
-                </div>
+                {text && <div className="fb-comment">&quot;{text}&quot;</div>}
               </div>
-              {text && <div className="fb-comment">&quot;{text}&quot;</div>}
-              {r.flagged && (
-                <div className="fb-tags">
-                  <span className="pill pill-red">Flagged</span>
-                  <InfoTip text={tooltips["flagged"]} />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      {!loading && responses.length === 0 && <p className="subtitle">No feedback matches this filter.</p>}
+            );
+          })}
+          {responses.length === 0 && <div className="ab-empty">No feedback matches this filter.</div>}
+        </div>
+      )}
 
       {!loading && total > 0 && (
         <div className="pagination">

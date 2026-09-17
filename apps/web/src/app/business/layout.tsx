@@ -48,9 +48,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
 
               <div className="nav-group-label">Listen</div>
               <nav className="admin-nav">
+                <a href="/business/responses">Raw Feedback</a>
+              </nav>
+
+              <div className="nav-group-label">Understand</div>
+              <nav className="admin-nav">
                 <a href="/business/insights">Insights</a>
                 <a href="/business/analytics">Analytics</a>
-                <a href="/business/responses">Raw Feedback</a>
                 <a href="/business/alert-rules">Alert Rules</a>
               </nav>
 

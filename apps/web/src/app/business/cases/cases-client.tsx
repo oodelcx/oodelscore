@@ -25,6 +25,7 @@ interface ItemRow {
   priority: string;
   status: string;
   dueDate: string | null;
+  createdAt: string;
   resolutionNote: string;
   suggestedAction: string;
   playbookRun?: PlaybookRunSummary | null;
@@ -63,6 +64,22 @@ function formatHours(hours: number | null | undefined): string {
   if (hours === null || hours === undefined) return "—";
   if (hours >= 24) return `${(hours / 24).toFixed(1)}d`;
   return `${hours.toFixed(1)}h`;
+}
+
+function formatSpan(ms: number): string {
+  const hours = ms / (1000 * 60 * 60);
+  if (hours >= 24) return `${Math.round(hours / 24)}d`;
+  return `${Math.max(1, Math.round(hours))}h`;
+}
+
+// Age/SLA badge next to the status pill — "Open Xh/Xd" for anything still
+// open, or "Overdue by Xh/Xd" once it's past its due date, so urgency is
+// visible without reading the due-date field in the meta row.
+function ageBadge(item: ItemRow): { label: string; overdue: boolean } {
+  if (item.dueDate && item.status !== "resolved" && new Date(item.dueDate) < new Date()) {
+    return { label: `Overdue by ${formatSpan(Date.now() - new Date(item.dueDate).getTime())}`, overdue: true };
+  }
+  return { label: `Open ${formatSpan(Date.now() - new Date(item.createdAt).getTime())}`, overdue: false };
 }
 
 export default function BusinessCasesClient() {
@@ -346,21 +363,23 @@ export default function BusinessCasesClient() {
           {(isLimited ? items : visibleItems).map((item) => {
             const overdue = isOverdue(item);
             const run = item.playbookRun ?? null;
+            const age = item.status === "resolved" ? null : ageBadge(item);
+            const severityClass = item.priority === "critical" ? " sev-critical" : item.priority === "high" ? " sev-high" : "";
             return (
               <Fragment key={item._id}>
-                <div className={`card ab-card${overdue ? " overdue" : ""}`}>
+                <div className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`}>
                   <div className="ab-card-head">
                     <div className="ab-title-block">
                       <div className="ab-badges">
                         <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
                           {item.status.replace(/_/g, " ")}
                         </span>
+                        {age && <span className={`pill ${age.overdue ? "pill-red" : "pill-gray"}`}>{age.label}</span>}
                         {!isLimited && (
                           <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
                             {item.priority}
                           </span>
                         )}
-                        {overdue && <span className="pill pill-red">Overdue</span>}
                       </div>
                       <div className="ab-title">{item.title}</div>
                       {!isLimited && (
