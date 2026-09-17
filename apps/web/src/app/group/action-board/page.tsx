@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ItemRow {
   _id: string;
@@ -61,6 +61,7 @@ export default function ActionBoardPage() {
   const [escalationNoteDraft, setEscalationNoteDraft] = useState("");
   const [filter, setFilter] = useState<"all" | "unassigned" | "overdue" | "resolved" | "escalated">("all");
   const [regionFilter, setRegionFilter] = useState("");
+  const [expandedDescriptionFor, setExpandedDescriptionFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -258,205 +259,201 @@ export default function ActionBoardPage() {
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <table className="clean striped">
-          <thead>
-            <tr>
-              <th>Title</th>
-              {!isLimited && <th>Business</th>}
-              <th>Owner</th>
-              <th>Priority</th>
-              <th>Status</th>
-              <th>Due</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {(isLimited ? items : visibleItems).map((item) => {
-              const playbook = playbookForCategory(item.categoryId);
-              const colCount = isLimited ? 5 : 6;
-              return (
-                <Fragment key={item._id}>
-                  <tr>
-                    <td>
+        <div className="ab-list">
+          {(isLimited ? items : visibleItems).map((item) => {
+            const playbook = playbookForCategory(item.categoryId);
+            const overdue = isOverdue(item);
+            const descriptionExpanded = expandedDescriptionFor === item._id;
+            const descriptionIsLong = item.description.length > 160;
+            return (
+              <div className={`card ab-card${overdue ? " overdue" : ""}`} key={item._id}>
+                <div className="ab-card-head">
+                  <div className="ab-title-block">
+                    <div className="ab-badges">
                       {item.escalated && (
-                        <span className="pill pill-red" style={{ marginRight: 6 }} title={item.escalationNote || undefined}>
+                        <span className="pill pill-red" title={item.escalationNote || undefined}>
                           Escalated
                         </span>
                       )}
-                      {item.title}
-                      {item.escalated && item.escalationNote && (
-                        <div className="card-sub" style={{ margin: "2px 0 0" }}>
-                          Escalation note: {item.escalationNote}
-                        </div>
-                      )}
-                      {item.description && <div className="card-sub" style={{ margin: "2px 0 0" }}>{item.description}</div>}
-                      {item.suggestedAction && (
-                        <div
-                          className="card-sub"
-                          style={{ margin: "6px 0 0", padding: "6px 8px", background: "var(--bg-2, #f7f7f8)", borderRadius: 6 }}
-                        >
-                          <b>Suggested:</b> {item.suggestedAction}
-                        </div>
-                      )}
-                      <div className="action-links">
-                        <button
-                          type="button"
-                          className={`btn btn-sm action-btn${expandedPlaybookFor === item._id ? " active" : ""}`}
-                          disabled={!playbook}
-                          title={playbook ? undefined : "No playbook set for this category"}
-                          onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
-                        >
-                          📘 Playbook
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
-                          onClick={() => toggleComments(item._id)}
-                        >
-                          💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
-                        </button>
-                      </div>
-                    </td>
-                    {!isLimited && <td>{businessName(item.businessId)}</td>}
-                    <td>{isLimited ? ownerLabel(item.ownerId) : ownerLabel(item.ownerId)}</td>
-                    <td>
+                      <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
+                        {item.status.replace(/_/g, " ")}
+                      </span>
                       <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
                         {item.priority}
                       </span>
-                    </td>
-                    <td>
-                      <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>{item.status}</span>
-                    </td>
-                    <td>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</td>
-                    <td style={{ textAlign: "right" }}>
-                      {isLimited && item.status !== "resolved" && resolvingId !== item._id && (
-                        <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
-                          Mark resolved
-                        </button>
-                      )}
+                      {overdue && <span className="pill pill-red">Overdue</span>}
+                    </div>
+                    <div className="ab-title">{item.title}</div>
+                    <div className="ab-meta-row">
                       {!isLimited && (
-                        <button
-                          className={`btn btn-sm${item.escalated ? " btn-dark" : ""}`}
-                          disabled={escalating === item._id}
-                          onClick={() => (item.escalated ? unEscalate(item) : startEscalate(item._id))}
-                        >
-                          {item.escalated ? "Un-escalate" : "Escalate"}
-                        </button>
+                        <span>
+                          Business: <b>{businessName(item.businessId)}</b>
+                        </span>
                       )}
-                    </td>
-                  </tr>
-                  {escalatingId === item._id && (
-                    <tr>
-                      <td colSpan={colCount}>
-                        <div style={{ margin: "6px 0", padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
-                          <p className="card-sub" style={{ marginTop: 0 }}>
-                            Escalating notifies{" "}
-                            <b>
-                              {item.ownerId ? ownerLabel(item.ownerId) : `${businessName(item.businessId)}'s owner`}
-                            </b>{" "}
-                            by email right now, flagging this item as needing their attention. Add a note so they know why.
-                          </p>
-                          <div className="field">
-                            <label>Note (optional, included in the email)</label>
-                            <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
-                          </div>
-                          <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
-                            {escalating === item._id ? "Escalating…" : "Send escalation"}
-                          </button>{" "}
-                          <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
-                            Cancel
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {expandedPlaybookFor === item._id && playbook && (
-                    <tr>
-                      <td colSpan={colCount} style={{ background: "var(--bg-2, #f7f7f8)" }}>
-                        <div className="card-sub" style={{ margin: "4px 0" }}>
-                          <b>Trigger:</b> {playbook.triggerCondition || "—"}
-                        </div>
-                        <ul style={{ margin: "4px 0 6px", paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
-                          {playbook.steps.map((step, i) => (
-                            <li key={i}>{step}</li>
-                          ))}
-                        </ul>
-                      </td>
-                    </tr>
-                  )}
-                  {expandedCommentsFor === item._id && (
-                    <tr>
-                      <td colSpan={colCount} style={{ background: "var(--bg-2, #f7f7f8)" }}>
-                        <div style={{ margin: "6px 0" }}>
-                          {(commentsByItem[item._id] ?? []).length === 0 ? (
-                            <p className="subtitle" style={{ margin: "0 0 8px" }}>
-                              No comments yet — start the trail below.
-                            </p>
-                          ) : (
-                            <ul style={{ margin: "0 0 8px", paddingLeft: 0, listStyle: "none" }}>
-                              {(commentsByItem[item._id] ?? []).map((c) => (
-                                <li key={c._id} style={{ marginBottom: 8, fontSize: "12.5px" }}>
-                                  <b>{c.authorLabel}</b>{" "}
-                                  <span style={{ color: "var(--text-3)" }}>{new Date(c.createdAt).toLocaleString()}</span>
-                                  <div style={{ color: "var(--text-2)" }}>{c.body}</div>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                          <div className="field-row" style={{ alignItems: "flex-end" }}>
-                            <div className="field" style={{ margin: 0, flex: 1 }}>
-                              <textarea
-                                placeholder="Add a note for whoever's on this item…"
-                                value={commentDraft}
-                                onChange={(e) => setCommentDraft(e.target.value)}
-                              />
-                            </div>
-                            <button
-                              className="btn btn-sm btn-dark"
-                              disabled={postingComment || !commentDraft.trim()}
-                              onClick={() => postComment(item._id)}
-                            >
-                              {postingComment ? "Posting…" : "Post"}
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {isLimited && resolvingId === item._id && (
-                    <tr>
-                      <td colSpan={colCount}>
-                        <div className="field" style={{ margin: "6px 0" }}>
-                          <label>What did you do about this?</label>
-                          <textarea
-                            value={resolutionDraft}
-                            onChange={(e) => setResolutionDraft(e.target.value)}
-                            autoFocus
-                            placeholder="Describe the action taken — this is logged to the Decision Log automatically."
-                          />
-                        </div>
-                        {resolutionError && <p className="error-text">{resolutionError}</p>}
-                        <button className="btn btn-dark btn-sm" onClick={() => confirmResolve(item._id)}>
-                          Confirm resolved
-                        </button>{" "}
-                        <button className="btn btn-sm" onClick={cancelResolve}>
-                          Cancel
-                        </button>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-            {(isLimited ? items : visibleItems).length === 0 && (
-              <tr>
-                <td colSpan={isLimited ? 5 : 6} className="subtitle">
-                  {items.length === 0 ? "No action items yet." : "No items match this filter."}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                      <span>
+                        Owner: <b>{ownerLabel(item.ownerId)}</b>
+                      </span>
+                      <span>
+                        Due: <b>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</b>
+                      </span>
+                    </div>
+                    {item.description && (
+                      <>
+                        <div className={`ab-desc${descriptionExpanded ? " expanded" : ""}`}>{item.description}</div>
+                        {descriptionIsLong && (
+                          <span
+                            className="ab-show-more"
+                            onClick={() => setExpandedDescriptionFor(descriptionExpanded ? null : item._id)}
+                          >
+                            {descriptionExpanded ? "Show less" : "Show more"}
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {item.escalated && item.escalationNote && (
+                      <div className="ab-callout escalation">
+                        <b>Escalation note:</b> {item.escalationNote}
+                      </div>
+                    )}
+                    {item.suggestedAction && (
+                      <div className="ab-callout">
+                        <b>Suggested:</b> {item.suggestedAction}
+                      </div>
+                    )}
+                  </div>
+                  <div className="ab-actions-col">
+                    {isLimited && item.status !== "resolved" && resolvingId !== item._id && (
+                      <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
+                        Mark resolved
+                      </button>
+                    )}
+                    {!isLimited && (
+                      <button
+                        className={`btn btn-sm${item.escalated ? " btn-dark" : ""}`}
+                        disabled={escalating === item._id}
+                        onClick={() => (item.escalated ? unEscalate(item) : startEscalate(item._id))}
+                      >
+                        {item.escalated ? "Un-escalate" : "Escalate"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="action-links">
+                  <button
+                    type="button"
+                    className={`btn btn-sm action-btn${expandedPlaybookFor === item._id ? " active" : ""}`}
+                    disabled={!playbook}
+                    title={playbook ? undefined : "No playbook set for this category"}
+                    onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
+                  >
+                    📘 Playbook
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
+                    onClick={() => toggleComments(item._id)}
+                  >
+                    💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
+                  </button>
+                </div>
+
+                {escalatingId === item._id && (
+                  <div className="ab-panel">
+                    <p className="card-sub" style={{ marginTop: 0 }}>
+                      Escalating notifies{" "}
+                      <b>{item.ownerId ? ownerLabel(item.ownerId) : `${businessName(item.businessId)}'s owner`}</b> by
+                      email right now, flagging this item as needing their attention. Add a note so they know why.
+                    </p>
+                    <div className="field">
+                      <label>Note (optional, included in the email)</label>
+                      <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
+                    </div>
+                    <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
+                      {escalating === item._id ? "Escalating…" : "Send escalation"}
+                    </button>{" "}
+                    <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {expandedPlaybookFor === item._id && playbook && (
+                  <div className="ab-panel">
+                    <div className="card-sub" style={{ margin: "0 0 4px" }}>
+                      <b>Trigger:</b> {playbook.triggerCondition || "—"}
+                    </div>
+                    <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
+                      {playbook.steps.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {expandedCommentsFor === item._id && (
+                  <div className="ab-panel">
+                    {(commentsByItem[item._id] ?? []).length === 0 ? (
+                      <p className="subtitle" style={{ margin: "0 0 8px" }}>
+                        No comments yet — start the trail below.
+                      </p>
+                    ) : (
+                      <ul style={{ margin: "0 0 8px", paddingLeft: 0, listStyle: "none" }}>
+                        {(commentsByItem[item._id] ?? []).map((c) => (
+                          <li key={c._id} style={{ marginBottom: 8, fontSize: "12.5px" }}>
+                            <b>{c.authorLabel}</b>{" "}
+                            <span style={{ color: "var(--text-3)" }}>{new Date(c.createdAt).toLocaleString()}</span>
+                            <div style={{ color: "var(--text-2)" }}>{c.body}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="field-row" style={{ alignItems: "flex-end" }}>
+                      <div className="field" style={{ margin: 0, flex: 1 }}>
+                        <textarea
+                          placeholder="Add a note for whoever's on this item…"
+                          value={commentDraft}
+                          onChange={(e) => setCommentDraft(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        className="btn btn-sm btn-dark"
+                        disabled={postingComment || !commentDraft.trim()}
+                        onClick={() => postComment(item._id)}
+                      >
+                        {postingComment ? "Posting…" : "Post"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isLimited && resolvingId === item._id && (
+                  <div className="ab-panel">
+                    <div className="field" style={{ margin: 0 }}>
+                      <label>What did you do about this?</label>
+                      <textarea
+                        value={resolutionDraft}
+                        onChange={(e) => setResolutionDraft(e.target.value)}
+                        autoFocus
+                        placeholder="Describe the action taken — this is logged to the Decision Log automatically."
+                      />
+                    </div>
+                    {resolutionError && <p className="error-text">{resolutionError}</p>}
+                    <button className="btn btn-dark btn-sm" style={{ marginTop: 8 }} onClick={() => confirmResolve(item._id)}>
+                      Confirm resolved
+                    </button>{" "}
+                    <button className="btn btn-sm" onClick={cancelResolve}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {(isLimited ? items : visibleItems).length === 0 && (
+            <div className="ab-empty">{items.length === 0 ? "No action items yet." : "No items match this filter."}</div>
+          )}
+        </div>
       )}
     </div>
   );
