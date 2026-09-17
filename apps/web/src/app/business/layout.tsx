@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
 import { connectToDatabase, Business, ParentOrganization } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
+import MobileNavToggle from "@/components/mobile-nav-toggle";
 import "../admin/admin.css";
 import "./business.css";
 
@@ -24,6 +25,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
 
   return (
     <div className="admin-app">
+      <MobileNavToggle label={business.name} />
       <aside className="admin-sidebar">
         <div>
           <div className="admin-sidebar-top">
