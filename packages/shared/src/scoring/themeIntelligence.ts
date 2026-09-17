@@ -35,14 +35,16 @@ export async function computeThemeIntelligence(
   if (businessIds.length === 0) return [];
 
   const [current, previous] = await Promise.all([
-    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to }, "themes.0": { $exists: true } }).select(
-      "themes sentiment answers submittedAt"
-    ),
+    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to }, "themes.0": { $exists: true } })
+      .select("themes sentiment answers submittedAt")
+      .lean(),
     Response.find({
       businessId: { $in: businessIds },
       submittedAt: { $gte: previousFrom, $lte: previousTo },
       "themes.0": { $exists: true },
-    }).select("themes sentiment"),
+    })
+      .select("themes sentiment")
+      .lean(),
   ]);
 
   interface ThemeAgg {

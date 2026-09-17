@@ -16,9 +16,15 @@ interface ResponseRow {
   feedbackPointId: string;
   feedbackPointName: string;
 }
+interface FeedbackPointOption {
+  _id: string;
+  name: string;
+}
 
 type FilterId = "all" | "negative" | "comment" | string;
 type SortId = "newest" | "lowest";
+
+const LIMIT = 25;
 
 function starValue(r: ResponseRow): number | null {
   const star = r.answers.find((a) => a.type === "star_1_5" && typeof a.value === "number");
@@ -37,9 +43,13 @@ function scoreColor(star: number | null): string {
 
 export default function RawFeedbackPage() {
   const [responses, setResponses] = useState<ResponseRow[]>([]);
+  const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPointOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterId>("all");
   const [sort, setSort] = useState<SortId>("newest");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loggingFor, setLoggingFor] = useState<string | null>(null);
   const [actionTitle, setActionTitle] = useState("");
@@ -47,15 +57,33 @@ export default function RawFeedbackPage() {
   const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
 
   function load() {
-    fetch("/api/business/responses")
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), filter, sort });
+    fetch(`/api/business/responses?${params.toString()}`)
       .then((res) => res.json())
-      .then((data) => setResponses(data.responses ?? []))
+      .then((data) => {
+        setResponses(data.responses ?? []);
+        setFeedbackPoints(data.feedbackPoints ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotal(data.total ?? 0);
+      })
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filter, sort]);
+
+  function changeFilter(f: FilterId) {
+    setFilter(f);
+    setPage(1);
+  }
+
+  function changeSort(s: SortId) {
+    setSort(s);
+    setPage(1);
+  }
 
   async function toggleFlag(r: ResponseRow) {
     await fetch(`/api/business/responses/${r._id}`, {
@@ -89,45 +117,22 @@ export default function RawFeedbackPage() {
     setLoggedIds((prev) => new Set(prev).add(r._id));
   }
 
-  const feedbackPoints = Array.from(
-    new Map(responses.map((r) => [r.feedbackPointId, r.feedbackPointName])).entries()
-  ).map(([id, name]) => ({ id, name }));
-
-  const filtered = responses
-    .filter((r) => {
-      if (filter === "negative") return (starValue(r) ?? 5) <= 2;
-      if (filter === "comment") return comment(r) !== null;
-      if (filter !== "all") return r.feedbackPointId === filter;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sort === "lowest") {
-        const av = starValue(a);
-        const bv = starValue(b);
-        if (av === null && bv === null) return 0;
-        if (av === null) return 1;
-        if (bv === null) return -1;
-        return av - bv;
-      }
-      return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
-    });
-
   return (
     <div>
       <h1>Raw feedback</h1>
       <p className="subtitle">Every individual response — who said what, and when.</p>
       <div className="filters">
         {(["all", "negative", "comment"] as FilterId[]).map((f) => (
-          <div key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
+          <div key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => changeFilter(f)}>
             {f === "all" ? "All" : f === "negative" ? "Negative only" : "Has comment"}
           </div>
         ))}
         {feedbackPoints.map((fp) => (
-          <div key={fp.id} className={`chip ${filter === fp.id ? "active" : ""}`} onClick={() => setFilter(fp.id)}>
+          <div key={fp._id} className={`chip ${filter === fp._id ? "active" : ""}`} onClick={() => changeFilter(fp._id)}>
             {fp.name}
           </div>
         ))}
-        <select style={{ marginLeft: "auto" }} value={sort} onChange={(e) => setSort(e.target.value as SortId)}>
+        <select style={{ marginLeft: "auto" }} value={sort} onChange={(e) => changeSort(e.target.value as SortId)}>
           <option value="newest">Newest first</option>
           <option value="lowest">Lowest score first</option>
         </select>
@@ -135,7 +140,7 @@ export default function RawFeedbackPage() {
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading &&
-        filtered.map((r) => {
+        responses.map((r) => {
           const star = starValue(r);
           const text = comment(r);
           return (
@@ -198,7 +203,21 @@ export default function RawFeedbackPage() {
             </div>
           );
         })}
-      {!loading && filtered.length === 0 && <p className="subtitle">No feedback matches this filter.</p>}
+      {!loading && responses.length === 0 && <p className="subtitle">No feedback matches this filter.</p>}
+
+      {!loading && total > 0 && (
+        <div className="pagination">
+          <button className="btn btn-sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            ← Prev
+          </button>
+          <span className="pagination-status">
+            Page {page} of {totalPages} · {total} response{total === 1 ? "" : "s"}
+          </span>
+          <button className="btn btn-sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

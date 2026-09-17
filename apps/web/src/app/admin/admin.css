@@ -454,6 +454,21 @@ input[type="number"] {
   border-color: var(--sidebar-bg);
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.pagination-status {
+  font-size: 12.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
 .backlink {
   font-size: 13px;
   color: var(--text-2);

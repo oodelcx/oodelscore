@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
+import { useTooltips } from "@/lib/useTooltips";
 
 interface ItemRow {
   _id: string;
@@ -33,7 +34,8 @@ interface CommentRow {
   createdAt: string;
 }
 
-export default function BusinessActionBoardClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function BusinessActionBoardClient() {
+  const tooltips = useTooltips("action-board");
   const [items, setItems] = useState<ItemRow[]>([]);
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);

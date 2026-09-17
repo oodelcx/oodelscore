@@ -25,9 +25,12 @@ export async function GET(request: Request) {
   if (!permission.view) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get("q")?.trim().toLowerCase() ?? "";
+  const q = searchParams.get("q")?.trim() ?? "";
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 50));
+  const skip = (page - 1) * limit;
 
   await connectToDatabase();
   const businessFilter = permission.scope === "assigned" ? { accountManagerId: session.user._id } : {};
@@ -42,8 +45,19 @@ export async function GET(request: Request) {
     if (to) submittedAt.$lte = new Date(to);
     filter.submittedAt = submittedAt;
   }
+  if (q) {
+    // Search respondent fields directly on Response, plus business name via
+    // the id subset of businesses whose name matches (Response has no
+    // denormalized business name to query against directly).
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const matchingBusinessIds = businesses.filter((b) => re.test(b.name)).map((b) => b._id);
+    filter.$or = [{ respondentEmail: re }, { respondentName: re }, { businessId: { $in: matchingBusinessIds } }];
+  }
 
-  const responses = await Response.find(filter).sort({ submittedAt: -1 }).limit(500);
+  const [total, responses] = await Promise.all([
+    Response.countDocuments(filter),
+    Response.find(filter).sort({ submittedAt: -1 }).skip(skip).limit(limit).lean(),
+  ]);
 
   const enriched = responses.map((r) => {
     const starValues = r.answers.filter((a) => a.type === "star_1_5" && typeof a.value === "number").map((a) => a.value as number);
@@ -72,14 +86,12 @@ export async function GET(request: Request) {
     };
   });
 
-  const searched = q
-    ? enriched.filter(
-        (r) =>
-          r.respondentEmail?.toLowerCase().includes(q) ||
-          r.respondentName?.toLowerCase().includes(q) ||
-          r.businessName.toLowerCase().includes(q)
-      )
-    : enriched;
-
-  return NextResponse.json({ status: "ok", responses: searched });
+  return NextResponse.json({
+    status: "ok",
+    responses: enriched,
+    page,
+    limit,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  });
 }

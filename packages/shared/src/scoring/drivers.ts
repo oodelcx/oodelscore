@@ -55,7 +55,7 @@ export async function computeDriverAnalysis(
   if (businessIds.length === 0) return [];
 
   const [responses, categories] = await Promise.all([
-    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers"),
+    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers").lean(),
     Category.find(),
   ]);
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));

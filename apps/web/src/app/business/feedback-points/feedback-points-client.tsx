@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { QrModal } from "@/components/qr-modal";
 import { InfoTip } from "@/components/info-tip";
+import { useTooltips } from "@/lib/useTooltips";
 
 interface DemographicConfig {
   name: string;
@@ -63,7 +64,8 @@ function configBadges(p: FeedbackPointRow) {
   return badges;
 }
 
-export default function FeedbackPointsClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function FeedbackPointsClient() {
+  const tooltips = useTooltips("feedback-points");
   const [points, setPoints] = useState<FeedbackPointRow[]>([]);
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
