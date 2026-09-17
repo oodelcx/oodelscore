@@ -22,6 +22,7 @@ export default function InsightsClient({ tooltips }: { tooltips: Record<string, 
 
   useEffect(() => {
     setLoading(true);
+    setReports([]);
     fetch(`/api/business/insights?period=${period}`)
       .then((res) => res.json())
       .then((data) => setReports(data.reports ?? []))
@@ -56,20 +57,21 @@ export default function InsightsClient({ tooltips }: { tooltips: Record<string, 
           <div style={{ fontSize: 13, marginTop: 4 }}>Check back after your next reporting period.</div>
         </div>
       )}
-      {reports.map((r) => (
-        <div className="card" key={r._id} style={{ marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <h3>
-                {new Date(r.periodStart).toLocaleDateString()} – {new Date(r.periodEnd).toLocaleDateString()}
-              </h3>
-              <p className="card-sub">Published {r.reviewedAt ? new Date(r.reviewedAt).toLocaleString() : ""}</p>
+      {!loading &&
+        reports.map((r) => (
+          <div className="card" key={r._id} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <h3>
+                  {new Date(r.periodStart).toLocaleDateString()} – {new Date(r.periodEnd).toLocaleDateString()}
+                </h3>
+                <p className="card-sub">Published {r.reviewedAt ? new Date(r.reviewedAt).toLocaleString() : ""}</p>
+              </div>
+              <span className="pill pill-green">Published</span>
             </div>
-            <span className="pill pill-green">Published</span>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6 }}>{r.bodyMarkdown}</p>
           </div>
-          <p style={{ fontSize: 13.5, lineHeight: 1.6 }}>{r.bodyMarkdown}</p>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }

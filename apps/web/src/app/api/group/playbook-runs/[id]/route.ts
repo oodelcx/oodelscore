@@ -1,19 +1,36 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, PlaybookRun, Playbook } from "@oodelscore/shared";
+import { connectToDatabase, PlaybookRun, Playbook, ActionBoardItem } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { computePlaybookUsageOne, countOwnerRunsLast30d } from "@/lib/playbookUsage";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-/** Mirrors /api/business/playbook-runs/[id]'s GET. */
+/**
+ * Mirrors /api/business/playbook-runs/[id]'s GET.
+ *
+ * Authorization isn't just {ownerType:"parentOrg", ownerId: org._id}: a
+ * case-linked run (actionBoardItemId set) can be ownerType:"business" when
+ * the case's own branch had a business-specific Playbook, or
+ * ownerType:"parentOrg" when it fell back to the org-wide one
+ * (autoAttachPlaybook picks whichever Playbook actually matched) — either
+ * way, the case belongs to this org and the run must stay visible here.
+ * Only an ad-hoc run with no linked case (started from the Playbook
+ * Library, not attached to a specific Case) falls back to the strict
+ * ownerType/ownerId check.
+ */
 export async function GET(_request: Request, { params }: RouteParams) {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
   const { id } = await params;
-  const run = await PlaybookRun.findOne({ _id: id, ownerType: "parentOrg", ownerId: session.org._id });
+  const run = await PlaybookRun.findById(id);
   if (!run) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+
+  const authorized = run.actionBoardItemId
+    ? (await ActionBoardItem.exists({ _id: run.actionBoardItemId, parentOrgId: session.org._id })) !== null
+    : run.ownerType === "parentOrg" && run.ownerId.toString() === session.org._id.toString();
+  if (!authorized) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const playbook = await Playbook.findById(run.playbookId);
   const [usage, usedThisOwnerLast30d] = await Promise.all([
@@ -37,15 +54,20 @@ export async function GET(_request: Request, { params }: RouteParams) {
   });
 }
 
-/** Mirrors /api/business/playbook-runs/[id]. */
+/** Mirrors /api/business/playbook-runs/[id]. Same case-linked-vs-ad-hoc
+ * authorization as the GET above. */
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
   const { id } = await params;
-  const run = await PlaybookRun.findOne({ _id: id, ownerType: "parentOrg", ownerId: session.org._id });
+  const run = await PlaybookRun.findById(id);
   if (!run) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  const authorized = run.actionBoardItemId
+    ? (await ActionBoardItem.exists({ _id: run.actionBoardItemId, parentOrgId: session.org._id })) !== null
+    : run.ownerType === "parentOrg" && run.ownerId.toString() === session.org._id.toString();
+  if (!authorized) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
   if (run.status !== "active") return NextResponse.json({ status: "error", message: "This run is no longer active" }, { status: 400 });
 
   const body = await request.json().catch(() => null);

@@ -1,19 +1,34 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, PlaybookRun, Playbook } from "@oodelscore/shared";
+import { connectToDatabase, PlaybookRun, Playbook, ActionBoardItem } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { computePlaybookUsageOne, countOwnerRunsLast30d } from "@/lib/playbookUsage";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-/** Run detail for the Case Management side panel — the run plus its playbook's usage analytics and the "3+ runs in 30 days" pattern nudge. */
+/**
+ * Run detail for the Case Management side panel — the run plus its
+ * playbook's usage analytics and the "3+ runs in 30 days" pattern nudge.
+ *
+ * A case-linked run (actionBoardItemId set) can be ownerType:"parentOrg"
+ * when the case's category had no business-specific Playbook and fell
+ * back to the org-wide one (autoAttachPlaybook picks whichever Playbook
+ * actually matched) — the case still belongs to this business, so the run
+ * must stay visible here too. Only an ad-hoc run with no linked case falls
+ * back to the strict ownerType/ownerId check.
+ */
 export async function GET(_request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
   const { id } = await params;
-  const run = await PlaybookRun.findOne({ _id: id, ownerType: "business", ownerId: session.business._id });
+  const run = await PlaybookRun.findById(id);
   if (!run) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+
+  const authorized = run.actionBoardItemId
+    ? (await ActionBoardItem.exists({ _id: run.actionBoardItemId, businessId: session.business._id })) !== null
+    : run.ownerType === "business" && run.ownerId.toString() === session.business._id.toString();
+  if (!authorized) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const playbook = await Playbook.findById(run.playbookId);
   const [usage, usedThisOwnerLast30d] = await Promise.all([
@@ -50,8 +65,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   await connectToDatabase();
   const { id } = await params;
-  const run = await PlaybookRun.findOne({ _id: id, ownerType: "business", ownerId: session.business._id });
+  const run = await PlaybookRun.findById(id);
   if (!run) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  const authorized = run.actionBoardItemId
+    ? (await ActionBoardItem.exists({ _id: run.actionBoardItemId, businessId: session.business._id })) !== null
+    : run.ownerType === "business" && run.ownerId.toString() === session.business._id.toString();
+  if (!authorized) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
   if (run.status !== "active") return NextResponse.json({ status: "error", message: "This run is no longer active" }, { status: 400 });
 
   const body = await request.json().catch(() => null);

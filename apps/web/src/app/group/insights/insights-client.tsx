@@ -21,6 +21,7 @@ export default function GroupInsightsClient({ tooltips }: { tooltips: Record<str
 
   useEffect(() => {
     setLoading(true);
+    setReports([]);
     fetch(`/api/group/insights?period=${period}`)
       .then((res) => res.json())
       .then((data) => setReports(data.reports ?? []))
@@ -54,20 +55,21 @@ export default function GroupInsightsClient({ tooltips }: { tooltips: Record<str
           <div style={{ fontWeight: 500, color: "var(--text)" }}>No {period} reports published yet</div>
         </div>
       )}
-      {reports.map((r) => (
-        <div className="card" key={r._id} style={{ marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <h3>
-                {new Date(r.periodStart).toLocaleDateString()} – {new Date(r.periodEnd).toLocaleDateString()}
-              </h3>
-              <p className="card-sub">Published {r.reviewedAt ? new Date(r.reviewedAt).toLocaleString() : ""}</p>
+      {!loading &&
+        reports.map((r) => (
+          <div className="card" key={r._id} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <h3>
+                  {new Date(r.periodStart).toLocaleDateString()} – {new Date(r.periodEnd).toLocaleDateString()}
+                </h3>
+                <p className="card-sub">Published {r.reviewedAt ? new Date(r.reviewedAt).toLocaleString() : ""}</p>
+              </div>
+              <span className="pill pill-green">Published</span>
             </div>
-            <span className="pill pill-green">Published</span>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6 }}>{r.bodyMarkdown}</p>
           </div>
-          <p style={{ fontSize: 13.5, lineHeight: 1.6 }}>{r.bodyMarkdown}</p>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }
