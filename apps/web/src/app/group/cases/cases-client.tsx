@@ -290,7 +290,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
       </div>
 
       {!isLimited && (
-        <div className="grid grid-5" style={{ marginBottom: 20 }}>
+        <div className="grid grid-6" style={{ marginBottom: 20 }}>
           <div className="card">
             <div className="metric-label">Open</div>
             <div className="metric-val">{openCount}</div>
@@ -305,6 +305,13 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
               <InfoTip text={tooltips["due-date"]} />
             </div>
             <div className="metric-val" style={{ color: "var(--red)" }}>{overdueCount}</div>
+          </div>
+          <div className="card" style={{ background: "var(--red-bg)" }}>
+            <div className="metric-label" style={{ color: "var(--red)" }}>
+              Escalated
+              <InfoTip text={tooltips["escalated"]} />
+            </div>
+            <div className="metric-val" style={{ color: "var(--red)" }}>{escalatedCount}</div>
           </div>
           <div className="card">
             <div className="metric-label">Resolved (30d)</div>
@@ -368,27 +375,15 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
               <div className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`} key={item._id}>
                 <div className="ab-card-head">
                   <div className="ab-title-block">
-                    <div className="ab-badges">
-                      {item.escalated && (
-                        <span className="pill pill-red" title={item.escalationNote || undefined}>
-                          Escalated
-                        </span>
-                      )}
-                      {item.escalated && <InfoTip text={tooltips["escalated"]} />}
-                      <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
-                        {item.status.replace(/_/g, " ")}
-                      </span>
-                      {age && <span className={`pill ${age.overdue ? "pill-red" : "pill-gray"}`}>{age.label}</span>}
-                      <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
-                        {item.priority}
-                      </span>
-                    </div>
                     <div className="ab-title">{item.title}</div>
                     <div className="ab-meta-row">
                       {!isLimited && (
                         <span>
                           Business: <b>{businessName(item.businessId)}</b>
                         </span>
+                      )}
+                      {item.categoryId && (
+                        <span className="pill pill-gray">{categoryName(item.categoryId)}</span>
                       )}
                       <span>
                         Due: <b>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</b>
@@ -419,6 +414,21 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                     )}
                   </div>
                   <div className="ab-actions-col">
+                    <div className="ab-badges">
+                      {item.escalated && (
+                        <span className="pill pill-red" title={item.escalationNote || undefined}>
+                          Escalated
+                        </span>
+                      )}
+                      {item.escalated && <InfoTip text={tooltips["escalated"]} />}
+                      <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
+                        {item.status.replace(/_/g, " ")}
+                      </span>
+                      {age && <span className={`pill ${age.overdue ? "pill-red" : "pill-gray"}`}>{age.label}</span>}
+                      <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
+                        {item.priority}
+                      </span>
+                    </div>
                     {isLimited && item.status !== "resolved" && resolvingId !== item._id && (
                       <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
                         Mark resolved
