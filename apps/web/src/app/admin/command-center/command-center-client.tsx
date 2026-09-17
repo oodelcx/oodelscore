@@ -50,6 +50,9 @@ interface CommandCenterData {
   sparklines: Sparkline[];
 }
 
+type CcTheme = "light" | "dark";
+const CC_THEME_KEY = "cc-theme";
+
 const LEVEL_LABELS: Record<string, string> = {
   "1": "Collecting",
   "2": "Reacting",
@@ -80,6 +83,28 @@ export default function AdminCommandCenterClient({ tooltips }: { tooltips: Recor
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
+  const [theme, setTheme] = useState<CcTheme>("light");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CC_THEME_KEY);
+      if (stored === "dark" || stored === "light") setTheme(stored);
+    } catch {
+      // localStorage unavailable (e.g. private browsing) — keep default light
+    }
+  }, []);
+
+  function toggleTheme() {
+    setTheme((prev) => {
+      const next: CcTheme = prev === "light" ? "dark" : "light";
+      try {
+        localStorage.setItem(CC_THEME_KEY, next);
+      } catch {
+        // best-effort persistence only
+      }
+      return next;
+    });
+  }
 
   function goToClient(tile: ClientTile) {
     router.push(tile.ownerType === "business" ? `/admin/businesses/${tile.businessId}` : `/admin/parent-orgs/${tile.businessId}`);
@@ -127,7 +152,7 @@ export default function AdminCommandCenterClient({ tooltips }: { tooltips: Recor
         </div>
       </div>
 
-      <div className="cc-root">
+      <div className="cc-root" data-theme={theme === "dark" ? "dark" : undefined}>
         <div className="cc-ticker">
           <div className="cc-ticker-track">
             {tickerItems.map((t, i) => (
@@ -155,6 +180,15 @@ export default function AdminCommandCenterClient({ tooltips }: { tooltips: Recor
             <div className="cc-chip live">● LIVE</div>
             <div className="cc-chip">{clientCount} CLIENTS</div>
             {firingAlerts > 0 && <div className="cc-chip alert">{firingAlerts} ALERTS FIRING</div>}
+            <button
+              type="button"
+              className="cc-chip"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {theme === "dark" ? "☾ DARK" : "☀ LIGHT"}
+            </button>
           </div>
         </div>
 
@@ -306,13 +340,13 @@ export default function AdminCommandCenterClient({ tooltips }: { tooltips: Recor
                 </div>
                 <div className="cc-gauge-wrap">
                   <svg width="60" height="60" viewBox="0 0 70 70">
-                    <circle cx="35" cy="35" r="30" fill="none" stroke="#232b38" strokeWidth="7" />
+                    <circle cx="35" cy="35" r="30" fill="none" stroke="var(--cc-border)" strokeWidth="7" />
                     <circle
                       cx="35"
                       cy="35"
                       r="30"
                       fill="none"
-                      stroke="#33d17a"
+                      stroke="var(--cc-green)"
                       strokeWidth="7"
                       strokeLinecap="round"
                       strokeDasharray="188.5"
@@ -377,7 +411,7 @@ export default function AdminCommandCenterClient({ tooltips }: { tooltips: Recor
                   <div className="cc-spark-row cc-clickable" key={s.clientId} onClick={() => goToClient(data.clientTiles.find((t) => t.clientId === s.clientId)!)}>
                     <span className="cc-spark-name">{s.name}</span>
                     <svg width="80" height="22" viewBox="0 0 80 22">
-                      <polyline points={sparkPoints(s.days, 80, 20)} fill="none" stroke="#33d17a" strokeWidth="1.6" />
+                      <polyline points={sparkPoints(s.days, 80, 20)} fill="none" stroke="var(--cc-green)" strokeWidth="1.6" />
                     </svg>
                     <span className="cc-spark-count">{s.days.reduce((a, b) => a + b, 0)}</span>
                   </div>
