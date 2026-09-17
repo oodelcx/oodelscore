@@ -39,8 +39,15 @@ export default function AdminOverviewPage() {
 
   return (
     <div>
-      <h1>Platform overview</h1>
-      <p className="subtitle">Your command center — every number here is where you go to act on it.</p>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1>Platform overview</h1>
+          <p className="subtitle">Every number here is where you go to act on it.</p>
+        </div>
+        <Link href="/admin/command-center" className="btn" style={{ whiteSpace: "nowrap" }}>
+          Open Command Center →
+        </Link>
+      </div>
 
       {error && <p className="error-text">{error}</p>}
       {loading && <p className="subtitle">Loading…</p>}
