@@ -9,7 +9,7 @@ export default function AdminSecurityPage() {
           <p className="subtitle">Manage how you sign in to your own admin account.</p>
         </div>
       </div>
-      <SecuritySettingsCard />
+      <SecuritySettingsCard showAuditLogLink />
     </div>
   );
 }
