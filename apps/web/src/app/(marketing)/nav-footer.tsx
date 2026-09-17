@@ -46,21 +46,25 @@ export function MarketingNav({
         <div className="nav-right">
           <Link href="/login">Sign in</Link>
           <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
+          {/* Only rendered/visible below the 860px breakpoint where
+              .nav-links is hidden (marketing.css) — lives inside nav-right
+              (not as a separate flex child of nav-inner) so it clusters
+              with Sign in/Book a demo at the right edge instead of being
+              spaced apart from them by nav-inner's space-between. Sign in
+              and Book a demo both stay visible at mobile width; only the
+              page links (Home/Product/…) move into the panel below. */}
+          <button
+            type="button"
+            className="nav-mobile-toggle"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((v) => !v)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
-        {/* Only rendered/visible below the 860px breakpoint where .nav-links
-            is hidden (marketing.css) — without this there was previously no
-            way to reach Home/Product/Solutions/Pricing/Company on mobile. */}
-        <button
-          type="button"
-          className="nav-mobile-toggle"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          aria-expanded={mobileOpen}
-          onClick={() => setMobileOpen((v) => !v)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
       </div>
       {mobileOpen && (
         <div className="nav-mobile-panel">
@@ -74,9 +78,6 @@ export function MarketingNav({
               {item.label}
             </Link>
           ))}
-          <Link href="/login" onClick={() => setMobileOpen(false)}>
-            Sign in
-          </Link>
         </div>
       )}
     </nav>

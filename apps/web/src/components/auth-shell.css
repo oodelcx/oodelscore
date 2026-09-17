@@ -76,6 +76,11 @@
   width: 100%;
   max-width: 340px;
 }
+/* Mobile-only brand mark above the form content — hidden on desktop, where
+   .as-visual already carries the (white) wordmark on its black panel. */
+.as-mobile-brand {
+  display: none;
+}
 
 /* Mobile-only branded header (AuthMobileNav) — hidden on desktop where
    .as-visual already carries the logo/branding on its black panel. */
@@ -102,16 +107,13 @@
   .as-mobile-nav-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 14px 16px;
   }
-  .as-mobile-toggle,
-  .as-mobile-toggle-spacer {
+  .as-mobile-toggle {
     width: 32px;
     height: 32px;
     flex-shrink: 0;
-  }
-  .as-mobile-toggle {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -129,10 +131,11 @@
     background: #171614;
     border-radius: 1px;
   }
-  .as-mobile-logo img {
-    height: 22px;
-    width: auto;
+  .as-mobile-brand {
     display: block;
+    height: 28px;
+    width: auto;
+    margin: 4px auto 28px;
   }
   .as-mobile-panel {
     display: flex;

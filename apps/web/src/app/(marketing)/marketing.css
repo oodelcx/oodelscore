@@ -232,12 +232,20 @@
   .mkt .nav-links {
     display: none;
   }
-  /* "Sign in" already moves into the mobile panel on click; the standalone
-     link in .nav-right would otherwise sit awkwardly next to the primary
-     CTA with nothing else beside it, so it's hidden here and only the
-     "Book a demo" button + the new hamburger remain in the bar itself. */
+  /* Sign in and Book a demo both stay visible in the bar at mobile width;
+     only the page links (Home/Product/…) move into the hamburger panel.
+     Tighter gap/padding here so all three (link, button, toggle) fit
+     comfortably at phone width. */
+  .mkt .nav-right {
+    gap: 10px;
+  }
   .mkt .nav-right > a {
-    display: none;
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+  .mkt .nav-right .btn-primary {
+    padding: 8px 14px;
+    font-size: 13px;
   }
   .mkt .nav-mobile-toggle {
     display: flex;
