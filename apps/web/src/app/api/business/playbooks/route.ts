@@ -9,6 +9,7 @@ import {
   PLAYBOOK_TRIGGER_COMPARATORS,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
 
 // Mirrors /api/group/playbooks, scoped to businessId instead of
 // parentOrgId. Not available to limited-tier team members.
@@ -30,12 +31,19 @@ export async function GET() {
     status: "active",
   });
   const activeRunByPlaybookId = new Map(activeRuns.map((r) => [r.playbookId.toString(), r]));
+  const usageByPlaybookId = await computePlaybookUsageBatch(playbooks.map((p) => p._id));
 
   const enriched = await Promise.all(
     playbooks.map(async (playbook) => ({
       ...playbook.toObject(),
       triggerStatus: await evaluatePlaybookTrigger(playbook, [session.business._id]),
       activeRun: activeRunByPlaybookId.get(playbook._id.toString()) ?? null,
+      usage: usageByPlaybookId.get(playbook._id.toString()) ?? {
+        usageCount90d: 0,
+        completionRate: null,
+        avgResolutionHours: null,
+        lastUsedAt: null,
+      },
     }))
   );
 

@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ActionBoardItem, Playbook, User, sendTemplatedEmail, ACTION_PRIORITIES } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  ActionBoardItem,
+  Playbook,
+  User,
+  sendTemplatedEmail,
+  ACTION_PRIORITIES,
+  autoAttachPlaybook,
+} from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { buildCaseStats, attachPlaybookRunsToItems } from "@/lib/caseStats";
 
 /**
  * Standalone business's own single-business Action Board (spec Section 16
@@ -24,7 +33,11 @@ export async function GET() {
     ActionBoardItem.find(filter).sort({ createdAt: -1 }),
     Playbook.find(scope),
   ]);
-  return NextResponse.json({ status: "ok", items, playbooks, tier: session.tier });
+
+  const stats = buildCaseStats(items);
+  const itemsWithRuns = await attachPlaybookRunsToItems(items, playbooks);
+
+  return NextResponse.json({ status: "ok", items: itemsWithRuns, playbooks, tier: session.tier, stats });
 }
 
 export async function POST(request: Request) {
@@ -51,6 +64,8 @@ export async function POST(request: Request) {
     sourceResponseIds: Array.isArray(body?.sourceResponseIds) ? body.sourceResponseIds : [],
     source: "manual",
   });
+
+  await autoAttachPlaybook(item).catch((err) => console.error("[action-board] auto-attach playbook failed", err));
 
   if (item.ownerId) {
     const owner = await User.findById(item.ownerId);

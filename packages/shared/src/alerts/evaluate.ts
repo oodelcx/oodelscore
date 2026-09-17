@@ -6,6 +6,7 @@ import { Category } from "../models/Category";
 import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
 import { ActionBoardItem } from "../models/ActionBoardItem";
 import { User } from "../models/User";
+import { autoAttachPlaybook } from "../scoring/caseAutoAttach";
 import { computeBusinessMetrics } from "../scoring/aggregate";
 import { sendTemplatedEmail } from "../email/resend";
 import { generateTriageSuggestion } from "../ai/triage";
@@ -105,6 +106,8 @@ async function autoTriageAndCreateActionItem(
     source: mapping ? "auto_assigned" : "auto_suggested",
     suggestedAction,
   });
+
+  await autoAttachPlaybook(item).catch((err) => console.error("[alerts] auto-attach playbook failed", err));
 
   // Notify the owner that they've been assigned this item — no confirmation
   // language, since the assignment already happened.
