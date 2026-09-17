@@ -6,6 +6,21 @@ import { InfoTip } from "@/components/info-tip";
 
 type TriggerMetric = "categoryAverage" | "negativeMentionCount";
 
+interface UsageInfo {
+  usageCount90d: number;
+  completionRate: number | null;
+  avgResolutionHours: number | null;
+  lastUsedAt: string | null;
+}
+interface RunHistoryRow {
+  _id: string;
+  status: string;
+  startedAt?: string;
+  completedAt?: string | null;
+  caseTitle?: string;
+  completedBy?: string;
+  [key: string]: unknown;
+}
 interface PlaybookRow {
   _id: string;
   title: string;
@@ -17,8 +32,15 @@ interface PlaybookRow {
   triggerWindowDays: number | null;
   steps: string[];
   usageCount: number;
+  usage?: UsageInfo;
   triggerStatus: { isTriggered: boolean; currentValue: number | null; description: string } | null;
   activeRun: { _id: string; steps: string[]; completedStepIndexes: number[]; status: "active" | "completed" | "abandoned" } | null;
+}
+
+function formatHours(hours: number | null | undefined): string {
+  if (hours === null || hours === undefined) return "—";
+  if (hours >= 24) return `${(hours / 24).toFixed(1)}d`;
+  return `${hours.toFixed(1)}h`;
 }
 interface CategoryRow {
   _id: string;
@@ -52,6 +74,9 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [expandedFor, setExpandedFor] = useState<string | null>(null);
+  const [historyFor, setHistoryFor] = useState<string | null>(null);
+  const [historyById, setHistoryById] = useState<Record<string, RunHistoryRow[]>>({});
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   function load() {
     setLoading(true);
@@ -164,12 +189,28 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
     load();
   }
 
+  async function toggleHistory(id: string) {
+    if (historyFor === id) {
+      setHistoryFor(null);
+      return;
+    }
+    setHistoryFor(id);
+    if (!historyById[id]) {
+      setHistoryLoading(true);
+      const data = await fetch(`/api/business/playbooks/${id}/runs`)
+        .then((r) => r.json())
+        .catch(() => null);
+      setHistoryById((prev) => ({ ...prev, [id]: data?.runs ?? [] }));
+      setHistoryLoading(false);
+    }
+  }
+
   return (
     <div>
       <div className="page-head">
         <div>
           <h1>
-            Playbooks
+            Playbook Library
             <InfoTip text={tooltips["playbooks"]} />
           </h1>
           <p className="subtitle">Standard guidance per category/issue type — shown right on matching Action Board items.</p>
@@ -346,6 +387,30 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                       {p.triggerStatus?.description && (
                         <div className="ab-callout">{p.triggerStatus.description}</div>
                       )}
+                      {p.usage && (
+                        <div className="pb-stat-grid">
+                          <div className="pb-stat-tile">
+                            <div className="pb-stat-label">Used (90d)</div>
+                            <div className="pb-stat-val">{p.usage.usageCount90d}</div>
+                          </div>
+                          <div className="pb-stat-tile">
+                            <div className="pb-stat-label">Completion rate</div>
+                            <div className="pb-stat-val">
+                              {p.usage.completionRate === null ? "—" : `${Math.round(p.usage.completionRate * 100)}%`}
+                            </div>
+                          </div>
+                          <div className="pb-stat-tile">
+                            <div className="pb-stat-label">Avg resolution</div>
+                            <div className="pb-stat-val">{formatHours(p.usage.avgResolutionHours)}</div>
+                          </div>
+                          <div className="pb-stat-tile">
+                            <div className="pb-stat-label">Last used</div>
+                            <div className="pb-stat-val" style={{ fontSize: 13 }}>
+                              {p.usage.lastUsedAt ? new Date(p.usage.lastUsedAt).toLocaleDateString() : "—"}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="ab-actions-col">
                       <button className="icon-btn" onClick={() => startEdit(p)} title="Edit playbook">
@@ -365,6 +430,13 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                     >
                       📘 {p.activeRun ? "Continue run" : "Steps & run"}
                     </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm action-btn${historyFor === p._id ? " active" : ""}`}
+                      onClick={() => toggleHistory(p._id)}
+                    >
+                      🕘 View run history
+                    </button>
                   </div>
 
                   {expandedFor === p._id && (
@@ -383,6 +455,43 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                         runsPath="/api/business/playbook-runs"
                         onChange={load}
                       />
+                    </div>
+                  )}
+
+                  {historyFor === p._id && (
+                    <div className="ab-panel">
+                      {historyLoading && !historyById[p._id] && <p className="subtitle">Loading…</p>}
+                      {historyById[p._id] && historyById[p._id].length === 0 && (
+                        <p className="subtitle" style={{ margin: 0 }}>
+                          No runs yet.
+                        </p>
+                      )}
+                      {historyById[p._id] && historyById[p._id].length > 0 && (
+                        <table className="clean" style={{ fontSize: 12.5 }}>
+                          <thead>
+                            <tr>
+                              <th>Case</th>
+                              <th>Started</th>
+                              <th>Status</th>
+                              {historyById[p._id].some((r) => r.completedBy) && <th>Completed by</th>}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyById[p._id].map((r) => (
+                              <tr key={r._id}>
+                                <td>{r.caseTitle ?? "—"}</td>
+                                <td>{r.startedAt ? new Date(r.startedAt).toLocaleDateString() : "—"}</td>
+                                <td>
+                                  <span className={`pill ${r.status === "completed" ? "pill-green" : r.status === "abandoned" ? "pill-gray" : "pill-amber"}`}>
+                                    {r.status}
+                                  </span>
+                                </td>
+                                {historyById[p._id].some((row) => row.completedBy) && <td>{r.completedBy ?? "—"}</td>}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
                     </div>
                   )}
                 </>

@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
+import { PlaybookRunPanelSlideout } from "@/components/playbook-run-panel-slideout";
 
+interface PlaybookRunSummary {
+  id: string;
+  playbookId: string;
+  playbookTitle: string;
+  categoryId: string | null;
+  stepsTotal: number;
+  stepsCompleted: number;
+  status: "active" | "completed" | "abandoned";
+  attachReason: string;
+}
 interface ItemRow {
   _id: string;
   title: string;
@@ -18,13 +30,7 @@ interface ItemRow {
   escalated: boolean;
   escalationNote: string;
   suggestedAction: string;
-}
-interface PlaybookRow {
-  _id: string;
-  categoryId: string | null;
-  title: string;
-  triggerCondition: string;
-  steps: string[];
+  playbookRun?: PlaybookRunSummary | null;
 }
 interface BusinessRow {
   _id: string;
@@ -35,24 +41,43 @@ interface TeamRow {
   userId: string;
   label: string;
 }
+interface CategoryRow {
+  _id: string;
+  name: string;
+}
 interface CommentRow {
   _id: string;
   authorLabel: string;
   body: string;
   createdAt: string;
 }
+interface Stats {
+  open: number;
+  inProgress: number;
+  overdue: number;
+  escalated: number;
+  resolved30d: number;
+  avgResolutionHours: number | null;
+}
 
-export default function ActionBoardClient({ tooltips }: { tooltips: Record<string, string> }) {
+function formatHours(hours: number | null | undefined): string {
+  if (hours === null || hours === undefined) return "—";
+  if (hours >= 24) return `${(hours / 24).toFixed(1)}d`;
+  return `${hours.toFixed(1)}h`;
+}
+
+export default function CasesClient({ tooltips }: { tooltips: Record<string, string> }) {
+  const router = useRouter();
   const [items, setItems] = useState<ItemRow[]>([]);
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [team, setTeam] = useState<TeamRow[]>([]);
-  const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tier, setTier] = useState<"full" | "limited" | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolutionDraft, setResolutionDraft] = useState("");
   const [resolutionError, setResolutionError] = useState<string | null>(null);
-  const [expandedPlaybookFor, setExpandedPlaybookFor] = useState<string | null>(null);
   const [expandedCommentsFor, setExpandedCommentsFor] = useState<string | null>(null);
   const [commentsByItem, setCommentsByItem] = useState<Record<string, CommentRow[]>>({});
   const [commentDraft, setCommentDraft] = useState("");
@@ -62,7 +87,9 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
   const [escalationNoteDraft, setEscalationNoteDraft] = useState("");
   const [filter, setFilter] = useState<"all" | "unassigned" | "overdue" | "resolved" | "escalated">("all");
   const [regionFilter, setRegionFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [expandedDescriptionFor, setExpandedDescriptionFor] = useState<string | null>(null);
+  const [openRunFor, setOpenRunFor] = useState<{ itemId: string; runId: string } | null>(null);
 
   function load() {
     setLoading(true);
@@ -70,12 +97,14 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
       fetch("/api/group/action-board").then((r) => r.json()),
       fetch("/api/group/businesses").then((r) => r.json()),
       fetch("/api/group/team").then((r) => r.json()),
-    ]).then(([itemsData, businessesData, teamData]) => {
+      fetch("/api/group/category-owners").then((r) => r.json()).catch(() => ({ categories: [] })),
+    ]).then(([itemsData, businessesData, teamData, categoryData]) => {
       setItems(itemsData.items ?? []);
-      setPlaybooks(itemsData.playbooks ?? []);
       setTier(itemsData.tier ?? null);
+      setStats(itemsData.stats ?? null);
       setBusinesses(businessesData.businesses ?? []);
       setTeam(teamData.team ?? []);
+      setCategories(categoryData.categories ?? []);
       setLoading(false);
     });
   }
@@ -84,9 +113,15 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
     load();
   }, []);
 
-  function playbookForCategory(categoryId: string | null) {
-    if (!categoryId) return null;
-    return playbooks.find((p) => p.categoryId === categoryId) ?? null;
+  function categoryName(id: string | null): string {
+    if (!id) return "Any category";
+    return categories.find((c) => c._id === id)?.name ?? "Uncategorized";
+  }
+
+  function logDecision(ctx: { title: string; trigger: string; linkedCaseId: string }) {
+    const params = new URLSearchParams({ new: "1", title: ctx.title, trigger: ctx.trigger, linkedCaseId: ctx.linkedCaseId });
+    setOpenRunFor(null);
+    router.push(`/group/decision-log?${params.toString()}`);
   }
 
   function startResolve(id: string) {
@@ -185,18 +220,21 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
   const isLimited = tier === "limited";
   const regions = Array.from(new Set(businesses.map((b) => b.region).filter((r): r is string => !!r))).sort();
 
-  const openCount = items.filter((i) => i.status === "open").length;
-  const inProgressCount = items.filter((i) => i.status === "in_progress").length;
-  const overdueCount = items.filter(isOverdue).length;
-  const escalatedCount = items.filter((i) => i.escalated).length;
+  const openCount = stats?.open ?? items.filter((i) => i.status === "open").length;
+  const inProgressCount = stats?.inProgress ?? items.filter((i) => i.status === "in_progress").length;
+  const overdueCount = stats?.overdue ?? items.filter(isOverdue).length;
+  const escalatedCount = stats?.escalated ?? items.filter((i) => i.escalated).length;
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const resolved30dCount = items.filter((i) => i.status === "resolved" && i.resolvedAt && new Date(i.resolvedAt).getTime() >= thirtyDaysAgo).length;
+  const resolved30dCount =
+    stats?.resolved30d ??
+    items.filter((i) => i.status === "resolved" && i.resolvedAt && new Date(i.resolvedAt).getTime() >= thirtyDaysAgo).length;
 
   const visibleItems = items.filter((item) => {
     if (regionFilter) {
       const region = businesses.find((b) => b._id === item.businessId)?.region;
       if (region !== regionFilter) return false;
     }
+    if (categoryFilter && item.categoryId !== categoryFilter) return false;
     if (filter === "unassigned") return !item.ownerId;
     if (filter === "overdue") return isOverdue(item);
     if (filter === "resolved") return item.status === "resolved";
@@ -209,19 +247,19 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
       <div className="page-head">
         <div>
           <h1>
-            {isLimited ? "My Action Items" : "Action Board"}
+            {isLimited ? "My Cases" : "Case Management"}
             {!isLimited && <InfoTip text={tooltips["oversight"]} />}
           </h1>
           <p className="subtitle">
             {isLimited
-              ? "Items assigned to you — update their status as you work through them."
-              : "Read-only oversight of every branch's Action Board — assigning and resolving items is each branch's own job. Comment on an item or flag it Escalated if it needs your attention."}
+              ? "Cases assigned to you — update their status as you work through them."
+              : "Read-only oversight of every branch's Case Management — assigning and resolving cases is each branch's own job. Comment on a case or flag it Escalated if it needs your attention."}
           </p>
         </div>
       </div>
 
       {!isLimited && (
-        <div className="grid grid-4" style={{ marginBottom: 20 }}>
+        <div className="grid grid-5" style={{ marginBottom: 20 }}>
           <div className="card">
             <div className="metric-label">Open</div>
             <div className="metric-val">{openCount}</div>
@@ -240,6 +278,10 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
           <div className="card">
             <div className="metric-label">Resolved (30d)</div>
             <div className="metric-val">{resolved30dCount}</div>
+          </div>
+          <div className="card">
+            <div className="metric-label">Avg time to resolve</div>
+            <div className="metric-val">{formatHours(stats?.avgResolutionHours ?? null)}</div>
           </div>
         </div>
       )}
@@ -261,6 +303,16 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
               ))}
             </select>
           )}
+          {categories.length > 0 && (
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       )}
 
@@ -268,8 +320,8 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
       {!loading && (
         <div className="ab-list">
           {(isLimited ? items : visibleItems).map((item) => {
-            const playbook = playbookForCategory(item.categoryId);
             const overdue = isOverdue(item);
+            const run = item.playbookRun ?? null;
             const descriptionExpanded = expandedDescriptionFor === item._id;
             const descriptionIsLong = item.description.length > 160;
             return (
@@ -349,15 +401,21 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
                 </div>
 
                 <div className="action-links">
-                  <button
-                    type="button"
-                    className={`btn btn-sm action-btn${expandedPlaybookFor === item._id ? " active" : ""}`}
-                    disabled={!playbook}
-                    title={playbook ? undefined : "No playbook set for this category"}
-                    onClick={() => setExpandedPlaybookFor(expandedPlaybookFor === item._id ? null : item._id)}
-                  >
-                    📘 Playbook
-                  </button>
+                  {run ? (
+                    <div className="pb-chip" onClick={() => setOpenRunFor({ itemId: item._id, runId: run.id })}>
+                      <span>
+                        Playbook: {run.stepsCompleted} of {run.stepsTotal} steps
+                      </span>
+                      <span className="pb-chip-track">
+                        <span
+                          className="pb-chip-fill"
+                          style={{ width: `${run.stepsTotal ? Math.round((run.stepsCompleted / run.stepsTotal) * 100) : 0}%` }}
+                        />
+                      </span>
+                    </div>
+                  ) : item.categoryId ? (
+                    <span className="pb-no-playbook">No playbook set</span>
+                  ) : null}
                   <button
                     type="button"
                     className={`btn btn-sm action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
@@ -384,19 +442,6 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
                     <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
                       Cancel
                     </button>
-                  </div>
-                )}
-
-                {expandedPlaybookFor === item._id && playbook && (
-                  <div className="ab-panel">
-                    <div className="card-sub" style={{ margin: "0 0 4px" }}>
-                      <b>Trigger:</b> {playbook.triggerCondition || "—"}
-                    </div>
-                    <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
-                      {playbook.steps.map((step, i) => (
-                        <li key={i}>{step}</li>
-                      ))}
-                    </ul>
                   </div>
                 )}
 
@@ -460,9 +505,30 @@ export default function ActionBoardClient({ tooltips }: { tooltips: Record<strin
             );
           })}
           {(isLimited ? items : visibleItems).length === 0 && (
-            <div className="ab-empty">{items.length === 0 ? "No action items yet." : "No items match this filter."}</div>
+            <div className="ab-empty">{items.length === 0 ? "No cases yet." : "No cases match this filter."}</div>
           )}
         </div>
+      )}
+
+      {openRunFor && (
+        <PlaybookRunPanelSlideout
+          runId={openRunFor.runId}
+          basePath="group"
+          categoryName={categoryName}
+          onClose={() => setOpenRunFor(null)}
+          onChanged={load}
+          libraryHref="/group/playbooks"
+          onLogDecision={logDecision}
+          onResolveCase={
+            isLimited
+              ? () => {
+                  const itemId = openRunFor.itemId;
+                  setOpenRunFor(null);
+                  startResolve(itemId);
+                }
+              : undefined
+          }
+        />
       )}
     </div>
   );

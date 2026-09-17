@@ -30,7 +30,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
-              <a href="/group/action-board">My Action Items</a>
+              <a href="/group/cases">My Cases</a>
             </nav>
           ) : (
             <>
@@ -50,9 +50,8 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               </nav>
               <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
-                <a href="/group/action-board">Action board</a>
+                <a href="/group/cases">Case Management</a>
                 <a href="/group/decision-log">Decision log</a>
-                <a href="/group/playbooks">Playbooks</a>
               </nav>
               <div className="nav-group-label">Measure</div>
               <nav className="admin-nav">
@@ -65,6 +64,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 {!isOrgTeamMember && <a href="/group/category-owners">Category Owners</a>}
                 <a href="/group/messages">Messages</a>
                 {!isOrgTeamMember && <a href="/group/billing">Billing</a>}
+                <a href="/group/playbooks">Playbook Library</a>
                 <a href="/group/security">Security</a>
               </nav>
             </>
