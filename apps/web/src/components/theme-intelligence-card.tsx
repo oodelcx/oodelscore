@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { InfoTip } from "@/components/info-tip";
 
 interface ThemeRow {
   theme: string;
@@ -19,7 +20,15 @@ function dominantSentimentColor(s: ThemeRow["sentimentBreakdown"]): string {
 }
 
 /** Shared by Business and Group Analytics — what people are actually talking about, extracted from open-ended feedback by Claude Haiku (with a keyword fallback when no API key is configured). */
-export function ThemeIntelligenceCard({ apiPath, analyzeApiPath }: { apiPath: string; analyzeApiPath: string }) {
+export function ThemeIntelligenceCard({
+  apiPath,
+  analyzeApiPath,
+  tooltip,
+}: {
+  apiPath: string;
+  analyzeApiPath: string;
+  tooltip?: string;
+}) {
   const [themes, setThemes] = useState<ThemeRow[] | null>(null);
   const [windowDays, setWindowDays] = useState(30);
   const [analyzing, setAnalyzing] = useState(false);
@@ -58,7 +67,10 @@ export function ThemeIntelligenceCard({ apiPath, analyzeApiPath }: { apiPath: st
     <div className="card">
       <div className="page-head" style={{ marginBottom: 6 }}>
         <div>
-          <h3 style={{ margin: 0 }}>Theme &amp; Sentiment Intelligence</h3>
+          <h3 style={{ margin: 0 }}>
+            Theme &amp; Sentiment Intelligence
+            <InfoTip text={tooltip} />
+          </h3>
           <p className="card-sub" style={{ margin: 0 }}>
             What people are actually talking about, over the last {windowDays} days — extracted from open-ended answers.
           </p>

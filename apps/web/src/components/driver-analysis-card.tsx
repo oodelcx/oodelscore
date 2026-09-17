@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import { InfoTip } from "@/components/info-tip";
 
 interface DriverRow {
   categoryId: string;
@@ -50,11 +51,15 @@ export function DriverAnalysisCard({
   rootCauseApiPath,
   canCreateAction,
   createActionApiPath,
+  driverTooltip,
+  rootCauseTooltip,
 }: {
   apiPath: string;
   rootCauseApiPath: string;
   canCreateAction: boolean;
   createActionApiPath?: string;
+  driverTooltip?: string;
+  rootCauseTooltip?: string;
 }) {
   const [drivers, setDrivers] = useState<DriverRow[] | null>(null);
   const [windowDays, setWindowDays] = useState(90);
@@ -117,7 +122,10 @@ export function DriverAnalysisCard({
 
   return (
     <div className="card">
-      <h3>What&rsquo;s driving your score</h3>
+      <h3>
+        What&rsquo;s driving your score
+        <InfoTip text={driverTooltip} />
+      </h3>
       <p className="card-sub">
         How strongly each category correlates with the rest of a response&rsquo;s rating, over the last {windowDays} days.
         Priority categories score below average and move the needle most — fix these first.
@@ -186,7 +194,8 @@ export function DriverAnalysisCard({
                               </>
                             )}
                             <p>
-                              <b>Likely root cause</b>{" "}
+                              <b>Likely root cause</b>
+                              <InfoTip text={rootCauseTooltip} />{" "}
                               <span className="pill pill-amber">{CONFIDENCE_LABEL[analysis.confidenceLabel]}</span>
                               <br />
                               {analysis.likelyRootCause}
