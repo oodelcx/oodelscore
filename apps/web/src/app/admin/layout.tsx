@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { requireStaffSession } from "@/lib/adminAuth";
 import { connectToDatabase, AiInsightReport, Business, FeedbackPointRequest } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
+import MobileNavToggle from "@/components/mobile-nav-toggle";
 import "./admin.css";
 
 /**
@@ -61,6 +62,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className="admin-app">
+      <MobileNavToggle label="OodelCX Admin" />
       <aside className="admin-sidebar">
         <div>
           <div className="admin-sidebar-top">

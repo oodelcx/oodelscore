@@ -5,6 +5,7 @@ import { connectToDatabase, ParentOrganization } from "@oodelscore/shared";
 import "../admin/admin.css";
 import "../business/business.css";
 import LogoutLink from "./logout-link";
+import MobileNavToggle from "@/components/mobile-nav-toggle";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -22,6 +23,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
 
   return (
     <div className="admin-app">
+      <MobileNavToggle label="Parent Organisation Portal" />
       <aside className="admin-sidebar">
         <div>
           <div className="admin-sidebar-top">
