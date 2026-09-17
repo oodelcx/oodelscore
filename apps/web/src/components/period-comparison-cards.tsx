@@ -23,11 +23,11 @@ export function PeriodComparisonCards({ comparisons }: { comparisons: Comparison
           return (
             <div className="card" key={period}>
               <div className="metric-label">This {period}</div>
-              <div className="metric-val">{c.starAverage !== null ? `${c.starAverage}/5` : "—"}</div>
+              <div className="metric-val">{c.starAverage !== null ? `${c.starAverage.toFixed(2)}/5` : "—"}</div>
               <div className={`metric-note ${c.changePercent !== null ? (c.changePercent >= 0 ? "up" : "down") : ""}`}>
                 {c.changePercent === null
                   ? "No prior period data yet"
-                  : `${c.changePercent >= 0 ? "↑" : "↓"} ${Math.abs(c.changePercent)}% vs last ${period} · ${c.responseCount} responses`}
+                  : `${c.changePercent >= 0 ? "↑" : "↓"} ${Math.abs(c.changePercent).toFixed(1)}% vs last ${period} · ${c.responseCount} responses`}
               </div>
             </div>
           );
