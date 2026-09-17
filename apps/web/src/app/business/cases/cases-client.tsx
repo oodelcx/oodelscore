@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
+import { OwnerBadge } from "@/components/owner-badge";
 import { PlaybookRunPanelSlideout } from "@/components/playbook-run-panel-slideout";
 import { useTooltips } from "@/lib/useTooltips";
 
@@ -110,6 +111,7 @@ export default function BusinessCasesClient() {
   const [openRunFor, setOpenRunFor] = useState<{ itemId: string; runId: string } | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
@@ -191,6 +193,7 @@ export default function BusinessCasesClient() {
     setTitle("");
     setOwnerId("");
     setDueDate("");
+    setShowCreateForm(false);
     load();
   }
 
@@ -265,6 +268,16 @@ export default function BusinessCasesClient() {
               : "Cases spawned from flagged feedback — Alert Rules create these automatically and assign them to whoever owns that category. A matching Playbook attaches automatically."}
           </p>
         </div>
+        <div className="page-head-actions">
+          <a className="link-action" href="/business/playbooks">
+            ⚙ Playbook Library
+          </a>
+          {!isLimited && (
+            <button className="btn btn-dark" onClick={() => setShowCreateForm((v) => !v)}>
+              {showCreateForm ? "Cancel" : "+ New case"}
+            </button>
+          )}
+        </div>
       </div>
 
       {!isLimited && (
@@ -297,8 +310,8 @@ export default function BusinessCasesClient() {
         </div>
       )}
 
-      {!isLimited && (
-        <div className="card">
+      {!isLimited && showCreateForm && (
+        <div className="card" style={{ marginBottom: 18 }}>
           <h3>New case</h3>
           <div className="field-row">
             <div className="field">
@@ -400,10 +413,6 @@ export default function BusinessCasesClient() {
                       {!isLimited && (
                         <div className="ab-meta-row">
                           <span>
-                            Owner: <b>{team.find((t) => t.userId === item.ownerId)?.label ?? "Unassigned"}</b>
-                            <InfoTip text={tooltips["owner"]} />
-                          </span>
-                          <span>
                             Due: <b>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</b>
                           </span>
                         </div>
@@ -443,31 +452,34 @@ export default function BusinessCasesClient() {
                     </div>
                   </div>
 
-                  <div className="action-links">
-                    {run ? (
-                      <div className="pb-chip" onClick={() => setOpenRunFor({ itemId: item._id, runId: run.id })}>
-                        <span>
-                          Playbook: {run.stepsCompleted} of {run.stepsTotal} steps
+                  <div className="case-footer">
+                    <div className="case-footer-actions">
+                      {run ? (
+                        <div className="pb-chip" onClick={() => setOpenRunFor({ itemId: item._id, runId: run.id })}>
+                          <span>
+                            Playbook: {run.stepsCompleted} of {run.stepsTotal} steps
+                          </span>
+                          <span className="pb-chip-track">
+                            <span
+                              className="pb-chip-fill"
+                              style={{ width: `${run.stepsTotal ? Math.round((run.stepsCompleted / run.stepsTotal) * 100) : 0}%` }}
+                            />
+                          </span>
+                        </div>
+                      ) : item.categoryId ? (
+                        <span className="pb-no-playbook">
+                          No playbook set — <a href="/business/playbooks">create one</a>
                         </span>
-                        <span className="pb-chip-track">
-                          <span
-                            className="pb-chip-fill"
-                            style={{ width: `${run.stepsTotal ? Math.round((run.stepsCompleted / run.stepsTotal) * 100) : 0}%` }}
-                          />
-                        </span>
-                      </div>
-                    ) : item.categoryId ? (
-                      <span className="pb-no-playbook">
-                        No playbook set — <a href="/business/playbooks">create one</a>
-                      </span>
-                    ) : null}
-                    <button
-                      type="button"
-                      className={`btn btn-sm action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
-                      onClick={() => toggleComments(item._id)}
-                    >
-                      💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
-                    </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className={`case-action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
+                        onClick={() => toggleComments(item._id)}
+                      >
+                        💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
+                      </button>
+                    </div>
+                    {!isLimited && <OwnerBadge label={team.find((t) => t.userId === item.ownerId)?.label ?? null} tip={tooltips["owner"]} />}
                   </div>
 
                   {expandedCommentsFor === item._id && (
