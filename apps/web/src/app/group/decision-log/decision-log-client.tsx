@@ -342,7 +342,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
           </div>
         </div>
         <div className="field">
-          <label>Linked Action Board items (optional)</label>
+          <label>Linked cases (optional)</label>
           <div className="chip-select">
             {actions.slice(0, 20).map((a) => (
               <div
@@ -353,7 +353,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
                 {a.title}
               </div>
             ))}
-            {actions.length === 0 && <span className="subtitle">No action items to link yet.</span>}
+            {actions.length === 0 && <span className="subtitle">No cases to link yet.</span>}
           </div>
         </div>
         <div className="field-row">
@@ -504,7 +504,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
                         </div>
                         {e.linkedActionIds.length > 0 && (
                           <div className="ab-callout">
-                            <b>Linked Action Board items:</b> {e.linkedActionIds.map(linkedActionTitle).join(", ")}
+                            <b>Linked cases:</b> {e.linkedActionIds.map(linkedActionTitle).join(", ")}
                           </div>
                         )}
                         <div className="ab-callout">

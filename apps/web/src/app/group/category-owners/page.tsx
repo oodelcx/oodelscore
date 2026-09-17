@@ -92,7 +92,7 @@ export default function GroupCategoryOwnersPage() {
         <div>
           <h1>Category Owners</h1>
           <p className="subtitle" style={{ margin: 0 }}>
-            When an Alert Rule fires, the AI picks the category — this says who the resulting Action Board item goes to.
+            When an Alert Rule fires, the AI picks the category — this says who the resulting case goes to.
           </p>
         </div>
       </div>

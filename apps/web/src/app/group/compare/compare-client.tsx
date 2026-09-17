@@ -250,8 +250,8 @@ export default function CompareClient({ tooltips }: { tooltips: Record<string, s
               {gapInsight && (
                 <div className="callout" style={{ margin: "18px 0 0" }}>
                   {gapInsight.bottom.name}&apos;s biggest gap vs {gapInsight.top.name} is {gapInsight.category} (
-                  {gapInsight.bottomVal.toFixed(1)} vs {gapInsight.topVal.toFixed(1)}) — worth checking against any open Action Board
-                  item there.
+                  {gapInsight.bottomVal.toFixed(1)} vs {gapInsight.topVal.toFixed(1)}) — worth checking against any open case
+                  there.
                 </div>
               )}
             </div>

@@ -46,12 +46,12 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "open-actions",
         label: "Open Actions",
-        text: "Number of Action Board items currently open — flagged issues with an owner assigned but not yet resolved.",
+        text: "Number of cases currently open in Case Management — flagged issues with an owner assigned but not yet resolved.",
       },
       {
         key: "overdue-actions",
         label: "Overdue Actions",
-        text: "Action Board items that have passed their due date without being resolved.",
+        text: "Cases that have passed their due date without being resolved.",
       },
       {
         key: "cx-pulse-maturity",
@@ -137,12 +137,12 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "open-actions",
         label: "Open Actions",
-        text: "Number of Action Board items currently open — flagged issues with an owner assigned but not yet resolved.",
+        text: "Number of cases currently open in Case Management — flagged issues with an owner assigned but not yet resolved.",
       },
       {
         key: "overdue-actions",
         label: "Overdue Actions",
-        text: "Action Board items that have passed their due date without being resolved.",
+        text: "Cases that have passed their due date without being resolved.",
       },
       {
         key: "cx-pulse-composite",
@@ -255,7 +255,7 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
   },
   {
     screenKey: "action-board",
-    screenLabel: "Action Board",
+    screenLabel: "Case Management",
     tooltips: [
       {
         key: "item-title",
@@ -500,12 +500,12 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
   },
   {
     screenKey: "group-action-board",
-    screenLabel: "Group Action Board",
+    screenLabel: "Group Case Management",
     tooltips: [
       {
         key: "oversight",
-        label: "Action Board",
-        text: "Read-only oversight of every branch's Action Board — assigning and resolving items is each branch's own job. You can comment on an item or mark it Escalated if it needs your attention.",
+        label: "Case Management",
+        text: "Read-only oversight of every branch's Case Management — assigning and resolving cases is each branch's own job. You can comment on a case or mark it Escalated if it needs your attention.",
       },
       {
         key: "due-date",
@@ -531,7 +531,7 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "decision-log",
         label: "Decision Log",
-        text: "A record of decisions made in response to feedback, with a before/after measurement of whether they actually worked. Resolving an Action Board item with a note logs one here automatically.",
+        text: "A record of decisions made in response to feedback, with a before/after measurement of whether they actually worked. Resolving a case with a note logs one here automatically.",
       },
       {
         key: "trigger",
@@ -664,7 +664,7 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "category-owners",
         label: "Category Owners",
-        text: "When an Alert Rule fires, the AI picks the feedback category — this sets who the resulting Action Board item is assigned to automatically, no separate confirmation step.",
+        text: "When an Alert Rule fires, the AI picks the feedback category — this sets who the resulting case is assigned to automatically, no separate confirmation step.",
       },
       {
         key: "default-owner",
@@ -696,7 +696,7 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "log-action",
         label: "Log action taken",
-        text: "Create an Action Board item directly from this response, pre-filled with its comment and feedback point so you don't have to retype context.",
+        text: "Create a case directly from this response, pre-filled with its comment and feedback point so you don't have to retype context.",
       },
     ],
   },
@@ -742,8 +742,8 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       },
       {
         key: "overdue-actions",
-        label: "Overdue action items",
-        text: "This business's Action Board items that have passed their due date without being resolved.",
+        label: "Overdue cases",
+        text: "This business's cases that have passed their due date without being resolved.",
       },
       {
         key: "response-trend",
@@ -783,8 +783,8 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       },
       {
         key: "overdue-actions",
-        label: "Overdue action items (network)",
-        text: "Action Board items across every business in this organization that have passed their due date without being resolved.",
+        label: "Overdue cases (network)",
+        text: "Cases across every business in this organization that have passed their due date without being resolved.",
       },
       {
         key: "response-trend",

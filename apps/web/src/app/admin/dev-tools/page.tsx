@@ -18,7 +18,7 @@ export default function DevDataToolsPage() {
   async function runSeed() {
     if (
       !confirm(
-        "This creates a full showcase dataset (banks, schools, a diagnostics lab, a retail chain, and standalone businesses) with sample feedback, alerts, action items, billing, and more. Every login it creates uses password \"ocx123\". Continue?"
+        "This creates a full showcase dataset (banks, schools, a diagnostics lab, a retail chain, and standalone businesses) with sample feedback, alerts, cases, billing, and more. Every login it creates uses password \"ocx123\". Continue?"
       )
     ) {
       return;
@@ -77,7 +77,7 @@ export default function DevDataToolsPage() {
           separately from the group), <b>PrecisionDx Diagnostics</b> (3 locations, comp account), <b>UrbanMart
           Retail</b> (3 stores) — plus four standalone businesses across restaurant, fitness, and automotive.
           Every business gets a question template, a feedback point, weeks of real feedback responses (some
-          negative), alert rules, auto-created Action Board items with comments and resolutions, playbooks,
+          negative), alert rules, auto-created cases with comments and resolutions, playbooks,
           category owner mappings, billing in different states (active, overdue, comp), and CX Pulse scores
           computed from all of it. Also seeds sample AI Insights reports — weekly, monthly, quarterly, and
           yearly, both approved (visible on Business/Group Insights tabs) and pending or rejected (visible in
@@ -94,7 +94,7 @@ export default function DevDataToolsPage() {
         {seedResult && (
           <div className="callout" style={{ marginTop: 12 }}>
             Done. {seedResult.parentOrgs} organizations, {seedResult.businesses} businesses, {seedResult.users} logins,{" "}
-            {seedResult.responses} feedback responses, {seedResult.actionBoardItems} Action Board items,{" "}
+            {seedResult.responses} feedback responses, {seedResult.actionBoardItems} cases,{" "}
             {seedResult.alertRules} alert rules, {seedResult.billingSubscriptions} billing subscriptions created.
           </div>
         )}
@@ -104,7 +104,7 @@ export default function DevDataToolsPage() {
         <h3 style={{ color: "var(--red, crimson)" }}>Wipe all data</h3>
         <p className="card-sub">
           Deletes every business, parent organization, login (other than Admin staff), feedback response, alert,
-          Action Board item, playbook, decision, category, question template, and billing record — everything
+          case, playbook, decision, category, question template, and billing record — everything
           except staff logins and platform configuration (roles, email templates, site content). This cannot be
           undone. Use this once you're done exploring the showcase and are ready to enter real data.
         </p>

@@ -286,7 +286,7 @@ export default function GroupCommandCenterClient() {
                         </tr>
                       ))}
                       <tr className="cc-matrix-extra">
-                        <td>Open action items</td>
+                        <td>Open cases</td>
                         {data.branchTiles.map((b) => (
                           <td className="num cc-clickable" key={b.businessId} onClick={() => router.push("/group/action-board")}>
                             {b.openActionItems}
@@ -294,7 +294,7 @@ export default function GroupCommandCenterClient() {
                         ))}
                       </tr>
                       <tr className="cc-matrix-extra">
-                        <td>Overdue action items</td>
+                        <td>Overdue cases</td>
                         {data.branchTiles.map((b) => (
                           <td className="num cc-clickable" key={b.businessId} onClick={() => router.push("/group/action-board")}>
                             {b.overdueActionItems}

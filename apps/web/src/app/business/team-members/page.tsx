@@ -126,7 +126,7 @@ export default function BusinessTeamMembersPage() {
             <label>Access</label>
             <select value={tier} onChange={(e) => setTier(e.target.value as "full" | "limited")} disabled={atLimit}>
               <option value="full">Full — same as you, minus billing &amp; team management</option>
-              <option value="limited">Limited — only their own assigned Action Board items</option>
+              <option value="limited">Limited — only their own assigned cases</option>
             </select>
           </div>
         </div>
