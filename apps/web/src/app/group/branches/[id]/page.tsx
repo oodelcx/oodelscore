@@ -60,7 +60,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
 
       <div className="grid grid-2">
         <div className="card">
-          <h3>Open Action Board items here</h3>
+          <h3>Open cases here</h3>
           <table className="clean">
             <tbody>
               {data.openActionItems.map((item) => (
@@ -79,7 +79,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
             </tbody>
           </table>
           <Link className="btn btn-sm" style={{ marginTop: 10, display: "inline-block" }} href="/group/action-board">
-            View on Action Board →
+            View in Case Management →
           </Link>
         </div>
         <div className="card">

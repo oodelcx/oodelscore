@@ -1175,7 +1175,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     ownerId: meridian.org._id,
     period: "monthly",
     bodyMarkdown:
-      "In the past month, Meridian Bank Group collected 203 responses across all branches. Average star rating held steady at 4.6/5. Net Promoter Score rose to 61 (up from 54 last month), based on 128 respondents. Riverside branch had the strongest month, with cleanliness and staff friendliness both above 4.8/5. Uptown's wait-time concerns from earlier in the month were resolved after a staffing change — its score recovered to 4.4/5 by month's end. 4 items were raised on the Action Board this month; 3 are resolved, 1 remains open past its due date and is flagged for regional ops follow-up.",
+      "In the past month, Meridian Bank Group collected 203 responses across all branches. Average star rating held steady at 4.6/5. Net Promoter Score rose to 61 (up from 54 last month), based on 128 respondents. Riverside branch had the strongest month, with cleanliness and staff friendliness both above 4.8/5. Uptown's wait-time concerns from earlier in the month were resolved after a staffing change — its score recovered to 4.4/5 by month's end. 4 cases were raised in Case Management this month; 3 are resolved, 1 remains open past its due date and is flagged for regional ops follow-up.",
   });
   await addAiReport({
     ownerType: "parentOrg",
@@ -1198,7 +1198,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     ownerId: spiceroute.business._id,
     period: "weekly",
     bodyMarkdown:
-      "Spice Route collected 18 responses this week. Average star rating was 4.5/5. Net Promoter Score was 47, based on 11 respondents who answered the recommendation question. Comments were largely positive about food quality; one response flagged a long wait at peak dinner service, which has been added to the Action Board. With only 18 responses this week, this summary should be treated as a low-confidence early read rather than a firm trend.",
+      "Spice Route collected 18 responses this week. Average star rating was 4.5/5. Net Promoter Score was 47, based on 11 respondents who answered the recommendation question. Comments were largely positive about food quality; one response flagged a long wait at peak dinner service, which has been added as a case in Case Management. With only 18 responses this week, this summary should be treated as a low-confidence early read rather than a firm trend.",
   });
   await addAiReport({
     ownerType: "business",
