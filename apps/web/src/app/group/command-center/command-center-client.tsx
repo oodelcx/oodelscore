@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
+import { useTooltips } from "@/lib/useTooltips";
 import "./command-center.css";
 
 interface BranchTile {
@@ -73,7 +74,8 @@ function sparkPoints(days: number[], w: number, h: number): string {
 type CcTheme = "light" | "dark";
 const CC_THEME_KEY = "cc-theme";
 
-export default function GroupCommandCenterClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function GroupCommandCenterClient() {
+  const tooltips = useTooltips("group-command-center");
   const router = useRouter();
   const [data, setData] = useState<CommandCenterData | null>(null);
   const [loading, setLoading] = useState(true);

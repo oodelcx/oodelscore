@@ -21,7 +21,7 @@ export async function computeBusinessMetrics(
   const responses = await Response.find({
     businessId,
     submittedAt: { $gte: from, $lte: to },
-  });
+  }).lean();
 
   let starSum = 0;
   let starCount = 0;
@@ -72,7 +72,7 @@ export async function computeBusinessCategoryBreakdown(
   to: Date
 ): Promise<CategoryBreakdownEntry[]> {
   const [responses, categories] = await Promise.all([
-    Response.find({ businessId, submittedAt: { $gte: from, $lte: to } }).select("answers"),
+    Response.find({ businessId, submittedAt: { $gte: from, $lte: to } }).select("answers").lean(),
     Category.find(),
   ]);
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));

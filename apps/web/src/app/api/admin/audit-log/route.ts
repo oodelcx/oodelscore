@@ -18,7 +18,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim();
   const action = searchParams.get("action")?.trim();
-  const limit = Math.min(Number(searchParams.get("limit")) || 100, 500);
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const limit = Math.min(Math.max(1, Number(searchParams.get("limit")) || 50), 200);
+  const skip = (page - 1) * limit;
 
   const filter: Record<string, unknown> = {};
   if (action) filter.action = action;
@@ -27,8 +29,19 @@ export async function GET(request: Request) {
     filter.$or = [{ actorEmail: re }, { action: re }, { targetLabel: re }];
   }
 
-  const entries = await AuditLogEntry.find(filter).sort({ createdAt: -1 }).limit(limit);
-  const actions = await AuditLogEntry.distinct("action");
+  const [total, entries, actions] = await Promise.all([
+    AuditLogEntry.countDocuments(filter),
+    AuditLogEntry.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    AuditLogEntry.distinct("action"),
+  ]);
 
-  return NextResponse.json({ status: "ok", entries, actions });
+  return NextResponse.json({
+    status: "ok",
+    entries,
+    actions,
+    page,
+    limit,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+  });
 }

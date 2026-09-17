@@ -14,6 +14,8 @@ interface ResponseRow {
   flagged: boolean;
 }
 
+const LIMIT = 25;
+
 function starValue(r: ResponseRow): number | null {
   const star = r.answers.find((a) => a.type === "star_1_5" && typeof a.value === "number");
   return star ? (star.value as number) : null;
@@ -33,32 +35,48 @@ export default function GroupRawFeedbackPage() {
   const [responses, setResponses] = useState<ResponseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [negativeOnly, setNegativeOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    fetch("/api/group/raw-feedback")
+    setLoading(true);
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(LIMIT),
+      filter: negativeOnly ? "negative" : "all",
+    });
+    fetch(`/api/group/raw-feedback?${params.toString()}`)
       .then((res) => res.json())
-      .then((data) => setResponses(data.responses ?? []))
+      .then((data) => {
+        setResponses(data.responses ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotal(data.total ?? 0);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, negativeOnly]);
 
-  const filtered = negativeOnly ? responses.filter((r) => (starValue(r) ?? 5) <= 2) : responses;
+  function setFilter(negative: boolean) {
+    setNegativeOnly(negative);
+    setPage(1);
+  }
 
   return (
     <div>
       <h1>Raw feedback</h1>
       <p className="subtitle">Every response across your network — who said what, and where.</p>
       <div className="filters">
-        <div className={`chip ${!negativeOnly ? "active" : ""}`} onClick={() => setNegativeOnly(false)}>
+        <div className={`chip ${!negativeOnly ? "active" : ""}`} onClick={() => setFilter(false)}>
           All
         </div>
-        <div className={`chip ${negativeOnly ? "active" : ""}`} onClick={() => setNegativeOnly(true)}>
+        <div className={`chip ${negativeOnly ? "active" : ""}`} onClick={() => setFilter(true)}>
           Negative only
         </div>
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading &&
-        filtered.map((r) => {
+        responses.map((r) => {
           const star = starValue(r);
           const text = comment(r);
           return (
@@ -81,7 +99,21 @@ export default function GroupRawFeedbackPage() {
             </div>
           );
         })}
-      {!loading && filtered.length === 0 && <p className="subtitle">No feedback matches this filter.</p>}
+      {!loading && responses.length === 0 && <p className="subtitle">No feedback matches this filter.</p>}
+
+      {!loading && total > 0 && (
+        <div className="pagination">
+          <button className="btn btn-sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            ← Prev
+          </button>
+          <span className="pagination-status">
+            Page {page} of {totalPages} · {total} response{total === 1 ? "" : "s"}
+          </span>
+          <button className="btn btn-sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
