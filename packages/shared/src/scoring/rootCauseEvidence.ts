@@ -80,10 +80,12 @@ export async function gatherRootCauseEvidence(
   const previousFrom = new Date(now.getTime() - WINDOW_DAYS * 2 * DAY_MS);
 
   const [currentResponses, previousResponses] = await Promise.all([
-    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: currentFrom, $lte: now } }).select(
-      "answers sentiment submittedAt businessId"
-    ),
-    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: previousFrom, $lte: currentFrom } }).select("answers sentiment"),
+    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: currentFrom, $lte: now } })
+      .select("answers sentiment submittedAt businessId")
+      .lean(),
+    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: previousFrom, $lte: currentFrom } })
+      .select("answers sentiment")
+      .lean(),
   ]);
 
   const current = windowedCategoryStats(currentResponses, categoryIdStr);

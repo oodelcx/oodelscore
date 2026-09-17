@@ -17,6 +17,8 @@ interface ResponseRow {
 
 type FilterId = "all" | "anomaly" | "comment";
 
+const LIMIT = 50;
+
 export default function FeedbackResponsesPage() {
   const [responses, setResponses] = useState<ResponseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,10 +27,13 @@ export default function FeedbackResponsesPage() {
   const [q, setQ] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   function load() {
     setLoading(true);
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
     if (q.trim()) params.set("q", q.trim());
     if (from) params.set("from", from);
     if (to) params.set("to", to);
@@ -40,11 +45,26 @@ export default function FeedbackResponsesPage() {
           return;
         }
         setResponses(data.responses ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotal(data.total ?? 0);
       })
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, [q, from, to]);
+  useEffect(load, [page]);
+
+  // Search/date changes should always jump back to page 1 — otherwise a
+  // narrower query could land on a page number past its own last page.
+  // Debounced so typing in the search box doesn't fire a request per
+  // keystroke.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (page === 1) load();
+      else setPage(1);
+    }, 300);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, from, to]);
 
   async function deleteResponse(id: string) {
     if (!confirm("Delete this response permanently?")) return;
@@ -91,6 +111,10 @@ export default function FeedbackResponsesPage() {
           Has comment
         </div>
       </div>
+      <p className="subtitle" style={{ marginTop: -6, marginBottom: 14 }}>
+        &quot;Legacy-bug affected&quot; and &quot;Has comment&quot; filter the page currently on screen — search and date range
+        query the full result set across every page.
+      </p>
 
       {anomalyCount > 0 && (
         <div className="callout" style={{ background: "var(--red-bg)", borderColor: "#f0c7c7", color: "var(--red)" }}>
@@ -148,6 +172,20 @@ export default function FeedbackResponsesPage() {
             )}
           </tbody>
         </table>
+      )}
+
+      {!loading && total > 0 && (
+        <div className="pagination">
+          <button className="btn btn-sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            ← Prev
+          </button>
+          <span className="pagination-status">
+            Page {page} of {totalPages} · {total} response{total === 1 ? "" : "s"}
+          </span>
+          <button className="btn btn-sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            Next →
+          </button>
+        </div>
       )}
     </div>
   );

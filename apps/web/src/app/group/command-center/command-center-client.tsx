@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
+import { useTooltips } from "@/lib/useTooltips";
 import "./command-center.css";
 
 interface BranchTile {
@@ -73,7 +74,8 @@ function sparkPoints(days: number[], w: number, h: number): string {
 type CcTheme = "light" | "dark";
 const CC_THEME_KEY = "cc-theme";
 
-export default function GroupCommandCenterClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function GroupCommandCenterClient() {
+  const tooltips = useTooltips("group-command-center");
   const router = useRouter();
   const [data, setData] = useState<CommandCenterData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -379,9 +381,9 @@ export default function GroupCommandCenterClient({ tooltips }: { tooltips: Recor
                     </div>
                     <div className="cc-mini-row">
                       <span>
-                        Group MRR <InfoTip text={tooltips["billing-mrr"]} />
+                        Your subscription <InfoTip text={tooltips["billing-mrr"]} />
                       </span>
-                      <b>${data.billing.mrrValue.toFixed(2)}</b>
+                      <b>${data.billing.mrrValue.toFixed(2)}/mo</b>
                     </div>
                     {data.billing.nextPaymentDate && (
                       <div className="cc-mini-row">

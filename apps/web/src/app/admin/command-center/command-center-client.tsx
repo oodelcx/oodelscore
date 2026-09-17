@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
+import { useTooltips } from "@/lib/useTooltips";
 import "./command-center.css";
 
 interface ClientTile {
@@ -77,7 +78,8 @@ function sparkPoints(days: number[], w: number, h: number): string {
   return days.map((v, i) => `${(i * step).toFixed(1)},${(h - (v / max) * h).toFixed(1)}`).join(" ");
 }
 
-export default function AdminCommandCenterClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function AdminCommandCenterClient() {
+  const tooltips = useTooltips("admin-command-center");
   const router = useRouter();
   const [data, setData] = useState<CommandCenterData | null>(null);
   const [loading, setLoading] = useState(true);

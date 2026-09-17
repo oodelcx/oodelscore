@@ -14,6 +14,8 @@ interface EntryRow {
   createdAt: string;
 }
 
+const LIMIT = 50;
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();
 }
@@ -25,25 +27,43 @@ export default function AuditLogPage() {
   const [q, setQ] = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  function load() {
+  function load(targetPage: number, overrides?: { q?: string; action?: string }) {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (q.trim()) params.set("q", q.trim());
-    if (actionFilter) params.set("action", actionFilter);
+    const params = new URLSearchParams({ page: String(targetPage), limit: String(LIMIT) });
+    const effectiveQ = overrides?.q ?? q;
+    const effectiveAction = overrides?.action ?? actionFilter;
+    if (effectiveQ.trim()) params.set("q", effectiveQ.trim());
+    if (effectiveAction) params.set("action", effectiveAction);
     fetch(`/api/admin/audit-log?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
         setEntries(data.entries ?? []);
         setActions(data.actions ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotal(data.total ?? 0);
       })
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
-    load();
+    load(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actionFilter]);
+  }, [page]);
+
+  function runSearch() {
+    if (page === 1) load(1);
+    else setPage(1);
+  }
+
+  function changeActionFilter(value: string) {
+    setActionFilter(value);
+    if (page === 1) load(1, { action: value });
+    else setPage(1);
+  }
 
   return (
     <div>
@@ -65,13 +85,13 @@ export default function AuditLogPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && load()}
+              onKeyDown={(e) => e.key === "Enter" && runSearch()}
               placeholder="e.g. owner@business.test"
             />
           </div>
           <div className="field">
             <label>Action</label>
-            <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
+            <select value={actionFilter} onChange={(e) => changeActionFilter(e.target.value)}>
               <option value="">All actions</option>
               {actions.map((a) => (
                 <option key={a} value={a}>
@@ -81,7 +101,7 @@ export default function AuditLogPage() {
             </select>
           </div>
         </div>
-        <button className="btn btn-sm" onClick={load}>
+        <button className="btn btn-sm" onClick={runSearch}>
           Search
         </button>
       </div>
@@ -155,6 +175,20 @@ export default function AuditLogPage() {
             )}
           </tbody>
         </table>
+      )}
+
+      {!loading && total > 0 && (
+        <div className="pagination">
+          <button className="btn btn-sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            ← Prev
+          </button>
+          <span className="pagination-status">
+            Page {page} of {totalPages} · {total} entr{total === 1 ? "y" : "ies"}
+          </span>
+          <button className="btn btn-sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            Next →
+          </button>
+        </div>
       )}
     </div>
   );

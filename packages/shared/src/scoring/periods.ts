@@ -61,7 +61,7 @@ export interface TrendPoint {
 /** Daily star average over the trailing `days` days — for the trend line chart. */
 export async function computeDailyTrend(businessIds: Types.ObjectId[], days: number, now: Date = new Date()): Promise<TrendPoint[]> {
   const from = new Date(now.getTime() - days * DAY_MS);
-  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from } }).select("answers submittedAt");
+  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from } }).select("answers submittedAt").lean();
 
   const byDay = new Map<string, { sum: number; count: number }>();
   for (const response of responses) {
@@ -95,7 +95,7 @@ export interface RatingDistribution {
 }
 
 export async function computeRatingDistribution(businessIds: Types.ObjectId[], from: Date, to: Date): Promise<RatingDistribution> {
-  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers");
+  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers").lean();
   let high = 0;
   let mid = 0;
   let low = 0;

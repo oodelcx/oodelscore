@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
+import { useTooltips } from "@/lib/useTooltips";
 
 interface Comparison {
   starAverage: number | null;
@@ -60,7 +61,8 @@ function trendSvgPoints(trend: TrendPoint[]): string {
     .join(" ");
 }
 
-export default function BusinessDashboardClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function BusinessDashboardClient() {
+  const tooltips = useTooltips("business-dashboard");
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
