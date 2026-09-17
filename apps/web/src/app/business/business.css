@@ -557,6 +557,10 @@ table.clean.striped tbody tr:nth-child(even) td {
 .case-owner-name {
   font-size: 12px;
   color: var(--text-2);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Side panel / bottom sheet — the Case Management playbook-run detail
