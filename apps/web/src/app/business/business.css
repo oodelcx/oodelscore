@@ -363,6 +363,13 @@ table.clean.striped tbody tr:nth-child(even) td {
   gap: 6px;
   flex-shrink: 0;
 }
+/* Badge pair pinned to the card's top-right corner (severity/status tag +
+   age/overdue tag) — sits above whatever action button (Mark resolved)
+   follows it in the same column. */
+.ab-actions-col .ab-badges {
+  margin-bottom: 0;
+  justify-content: flex-end;
+}
 .ab-meta-row {
   display: flex;
   align-items: center;

@@ -398,20 +398,12 @@ export default function BusinessCasesClient() {
                 <div className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`}>
                   <div className="ab-card-head">
                     <div className="ab-title-block">
-                      <div className="ab-badges">
-                        <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
-                          {item.status.replace(/_/g, " ")}
-                        </span>
-                        {age && <span className={`pill ${age.overdue ? "pill-red" : "pill-gray"}`}>{age.label}</span>}
-                        {!isLimited && (
-                          <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
-                            {item.priority}
-                          </span>
-                        )}
-                      </div>
                       <div className="ab-title">{item.title}</div>
                       {!isLimited && (
                         <div className="ab-meta-row">
+                          {item.categoryId && (
+                            <span className="pill pill-gray">{categoryName(item.categoryId)}</span>
+                          )}
                           <span>
                             Due: <b>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</b>
                           </span>
@@ -444,6 +436,17 @@ export default function BusinessCasesClient() {
                       )}
                     </div>
                     <div className="ab-actions-col">
+                      <div className="ab-badges">
+                        <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
+                          {item.status.replace(/_/g, " ")}
+                        </span>
+                        {age && <span className={`pill ${age.overdue ? "pill-red" : "pill-gray"}`}>{age.label}</span>}
+                        {!isLimited && (
+                          <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
+                            {item.priority}
+                          </span>
+                        )}
+                      </div>
                       {item.status !== "resolved" && resolvingId !== item._id && (
                         <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
                           Mark resolved
