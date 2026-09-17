@@ -71,6 +71,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <div className="nav-group-label">Platform</div>
           <nav className="admin-nav">
             <a href="/admin">Overview</a>
+            <a href="/admin/command-center">Command Center</a>
           </nav>
 
           <div className="nav-group-label">Accounts</div>
