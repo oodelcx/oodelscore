@@ -824,7 +824,7 @@ function ProductPanel({
         <h3>Feature sections</h3>
         <p className="card-sub">
           Each renders as an alternating text/visual row, in this order. Tag should match a real product capability (CX Pulse, Theme
-          Intelligence, Root Cause Analysis, Driver Analysis, Action Board, Decision Log) so the right illustrative visual shows.
+          Intelligence, Root Cause Analysis, Driver Analysis, Case Management, Decision Log) so the right illustrative visual shows.
         </p>
         {features.map((feature, i) => (
           <div className="qrow" key={i}>

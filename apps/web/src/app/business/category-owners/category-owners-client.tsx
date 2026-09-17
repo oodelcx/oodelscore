@@ -100,7 +100,7 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
             <InfoTip text={tooltips["category-owners"]} />
           </h1>
           <p className="subtitle" style={{ margin: 0 }}>
-            When an Alert Rule fires, the AI picks the category — this says who the resulting Action Board item goes to.
+            When an Alert Rule fires, the AI picks the category — this says who the resulting case goes to.
           </p>
         </div>
       </div>

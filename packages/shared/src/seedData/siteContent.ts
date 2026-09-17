@@ -46,12 +46,12 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroSubheadline:
         "OodelCX turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
       metaDescription:
-        "OodelCX turns customer feedback into tracked, owned work — QR-code surveys, OCX Intelligence reports, and an Action Board built for one location or a thousand.",
+        "OodelCX turns customer feedback into tracked, owned work — QR-code surveys, OCX Intelligence reports, and Case Management built for one location or a thousand.",
       loopHeadline: "Listen. Understand. Act. Measure.",
       loopStages: JSON.stringify([
         { label: "Listen", title: "Collect", body: "A QR scan, a short survey, no app or login." },
         { label: "Understand", title: "Make sense of it", body: "Themes, root causes, and drivers surfaced automatically." },
-        { label: "Act", title: "Do something", body: "An owned task on the Action Board, not a comment nobody reads." },
+        { label: "Act", title: "Do something", body: "An owned case in Case Management, not a comment nobody reads." },
         { label: "Measure", title: "Know if it worked", body: "CX Pulse tracks whether the loop is actually closing." },
       ]),
       heroCarouselIntervalSeconds: "3",
@@ -113,12 +113,12 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroHeadline: "Straightforward pricing, whatever your size.",
       heroSubhead: "Every plan includes OCX Intelligence reporting and unlimited responses.",
       metaDescription:
-        "OodelCX pricing for single locations and multi-branch groups — every plan includes OCX Intelligence reporting, an Action Board, and unlimited responses.",
+        "OodelCX pricing for single locations and multi-branch groups — every plan includes OCX Intelligence reporting, Case Management, and unlimited responses.",
       loopStripHeadline: "Every plan is the whole loop, not a slice of it.",
       loopStripItems: JSON.stringify([
         { label: "Listen", body: "Unlimited QR feedback points and responses" },
         { label: "Understand", body: "Themes and root causes surfaced automatically" },
-        { label: "Act", body: "Action Board, Decision Log, and Playbooks included" },
+        { label: "Act", body: "Case Management, Decision Log, and Playbooks included" },
         { label: "Measure", body: "CX Pulse scoring on every plan tier" },
       ]),
       plans: JSON.stringify([
@@ -169,7 +169,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroSubheadline:
         "One platform for the whole loop — collecting feedback, turning it into owned work, and proving whether that work is actually changing anything.",
       metaDescription:
-        "See how OodelCX collects feedback, turns it into owned work with the Action Board, and measures real improvement with CX Pulse.",
+        "See how OodelCX collects feedback, turns it into owned work with the Case Management, and measures real improvement with CX Pulse.",
       features: JSON.stringify([
         {
           tag: "CX Pulse",
@@ -192,9 +192,9 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "See which rated categories correlate most with overall satisfaction and NPS, so effort goes where it changes the number — not just wherever feedback happens to be loudest.",
         },
         {
-          tag: "Action Board",
+          tag: "Case Management",
           headline: "A place for the work to actually happen",
-          body: "Flagged feedback becomes a tracked item with an owner and a due date — not a comment that gets read once and forgotten.",
+          body: "Flagged feedback becomes a tracked case with an owner and a due date — not a comment that gets read once and forgotten.",
         },
         {
           tag: "Decision Log",
@@ -218,7 +218,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       singlePoints: JSON.stringify([
         "Your own feedback points, question set, and alert rules",
         "Weekly and monthly OCX Intelligence reports",
-        "Your own Action Board, Decision Log, and Playbooks",
+        "Your own Case Management, Decision Log, and Playbooks",
         "Your own CX Pulse score, tracked over time",
       ]),
       groupTitle: "Compare every branch, act across all of them",
@@ -243,7 +243,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroBody:
         "Not a feature list. This is the path a single piece of feedback actually takes through OodelCX, start to finish.",
       metaDescription:
-        "The step-by-step mechanism behind OodelCX — from a QR code scan through OCX Intelligence tagging, alerts, the Action Board, the Decision Log, and CX Pulse.",
+        "The step-by-step mechanism behind OodelCX — from a QR code scan through OCX Intelligence tagging, alerts, the Case Management, the Decision Log, and CX Pulse.",
       steps: JSON.stringify([
         {
           title: "A QR code goes up at the point of service",
@@ -262,8 +262,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "A low score, a flagged theme, or a pattern crossing a threshold triggers an alert to the right person — instead of every response getting equal, unfiltered attention.",
         },
         {
-          title: "The Action Board turns it into an owned task",
-          body: "A flagged response becomes a tracked item with an owner and a due date. Recurring issues can be handled with a Playbook, so the same fix doesn't get reinvented every time.",
+          title: "Case Management turns it into an owned task",
+          body: "A flagged response becomes a tracked case with an owner and a due date. Recurring issues can be handled with a Playbook, so the same fix doesn't get reinvented every time.",
         },
         {
           title: "The Decision Log measures whether the fix worked",

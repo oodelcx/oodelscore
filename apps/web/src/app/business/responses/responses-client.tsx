@@ -178,12 +178,12 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
               {loggingFor === r._id && (
                 <div style={{ marginTop: 10, padding: 12, background: "var(--bg)", borderRadius: 8 }}>
                   <div className="field">
-                    <label>Action item title</label>
+                    <label>Case title</label>
                     <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} autoFocus />
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                     <button className="btn btn-dark btn-sm" disabled={actionSubmitting} onClick={() => submitLogAction(r)}>
-                      {actionSubmitting ? "Logging…" : "Add to Action Board"}
+                      {actionSubmitting ? "Logging…" : "Add to Case Management"}
                     </button>
                     <button className="btn btn-sm" onClick={() => setLoggingFor(null)}>
                       Cancel

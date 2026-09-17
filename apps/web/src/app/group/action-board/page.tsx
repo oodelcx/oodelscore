@@ -1,7 +1,7 @@
-import { getTooltips } from "@/lib/tooltips";
-import ActionBoardClient from "./action-board-client";
+import { redirect } from "next/navigation";
 
-export default async function GroupActionBoardPage() {
-  const tooltips = await getTooltips("group-action-board");
-  return <ActionBoardClient tooltips={tooltips} />;
+// "Action Board" was renamed "Case Management" and moved to /group/cases.
+// This route stays in place, redirecting, so old bookmarks/links don't 404.
+export default function GroupActionBoardRedirect() {
+  redirect("/group/cases");
 }

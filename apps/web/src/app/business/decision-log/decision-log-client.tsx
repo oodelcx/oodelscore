@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
 
 type OutcomeMetric = "starAverage" | "nps" | "categoryAverage";
@@ -49,11 +50,21 @@ function outcomeDelta(entry: EntryRow): string | null {
 }
 
 export default function BusinessDecisionLogClient({ tooltips }: { tooltips: Record<string, string> }) {
+  return (
+    <Suspense fallback={<p className="subtitle">Loading…</p>}>
+      <BusinessDecisionLogInner tooltips={tooltips} />
+    </Suspense>
+  );
+}
+
+function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
+  const searchParams = useSearchParams();
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [trigger, setTrigger] = useState("");
+  const [linkedCaseId, setLinkedCaseId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [measuringId, setMeasuringId] = useState<string | null>(null);
@@ -86,6 +97,19 @@ export default function BusinessDecisionLogClient({ tooltips }: { tooltips: Reco
       .then((d) => setCategories(d.categories ?? []));
   }, []);
 
+  // Pre-fill the "New entry" form when arriving from Case Management's
+  // pattern-nudge callout, e.g. /business/decision-log?new=1&title=...&trigger=...&linkedCaseId=...
+  useEffect(() => {
+    if (searchParams?.get("new") !== "1") return;
+    const qTitle = searchParams.get("title");
+    const qTrigger = searchParams.get("trigger");
+    const qLinkedCaseId = searchParams.get("linkedCaseId");
+    if (qTitle) setTitle(qTitle);
+    if (qTrigger) setTrigger(qTrigger);
+    if (qLinkedCaseId) setLinkedCaseId(qLinkedCaseId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function createEntry() {
     if (!title.trim()) return;
     setCreating(true);
@@ -93,7 +117,7 @@ export default function BusinessDecisionLogClient({ tooltips }: { tooltips: Reco
     const res = await fetch("/api/business/decision-log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, trigger }),
+      body: JSON.stringify({ title, trigger, linkedActionIds: linkedCaseId ? [linkedCaseId] : [] }),
     });
     const data = await res.json();
     setCreating(false);
@@ -103,6 +127,7 @@ export default function BusinessDecisionLogClient({ tooltips }: { tooltips: Reco
     }
     setTitle("");
     setTrigger("");
+    setLinkedCaseId(null);
     load();
   }
 
@@ -210,6 +235,7 @@ export default function BusinessDecisionLogClient({ tooltips }: { tooltips: Reco
 
       <div className="card">
         <h3>New entry</h3>
+        {linkedCaseId && <p className="card-sub">Pre-filled from a Case Management playbook — this entry will link back to that case.</p>}
         <div className="field-row">
           <div className="field">
             <label>Title</label>

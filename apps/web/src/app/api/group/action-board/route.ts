@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, ActionBoardItem, Playbook } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { buildCaseStats, attachPlaybookRunsToItems } from "@/lib/caseStats";
 
 /**
  * Product decision: Group is read-only oversight on branch Action Board
@@ -21,5 +22,9 @@ export async function GET() {
     ActionBoardItem.find(filter).sort({ createdAt: -1 }),
     Playbook.find({ parentOrgId: session.org._id }),
   ]);
-  return NextResponse.json({ status: "ok", items, playbooks, tier: session.tier });
+
+  const stats = buildCaseStats(items);
+  const itemsWithRuns = await attachPlaybookRunsToItems(items, playbooks);
+
+  return NextResponse.json({ status: "ok", items: itemsWithRuns, playbooks, tier: session.tier, stats });
 }

@@ -95,10 +95,10 @@ function FeatureVisual({ tag }: { tag: string }) {
       </div>
     );
   }
-  if (tag === "Action Board") {
+  if (tag === "Case Management") {
     return (
       <div className="mock-card mock-action-card">
-        <span className="pill">Action assigned</span>
+        <span className="pill">Case assigned</span>
         <div className="mock-action-title">Cleanliness dip, morning shift — Sam K.</div>
         <div className="mock-action-meta">Due in 2 days · sourced from 3 flagged responses</div>
       </div>

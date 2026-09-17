@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Playbook, PlaybookRun } from "@oodelscore/shared";
+import { connectToDatabase, Playbook, PlaybookRun, ActionBoardItem } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-/** Starts a checklist run against this playbook, or returns the already-active one — never two active runs at once. */
-export async function POST(_request: Request, { params }: RouteParams) {
+/**
+ * Starts a checklist run against this playbook, or returns the
+ * already-active one — never two active runs at once.
+ *
+ * Optionally accepts a JSON body `{ actionBoardItemId }` to attach the run
+ * to one specific Case instead of starting an ad-hoc, business-wide run —
+ * this is what lets a user manually attach a playbook to a case that didn't
+ * get one auto-attached at creation time (e.g. the category had no playbook
+ * yet, or one was added later). With no body / no actionBoardItemId, this
+ * behaves exactly as before.
+ */
+export async function POST(request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
@@ -14,7 +24,36 @@ export async function POST(_request: Request, { params }: RouteParams) {
   const playbook = await Playbook.findOne({ _id: id, businessId: session.business._id });
   if (!playbook) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
-  const existing = await PlaybookRun.findOne({ playbookId: playbook._id, ownerType: "business", ownerId: session.business._id, status: "active" });
+  const body = await request.json().catch(() => null);
+  const actionBoardItemId = typeof body?.actionBoardItemId === "string" ? body.actionBoardItemId : null;
+
+  if (actionBoardItemId) {
+    const item = await ActionBoardItem.findOne({ _id: actionBoardItemId, businessId: session.business._id });
+    if (!item) return NextResponse.json({ status: "error", message: "Case not found" }, { status: 404 });
+
+    const existing = await PlaybookRun.findOne({ playbookId: playbook._id, actionBoardItemId: item._id, status: "active" });
+    if (existing) return NextResponse.json({ status: "ok", run: existing });
+
+    const run = await PlaybookRun.create({
+      playbookId: playbook._id,
+      ownerType: "business",
+      ownerId: session.business._id,
+      actionBoardItemId: item._id,
+      steps: playbook.steps,
+      completedStepIndexes: [],
+      status: "active",
+    });
+
+    return NextResponse.json({ status: "ok", run }, { status: 201 });
+  }
+
+  const existing = await PlaybookRun.findOne({
+    playbookId: playbook._id,
+    ownerType: "business",
+    ownerId: session.business._id,
+    actionBoardItemId: null,
+    status: "active",
+  });
   if (existing) return NextResponse.json({ status: "ok", run: existing });
 
   const run = await PlaybookRun.create({

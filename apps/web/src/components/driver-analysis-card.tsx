@@ -215,7 +215,7 @@ export function DriverAnalysisCard({
                                 disabled={creatingAction || actionCreated}
                                 onClick={() => createAction(d.categoryId)}
                               >
-                                {actionCreated ? "Action created ✓" : creatingAction ? "Creating…" : "Create Action"}
+                                {actionCreated ? "Case created ✓" : creatingAction ? "Creating…" : "Create Case"}
                               </button>
                             )}
                           </>

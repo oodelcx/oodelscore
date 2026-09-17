@@ -22,17 +22,17 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
   report_ready: { label: "Report Ready", trigger: "An AI Insights report is approved", category: "alerts" },
   action_assigned: {
     label: "Action Assigned",
-    trigger: "Someone is assigned an item on a group's Action Board",
+    trigger: "Someone is assigned a case on a group's Case Management board",
     category: "alerts",
   },
   action_comment_added: {
     label: "Action Comment Added",
-    trigger: "Someone comments on an Action Board item",
+    trigger: "Someone comments on a case",
     category: "alerts",
   },
   item_escalated: {
     label: "Item Escalated",
-    trigger: "A Group user escalates a branch's Action Board item",
+    trigger: "A Group user escalates a branch's case",
     category: "alerts",
   },
   invoice_receipt: { label: "Invoice Receipt", trigger: "A payment succeeds", category: "billing" },

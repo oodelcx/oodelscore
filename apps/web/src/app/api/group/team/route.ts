@@ -39,7 +39,7 @@ export async function GET() {
       userId: u._id.toString(),
       label: `${u.email} (${session.org.name}${u.teamRole ? `, ${u.teamRole}` : ""})`,
       role: u.teamRole || "Team member",
-      access: u.tier === "full" ? "Full access, all regions" : "Limited — own assigned Action Board items only",
+      access: u.tier === "full" ? "Full access, all regions" : "Limited — own assigned cases only",
     })),
     ...businessUsers.map((u) => ({
       userId: u._id.toString(),

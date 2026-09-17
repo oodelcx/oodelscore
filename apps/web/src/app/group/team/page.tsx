@@ -23,7 +23,7 @@ export default function TeamPage() {
   return (
     <div>
       <h1>Team &amp; access</h1>
-      <p className="subtitle">Who can see network data, and how much — used to assign Action Board owners.</p>
+      <p className="subtitle">Who can see network data, and how much — used to assign Case Management owners.</p>
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
