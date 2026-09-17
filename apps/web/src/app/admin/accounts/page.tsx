@@ -165,6 +165,59 @@ export default function AccountsPage() {
     }
   }
 
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [editStaffRoleId, setEditStaffRoleId] = useState("");
+  const [editStaffBusinessIds, setEditStaffBusinessIds] = useState<Set<string>>(new Set());
+  const [editStaffOrgIds, setEditStaffOrgIds] = useState<Set<string>>(new Set());
+  const [savingStaffEdit, setSavingStaffEdit] = useState(false);
+  const [staffEditError, setStaffEditError] = useState<string | null>(null);
+
+  function openEditStaffModal(staffRow: StaffRow) {
+    setEditingStaffId(staffRow._id);
+    setEditStaffRoleId(staffRow.roleId?._id ?? roles[0]?._id ?? "");
+    setEditStaffBusinessIds(new Set(businesses.filter((b) => b.accountManagerId === staffRow._id).map((b) => b._id)));
+    setEditStaffOrgIds(new Set(parentOrgs.filter((o) => o.accountManagerId === staffRow._id).map((o) => o._id)));
+    setStaffEditError(null);
+  }
+
+  function closeEditStaffModal() {
+    setEditingStaffId(null);
+    setStaffEditError(null);
+  }
+
+  function toggleEditStaffSet(set: Set<string>, setSet: (next: Set<string>) => void, id: string) {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSet(next);
+  }
+
+  const editStaffRole = roles.find((r) => r._id === editStaffRoleId) ?? null;
+  const editStaffBusinessesScoped = editStaffRole?.permissions.businesses?.scope !== "all";
+  const editStaffOrgsScoped = editStaffRole?.permissions.parentOrgs?.scope !== "all";
+
+  async function saveStaffEdit() {
+    if (!editingStaffId) return;
+    setSavingStaffEdit(true);
+    setStaffEditError(null);
+    const body: Record<string, unknown> = { roleId: editStaffRoleId };
+    if (editStaffBusinessesScoped) body.assignedBusinessIds = Array.from(editStaffBusinessIds);
+    if (editStaffOrgsScoped) body.assignedParentOrgIds = Array.from(editStaffOrgIds);
+    const res = await fetch(`/api/admin/staff/${editingStaffId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => null);
+    setSavingStaffEdit(false);
+    if (!res.ok) {
+      setStaffEditError(data?.message ?? "Failed to save changes");
+      return;
+    }
+    setEditingStaffId(null);
+    loadAll();
+  }
+
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -537,6 +590,9 @@ export default function AccountsPage() {
                       {resendingId === s._id ? "Sending…" : "Resend invite"}
                     </button>
                   )}
+                  <button className="icon-btn" style={{ marginRight: 8 }} title="Edit role & access" onClick={() => openEditStaffModal(s)}>
+                    ✎
+                  </button>
                   <button className="icon-btn btn-danger" onClick={() => removeStaff(s._id)}>
                     🗑
                   </button>
@@ -733,6 +789,85 @@ export default function AccountsPage() {
             <button className="btn btn-dark" disabled={creatingRole} onClick={createRole} style={{ marginTop: 12 }}>
               {creatingRole ? "Creating…" : "+ Create role"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {editingStaffId && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeEditStaffModal()}>
+          <div className="modal-box">
+            <div className="modal-head">
+              <h2>Edit staff access</h2>
+              <button className="modal-close" onClick={closeEditStaffModal}>
+                ×
+              </button>
+            </div>
+            <div className="field">
+              <label>Role</label>
+              <select value={editStaffRoleId} onChange={(e) => setEditStaffRoleId(e.target.value)}>
+                {roles.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>Assigned businesses</label>
+              {!editStaffBusinessesScoped ? (
+                <p className="subtitle" style={{ margin: 0 }}>
+                  This role has access to all businesses — nothing to assign.
+                </p>
+              ) : (
+                <div style={{ maxHeight: 160, overflowY: "auto", border: "1px solid var(--border, #e2e2df)", borderRadius: 6, padding: 8 }}>
+                  {businesses.map((b) => (
+                    <label key={b._id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
+                      <input
+                        type="checkbox"
+                        checked={editStaffBusinessIds.has(b._id)}
+                        onChange={() => toggleEditStaffSet(editStaffBusinessIds, setEditStaffBusinessIds, b._id)}
+                      />
+                      {b.name}
+                    </label>
+                  ))}
+                  {businesses.length === 0 && <p className="subtitle" style={{ margin: 0 }}>No businesses yet.</p>}
+                </div>
+              )}
+            </div>
+
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>Assigned parent organizations</label>
+              {!editStaffOrgsScoped ? (
+                <p className="subtitle" style={{ margin: 0 }}>
+                  This role has access to all parent organizations — nothing to assign.
+                </p>
+              ) : (
+                <div style={{ maxHeight: 160, overflowY: "auto", border: "1px solid var(--border, #e2e2df)", borderRadius: 6, padding: 8 }}>
+                  {parentOrgs.map((o) => (
+                    <label key={o._id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
+                      <input
+                        type="checkbox"
+                        checked={editStaffOrgIds.has(o._id)}
+                        onChange={() => toggleEditStaffSet(editStaffOrgIds, setEditStaffOrgIds, o._id)}
+                      />
+                      {o.name}
+                    </label>
+                  ))}
+                  {parentOrgs.length === 0 && <p className="subtitle" style={{ margin: 0 }}>No parent organizations yet.</p>}
+                </div>
+              )}
+            </div>
+
+            {staffEditError && <p className="error-text">{staffEditError}</p>}
+            <div className="modal-actions">
+              <button className="btn" onClick={closeEditStaffModal}>
+                Cancel
+              </button>
+              <button className="btn btn-dark" disabled={savingStaffEdit || !editStaffRoleId} onClick={saveStaffEdit}>
+                {savingStaffEdit ? "Saving…" : "Save changes"}
+              </button>
+            </div>
           </div>
         </div>
       )}

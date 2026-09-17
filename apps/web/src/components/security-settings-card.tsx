@@ -1,11 +1,97 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-/** Two-factor auth setup/disable, shared across Business, Group, and Admin —
- * it's the same flow (TOTP against the logged-in user's own account) no
- * matter which portal it's opened from. */
-export function SecuritySettingsCard() {
+/** Change-password card, shared across Business, Group, and Admin — same
+ * flow (verify current password, then update) regardless of account type. */
+function ChangePasswordCard() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setError(null);
+    setSuccess(false);
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirmation don't match");
+      return;
+    }
+    setBusy(true);
+    const res = await fetch("/api/auth/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json().catch(() => null);
+    setBusy(false);
+    if (!res.ok) {
+      setError(data?.message ?? "Failed to change password");
+      return;
+    }
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setSuccess(true);
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <h3>Change password</h3>
+      <p className="card-sub">Update the password you use to sign in.</p>
+
+      <div className="field" style={{ marginTop: 10 }}>
+        <label>Current password</label>
+        <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+      </div>
+      <div className="field" style={{ marginTop: 10 }}>
+        <label>New password</label>
+        <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+      </div>
+      <div className="field" style={{ marginTop: 10 }}>
+        <label>Confirm new password</label>
+        <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+      </div>
+
+      {error && <p className="error-text">{error}</p>}
+      {success && (
+        <p className="callout" style={{ marginTop: 10 }}>
+          <span className="pill pill-green" style={{ marginRight: 8 }}>
+            Updated
+          </span>
+          Your password has been changed.
+        </p>
+      )}
+
+      <button
+        className="btn btn-dark btn-sm"
+        style={{ marginTop: 10 }}
+        disabled={busy || !currentPassword || !newPassword || !confirmPassword}
+        onClick={submit}
+      >
+        {busy ? "Saving…" : "Change password"}
+      </button>
+    </div>
+  );
+}
+
+interface SecuritySettingsCardProps {
+  /** Admin-only: shows a link to the Admin audit log. Business/Group don't
+   * have an audit log page. */
+  showAuditLogLink?: boolean;
+}
+
+/** Two-factor auth setup/disable plus change-password, shared across
+ * Business, Group, and Admin — the same flows (against the logged-in user's
+ * own account) no matter which portal it's opened from. */
+function TwoFactorCard() {
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [step, setStep] = useState<"idle" | "setup" | "disable">("idle");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
@@ -153,5 +239,23 @@ export function SecuritySettingsCard() {
         </div>
       )}
     </div>
+  );
+}
+
+export function SecuritySettingsCard({ showAuditLogLink = false }: SecuritySettingsCardProps) {
+  return (
+    <>
+      <TwoFactorCard />
+      <ChangePasswordCard />
+      {showAuditLogLink && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h3>Audit log</h3>
+          <p className="card-sub">Every staff/role/permission change and other audited admin action, with before/after detail.</p>
+          <Link className="btn btn-sm" href="/admin/audit-log" style={{ marginTop: 10, display: "inline-block" }}>
+            View audit log →
+          </Link>
+        </div>
+      )}
+    </>
   );
 }
