@@ -14,6 +14,12 @@ interface ResponseRow {
   businessName: string;
   flagged: boolean;
 }
+interface ResponseStats {
+  total: number;
+  avgStar: number | null;
+  negative: number;
+  flagged: number;
+}
 
 const LIMIT = 25;
 
@@ -39,6 +45,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<ResponseStats | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -53,6 +60,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         setResponses(data.responses ?? []);
         setTotalPages(data.totalPages ?? 1);
         setTotal(data.total ?? 0);
+        setStats(data.stats ?? null);
       })
       .finally(() => setLoading(false));
   }, [page, negativeOnly]);
@@ -66,6 +74,32 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
     <div>
       <h1>Raw feedback</h1>
       <p className="subtitle">Every response across your network — who said what, and where.</p>
+
+      {stats && (
+        <div className="grid grid-4" style={{ marginBottom: 20 }}>
+          <div className="card">
+            <div className="metric-label">Responses (filtered)</div>
+            <div className="metric-val">{stats.total}</div>
+          </div>
+          <div className="card">
+            <div className="metric-label">Average rating</div>
+            <div className="metric-val">{stats.avgStar !== null ? `${stats.avgStar.toFixed(1)}★` : "—"}</div>
+          </div>
+          <div className="card" style={{ background: "var(--red-bg)" }}>
+            <div className="metric-label" style={{ color: "var(--red)" }}>
+              Negative (1-2★)
+            </div>
+            <div className="metric-val" style={{ color: "var(--red)" }}>
+              {stats.negative}
+            </div>
+          </div>
+          <div className="card">
+            <div className="metric-label">Flagged</div>
+            <div className="metric-val">{stats.flagged}</div>
+          </div>
+        </div>
+      )}
+
       <div className="filters">
         <div className={`chip ${!negativeOnly ? "active" : ""}`} onClick={() => setFilter(false)}>
           All
@@ -77,6 +111,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}
+      <div className="content-narrow">
       {!loading && (
         <div className="ab-list">
           {responses.map((r) => {
@@ -121,6 +156,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }

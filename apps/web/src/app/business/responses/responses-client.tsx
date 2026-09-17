@@ -21,6 +21,12 @@ interface FeedbackPointOption {
   _id: string;
   name: string;
 }
+interface ResponseStats {
+  total: number;
+  avgStar: number | null;
+  negative: number;
+  flagged: number;
+}
 
 type FilterId = "all" | "negative" | "comment" | string;
 type SortId = "newest" | "lowest";
@@ -56,6 +62,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [actionTitle, setActionTitle] = useState("");
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
+  const [stats, setStats] = useState<ResponseStats | null>(null);
 
   function load() {
     setLoading(true);
@@ -67,6 +74,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
         setFeedbackPoints(data.feedbackPoints ?? []);
         setTotalPages(data.totalPages ?? 1);
         setTotal(data.total ?? 0);
+        setStats(data.stats ?? null);
       })
       .finally(() => setLoading(false));
   }
@@ -122,6 +130,32 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
     <div>
       <h1>Raw feedback</h1>
       <p className="subtitle">Every individual response — who said what, and when.</p>
+
+      {stats && (
+        <div className="grid grid-4" style={{ marginBottom: 20 }}>
+          <div className="card">
+            <div className="metric-label">Responses (filtered)</div>
+            <div className="metric-val">{stats.total}</div>
+          </div>
+          <div className="card">
+            <div className="metric-label">Average rating</div>
+            <div className="metric-val">{stats.avgStar !== null ? `${stats.avgStar.toFixed(1)}★` : "—"}</div>
+          </div>
+          <div className="card" style={{ background: "var(--red-bg)" }}>
+            <div className="metric-label" style={{ color: "var(--red)" }}>
+              Negative (1-2★)
+            </div>
+            <div className="metric-val" style={{ color: "var(--red)" }}>
+              {stats.negative}
+            </div>
+          </div>
+          <div className="card">
+            <div className="metric-label">Flagged</div>
+            <div className="metric-val">{stats.flagged}</div>
+          </div>
+        </div>
+      )}
+
       <div className="filters">
         {(["all", "negative", "comment"] as FilterId[]).map((f) => (
           <div key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => changeFilter(f)}>
@@ -140,6 +174,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}
+      <div className="content-narrow">
       {!loading && (
         <div className="ab-list">
           {responses.map((r) => {
@@ -240,6 +275,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }

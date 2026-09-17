@@ -769,6 +769,20 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     ],
     escalationContactId: dailygrind.teamFull!._id,
   });
+  const serviceSpeedPlaybook = await addPlaybook({
+    parentOrgId: meridian.org._id,
+    businessId: null,
+    title: "Speed of Service Recovery",
+    category: "Service Speed",
+    trigger: "Service-speed average dips below 3.5 stars over 2 weeks",
+    steps: [
+      "Branch manager reviews staffing levels for the flagged time slot",
+      "Adjust scheduling or add a float staff member for peak hours",
+      "Follow up with the customer if contact info was left",
+      "Re-check the branch's service-speed score after 2 weeks",
+    ],
+    escalationContactId: meridian.teamStaff[2]._id,
+  });
 
   // 7. Alert rules — one fixed_threshold + one nps_floor per business, plus
   // org-wide sudden_drop and negative_sentiment rules for two groups.
@@ -1368,49 +1382,249 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     createdBy: dailygrind.ownerUser._id,
   });
 
-  // 14. Playbook run history — one completed (so usageCount shows a real
-  // number instead of 0) and one active (so the checklist UI has something
-  // to render), instead of every playbook always looking unused.
-  const existingCompletedRun = await PlaybookRun.findOne({
-    playbookId: staffFriendlinessPlaybook._id,
-    ownerType: "parentOrg",
-    ownerId: meridian.org._id,
-    status: "completed",
-  });
-  if (!existingCompletedRun) {
-    await PlaybookRun.create({
-      playbookId: staffFriendlinessPlaybook._id,
-      ownerType: "parentOrg",
-      ownerId: meridian.org._id,
-      steps: staffFriendlinessPlaybook.steps,
-      completedStepIndexes: staffFriendlinessPlaybook.steps.map((_: string, i: number) => i),
-      status: "completed",
-      startedAt: daysAgo(18),
-      completedAt: daysAgo(11),
-    });
-    await Playbook.updateOne({ _id: staffFriendlinessPlaybook._id }, { $inc: { usageCount: 1 } });
-    result.playbookRuns++;
+  // 14. Playbook run history, linked to real Case Management cases via
+  // actionBoardItemId — otherwise every case on the live Case Management
+  // page shows "No playbook set" even though playbooks/runs exist, since
+  // the page joins runs to cases on actionBoardItemId (see caseStats.ts's
+  // attachPlaybookRunsToItems). Idempotent: cases are upserted by
+  // title+businessId, runs by playbookId+actionBoardItemId.
+  const staffFriendlinessCategoryId = categoryByName.get("Staff Friendliness")!;
+  const serviceSpeedCategoryId = categoryByName.get("Service Speed")!;
+  const productQualityCategoryId = categoryByName.get("Product Quality")!;
+
+  const meridianDowntown = meridian.branches.find((b) => b.business.name === "Meridian Bank – Downtown")!;
+  const meridianUptown = meridian.branches.find((b) => b.business.name === "Meridian Bank – Uptown")!;
+  const meridianAirportRoad = meridian.branches.find((b) => b.business.name === "Meridian Bank – Airport Road")!;
+
+  const staffFriendlinessOwnerId = await ownerForCategory("parentOrg", meridian.org._id, staffFriendlinessCategoryId);
+  const productQualityOwnerId = await ownerForCategory("business", dailygrind.business._id, productQualityCategoryId);
+
+  /** Upserts one demo Case (ActionBoardItem) plus the PlaybookRun attached to it, and links them via actionBoardItemId. */
+  async function addCaseWithRun(params: {
+    parentOrgId: Types.ObjectId | null;
+    businessId: Types.ObjectId;
+    title: string;
+    description: string;
+    categoryId: Types.ObjectId;
+    priority: ActionPriority;
+    status: "open" | "in_progress" | "resolved";
+    ownerId: Types.ObjectId | null;
+    createdAt: Date;
+    resolvedAt?: Date | null;
+    resolutionNote?: string;
+    playbook: InstanceType<typeof Playbook>;
+    playbookOwnerType: "business" | "parentOrg";
+    playbookOwnerId: Types.ObjectId;
+    runStartedAt: Date;
+    runCompletedAt: Date | null;
+    runStatus: "active" | "completed" | "abandoned";
+    completedStepIndexes: number[];
+    attachReason: string;
+  }) {
+    const isNewItem = !(await ActionBoardItem.exists({ title: params.title, businessId: params.businessId }));
+    const item = await ActionBoardItem.findOneAndUpdate(
+      { title: params.title, businessId: params.businessId },
+      {
+        $set: {
+          parentOrgId: params.parentOrgId,
+          description: params.description,
+          categoryId: params.categoryId,
+          priority: params.priority,
+          status: params.status,
+          ownerId: params.ownerId,
+          dueDate: params.status === "resolved" ? null : daysAgo(-randomInt(2, 10)),
+          sourceResponseIds: [],
+          resolutionNote: params.resolutionNote ?? "",
+          resolvedAt: params.resolvedAt ?? null,
+          source: params.ownerId ? "auto_assigned" : "auto_suggested",
+          createdAt: params.createdAt,
+        },
+      },
+      { upsert: true, new: true }
+    );
+    if (isNewItem) result.actionBoardItems++;
+
+    const isNewRun = !(await PlaybookRun.exists({ playbookId: params.playbook._id, actionBoardItemId: item._id }));
+    await PlaybookRun.findOneAndUpdate(
+      { playbookId: params.playbook._id, actionBoardItemId: item._id },
+      {
+        $set: {
+          ownerType: params.playbookOwnerType,
+          ownerId: params.playbookOwnerId,
+          actionBoardItemId: item._id,
+          attachReason: params.attachReason,
+          steps: params.playbook.steps,
+          completedStepIndexes: params.completedStepIndexes,
+          status: params.runStatus,
+          startedAt: params.runStartedAt,
+          completedAt: params.runCompletedAt,
+        },
+      },
+      { upsert: true, new: true }
+    );
+    if (isNewRun) {
+      result.playbookRuns++;
+      if (params.runStatus === "completed") {
+        await Playbook.updateOne({ _id: params.playbook._id }, { $inc: { usageCount: 1 } });
+      }
+    }
+    return item;
   }
 
-  const existingActiveRun = await PlaybookRun.findOne({
-    playbookId: foodQualityPlaybook._id,
-    ownerType: "business",
-    ownerId: dailygrind.business._id,
-    status: "active",
+  const staffFriendlinessAutoAttachReason = "Auto-attached — this is the standard playbook for Staff Friendliness cases.";
+
+  // Airport Road — the original completed run from earlier seed passes, now
+  // linked to a resolved case instead of floating unattached.
+  await addCaseWithRun({
+    parentOrgId: meridian.org._id,
+    businessId: meridianAirportRoad.business._id,
+    title: `Staff Friendliness concern reported at ${meridianAirportRoad.business.name}`,
+    description: "Respondent comment: \"Teller was curt and seemed annoyed when I asked a follow-up question.\"",
+    categoryId: staffFriendlinessCategoryId,
+    priority: "medium",
+    status: "resolved",
+    ownerId: staffFriendlinessOwnerId,
+    createdAt: daysAgo(18),
+    resolvedAt: daysAgo(11),
+    resolutionNote: "Coached the teller one-on-one and re-checked the branch's friendliness score two weeks later — back above target.",
+    playbook: staffFriendlinessPlaybook,
+    playbookOwnerType: "parentOrg",
+    playbookOwnerId: meridian.org._id,
+    runStartedAt: daysAgo(18),
+    runCompletedAt: daysAgo(11),
+    runStatus: "completed",
+    completedStepIndexes: staffFriendlinessPlaybook.steps.map((_: string, i: number) => i),
+    attachReason: staffFriendlinessAutoAttachReason,
   });
-  if (!existingActiveRun) {
-    await PlaybookRun.create({
-      playbookId: foodQualityPlaybook._id,
-      ownerType: "business",
-      ownerId: dailygrind.business._id,
-      steps: foodQualityPlaybook.steps,
-      completedStepIndexes: [0],
-      status: "active",
-      startedAt: daysAgo(2),
-      completedAt: null,
-    });
-    result.playbookRuns++;
-  }
+
+  // Downtown — the same playbook run 3 times for the same branch within the
+  // last 30 days, so countOwnerRunsLast30d (playbookUsage.ts) returns >= 3
+  // and the "pattern nudge" banner has something real to show.
+  await addCaseWithRun({
+    parentOrgId: meridian.org._id,
+    businessId: meridianDowntown.business._id,
+    title: `Staff Friendliness concern reported at ${meridianDowntown.business.name} (teller line)`,
+    description: "Respondent comment: \"Felt rushed and wasn't greeted at the teller line.\"",
+    categoryId: staffFriendlinessCategoryId,
+    priority: "medium",
+    status: "in_progress",
+    ownerId: staffFriendlinessOwnerId,
+    createdAt: daysAgo(22),
+    playbook: staffFriendlinessPlaybook,
+    playbookOwnerType: "business",
+    playbookOwnerId: meridianDowntown.business._id,
+    runStartedAt: daysAgo(22),
+    runCompletedAt: null,
+    runStatus: "active",
+    completedStepIndexes: [0],
+    attachReason: staffFriendlinessAutoAttachReason,
+  });
+  await addCaseWithRun({
+    parentOrgId: meridian.org._id,
+    businessId: meridianDowntown.business._id,
+    title: `Staff Friendliness concern reported at ${meridianDowntown.business.name} (drive-through)`,
+    description: "Respondent comment: \"Drive-through staff member was short with me over the intercom.\"",
+    categoryId: staffFriendlinessCategoryId,
+    priority: "medium",
+    status: "in_progress",
+    ownerId: staffFriendlinessOwnerId,
+    createdAt: daysAgo(12),
+    playbook: staffFriendlinessPlaybook,
+    playbookOwnerType: "business",
+    playbookOwnerId: meridianDowntown.business._id,
+    runStartedAt: daysAgo(12),
+    runCompletedAt: null,
+    runStatus: "active",
+    completedStepIndexes: [0, 1],
+    attachReason: staffFriendlinessAutoAttachReason,
+  });
+  await addCaseWithRun({
+    parentOrgId: meridian.org._id,
+    businessId: meridianDowntown.business._id,
+    title: `Staff Friendliness concern reported at ${meridianDowntown.business.name} (new accounts desk)`,
+    description: "Respondent comment: \"New accounts rep barely made eye contact the whole time.\"",
+    categoryId: staffFriendlinessCategoryId,
+    priority: "high",
+    status: "resolved",
+    ownerId: staffFriendlinessOwnerId,
+    createdAt: daysAgo(4),
+    resolvedAt: daysAgo(1),
+    resolutionNote: "Coached the rep and confirmed with the customer that the follow-up visit went well.",
+    playbook: staffFriendlinessPlaybook,
+    playbookOwnerType: "business",
+    playbookOwnerId: meridianDowntown.business._id,
+    runStartedAt: daysAgo(4),
+    runCompletedAt: daysAgo(1),
+    runStatus: "completed",
+    completedStepIndexes: staffFriendlinessPlaybook.steps.map((_: string, i: number) => i),
+    attachReason: staffFriendlinessAutoAttachReason,
+  });
+
+  // Uptown — one abandoned run, so the demo shows that state too, not just
+  // active/completed.
+  await addCaseWithRun({
+    parentOrgId: meridian.org._id,
+    businessId: meridianUptown.business._id,
+    title: `Staff Friendliness concern reported at ${meridianUptown.business.name}`,
+    description: "Respondent comment: \"Staff member seemed distracted and didn't answer my question.\"",
+    categoryId: staffFriendlinessCategoryId,
+    priority: "low",
+    status: "open",
+    ownerId: staffFriendlinessOwnerId,
+    createdAt: daysAgo(9),
+    playbook: staffFriendlinessPlaybook,
+    playbookOwnerType: "business",
+    playbookOwnerId: meridianUptown.business._id,
+    runStartedAt: daysAgo(9),
+    runCompletedAt: daysAgo(6),
+    runStatus: "abandoned",
+    completedStepIndexes: [0],
+    attachReason: staffFriendlinessAutoAttachReason,
+  });
+
+  // Uptown — a different playbook (Service Speed), so the demo shows
+  // playbook variety across categories, not just one repeated example.
+  await addCaseWithRun({
+    parentOrgId: meridian.org._id,
+    businessId: meridianUptown.business._id,
+    title: `Service Speed concern reported at ${meridianUptown.business.name}`,
+    description: "Respondent comment: \"Waited almost 20 minutes just to speak with a teller.\"",
+    categoryId: serviceSpeedCategoryId,
+    priority: "medium",
+    status: "in_progress",
+    ownerId: meridian.teamStaff[2]._id,
+    createdAt: daysAgo(6),
+    playbook: serviceSpeedPlaybook,
+    playbookOwnerType: "business",
+    playbookOwnerId: meridianUptown.business._id,
+    runStartedAt: daysAgo(6),
+    runCompletedAt: null,
+    runStatus: "active",
+    completedStepIndexes: [0],
+    attachReason: "Auto-attached — this is the standard playbook for Service Speed cases.",
+  });
+
+  // Daily Grind — the original active run from earlier seed passes, now
+  // linked to a real in-progress case.
+  await addCaseWithRun({
+    parentOrgId: null,
+    businessId: dailygrind.business._id,
+    title: `Product Quality concern reported at ${dailygrind.business.name}`,
+    description: "Respondent comment: \"Sandwich was cold and the bread was stale.\"",
+    categoryId: productQualityCategoryId,
+    priority: "medium",
+    status: "in_progress",
+    ownerId: productQualityOwnerId,
+    createdAt: daysAgo(2),
+    playbook: foodQualityPlaybook,
+    playbookOwnerType: "business",
+    playbookOwnerId: dailygrind.business._id,
+    runStartedAt: daysAgo(2),
+    runCompletedAt: null,
+    runStatus: "active",
+    completedStepIndexes: [0],
+    attachReason: "Auto-attached — this is the standard playbook for Product Quality cases.",
+  });
 
   // 15. Sample Audit Log entries — enough for the Admin viewer to show real
   // rows across the action types logAuditEvent is actually called with,

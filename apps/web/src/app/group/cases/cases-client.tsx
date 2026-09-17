@@ -107,6 +107,13 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
   const [categoryFilter, setCategoryFilter] = useState("");
   const [expandedDescriptionFor, setExpandedDescriptionFor] = useState<string | null>(null);
   const [openRunFor, setOpenRunFor] = useState<{ itemId: string; runId: string } | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
   function load() {
     setLoading(true);
@@ -256,6 +263,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
     if (filter === "overdue") return isOverdue(item);
     if (filter === "resolved") return item.status === "resolved";
     if (filter === "escalated") return item.escalated;
+    if (search && !`${item.title} ${item.description}`.toLowerCase().includes(search)) return false;
     return true;
   });
 
@@ -330,6 +338,13 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
               ))}
             </select>
           )}
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search cases by title or description…"
+            style={{ minWidth: 220 }}
+          />
         </div>
       )}
 

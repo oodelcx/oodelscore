@@ -108,6 +108,13 @@ export default function BusinessCasesClient() {
   const [filter, setFilter] = useState<"all" | "unassigned" | "overdue" | "resolved">("all");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [openRunFor, setOpenRunFor] = useState<{ itemId: string; runId: string } | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
   function load() {
     setLoading(true);
@@ -243,6 +250,7 @@ export default function BusinessCasesClient() {
     if (filter === "unassigned") return !item.ownerId;
     if (filter === "overdue") return isOverdue(item);
     if (filter === "resolved") return item.status === "resolved";
+    if (search && !`${item.title} ${item.description}`.toLowerCase().includes(search)) return false;
     return true;
   });
 
@@ -354,6 +362,13 @@ export default function BusinessCasesClient() {
               ))}
             </select>
           )}
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search cases by title or description…"
+            style={{ minWidth: 220 }}
+          />
         </div>
       )}
 

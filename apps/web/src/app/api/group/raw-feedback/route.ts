@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, Business, Response } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { computeResponseStats } from "@/lib/responseStats";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -24,9 +25,10 @@ export async function GET(request: Request) {
     match.answers = { $elemMatch: { type: "star_1_5", value: { $lte: 2 } } };
   }
 
-  const [total, responses] = await Promise.all([
+  const [total, responses, stats] = await Promise.all([
     Response.countDocuments(match),
     Response.find(match).sort({ submittedAt: -1 }).skip(skip).limit(limit).lean(),
+    computeResponseStats(match),
   ]);
 
   const enriched = responses.map((r) => ({ ...r, businessName: businessNameById.get(r.businessId.toString()) ?? "Unknown" }));
@@ -38,5 +40,6 @@ export async function GET(request: Request) {
     limit,
     total,
     totalPages: Math.max(1, Math.ceil(total / limit)),
+    stats,
   });
 }
