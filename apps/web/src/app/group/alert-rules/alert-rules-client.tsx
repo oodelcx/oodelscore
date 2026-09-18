@@ -107,7 +107,7 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" data-tour="alert-new-rule">
         <h3>New rule</h3>
         <div className="field-row">
           <div className="field">
@@ -195,7 +195,7 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
             <InfoTip text={tooltips["org-rules"]} />
           </h3>
           <p className="section-sub">This is what produces the &quot;Flagged&quot; counts you see on Overview.</p>
-          <table className="clean">
+          <table className="clean" data-tour="alert-rules-table">
             <thead>
               <tr>
                 <th>Scope</th>

@@ -130,7 +130,7 @@ export default function FeedbackPointsClient() {
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <button className="btn btn-dark" onClick={openRequest}>
+          <button className="btn btn-dark" data-tour="fp-request-button" onClick={openRequest}>
             + Request new feedback point
           </button>
           <InfoTip text={tooltips["request-feedback-point"]} />
@@ -179,11 +179,12 @@ export default function FeedbackPointsClient() {
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="grid grid-2">
-          {points.map((p) => {
+          {points.map((p, index) => {
             const responses = responseCounts[p._id] ?? 0;
             const conversion = p.scans > 0 ? Math.round((responses / p.scans) * 100) : null;
+            const isFirst = index === 0;
             return (
-              <div className="card" key={p._id}>
+              <div className="card" data-tour={isFirst ? "fp-first-card" : undefined} key={p._id}>
                 <h3>{p.name}</h3>
                 <p className="card-sub">{p.description || "—"}</p>
                 <div style={{ display: "flex", gap: 18, fontSize: 13, color: "var(--text-2)", marginBottom: 12 }}>
@@ -218,7 +219,7 @@ export default function FeedbackPointsClient() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <button className="btn" style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
+                  <button className="btn" data-tour={isFirst ? "fp-first-qr" : undefined} style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
                     View QR
                   </button>
                   <button className="btn" style={{ flex: 1 }} onClick={openRequest}>

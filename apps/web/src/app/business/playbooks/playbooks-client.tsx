@@ -224,7 +224,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
       </div>
 
       {!readOnly && (
-      <div className="card">
+      <div className="card" data-tour="pb-new-playbook">
         <h3>New playbook</h3>
         <div className="field-row">
           <div className="field">
@@ -299,8 +299,8 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="ab-list">
-          {playbooks.map((p) => (
-            <div className="card ab-card" key={p._id}>
+          {playbooks.map((p, index) => (
+            <div className="card ab-card" data-tour={index === 0 ? "pb-first-card" : undefined} key={p._id}>
               {editingId === p._id ? (
                 <div className="ab-panel" style={{ margin: 0 }}>
                   <div className="field-row">

@@ -125,4 +125,174 @@ export const SEED_TOURS: SeedTour[] = [
       },
     ],
   },
+  {
+    tourId: "business-feedback-points",
+    tourLabel: "Take a tour of Feedback Points",
+    steps: [
+      {
+        key: "request",
+        title: "Requesting a feedback point",
+        body: "New QR points and question changes go through your account manager, so every survey stays error-free — send a note about what you need and they'll action it, usually within a business day.",
+      },
+      {
+        key: "first-point",
+        title: "A feedback point, up close",
+        body: "Scans, responses, and conversion rate for this point, plus which question set and layout it's currently using.",
+      },
+      {
+        key: "view-qr",
+        title: "The QR code itself",
+        body: "Download or print the poster for this location straight from here.",
+      },
+    ],
+  },
+  {
+    tourId: "business-category-owners",
+    tourLabel: "Take a tour of Category Owners",
+    steps: [
+      {
+        key: "table",
+        title: "Who a category goes to",
+        body: "When an Alert Rule fires, the AI picks the category — this table says who the resulting case is assigned to.",
+      },
+      {
+        key: "first-select",
+        title: "Setting an owner",
+        body: "Pick from your team, or invite someone new on the spot if they're not in the list yet.",
+      },
+    ],
+  },
+  {
+    tourId: "group-category-owners",
+    tourLabel: "Take a tour of Category Owners",
+    steps: [
+      {
+        key: "table",
+        title: "The default owner for every branch",
+        body: "This is the fallback for every branch in your organisation — any branch can still set its own owner for a category, which overrides your default for that branch only.",
+      },
+      {
+        key: "first-select",
+        title: "Setting a default",
+        body: "Pick from your team, or invite someone new on the spot if they're not in the list yet.",
+      },
+    ],
+  },
+  {
+    tourId: "business-alert-rules",
+    tourLabel: "Take a tour of Alert Rules",
+    steps: [
+      {
+        key: "new-rule",
+        title: "Creating a rule",
+        body: "Get notified the moment a metric slips below a threshold — set the type, the metric to watch, and who hears about it.",
+      },
+      {
+        key: "rules-table",
+        title: "Your rules",
+        body: "Pause, resume, or delete a rule, and see how often it's actually fired in the last 30 days.",
+      },
+    ],
+  },
+  {
+    tourId: "group-alert-rules",
+    tourLabel: "Take a tour of Alert Rules",
+    steps: [
+      {
+        key: "new-rule",
+        title: "Creating an organisation-wide rule",
+        body: "A rule set here cascades to every business in scope — all branches, or just one region — on top of whatever rules each branch has of its own.",
+      },
+      {
+        key: "rules-table",
+        title: "Your organisation rules",
+        body: "This is what produces the \"Flagged\" counts you see on Overview — pause, resume, or delete a rule from here.",
+      },
+    ],
+  },
+  {
+    tourId: "business-playbooks",
+    tourLabel: "Take a tour of the Playbook Library",
+    steps: [
+      {
+        key: "new-playbook",
+        title: "Writing a playbook",
+        body: "Standard step-by-step guidance for a category or issue type — it shows up automatically on any matching case in Case Management.",
+      },
+      {
+        key: "first-playbook",
+        title: "A playbook, up close",
+        body: "See how often it's actually used, its completion rate, and open its steps to edit them.",
+      },
+    ],
+  },
+  {
+    tourId: "group-playbooks",
+    tourLabel: "Take a tour of the Playbook Library",
+    steps: [
+      {
+        key: "new-playbook",
+        title: "Writing a playbook for your branches",
+        body: "A playbook authored here attaches automatically to a matching case at any branch that doesn't already have its own — branches check off the steps on their own cases, and you see their progress live.",
+      },
+      {
+        key: "first-playbook",
+        title: "A playbook, up close",
+        body: "Usage and completion rate across every branch it applies to, plus its steps.",
+      },
+    ],
+  },
+  {
+    tourId: "business-decision-log",
+    tourLabel: "Take a tour of the Decision Log",
+    steps: [
+      {
+        key: "new-button",
+        title: "Logging a decision",
+        body: "Resolving a case with a note in Case Management logs one here automatically — this is for anything else worth recording deliberately.",
+      },
+      {
+        key: "first-entry",
+        title: "A decision, up close",
+        body: "Track its status, then measure the outcome once it's been implemented for a while — did the number actually move?",
+      },
+    ],
+  },
+  {
+    tourId: "group-decision-log",
+    tourLabel: "Take a tour of the Decision Log",
+    steps: [
+      {
+        key: "new-button",
+        title: "Logging an organisation-wide decision",
+        body: "For changes that affect more than one branch — link the businesses it touches so its measured outcome rolls up correctly.",
+      },
+      {
+        key: "first-entry",
+        title: "A decision, up close",
+        body: "Track its status, then measure the outcome once it's been implemented for a while — did the number actually move?",
+      },
+    ],
+  },
+  {
+    tourId: "business-raw-feedback",
+    tourLabel: "Take a tour of Raw Feedback",
+    steps: [
+      {
+        key: "filters",
+        title: "Finding what matters",
+        body: "Narrow to negative ratings, responses with a comment, or one specific feedback point.",
+      },
+      {
+        key: "first-response",
+        title: "A response, up close",
+        body: "The rating, the comment, and who left it (when they chose to share that).",
+      },
+      {
+        key: "log-action",
+        title: "Acting on it",
+        body: "Flag anything worth a second look, or log an action taken directly from here — it creates a case in Case Management without you having to switch screens.",
+      },
+    ],
+  },
 ];
