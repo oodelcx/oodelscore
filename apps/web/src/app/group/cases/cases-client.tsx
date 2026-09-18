@@ -31,6 +31,8 @@ interface ItemRow {
   resolvedAt: string | null;
   escalated: boolean;
   escalationNote: string;
+  escalatedToOrg: boolean;
+  escalatedToOrgNote: string;
   suggestedAction: string;
   rating: number | null;
   playbookRun?: PlaybookRunSummary | null;
@@ -433,6 +435,11 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                         <b>Escalation note:</b> {item.escalationNote}
                       </div>
                     )}
+                    {item.escalatedToOrg && (
+                      <div className="ab-callout escalation">
+                        <b>Escalated by the branch:</b> {item.escalatedToOrgNote || "(no note added)"}
+                      </div>
+                    )}
                     {item.suggestedAction && (
                       <div className="ab-callout">
                         <b>Suggested:</b> {item.suggestedAction}
@@ -447,6 +454,11 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                         </span>
                       )}
                       {item.escalated && <InfoTip text={tooltips["escalated"]} />}
+                      {item.escalatedToOrg && (
+                        <span className="pill pill-red" title={item.escalatedToOrgNote || undefined}>
+                          Escalated by branch
+                        </span>
+                      )}
                       <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
                         {item.status.replace(/_/g, " ")}
                       </span>

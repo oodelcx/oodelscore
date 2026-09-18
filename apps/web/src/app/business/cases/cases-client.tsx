@@ -31,6 +31,8 @@ interface ItemRow {
   suggestedAction: string;
   rating: number | null;
   playbookRun?: PlaybookRunSummary | null;
+  escalatedToOrg: boolean;
+  escalatedToOrgNote: string;
 }
 interface TeamRow {
   userId: string;
@@ -107,6 +109,11 @@ export default function BusinessCasesClient() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [tier, setTier] = useState<"full" | "limited" | null>(null);
+  const [isBranch, setIsBranch] = useState(false);
+  const [orgName, setOrgName] = useState<string | null>(null);
+  const [escalating, setEscalating] = useState<string | null>(null);
+  const [escalatingId, setEscalatingId] = useState<string | null>(null);
+  const [escalationNoteDraft, setEscalationNoteDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -149,6 +156,8 @@ export default function BusinessCasesClient() {
       setPlaybooks(itemsData.playbooks ?? []);
       setTier(itemsData.tier ?? null);
       setStats(itemsData.stats ?? null);
+      setIsBranch(!!itemsData.isBranch);
+      setOrgName(itemsData.orgName ?? null);
       setTeam(teamData.team ?? []);
       setCategories(categoryData.categories ?? []);
       setLoading(false);
@@ -224,6 +233,25 @@ export default function BusinessCasesClient() {
       body: JSON.stringify(patch),
     });
     load();
+  }
+
+  function startEscalate(id: string) {
+    setEscalatingId(id);
+    setEscalationNoteDraft("");
+  }
+
+  async function confirmEscalate(id: string) {
+    setEscalating(id);
+    await updateItem(id, { escalatedToOrg: true, escalatedToOrgNote: escalationNoteDraft.trim() });
+    setEscalating(null);
+    setEscalatingId(null);
+    setEscalationNoteDraft("");
+  }
+
+  async function unEscalate(id: string) {
+    setEscalating(id);
+    await updateItem(id, { escalatedToOrg: false });
+    setEscalating(null);
   }
 
   async function toggleComments(id: string) {
@@ -472,6 +500,11 @@ export default function BusinessCasesClient() {
                             {item.priority}
                           </span>
                         )}
+                        {item.escalatedToOrg && (
+                          <span className="pill pill-red" title={item.escalatedToOrgNote || undefined}>
+                            Escalated to {orgName ?? "org"}
+                          </span>
+                        )}
                       </div>
                       {item.status !== "resolved" && resolvingId !== item._id && (
                         <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
@@ -497,7 +530,15 @@ export default function BusinessCasesClient() {
                         </div>
                       ) : item.categoryId ? (
                         <span className="pb-no-playbook">
-                          No playbook set — <a href="/business/playbooks">create one</a>
+                          {isBranch ? (
+                            <>
+                              No playbook set for this category — <a href="/business/playbooks">view Playbook Library</a>
+                            </>
+                          ) : (
+                            <>
+                              No playbook set — <a href="/business/playbooks">create one</a>
+                            </>
+                          )}
                         </span>
                       ) : null}
                       <button
@@ -507,6 +548,16 @@ export default function BusinessCasesClient() {
                       >
                         💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
                       </button>
+                      {isBranch && !isLimited && (
+                        <button
+                          type="button"
+                          className={`case-action-btn${item.escalatedToOrg ? " active" : ""}`}
+                          disabled={escalating === item._id}
+                          onClick={() => (item.escalatedToOrg ? unEscalate(item._id) : startEscalate(item._id))}
+                        >
+                          {item.escalatedToOrg ? "↩ Un-escalate" : `↗ Escalate to ${orgName ?? "org"}`}
+                        </button>
+                      )}
                     </div>
                     {!isLimited && <OwnerBadge label={team.find((t) => t.userId === item.ownerId)?.label ?? null} tip={tooltips["owner"]} />}
                   </div>
@@ -539,6 +590,21 @@ export default function BusinessCasesClient() {
                           {postingComment ? "Posting…" : "Post"}
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {escalatingId === item._id && (
+                    <div className="ab-panel">
+                      <div className="field" style={{ margin: 0 }}>
+                        <label>Escalating notifies {orgName ?? "your parent org"} — what do they need to know?</label>
+                        <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
+                      </div>
+                      <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
+                        {escalating === item._id ? "Escalating…" : "Send escalation"}
+                      </button>{" "}
+                      <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
+                        Cancel
+                      </button>
                     </div>
                   )}
 

@@ -82,12 +82,16 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
   const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
   const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
 
   function load() {
     setLoading(true);
     fetch("/api/business/decision-log")
       .then((res) => res.json())
-      .then((data) => setEntries(data.entries ?? []))
+      .then((data) => {
+        setEntries(data.entries ?? []);
+        setReadOnly(!!data.readOnly);
+      })
       .finally(() => setLoading(false));
   }
 
@@ -230,18 +234,21 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
         <div>
           <h1>Decision Log</h1>
           <p className="subtitle">
-            Track decisions and changes made in response to feedback, and measure the outcome. Resolving a case in
-            Case Management with a note logs one here automatically.
+            {readOnly
+              ? "Managed by your parent organization — resolving a case here with a note logs it to the org's Decision Log automatically, and it shows up below read-only."
+              : "Track decisions and changes made in response to feedback, and measure the outcome. Resolving a case in Case Management with a note logs one here automatically."}
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <button className="btn btn-dark" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "Cancel" : "+ New decision"}
-          </button>
-        </div>
+        {!readOnly && (
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <button className="btn btn-dark" onClick={() => setShowForm((v) => !v)}>
+              {showForm ? "Cancel" : "+ New decision"}
+            </button>
+          </div>
+        )}
       </div>
 
-      {showForm && (
+      {!readOnly && showForm && (
         <div className="card" style={{ marginBottom: 18 }}>
           <h3>New entry</h3>
           {linkedCaseId && <p className="card-sub">Pre-filled from a Case Management playbook — this entry will link back to that case.</p>}
@@ -330,15 +337,19 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                         <div className="ab-meta-row">
                           <span>
                             Status:{" "}
-                            <select
-                              value={e.status}
-                              onChange={(ev) => updateStatus(e._id, ev.target.value)}
-                              style={{ marginLeft: 4 }}
-                            >
-                              <option value="planned">Planned</option>
-                              <option value="in_progress">In progress</option>
-                              <option value="implemented">Implemented</option>
-                            </select>
+                            {readOnly ? (
+                              STATUS_LABELS[e.status] ?? e.status
+                            ) : (
+                              <select
+                                value={e.status}
+                                onChange={(ev) => updateStatus(e._id, ev.target.value)}
+                                style={{ marginLeft: 4 }}
+                              >
+                                <option value="planned">Planned</option>
+                                <option value="in_progress">In progress</option>
+                                <option value="implemented">Implemented</option>
+                              </select>
+                            )}
                           </span>
                         </div>
                         {e.trigger && (
@@ -365,21 +376,23 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                       </div>
                     </div>
 
-                    <div className="action-links">
-                      <button type="button" className="btn btn-sm action-btn" onClick={() => startEditTitle(e)}>
-                        ✎ Edit
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn btn-sm action-btn${measuringId === e._id ? " active" : ""}`}
-                        onClick={() => (measuringId === e._id ? setMeasuringId(null) : startMeasure(e))}
-                      >
-                        📏 Measure outcome
-                      </button>
-                      <button type="button" className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
-                        🗑
-                      </button>
-                    </div>
+                    {!readOnly && (
+                      <div className="action-links">
+                        <button type="button" className="btn btn-sm action-btn" onClick={() => startEditTitle(e)}>
+                          ✎ Edit
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm action-btn${measuringId === e._id ? " active" : ""}`}
+                          onClick={() => (measuringId === e._id ? setMeasuringId(null) : startMeasure(e))}
+                        >
+                          📏 Measure outcome
+                        </button>
+                        <button type="button" className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
+                          🗑
+                        </button>
+                      </div>
+                    )}
 
                     {measuringId === e._id && (
                       <div className="ab-panel">

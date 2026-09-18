@@ -35,6 +35,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A Group user escalates a branch's case",
     category: "alerts",
   },
+  case_escalated_to_org: {
+    label: "Case Escalated to Org",
+    trigger: "A branch escalates one of its own cases to its parent org",
+    category: "alerts",
+  },
   invoice_receipt: { label: "Invoice Receipt", trigger: "A payment succeeds", category: "billing" },
   payment_failed: { label: "Payment Failed", trigger: "A payment fails or goes overdue", category: "billing" },
   demo_request: {

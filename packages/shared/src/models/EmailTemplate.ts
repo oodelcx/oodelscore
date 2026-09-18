@@ -10,6 +10,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "action_assigned",
   "action_comment_added",
   "item_escalated",
+  "case_escalated_to_org",
   "invoice_receipt",
   "payment_failed",
   "demo_request",

@@ -5,6 +5,7 @@ import {
   ActionBoardItem,
   DecisionLogEntry,
   User,
+  ParentOrganization,
   sendTemplatedEmail,
   ACTION_PRIORITIES,
   ACTION_STATUSES,
@@ -87,6 +88,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if ("ownerId" in (body ?? {})) {
     item.ownerId = typeof body.ownerId === "string" ? new Types.ObjectId(body.ownerId) : null;
   }
+  // The other direction from Group's `escalated` flag: a branch flagging
+  // its own case for its parent org's attention. Only meaningful when this
+  // business actually has a parent org — a standalone business has nobody
+  // to escalate to, so the field is silently ignored for it rather than
+  // erroring (keeps this one PATCH handler shared instead of forking it).
+  if (typeof body?.escalatedToOrg === "boolean" && session.business.parentOrgId) {
+    item.escalatedToOrg = body.escalatedToOrg;
+    item.escalatedToOrgAt = body.escalatedToOrg ? new Date() : null;
+    if (body.escalatedToOrg && typeof body?.escalatedToOrgNote === "string") {
+      item.escalatedToOrgNote = body.escalatedToOrgNote.trim();
+    }
+    if (!body.escalatedToOrg) item.escalatedToOrgNote = "";
+  }
 
   await item.save();
 
@@ -104,6 +118,22 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         due_date: item.dueDate ? item.dueDate.toISOString().slice(0, 10) : "no due date",
         action_link: `${process.env.APP_URL ?? ""}/business`,
       }).catch((err) => console.error("[action-board] failed to send action_assigned", err));
+    }
+  }
+
+  if (body?.escalatedToOrg === true && session.business.parentOrgId) {
+    const org = await ParentOrganization.findById(session.business.parentOrgId);
+    const recipient = await User.findOne({ accountType: "parent_org", parentId: session.business.parentOrgId });
+    if (org && recipient) {
+      await sendTemplatedEmail("case_escalated_to_org", recipient.email, {
+        name: recipient.email,
+        escalator_name: session.user.email,
+        business_name: session.business.name,
+        org_name: org.name,
+        action_title: item.title,
+        escalation_note: item.escalatedToOrgNote || "(no note added)",
+        action_link: `${process.env.APP_URL ?? ""}/group/cases`,
+      }).catch((err) => console.error("[action-board] failed to send case_escalated_to_org", err));
     }
   }
 
