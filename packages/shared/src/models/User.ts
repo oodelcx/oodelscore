@@ -35,6 +35,14 @@ export interface IUser {
   twoFactorEnabled: boolean;
   twoFactorSecret: string | null;
   twoFactorPendingSecret: string | null;
+  // Guided-tour engine (Business/Parent Org portals only — never shown to
+  // admin_staff): tour ids the user has completed or explicitly skipped,
+  // so a first-login walkthrough doesn't nag a returning user. Persisted on
+  // the account rather than localStorage since real staff switch
+  // devices/browsers and shouldn't see it reappear just because they're on
+  // a new machine. A tour can still be re-triggered anytime via the "Take a
+  // tour" affordance regardless of this list.
+  seenTours: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,6 +68,7 @@ const UserSchema = new Schema<IUser>(
     twoFactorEnabled: { type: Boolean, default: false },
     twoFactorSecret: { type: String, default: null },
     twoFactorPendingSecret: { type: String, default: null },
+    seenTours: { type: [String], default: [] },
   },
   { timestamps: true }
 );

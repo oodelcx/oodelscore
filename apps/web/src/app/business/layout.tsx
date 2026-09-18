@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { connectToDatabase, Business, ParentOrganization } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
+import { TourProvider } from "@/components/tour/tour-provider";
 import "../admin/admin.css";
 import "./business.css";
 
@@ -99,7 +100,9 @@ export default async function BusinessLayout({ children }: { children: ReactNode
           <LogoutLink />
         </div>
       </aside>
-      <main className="admin-main">{children}</main>
+      <main className="admin-main">
+        <TourProvider initialSeenTours={[...user.seenTours]}>{children}</TourProvider>
+      </main>
     </div>
   );
 }

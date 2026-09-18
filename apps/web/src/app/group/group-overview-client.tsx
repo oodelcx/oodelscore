@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PeriodComparisonCards, type Comparisons } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
+import { TourAutostart } from "@/components/tour/tour-autostart";
+import { TakeTourButton } from "@/components/tour/take-tour-button";
 
 interface RegionRow {
   region: string;
@@ -74,6 +76,8 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
 
   return (
     <div>
+      <TourAutostart tourId="group-overview" />
+      <TakeTourButton tourId="group-overview" />
       <div className="page-head">
         <div>
           <h1>Your Organization</h1>
@@ -106,7 +110,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         </div>
       </div>
 
-      <div className="grid grid-4" style={{ marginBottom: 20 }}>
+      <div className="grid grid-4" data-tour="group-kpi-strip" style={{ marginBottom: 20 }}>
         <div className="card">
           <div className="metric-label">Branches</div>
           <div className="metric-val">{data.branchCount}</div>
@@ -152,7 +156,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         Regions
         <InfoTip text={tooltips["region-confidence"]} />
       </div>
-      <table className="clean" style={{ marginBottom: 28 }}>
+      <table className="clean" data-tour="group-branches-table" style={{ marginBottom: 28 }}>
         <thead>
           <tr>
             <th>Region</th>
