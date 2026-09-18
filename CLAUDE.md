@@ -19,7 +19,7 @@ MongoDB · Render (hosting) · Stripe (billing) · Resend (transactional email) 
 
 ## Current state
 
-Live site: oodelscore.com, currently built via Emergent. This repo is the target for the rebuild described in the spec. Before writing new code, check what already exists here that partially matches the spec — don't assume a blank slate.
+Live site: oodelcx.com, served entirely from this repo — there is no Emergent involved, and no separate legacy system to migrate off of. All work lands on `main`; the `production` branch is what's actually deployed (DNS and hosting already point at it), so merging `main` → `production` and pushing is a real deploy to real customers, not a staging step. Before writing new code, check what already exists here that partially matches the spec — this is a mature, actively developed codebase, not a blank slate or an early rebuild.
 
 ## Working agreement
 
