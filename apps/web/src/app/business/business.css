@@ -308,3 +308,452 @@ table.clean.striped tbody tr:nth-child(even) td {
   height: 16px;
   border-radius: 3px;
 }
+
+/* Card-based Action Board list (Group + Business) — replaces a dense
+   single <table> with one row/card per item, prominent title+pills,
+   truncated body, and a clean action-button row. Shared here since both
+   portals' Action Boards use the same pattern. */
+.ab-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ab-card {
+  transition: box-shadow 0.15s ease;
+  border-left: 3px solid var(--border);
+}
+.ab-card.overdue {
+  border-color: #eecccb;
+}
+/* Severity stripe — left-edge accent by case priority, so a critical case
+   reads as urgent at a glance without having to parse the priority pill. */
+.ab-card.sev-critical {
+  border-left: 3px solid var(--red);
+}
+.ab-card.sev-high {
+  border-left: 3px solid var(--amber);
+}
+.ab-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ab-title-block {
+  min-width: 0;
+  flex: 1;
+}
+.ab-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.ab-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ab-actions-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+/* Badge pair pinned to the card's top-right corner (severity/status tag +
+   age/overdue tag) — sits above whatever action button (Mark resolved)
+   follows it in the same column. */
+.ab-actions-col .ab-badges {
+  margin-bottom: 0;
+  justify-content: flex-end;
+}
+.ab-actions-col .ab-badges .pill {
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+.ab-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 6px;
+}
+.ab-meta-row b {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.ab-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ab-desc.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+}
+.ab-show-more {
+  font-size: 11.5px;
+  color: var(--accent);
+  cursor: pointer;
+  margin-top: 4px;
+  display: inline-block;
+}
+.ab-callout {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--bg-2, #f7f7f8);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.ab-callout.escalation {
+  background: var(--red-bg);
+  color: var(--red);
+}
+.ab-panel {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-2, #f7f7f5);
+  border-radius: 8px;
+}
+.ab-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-3);
+  font-size: 13.5px;
+}
+
+/* Case Management — playbook auto-attach chip on a case card. Deliberately
+   purple/accent-toned so it reads as its own category of information,
+   distinct from the status/priority pills next to it. */
+.pb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid #c9c3f5;
+  background: var(--purple-bg);
+  color: var(--purple);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  max-width: 260px;
+  box-shadow: 0 1px 2px rgba(60, 52, 137, 0.08);
+}
+.pb-chip:hover {
+  background: #e4e1fb;
+}
+.pb-chip-track {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: #d9d5f5;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.pb-chip-fill {
+  height: 100%;
+  background: var(--purple);
+  border-radius: 3px;
+}
+.pb-no-playbook {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  border: 1px dashed var(--border);
+  padding: 5px 10px;
+  border-radius: 20px;
+}
+.pb-no-playbook a {
+  color: var(--text-3);
+  text-decoration: underline;
+}
+
+/* Case Management page-head — the low-emphasis "Playbook Library" link and
+   the primary "+ New case" button that sit to the right of the title. */
+/* Case Management KPI strip — mockup shows the number first, then the
+   caps label below it (most of the app keeps label-above-value; this is
+   scoped to .kpi-strip so it doesn't change metric cards elsewhere). */
+.kpi-strip .card {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+.kpi-strip .metric-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Star rating on a case card — the respondent's actual rating from the
+   source feedback response, when the case has one. */
+.case-stars {
+  color: var(--amber);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+.case-stars-empty {
+  color: var(--border);
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.link-action {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  text-decoration: none;
+}
+.link-action:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* Case card footer — a left-aligned row of pill-style action buttons
+   (playbook chip, Comments, Escalate) all sharing the same size, with the
+   case owner (avatar + name) pinned to the right of that same row. */
+.case-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.case-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.case-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.case-action-btn:hover {
+  border-color: #bfbeb8;
+}
+.case-action-btn.active {
+  background: var(--sidebar-bg);
+  color: #fff;
+  border-color: var(--sidebar-bg);
+}
+.case-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.case-owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.case-owner-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--purple-bg);
+  color: var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.case-owner-avatar.unassigned {
+  background: var(--bg-2, #f1f0ec);
+  color: var(--text-3);
+}
+.case-owner-name {
+  font-size: 12px;
+  color: var(--text-2);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Side panel / bottom sheet — the Case Management playbook-run detail
+   view. Right-side fixed panel at desktop width; becomes a bottom sheet
+   sliding up from the bottom at phone width via the media query below,
+   no JS device detection. */
+.pb-slideout-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 18, 0.35);
+  z-index: 1000;
+}
+.pb-slideout {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 100vw;
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.12);
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  animation: pb-slide-in-right 0.2s ease-out;
+}
+@keyframes pb-slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@media (max-width: 720px) {
+  .pb-slideout {
+    top: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 85vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    animation: pb-slide-in-bottom 0.2s ease-out;
+  }
+  @keyframes pb-slide-in-bottom {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+}
+.pb-slideout-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pb-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--purple);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.pb-slideout-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.pb-slideout-close {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-3);
+  padding: 4px;
+  flex-shrink: 0;
+}
+.pb-slideout-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+}
+.pb-slideout-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.pb-reason-callout {
+  background: var(--purple-bg);
+  border: 1px solid #dcd8f5;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--purple);
+  margin: 12px 0 18px;
+}
+.pb-nudge-callout {
+  background: var(--amber-bg);
+  border: 1px solid #f0dcb0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--amber);
+  margin-top: 18px;
+}
+.pb-nudge-callout button {
+  margin-top: 8px;
+}
+.pb-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 4px;
+}
+.pb-checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pb-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+.pb-stat-tile {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-2, #f7f7f5);
+}
+.pb-stat-tile .pb-stat-label {
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.pb-stat-tile .pb-stat-val {
+  font-size: 17px;
+  font-weight: 600;
+  margin-top: 3px;
+  color: var(--text);
+}

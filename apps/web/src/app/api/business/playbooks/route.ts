@@ -9,17 +9,34 @@ import {
   PLAYBOOK_TRIGGER_COMPARATORS,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
 
 // Mirrors /api/group/playbooks, scoped to businessId instead of
 // parentOrgId. Not available to limited-tier team members.
+//
+// Playbook authorship rule (product decision, matching the spec's original
+// "Decision Log / Playbooks: Business — none, Parent Org — full" intent,
+// with the one necessary carve-out the spec's own Section 16 already
+// established for the Act layer): a STANDALONE business (no parentOrgId)
+// has nowhere else for a playbook to come from, so it keeps full CRUD here
+// — same reasoning Section 16 used to give standalone businesses their own
+// Action Board. A BRANCH of a group already has a parent org that can
+// author one, so its own playbook authoring is disabled; it sees the
+// org's playbooks read-only (readOnly:true below) and interacts with them
+// by checking off steps on its own cases in Case Management, same as
+// before — Group already sees that live via GET /api/group/playbook-runs.
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
 
+  const isBranch = !!session.business.parentOrgId;
+
   const [playbooks, categories] = await Promise.all([
-    Playbook.find({ businessId: session.business._id }).sort({ createdAt: -1 }),
+    isBranch
+      ? Playbook.find({ parentOrgId: session.business.parentOrgId }).sort({ createdAt: -1 })
+      : Playbook.find({ businessId: session.business._id }).sort({ createdAt: -1 }),
     Category.find().sort({ name: 1 }),
   ]);
 
@@ -30,21 +47,34 @@ export async function GET() {
     status: "active",
   });
   const activeRunByPlaybookId = new Map(activeRuns.map((r) => [r.playbookId.toString(), r]));
+  const usageByPlaybookId = await computePlaybookUsageBatch(playbooks.map((p) => p._id));
 
   const enriched = await Promise.all(
     playbooks.map(async (playbook) => ({
       ...playbook.toObject(),
       triggerStatus: await evaluatePlaybookTrigger(playbook, [session.business._id]),
       activeRun: activeRunByPlaybookId.get(playbook._id.toString()) ?? null,
+      usage: usageByPlaybookId.get(playbook._id.toString()) ?? {
+        usageCount90d: 0,
+        completionRate: null,
+        avgResolutionHours: null,
+        lastUsedAt: null,
+      },
     }))
   );
 
-  return NextResponse.json({ status: "ok", playbooks: enriched, categories });
+  return NextResponse.json({ status: "ok", playbooks: enriched, categories, readOnly: isBranch });
 }
 
 export async function POST(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (session.business.parentOrgId) {
+    return NextResponse.json(
+      { status: "error", message: "Playbooks for a branch are managed by your parent organization." },
+      { status: 403 }
+    );
+  }
 
   await connectToDatabase();
 

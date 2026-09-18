@@ -65,6 +65,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["name", "escalator_name", "org_name", "business_name", "action_title", "escalation_note", "action_link"],
   },
   {
+    key: "case_escalated_to_org",
+    subject: "Escalated for your attention: {{action_title}}",
+    body: "Hi {{name}}, {{escalator_name}} at {{business_name}} escalated a case to {{org_name}} for your attention: {{action_title}}.\n\n{{escalation_note}}\n\nView it here: {{action_link}}",
+    availableVars: ["name", "escalator_name", "business_name", "org_name", "action_title", "escalation_note", "action_link"],
+  },
+  {
     key: "invoice_receipt",
     subject: "Your OodelCX payment receipt",
     body: "Hi {{name}}, we've received your payment of {{invoice_amount}}. Thank you.",

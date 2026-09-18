@@ -76,6 +76,17 @@
   width: 100%;
   max-width: 340px;
 }
+/* Mobile-only brand mark above the form content — hidden on desktop, where
+   .as-visual already carries the (white) wordmark on its black panel. */
+.as-mobile-brand {
+  display: none;
+}
+
+/* Mobile-only branded header (AuthMobileNav) — hidden on desktop where
+   .as-visual already carries the logo/branding on its black panel. */
+.as-mobile-nav {
+  display: none;
+}
 
 @media (max-width: 900px) {
   .as-shell {
@@ -85,7 +96,62 @@
     display: none;
   }
   .as-form-panel {
-    min-height: 100vh;
+    min-height: 0;
     flex: 1 1 auto;
+  }
+  .as-mobile-nav {
+    display: block;
+    background: #fff;
+    border-bottom: 1px solid #e7e5df;
+  }
+  .as-mobile-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 14px 16px;
+  }
+  .as-mobile-toggle {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  .as-mobile-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: #171614;
+    border-radius: 1px;
+  }
+  .as-mobile-brand {
+    display: block;
+    height: 28px;
+    width: auto;
+    margin: 4px auto 28px;
+  }
+  .as-mobile-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 16px 14px;
+    border-top: 1px solid #e7e5df;
+  }
+  .as-mobile-panel a {
+    padding: 10px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #171614;
+    text-decoration: none;
+    border-bottom: 1px solid #f1f0ec;
+  }
+  .as-mobile-panel a:last-child {
+    border-bottom: none;
   }
 }

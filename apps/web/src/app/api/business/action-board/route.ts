@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ActionBoardItem, Playbook, User, sendTemplatedEmail, ACTION_PRIORITIES } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  ActionBoardItem,
+  Playbook,
+  User,
+  ParentOrganization,
+  sendTemplatedEmail,
+  ACTION_PRIORITIES,
+  autoAttachPlaybook,
+} from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/lib/caseStats";
 
 /**
  * Standalone business's own single-business Action Board (spec Section 16
@@ -24,7 +34,29 @@ export async function GET() {
     ActionBoardItem.find(filter).sort({ createdAt: -1 }),
     Playbook.find(scope),
   ]);
-  return NextResponse.json({ status: "ok", items, playbooks, tier: session.tier });
+
+  const stats = buildCaseStats(items);
+  const [itemsWithRuns, ratingByItemId] = await Promise.all([
+    attachPlaybookRunsToItems(items, playbooks),
+    ratingsForItems(items),
+  ]);
+  const itemsWithRatings = itemsWithRuns.map((item) => ({
+    ...item,
+    rating: ratingByItemId.get(String((item as unknown as { _id: unknown })._id)) ?? null,
+  }));
+
+  const isBranch = !!session.business.parentOrgId;
+  const org = isBranch ? await ParentOrganization.findById(session.business.parentOrgId) : null;
+
+  return NextResponse.json({
+    status: "ok",
+    items: itemsWithRatings,
+    playbooks,
+    tier: session.tier,
+    stats,
+    isBranch,
+    orgName: org?.name ?? null,
+  });
 }
 
 export async function POST(request: Request) {
@@ -51,6 +83,8 @@ export async function POST(request: Request) {
     sourceResponseIds: Array.isArray(body?.sourceResponseIds) ? body.sourceResponseIds : [],
     source: "manual",
   });
+
+  await autoAttachPlaybook(item).catch((err) => console.error("[action-board] auto-attach playbook failed", err));
 
   if (item.ownerId) {
     const owner = await User.findById(item.ownerId);

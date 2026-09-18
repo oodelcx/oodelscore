@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AuthMobileNav } from "./auth-mobile-nav";
 import "./auth-shell.css";
 
 /** Splits headline on the first occurrence of highlight and wraps that
@@ -38,6 +39,7 @@ export function AuthShell({
 }) {
   return (
     <div className="as-shell">
+      <AuthMobileNav />
       <div className="as-visual" style={imageUrl ? { backgroundImage: `url(${imageUrl})` } : undefined}>
         {imageUrl && <div className="as-visual-scrim" />}
         <div className="as-center">
@@ -46,7 +48,13 @@ export function AuthShell({
         </div>
       </div>
       <div className="as-form-panel">
-        <div className="as-form-inner">{children}</div>
+        <div className="as-form-inner">
+          {/* Mobile-only — .as-visual (with the white wordmark) is hidden
+              below 900px, so this is the only branding on the page there.
+              Hidden on desktop, where the visual panel already has it. */}
+          <img className="as-mobile-brand" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -44,6 +44,17 @@ export interface IActionBoardItem {
   // gets the item_escalated email (the item's assigned owner, or the
   // branch's owner if nobody's assigned yet) so the flag isn't a mystery.
   escalationNote: string;
+  // The other direction: a branch flagging its own case for its parent
+  // org's attention (only meaningful when businessId belongs to a branch,
+  // not a standalone business — there's nobody to escalate to otherwise).
+  // Deliberately a separate field from `escalated` above rather than
+  // reusing it — that one is documented as a Group→branch oversight
+  // signal, and conflating the two directions would make a branch's own
+  // escalation look like (and get cleared/toggled by) Group's read-only
+  // flag, or vice versa.
+  escalatedToOrg: boolean;
+  escalatedToOrgAt: Date | null;
+  escalatedToOrgNote: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +78,9 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     escalated: { type: Boolean, default: false },
     escalatedAt: { type: Date, default: null },
     escalationNote: { type: String, default: "" },
+    escalatedToOrg: { type: Boolean, default: false },
+    escalatedToOrgAt: { type: Date, default: null },
+    escalatedToOrgNote: { type: String, default: "" },
   },
   { timestamps: true }
 );

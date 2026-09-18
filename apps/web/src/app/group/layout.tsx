@@ -5,6 +5,7 @@ import { connectToDatabase, ParentOrganization } from "@oodelscore/shared";
 import "../admin/admin.css";
 import "../business/business.css";
 import LogoutLink from "./logout-link";
+import MobileNavToggle from "@/components/mobile-nav-toggle";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -22,15 +23,16 @@ export default async function GroupLayout({ children }: { children: ReactNode })
 
   return (
     <div className="admin-app">
+      <MobileNavToggle label="Parent Organisation Portal" />
       <aside className="admin-sidebar">
-        <div>
+        <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
-              <a href="/group/action-board">My Action Items</a>
+              <a href="/group/cases">My Cases</a>
             </nav>
           ) : (
             <>
@@ -43,16 +45,19 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               </nav>
               <div className="nav-group-label">Listen</div>
               <nav className="admin-nav">
+                <a href="/group/raw-feedback">Raw feedback</a>
+              </nav>
+
+              <div className="nav-group-label">Understand</div>
+              <nav className="admin-nav">
                 <a href="/group/insights">Insights</a>
                 <a href="/group/analytics">Analytics</a>
-                <a href="/group/raw-feedback">Raw feedback</a>
                 <a href="/group/alert-rules">Alert rules</a>
               </nav>
               <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
-                <a href="/group/action-board">Action board</a>
+                <a href="/group/cases">Case Management</a>
                 <a href="/group/decision-log">Decision log</a>
-                <a href="/group/playbooks">Playbooks</a>
               </nav>
               <div className="nav-group-label">Measure</div>
               <nav className="admin-nav">
@@ -65,6 +70,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 {!isOrgTeamMember && <a href="/group/category-owners">Category Owners</a>}
                 <a href="/group/messages">Messages</a>
                 {!isOrgTeamMember && <a href="/group/billing">Billing</a>}
+                <a href="/group/playbooks">Playbook Library</a>
                 <a href="/group/security">Security</a>
               </nav>
             </>
@@ -81,7 +87,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               👤 Team member{user.teamRole ? ` — ${user.teamRole}` : ""}
             </div>
           )}
-          <div>{user.email}</div>
           <LogoutLink />
         </div>
       </aside>

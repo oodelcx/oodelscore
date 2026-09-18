@@ -15,7 +15,7 @@ async function resolveBusinessIds(ownerType: BillingOwnerType, ownerId: Types.Ob
 }
 
 export async function computeStarAndNps(businessIds: Types.ObjectId[], from: Date, to: Date) {
-  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers");
+  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers").lean();
   let starSum = 0;
   let starCount = 0;
   const npsAnswers: number[] = [];
@@ -38,7 +38,7 @@ export async function computeStarAndNps(businessIds: Types.ObjectId[], from: Dat
 }
 
 export async function computeCategoryAverage(businessIds: Types.ObjectId[], categoryId: Types.ObjectId, from: Date, to: Date): Promise<number | null> {
-  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers");
+  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers").lean();
   let sum = 0;
   let count = 0;
   for (const r of responses) {

@@ -1,12 +1,40 @@
-/* Dark terminal aesthetic, deliberately distinct from the rest of the app —
+/* Terminal aesthetic, deliberately distinct from the rest of the app —
    this page is an operating picture, not a form/table page, so it earns its
    own visual language. Scoped under .cc-root so it never leaks into
-   admin.css/business.css's light theme elsewhere in the Group portal. */
+   admin.css/business.css's light theme elsewhere in the Group portal.
+   Light is the default palette here too, with dark as an opt-in toggle —
+   see the token comment below. Same Bloomberg-terminal aesthetic as the
+   Admin Command Center (apps/web/src/app/admin/command-center/command-center.css)
+   — kept as a literal copy so both stay visually identical without
+   cross-portal CSS coupling. If one changes, mirror it here. */
 
 .cc-root, .cc-root *, .cc-root *::before, .cc-root *::after {
   box-sizing: border-box;
 }
+/* Light is the default theme. Dark is opt-in via [data-theme="dark"],
+   toggled from the topbar chip row and persisted client-side. Every
+   --cc-* token below is redefined for dark further down — keep both
+   lists in sync when adding a new token. */
 .cc-root {
+  --cc-bg: #f6f7f9;
+  --cc-panel: #ffffff;
+  --cc-panel-2: #eef1f5;
+  --cc-border: #d9dee6;
+  --cc-text: #12151b;
+  --cc-dim: #6b7280;
+  --cc-green: #15803d;
+  --cc-red: #b91c1c;
+  --cc-amber: #b45309;
+  --cc-blue: #1d4ed8;
+  background: var(--cc-bg);
+  border-radius: 10px;
+  padding: 14px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  color: var(--cc-text);
+  font-variant-numeric: tabular-nums;
+  max-width: 100%;
+}
+.cc-root[data-theme="dark"] {
   --cc-bg: #090c11;
   --cc-panel: #10151d;
   --cc-panel-2: #151b25;
@@ -17,13 +45,6 @@
   --cc-red: #f2495c;
   --cc-amber: #f2b705;
   --cc-blue: #4f8fef;
-  background: var(--cc-bg);
-  border-radius: 10px;
-  padding: 14px;
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  color: var(--cc-text);
-  font-variant-numeric: tabular-nums;
-  max-width: 100%;
 }
 
 .cc-band-green { color: var(--cc-green); }
@@ -97,8 +118,23 @@
   border: 1px solid var(--cc-border);
   color: var(--cc-dim);
 }
-.cc-chip.live { color: var(--cc-green); border-color: #1c4a30; background: #0e1f16; }
-.cc-chip.alert { color: var(--cc-red); border-color: #4a1c22; background: #1f0e10; }
+.cc-chip.live { color: var(--cc-green); border-color: #86efac; background: #ecfdf3; }
+.cc-chip.alert { color: var(--cc-red); border-color: #fca5a5; background: #fef2f2; }
+.cc-root[data-theme="dark"] .cc-chip.live { border-color: #1c4a30; background: #0e1f16; }
+.cc-root[data-theme="dark"] .cc-chip.alert { border-color: #4a1c22; background: #1f0e10; }
+
+.cc-chip-row button.cc-chip {
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+.cc-chip-row button.cc-chip:hover {
+  opacity: 0.82;
+}
+.cc-chip-row button.cc-chip:focus-visible {
+  outline: 2px solid var(--cc-blue);
+  outline-offset: 2px;
+}
 
 .cc-grid {
   display: grid;
@@ -127,9 +163,12 @@
 
 .cc-branch-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .cc-branch-tile { flex: 1 1 130px; min-width: 0; border-radius: 6px; padding: 10px 11px; border: 1px solid var(--cc-border); }
-.cc-branch-tile.green { background: linear-gradient(155deg, #0e2417, #0f151c); border-color: #1c4a30; }
-.cc-branch-tile.amber { background: linear-gradient(155deg, #2a2008, #14181c); border-color: #4a3b12; }
-.cc-branch-tile.red { background: linear-gradient(155deg, #2a0f12, #14181c); border-color: #4a1c22; }
+.cc-branch-tile.green { background: linear-gradient(155deg, #eafaf0, #ffffff); border-color: #bbe8cc; }
+.cc-branch-tile.amber { background: linear-gradient(155deg, #fef6e0, #ffffff); border-color: #f0d998; }
+.cc-branch-tile.red { background: linear-gradient(155deg, #fdecea, #ffffff); border-color: #f5b5bb; }
+.cc-root[data-theme="dark"] .cc-branch-tile.green { background: linear-gradient(155deg, #0e2417, #0f151c); border-color: #1c4a30; }
+.cc-root[data-theme="dark"] .cc-branch-tile.amber { background: linear-gradient(155deg, #2a2008, #14181c); border-color: #4a3b12; }
+.cc-root[data-theme="dark"] .cc-branch-tile.red { background: linear-gradient(155deg, #2a0f12, #14181c); border-color: #4a1c22; }
 .cc-branch-name { font-size: 12px; font-weight: 600; }
 .cc-branch-region { font-size: 9.5px; color: var(--cc-dim); margin-top: 1px; }
 .cc-branch-metrics { display: flex; gap: 12px; margin-top: 9px; }
@@ -144,9 +183,12 @@
 .cc-matrix tr:not(:last-child) td { border-bottom: 1px solid var(--cc-border); }
 .cc-matrix tr.cc-matrix-extra td { color: var(--cc-dim); font-style: italic; }
 .cc-cell { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 19px; padding: 0 4px; border-radius: 3px; font-weight: 600; font-size: 10.5px; }
-.cc-cell.green { background: #123924; color: var(--cc-green); }
-.cc-cell.amber { background: #2a2008; color: var(--cc-amber); }
-.cc-cell.red { background: #2a0f12; color: var(--cc-red); }
+.cc-cell.green { background: #dcfce7; color: var(--cc-green); }
+.cc-cell.amber { background: #fef3c7; color: var(--cc-amber); }
+.cc-cell.red { background: #fee2e2; color: var(--cc-red); }
+.cc-root[data-theme="dark"] .cc-cell.green { background: #123924; }
+.cc-root[data-theme="dark"] .cc-cell.amber { background: #2a2008; }
+.cc-root[data-theme="dark"] .cc-cell.red { background: #2a0f12; }
 
 .cc-feed { display: flex; flex-direction: column; gap: 0; max-height: 420px; overflow-y: auto; }
 .cc-feed-row { display: flex; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--cc-border); }

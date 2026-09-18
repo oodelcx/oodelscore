@@ -35,7 +35,20 @@
 
 .admin-app {
   display: flex;
-  min-height: 100vh;
+  /* height, not min-height, plus overflow:hidden: this makes .admin-app
+     itself the fixed viewport-height "shell" (the Facebook/Gmail-style
+     split-pane layout) rather than relying on the sidebar's own
+     position:sticky to fight the page's scroll. That sticky approach broke
+     in production (though not in an isolated test) because global.css's
+     `html, body { overflow-x: hidden }` makes body compute an implied
+     overflow-y:auto per the CSS overflow spec, splitting "the element the
+     mouse wheel scrolls" from "the element sticky positions against" in a
+     way a plain html/body page doesn't hit — sticky no longer reliably
+     stuck to the viewport. Locking .admin-app to the viewport and letting
+     only .admin-main scroll inside it sidesteps that entirely: the sidebar
+     is just a normal, never-scrolling flex child now, no sticky needed. */
+  height: 100vh;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
   /* oodel-score-admin-rebuild.html body{}: the three dashboards (Admin,
@@ -54,16 +67,20 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
-  /* min-height, not height: a fixed 100vh caps the sidebar's own box at
-     one screen tall. Once a page's main content needs scrolling past
-     that (more nav groups than fit, or a long page), sticky has nothing
-     left to stick to and detaches — you scroll past the sidebar's bottom
-     edge into blank page background while the main column keeps going.
-     min-height lets it stretch to match a taller row instead. */
-  min-height: 100vh;
-  align-self: stretch;
+  /* No position:sticky (see .admin-app above) — .admin-app is already
+     exactly viewport-height with overflow:hidden, so the sidebar simply
+     never scrolls; height:100% fills that fixed-height parent exactly. */
+  height: 100%;
+}
+/* The scrollable middle of the sidebar (logo + every nav group) — flexes
+   to fill whatever space is left between the fixed top and
+   .admin-sidebar-bottom, and scrolls on its own when nav groups overflow
+   one screen, instead of dragging the whole sidebar (and its bottom user
+   info) off-screen with it. */
+.admin-sidebar-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .admin-sidebar-top {
   padding: 22px 18px 14px;
@@ -147,6 +164,7 @@
   border-top: 1px solid #24282c;
   font-size: 13px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 .admin-sidebar-bottom > div {
   overflow-wrap: break-word;
@@ -171,6 +189,15 @@
      scrollbar. This is what was cutting content off on every portal page
      that reuses this shell (Admin, Business, Group). */
   min-width: 0;
+  /* Without this, height:100% (below) sizes only the content box, and the
+     32px top+bottom padding is added on top of that — 64px taller than
+     .admin-app's fixed viewport height. .admin-app's overflow:hidden then
+     permanently clips that excess off the bottom, so the last ~64px of
+     every page (often an entire card) was unreachable no matter how far
+     you scrolled. Verified with a harness loading this file directly:
+     .admin-main.clientHeight was 64px taller than .admin-app.clientHeight
+     before this, exactly the padding total. */
+  box-sizing: border-box;
   padding: 32px 40px;
   /* oodel-score-admin-rebuild.html .main{max-width:1520px} */
   max-width: 1520px;
@@ -179,6 +206,11 @@
      table), this scrolls just that content area instead of the global
      overflow-x:hidden safeguard (global.css) silently clipping it. */
   overflow-x: auto;
+  /* .admin-app (above) is now a fixed-height, non-scrolling shell — this is
+     the one column inside it that actually scrolls, so page content scrolls
+     independently of the sidebar instead of the two moving together. */
+  overflow-y: auto;
+  height: 100%;
 }
 h1 {
   font-size: 24px;
@@ -266,15 +298,20 @@ h1 {
 .grid-5 {
   grid-template-columns: repeat(5, 1fr);
 }
+.grid-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
 @media (max-width: 900px) {
   .grid-4,
-  .grid-5 {
+  .grid-5,
+  .grid-6 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 @media (max-width: 480px) {
   .grid-4,
   .grid-5,
+  .grid-6,
   .grid-2 {
     grid-template-columns: 1fr;
   }
@@ -294,6 +331,13 @@ h1 {
   font-size: 12px;
   color: var(--text-2);
   margin-top: 6px;
+}
+/* A comfortable reading width for content-forward card lists (e.g. Raw
+   Feedback) that would otherwise stretch to .admin-main's full 1520px and
+   float in a large empty canvas — the stat strip/filter bar above can still
+   span the full width, only the card list itself is capped. */
+.content-narrow {
+  max-width: 820px;
 }
 .card {
   background: var(--card);
@@ -452,6 +496,21 @@ input[type="number"] {
   background: var(--sidebar-bg);
   color: #fff;
   border-color: var(--sidebar-bg);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.pagination-status {
+  font-size: 12.5px;
+  color: var(--text-2);
+  white-space: nowrap;
 }
 
 .backlink {
@@ -1132,4 +1191,129 @@ input[type="number"] {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+/* Mobile off-canvas sidebar — Admin/Business/Group layouts share the
+   .admin-app / .admin-sidebar shell above; mobile-nav-toggle.tsx (a small
+   client island, see that file for why) toggles this by adding
+   "mobile-nav-open" on <html>. Breakpoint: 900px, matching the .grid-4/
+   .grid-5 breakpoint already used elsewhere in this file, rather than a new
+   number — one 900px "small screen" line for the whole shell. Above it,
+   nothing below changes anything: .mobile-topbar/.mobile-nav-backdrop stay
+   display:none and .admin-sidebar keeps its original sticky, in-flow
+   240px column exactly as before this block was added.
+
+   The slide + backdrop interaction (fixed overlay, translateX transition,
+   click-outside-to-close, box-shadow) mirrors the Case Management side
+   panel's .pb-slideout / .pb-slideout-backdrop (business.css) — left edge
+   instead of right, translateX instead of the slideout's mount/unmount
+   keyframe (this needs to animate open *and* closed while staying mounted,
+   which a transition does more naturally than a one-shot @keyframes). */
+.mobile-topbar {
+  display: none;
+}
+.mobile-nav-backdrop {
+  display: none;
+}
+@media (max-width: 900px) {
+  .admin-app {
+    /* Row layout (sidebar | main) only makes sense once the sidebar is a
+       normal in-flow column. Off-canvas, it's position:fixed (removed from
+       flow) so .admin-main is the only flex child left — flex-direction
+       doesn't matter for a single item, but column keeps intent clear for
+       the fixed topbar sitting above everything else via its own
+       position:fixed rather than flex order. */
+    display: block;
+    /* The desktop split-pane (.admin-app fixed to 100vh, only .admin-main
+       scrolling inside it) doesn't apply here — the off-canvas sidebar is
+       position:fixed (out of flow) so it doesn't need a non-scrolling
+       parent to stay put, and the mobile topbar above expects the normal
+       page/document to scroll under it. */
+    height: auto;
+    overflow: visible;
+  }
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    padding: 0 16px;
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid #24282c;
+    z-index: 500;
+  }
+  .mobile-topbar-label {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-nav-btn {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0;
+  }
+  .mobile-nav-btn:hover {
+    background: var(--sidebar-hover);
+  }
+  .mobile-nav-btn-bar {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: #fff;
+    border-radius: 1px;
+  }
+  /* Main content: no longer sits beside a 240px in-flow sidebar, so it
+     takes the full width; padding-top clears the new fixed top bar. */
+  .admin-main {
+    padding-top: calc(52px + 20px);
+    max-width: 100%;
+    height: auto;
+    overflow-y: visible;
+  }
+  /* The sidebar itself goes off-canvas: fixed, full-height, hidden past
+     the left edge until toggled open. */
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    min-height: 100vh;
+    width: 240px;
+    max-width: 85vw;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease-out;
+    z-index: 600;
+    box-shadow: none;
+  }
+  .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 18, 0.35);
+    z-index: 550;
+  }
+  html.mobile-nav-open .admin-sidebar {
+    transform: translateX(0);
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.18);
+  }
+  html.mobile-nav-open {
+    overflow: hidden;
+  }
 }

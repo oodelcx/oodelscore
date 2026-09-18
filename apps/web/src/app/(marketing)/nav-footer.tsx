@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import type { INavItem } from "@oodelscore/shared";
 import { BookDemoButton } from "./demo-modal";
@@ -25,6 +28,7 @@ export function MarketingNav({
 }) {
   const visible = [...navItems].filter((n) => n.visible).sort((a, b) => a.order - b.order);
   const isDark = headerStyle === "dark";
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <nav className={`nav ${isDark ? "nav-dark" : "nav-light"}`}>
@@ -42,8 +46,40 @@ export function MarketingNav({
         <div className="nav-right">
           <Link href="/login">Sign in</Link>
           <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
+          {/* Only rendered/visible below the 860px breakpoint where
+              .nav-links is hidden (marketing.css) — lives inside nav-right
+              (not as a separate flex child of nav-inner) so it clusters
+              with Sign in/Book a demo at the right edge instead of being
+              spaced apart from them by nav-inner's space-between. Sign in
+              and Book a demo both stay visible at mobile width; only the
+              page links (Home/Product/…) move into the panel below. */}
+          <button
+            type="button"
+            className="nav-mobile-toggle"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((v) => !v)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
       </div>
+      {mobileOpen && (
+        <div className="nav-mobile-panel">
+          {visible.map((item) => (
+            <Link
+              key={item.key}
+              href={PATH_BY_KEY[item.key] ?? "/"}
+              className={active === item.key ? "active" : ""}
+              onClick={() => setMobileOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </nav>
   );
 }

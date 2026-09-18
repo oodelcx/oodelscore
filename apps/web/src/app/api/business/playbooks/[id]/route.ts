@@ -7,6 +7,12 @@ type RouteParams = { params: Promise<{ id: string }> };
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (session.business.parentOrgId) {
+    return NextResponse.json(
+      { status: "error", message: "Playbooks for a branch are managed by your parent organization." },
+      { status: 403 }
+    );
+  }
 
   await connectToDatabase();
 
@@ -32,6 +38,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (session.business.parentOrgId) {
+    return NextResponse.json(
+      { status: "error", message: "Playbooks for a branch are managed by your parent organization." },
+      { status: 403 }
+    );
+  }
 
   await connectToDatabase();
 

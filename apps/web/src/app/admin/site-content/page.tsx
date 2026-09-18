@@ -28,6 +28,7 @@ const TABS: { id: string; label: string }[] = [
   { id: "privacy", label: "Privacy Policy" },
   { id: "terms", label: "Terms of Service" },
   { id: "login", label: "Login" },
+  { id: "tooltips", label: "Tooltips" },
 ];
 
 function parseJsonArray<T>(value: string | undefined): T[] {
@@ -116,7 +117,7 @@ export default function SiteContentPage() {
 
   return (
     <div>
-      <h1>Site Content</h1>
+      <h1>Site CMS</h1>
       <p className="subtitle">
         Every section on the live marketing site is generated from what&rsquo;s edited here — nothing on oodelscore.com is
         hard-coded copy.
@@ -150,6 +151,7 @@ export default function SiteContentPage() {
         <LegalPanel content={current} page={activeTab} onFieldChange={updateField} />
       )}
       {current && activeTab === "login" && <LoginPanel content={current} onFieldChange={updateField} />}
+      {activeTab === "tooltips" && <TooltipsPanel />}
 
       {current && (
         <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 10 }}>
@@ -822,7 +824,7 @@ function ProductPanel({
         <h3>Feature sections</h3>
         <p className="card-sub">
           Each renders as an alternating text/visual row, in this order. Tag should match a real product capability (CX Pulse, Theme
-          Intelligence, Root Cause Analysis, Driver Analysis, Action Board, Decision Log) so the right illustrative visual shows.
+          Intelligence, Root Cause Analysis, Driver Analysis, Case Management, Decision Log) so the right illustrative visual shows.
         </p>
         {features.map((feature, i) => (
           <div className="qrow" key={i}>
@@ -1202,6 +1204,123 @@ function LegalPanel({
       </button>
       </div>
     </>
+  );
+}
+
+interface TooltipEntry {
+  key: string;
+  label: string;
+  text: string;
+}
+interface TooltipScreenData {
+  screenKey: string;
+  screenLabel: string;
+  tooltips: TooltipEntry[];
+}
+
+/**
+ * Structurally separate from the marketing-page fields above (a
+ * TooltipScreen doc is `{ screenKey, screenLabel, tooltips: [] }`, not the
+ * Map<string,string>-per-page shape those panels edit) — so it manages its
+ * own fetch/save cycle rather than plugging into the `pages` state and the
+ * outer Save/Reset footer above.
+ *
+ * Built as a list that iterates over however many screens the API returns,
+ * so a future phase adding more screens (e.g. "business-dashboard") needs
+ * no changes here — the second-level nav and editor just grow to match.
+ */
+function TooltipsPanel() {
+  const [screens, setScreens] = useState<TooltipScreenData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeScreen, setActiveScreen] = useState<string | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/tooltips")
+      .then((res) => res.json())
+      .then((data) => {
+        const list: TooltipScreenData[] = data.screens ?? [];
+        setScreens(list);
+        setActiveScreen((prev) => prev ?? list[0]?.screenKey ?? null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  function updateEntryText(screenKey: string, entryKey: string, text: string) {
+    setScreens((prev) =>
+      prev.map((s) =>
+        s.screenKey !== screenKey
+          ? s
+          : { ...s, tooltips: s.tooltips.map((t) => (t.key === entryKey ? { ...t, text } : t)) }
+      )
+    );
+  }
+
+  async function save(screenKey: string) {
+    const screen = screens.find((s) => s.screenKey === screenKey);
+    if (!screen) return;
+    setSaving(screenKey);
+    setSavedMsg(null);
+    const res = await fetch(`/api/admin/tooltips/${screenKey}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tooltips: screen.tooltips }),
+    });
+    setSaving(null);
+    setSavedMsg(res.ok ? `${screen.screenLabel} tooltips saved` : `Failed to save ${screen.screenLabel}`);
+  }
+
+  if (loading) return <p className="subtitle">Loading…</p>;
+  const current = screens.find((s) => s.screenKey === activeScreen);
+
+  return (
+    <div>
+      <p className="card-sub" style={{ marginBottom: 12 }}>
+        Copy shown in the (i) info icons across the product&rsquo;s dashboards. Each screen below lists its tooltips in
+        display order.
+      </p>
+      {savedMsg && <p style={{ color: "var(--accent, #127C57)", fontSize: 13, marginBottom: 10 }}>{savedMsg}</p>}
+
+      <div className="cms-tabs" style={{ marginBottom: 16 }}>
+        {screens.map((s) => (
+          <button
+            key={s.screenKey}
+            className={activeScreen === s.screenKey ? "active" : ""}
+            onClick={() => {
+              setActiveScreen(s.screenKey);
+              setSavedMsg(null);
+            }}
+          >
+            {s.screenLabel}
+          </button>
+        ))}
+      </div>
+
+      {current && (
+        <div className="card">
+          <h3>{current.screenLabel}</h3>
+          {current.tooltips.map((entry) => (
+            <div className="field" key={entry.key}>
+              <label>{entry.label}</label>
+              <AutoTextarea
+                value={entry.text}
+                onChange={(e) => updateEntryText(current.screenKey, entry.key, e.target.value)}
+              />
+            </div>
+          ))}
+          <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+            <button
+              className="btn btn-dark"
+              disabled={saving === current.screenKey}
+              onClick={() => save(current.screenKey)}
+            >
+              {saving === current.screenKey ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

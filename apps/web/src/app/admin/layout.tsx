@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { requireStaffSession } from "@/lib/adminAuth";
 import { connectToDatabase, AiInsightReport, Business, FeedbackPointRequest } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
+import MobileNavToggle from "@/components/mobile-nav-toggle";
 import "./admin.css";
 
 /**
@@ -61,8 +62,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className="admin-app">
+      <MobileNavToggle label="OodelCX Admin" />
       <aside className="admin-sidebar">
-        <div>
+        <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">ADMIN PORTAL</div>
@@ -71,6 +73,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <div className="nav-group-label">Platform</div>
           <nav className="admin-nav">
             <a href="/admin">Overview</a>
+            <a href="/admin/command-center">Command Center</a>
           </nav>
 
           <div className="nav-group-label">Accounts</div>
@@ -88,7 +91,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <div className="nav-group-label">Content</div>
           <nav className="admin-nav">
             <a href="/admin/email-templates">Email Templates</a>
-            <a href="/admin/site-content">Site Content</a>
+            <a href="/admin/site-content">Site CMS</a>
             <a href="/admin/contact-messages">Contact Messages</a>
           </nav>
 
@@ -125,7 +128,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </div>
         <div className="admin-sidebar-bottom">
           <div className="biz">OodelCX Admin</div>
-          <div className="email">{user.email}</div>
           <LogoutLink />
         </div>
       </aside>

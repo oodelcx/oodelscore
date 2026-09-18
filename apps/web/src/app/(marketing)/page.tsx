@@ -165,7 +165,7 @@ export default async function MarketingHomePage() {
               <div className="scale-panel dark hover-lift">
                 <div className="scale-tag">{f.scalePanel2Tag}</div>
                 <h3>Compare every branch, act across all of them</h3>
-                <p>Regional rollups, branch-vs-branch comparison, and a shared Action Board so nothing falls through the cracks between locations.</p>
+                <p>Regional rollups, branch-vs-branch comparison, and shared Case Management so nothing falls through the cracks between locations.</p>
                 <div className="scale-mini">
                   <span>Regional benchmarks</span>
                   <span>Shared playbooks</span>

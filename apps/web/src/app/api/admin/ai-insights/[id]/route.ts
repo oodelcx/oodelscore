@@ -67,7 +67,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     report.reviewedBy = session.user._id;
   }
   if (typeof body.bodyMarkdown === "string") report.bodyMarkdown = body.bodyMarkdown;
-  if (typeof body.showChartOnDashboard === "boolean") report.showChartOnDashboard = body.showChartOnDashboard;
 
   await report.save();
 

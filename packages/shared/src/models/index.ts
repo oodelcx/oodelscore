@@ -15,6 +15,7 @@ export * from "./Invoice";
 export * from "./BillingCredit";
 export * from "./EmailTemplate";
 export * from "./SiteContent";
+export * from "./TooltipScreen";
 export * from "./AiInsightReport";
 export * from "./ActionBoardItem";
 export * from "./ActionItemComment";
