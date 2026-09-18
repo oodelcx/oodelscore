@@ -118,7 +118,7 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <table className="clean">
+        <table className="clean" data-tour="cat-owners-table">
           <thead>
             <tr>
               <th>Category</th>
@@ -129,10 +129,10 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
             </tr>
           </thead>
           <tbody>
-            {categories.map((c) => (
+            {categories.map((c, index) => (
               <tr key={c._id}>
                 <td>{c.name}</td>
-                <td>
+                <td data-tour={index === 0 ? "cat-owners-first-select" : undefined}>
                   {inviteForCategory === c._id ? (
                     <div className="field-row" style={{ alignItems: "flex-end" }}>
                       <div className="field" style={{ margin: 0 }}>

@@ -241,7 +241,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
         </div>
         {!readOnly && (
           <div style={{ display: "flex", alignItems: "center" }}>
-            <button className="btn btn-dark" onClick={() => setShowForm((v) => !v)}>
+            <button className="btn btn-dark" data-tour="dl-new-button" onClick={() => setShowForm((v) => !v)}>
               {showForm ? "Cancel" : "+ New decision"}
             </button>
           </div>
@@ -293,12 +293,12 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="ab-list">
-          {visibleEntries.map((e) => {
+          {visibleEntries.map((e, index) => {
             const delta = outcomeDelta(e);
             const triggerExpanded = expandedTriggerFor === e._id;
             const triggerIsLong = e.trigger.length > 160;
             return (
-              <div className="card ab-card" key={e._id}>
+              <div className="card ab-card" data-tour={index === 0 ? "dl-first-card" : undefined} key={e._id}>
                 {editingId === e._id ? (
                   <div className="ab-panel" style={{ margin: 0 }}>
                     <div className="field-row">

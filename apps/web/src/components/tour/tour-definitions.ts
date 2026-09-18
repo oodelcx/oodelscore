@@ -53,6 +53,78 @@ export const TOUR_DEFINITIONS: Record<string, StructuralTour> = {
       { key: "case-escalate", target: "cases-first-escalate", placement: "left" },
     ],
   },
+  "business-feedback-points": {
+    id: "business-feedback-points",
+    steps: [
+      { key: "request", target: "fp-request-button", placement: "left" },
+      { key: "first-point", target: "fp-first-card", placement: "top" },
+      { key: "view-qr", target: "fp-first-qr", placement: "top" },
+    ],
+  },
+  "business-category-owners": {
+    id: "business-category-owners",
+    steps: [
+      { key: "table", target: "cat-owners-table", placement: "top" },
+      { key: "first-select", target: "cat-owners-first-select", placement: "left" },
+    ],
+  },
+  "group-category-owners": {
+    id: "group-category-owners",
+    steps: [
+      { key: "table", target: "cat-owners-table", placement: "top" },
+      { key: "first-select", target: "cat-owners-first-select", placement: "left" },
+    ],
+  },
+  "business-alert-rules": {
+    id: "business-alert-rules",
+    steps: [
+      { key: "new-rule", target: "alert-new-rule", placement: "bottom" },
+      { key: "rules-table", target: "alert-rules-table", placement: "top" },
+    ],
+  },
+  "group-alert-rules": {
+    id: "group-alert-rules",
+    steps: [
+      { key: "new-rule", target: "alert-new-rule", placement: "bottom" },
+      { key: "rules-table", target: "alert-rules-table", placement: "top" },
+    ],
+  },
+  "business-playbooks": {
+    id: "business-playbooks",
+    steps: [
+      { key: "new-playbook", target: "pb-new-playbook", placement: "bottom" },
+      { key: "first-playbook", target: "pb-first-card", placement: "top" },
+    ],
+  },
+  "group-playbooks": {
+    id: "group-playbooks",
+    steps: [
+      { key: "new-playbook", target: "pb-new-playbook", placement: "bottom" },
+      { key: "first-playbook", target: "pb-first-card", placement: "top" },
+    ],
+  },
+  "business-decision-log": {
+    id: "business-decision-log",
+    steps: [
+      { key: "new-button", target: "dl-new-button", placement: "left" },
+      { key: "first-entry", target: "dl-first-card", placement: "top" },
+    ],
+  },
+  "group-decision-log": {
+    id: "group-decision-log",
+    steps: [
+      { key: "new-button", target: "dl-new-button", placement: "left" },
+      { key: "first-entry", target: "dl-first-card", placement: "top" },
+    ],
+  },
+  "business-raw-feedback": {
+    id: "business-raw-feedback",
+    steps: [
+      { key: "filters", target: "rf-filters", placement: "bottom" },
+      { key: "first-response", target: "rf-first-card", placement: "top" },
+      { key: "log-action", target: "rf-first-log-action", placement: "top" },
+    ],
+  },
 };
 
 // Which tour a route auto-launches / replays via the single "Take a tour"
@@ -64,4 +136,14 @@ export const ROUTE_TOUR_MAP: Record<string, string> = {
   "/group": "group-overview",
   "/business/cases": "business-cases",
   "/group/cases": "group-cases",
+  "/business/feedback-points": "business-feedback-points",
+  "/business/category-owners": "business-category-owners",
+  "/group/category-owners": "group-category-owners",
+  "/business/alert-rules": "business-alert-rules",
+  "/group/alert-rules": "group-alert-rules",
+  "/business/playbooks": "business-playbooks",
+  "/group/playbooks": "group-playbooks",
+  "/business/decision-log": "business-decision-log",
+  "/group/decision-log": "group-decision-log",
+  "/business/responses": "business-raw-feedback",
 };

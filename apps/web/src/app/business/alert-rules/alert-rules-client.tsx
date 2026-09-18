@@ -90,7 +90,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" data-tour="alert-new-rule">
         <h3>New rule</h3>
         <div className="field-row">
           <div className="field">
@@ -132,7 +132,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
       {!loading && (
         <>
           <h3 className="section-label" style={{ marginTop: 0 }}>Your rules</h3>
-          <table className="clean">
+          <table className="clean" data-tour="alert-rules-table">
             <thead>
               <tr>
                 <th>Rule</th>
