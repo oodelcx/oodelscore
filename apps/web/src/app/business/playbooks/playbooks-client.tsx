@@ -50,6 +50,7 @@ interface CategoryRow {
 export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record<string, string> }) {
   const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [readOnly, setReadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -85,6 +86,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
       .then((data) => {
         setPlaybooks(data.playbooks ?? []);
         setCategories(data.categories ?? []);
+        setReadOnly(!!data.readOnly);
       })
       .finally(() => setLoading(false));
   }
@@ -213,10 +215,15 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
             Playbook Library
             <InfoTip text={tooltips["playbooks"]} />
           </h1>
-          <p className="subtitle">Standard guidance per category/issue type — shown right on matching Action Board items.</p>
+          <p className="subtitle">
+            {readOnly
+              ? "Managed by your parent organization — these apply to your cases automatically. Check off steps from a case in Case Management; your parent org sees your progress there."
+              : "Standard guidance per category/issue type — shown right on matching Action Board items."}
+          </p>
         </div>
       </div>
 
+      {!readOnly && (
       <div className="card">
         <h3>New playbook</h3>
         <div className="field-row">
@@ -287,6 +294,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
           {creating ? "Creating…" : "+ Create playbook"}
         </button>
       </div>
+      )}
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
@@ -412,14 +420,16 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                         </div>
                       )}
                     </div>
-                    <div className="ab-actions-col">
-                      <button className="icon-btn" onClick={() => startEdit(p)} title="Edit playbook">
-                        ✎
-                      </button>
-                      <button className="icon-btn btn-danger" onClick={() => removePlaybook(p._id)} title="Delete playbook">
-                        🗑
-                      </button>
-                    </div>
+                    {!readOnly && (
+                      <div className="ab-actions-col">
+                        <button className="icon-btn" onClick={() => startEdit(p)} title="Edit playbook">
+                          ✎
+                        </button>
+                        <button className="icon-btn btn-danger" onClick={() => removePlaybook(p._id)} title="Delete playbook">
+                          🗑
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="action-links">
@@ -428,7 +438,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                       className={`btn btn-sm action-btn${expandedFor === p._id ? " active" : ""}`}
                       onClick={() => setExpandedFor(expandedFor === p._id ? null : p._id)}
                     >
-                      📘 {p.activeRun ? "Continue run" : "Steps & run"}
+                      📘 {readOnly ? "View steps" : p.activeRun ? "Continue run" : "Steps & run"}
                     </button>
                     <button
                       type="button"
@@ -441,20 +451,28 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
 
                   {expandedFor === p._id && (
                     <div className="ab-panel">
-                      {!p.activeRun && (
+                      {(!p.activeRun || readOnly) && (
                         <ol style={{ margin: 0, paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
                           {p.steps.map((step, i) => (
                             <li key={i}>{step}</li>
                           ))}
                         </ol>
                       )}
-                      <PlaybookRunPanel
-                        triggerStatus={p.triggerStatus}
-                        activeRun={p.activeRun}
-                        startPath={`/api/business/playbooks/${p._id}/start`}
-                        runsPath="/api/business/playbook-runs"
-                        onChange={load}
-                      />
+                      {readOnly && (
+                        <p className="subtitle" style={{ margin: "8px 0 0" }}>
+                          To work through these steps on a specific case, open it from Case Management — checking off
+                          a step there is visible to your parent organization immediately.
+                        </p>
+                      )}
+                      {!readOnly && (
+                        <PlaybookRunPanel
+                          triggerStatus={p.triggerStatus}
+                          activeRun={p.activeRun}
+                          startPath={`/api/business/playbooks/${p._id}/start`}
+                          runsPath="/api/business/playbook-runs"
+                          onChange={load}
+                        />
+                      )}
                     </div>
                   )}
 

@@ -12,7 +12,7 @@ export default function LogoutLink() {
   }
 
   return (
-    <div onClick={handleLogout} style={{ marginTop: 12, color: "#9a9ea3", fontSize: 12.5, cursor: "pointer" }}>
+    <div onClick={handleLogout} style={{ marginTop: 12, color: "#3fbe8b", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
       Log out
     </div>
   );

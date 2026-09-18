@@ -35,7 +35,20 @@
 
 .admin-app {
   display: flex;
-  min-height: 100vh;
+  /* height, not min-height, plus overflow:hidden: this makes .admin-app
+     itself the fixed viewport-height "shell" (the Facebook/Gmail-style
+     split-pane layout) rather than relying on the sidebar's own
+     position:sticky to fight the page's scroll. That sticky approach broke
+     in production (though not in an isolated test) because global.css's
+     `html, body { overflow-x: hidden }` makes body compute an implied
+     overflow-y:auto per the CSS overflow spec, splitting "the element the
+     mouse wheel scrolls" from "the element sticky positions against" in a
+     way a plain html/body page doesn't hit — sticky no longer reliably
+     stuck to the viewport. Locking .admin-app to the viewport and letting
+     only .admin-main scroll inside it sidesteps that entirely: the sidebar
+     is just a normal, never-scrolling flex child now, no sticky needed. */
+  height: 100vh;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
   /* oodel-score-admin-rebuild.html body{}: the three dashboards (Admin,
@@ -54,19 +67,10 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
-  /* A fixed viewport-height box, not min-height: min-height let the
-     sidebar's own box stretch to match a tall main column, and a
-     position:sticky element only "sticks" while its box is shorter than
-     its scroll container — once the sidebar's box was itself page-length,
-     sticky had nothing to stick against and the whole sidebar scrolled
-     away with the page, nav and all. Locking the box to 100vh restores
-     sticky's actual job (staying put) and .admin-sidebar-scroll below
-     handles what min-height was originally added for — a nav-group list
-     longer than one screen — by scrolling internally instead. */
-  height: 100vh;
-  align-self: stretch;
+  /* No position:sticky (see .admin-app above) — .admin-app is already
+     exactly viewport-height with overflow:hidden, so the sidebar simply
+     never scrolls; height:100% fills that fixed-height parent exactly. */
+  height: 100%;
 }
 /* The scrollable middle of the sidebar (logo + every nav group) — flexes
    to fill whatever space is left between the fixed top and
@@ -193,6 +197,11 @@
      table), this scrolls just that content area instead of the global
      overflow-x:hidden safeguard (global.css) silently clipping it. */
   overflow-x: auto;
+  /* .admin-app (above) is now a fixed-height, non-scrolling shell — this is
+     the one column inside it that actually scrolls, so page content scrolls
+     independently of the sidebar instead of the two moving together. */
+  overflow-y: auto;
+  height: 100%;
 }
 h1 {
   font-size: 24px;
@@ -1206,6 +1215,13 @@ input[type="number"] {
        the fixed topbar sitting above everything else via its own
        position:fixed rather than flex order. */
     display: block;
+    /* The desktop split-pane (.admin-app fixed to 100vh, only .admin-main
+       scrolling inside it) doesn't apply here — the off-canvas sidebar is
+       position:fixed (out of flow) so it doesn't need a non-scrolling
+       parent to stay put, and the mobile topbar above expects the normal
+       page/document to scroll under it. */
+    height: auto;
+    overflow: visible;
   }
   .mobile-topbar {
     display: flex;
@@ -1259,6 +1275,8 @@ input[type="number"] {
   .admin-main {
     padding-top: calc(52px + 20px);
     max-width: 100%;
+    height: auto;
+    overflow-y: visible;
   }
   /* The sidebar itself goes off-canvas: fixed, full-height, hidden past
      the left edge until toggled open. */

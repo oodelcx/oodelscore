@@ -87,7 +87,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               👤 Team member{user.teamRole ? ` — ${user.teamRole}` : ""}
             </div>
           )}
-          <div>{user.email}</div>
           <LogoutLink />
         </div>
       </aside>
