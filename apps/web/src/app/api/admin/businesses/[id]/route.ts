@@ -6,6 +6,7 @@ import {
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
   PRICING_INTERVALS,
+  syncBranchGroupPaysCoverage,
   assertStaffCanEditBusinessAdminFields,
   canAccessScopedResource,
   ForbiddenFieldWriteError,
@@ -134,7 +135,21 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await business.save();
-  return NextResponse.json({ status: "ok", business });
+
+  // The billingAssignment/pricingTerms change itself is saved regardless —
+  // a Stripe sync failure (org has no subscription yet, org priced as a
+  // lump sum, etc.) is reported back but never blocks the save, so Admin
+  // isn't stuck unable to set billingAssignment until Stripe cooperates.
+  let billingSyncWarning: string | null = null;
+  if ("billingAssignment" in body) {
+    try {
+      await syncBranchGroupPaysCoverage(business._id.toString());
+    } catch (err) {
+      billingSyncWarning = err instanceof Error ? err.message : "Failed to sync Stripe billing coverage";
+    }
+  }
+
+  return NextResponse.json({ status: "ok", business, billingSyncWarning });
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
