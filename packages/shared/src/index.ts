@@ -13,6 +13,7 @@ export * from "./seedData/demoAccounts";
 export * from "./seedData/platformDefaults";
 export * from "./seedData/siteContent";
 export * from "./seedData/tooltips";
+export * from "./seedData/tours";
 export * from "./stripe/client";
 export * from "./stripe/billing";
 export * from "./scoring/aggregate";

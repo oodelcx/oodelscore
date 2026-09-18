@@ -5,6 +5,7 @@ import { connectToDatabase, Business, ParentOrganization } from "@oodelscore/sha
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
+import { TourLauncher } from "@/components/tour/tour-launcher";
 import "../admin/admin.css";
 import "./business.css";
 
@@ -101,7 +102,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         </div>
       </aside>
       <main className="admin-main">
-        <TourProvider initialSeenTours={[...user.seenTours]}>{children}</TourProvider>
+        <TourProvider initialSeenTours={[...user.seenTours]}>
+          <TourLauncher />
+          {children}
+        </TourProvider>
       </main>
     </div>
   );

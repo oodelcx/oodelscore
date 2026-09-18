@@ -7,6 +7,7 @@ import "../business/business.css";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
+import { TourLauncher } from "@/components/tour/tour-launcher";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -92,7 +93,10 @@ export default async function GroupLayout({ children }: { children: ReactNode })
         </div>
       </aside>
       <main className="admin-main">
-        <TourProvider initialSeenTours={[...user.seenTours]}>{children}</TourProvider>
+        <TourProvider initialSeenTours={[...user.seenTours]}>
+          <TourLauncher />
+          {children}
+        </TourProvider>
       </main>
     </div>
   );

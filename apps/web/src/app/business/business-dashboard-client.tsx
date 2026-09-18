@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
 import { useTooltips } from "@/lib/useTooltips";
-import { TourAutostart } from "@/components/tour/tour-autostart";
-import { TakeTourButton } from "@/components/tour/take-tour-button";
 
 interface Comparison {
   starAverage: number | null;
@@ -82,8 +80,6 @@ export default function BusinessDashboardClient() {
     const b = data.branch;
     return (
       <div>
-        <TourAutostart tourId="business-dashboard" />
-        <TakeTourButton tourId="business-dashboard" />
         <h1>
           Your Dashboard {b.parentOrgName && <span className="group-badge">🏢 {b.parentOrgName}</span>}
         </h1>
@@ -148,8 +144,6 @@ export default function BusinessDashboardClient() {
 
   return (
     <div>
-      <TourAutostart tourId="business-dashboard" />
-      <TakeTourButton tourId="business-dashboard" />
       <h1>Your Dashboard</h1>
       <p className="subtitle">Your feedback performance at a glance.</p>
 
