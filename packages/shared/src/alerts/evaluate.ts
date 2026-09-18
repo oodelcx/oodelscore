@@ -124,13 +124,14 @@ async function autoTriageAndCreateActionItem(
   }
 }
 
+/** Returns false when the rule was still in cooldown and nothing was recorded. */
 async function recordFiringAndNotify(
   rule: IAlertRule & { _id: Types.ObjectId },
   businessId: Types.ObjectId,
   value: number,
   triggeringComment: string | null = null
-) {
-  if (await isInCooldown(rule._id, businessId)) return;
+): Promise<boolean> {
+  if (await isInCooldown(rule._id, businessId)) return false;
 
   await AlertActivity.create({ alertRuleId: rule._id, businessId, triggeredAt: new Date(), snapshotValue: value });
 
@@ -153,6 +154,8 @@ async function recordFiringAndNotify(
       console.error("[alerts] AI-assisted triage failed", err)
     );
   }
+
+  return true;
 }
 
 /**
@@ -196,6 +199,13 @@ export async function evaluateRealTimeAlertsForBusiness(
   }
 }
 
+export interface BaselineAlertSweepResult {
+  /** Rules that had at least one business in scope to evaluate. */
+  rulesEvaluated: number;
+  /** Firings actually recorded — rules still in cooldown are not counted. */
+  alertsFired: number;
+}
+
 /**
  * Hourly sweep (spec Section 10a): regional_outlier and sudden_drop both
  * need a rolling baseline across more than one data point, so they can't be
@@ -203,13 +213,17 @@ export async function evaluateRealTimeAlertsForBusiness(
  * above. No single triggering response exists for these, so AI triage
  * runs without a comment (title falls back to describing the rule).
  */
-export async function evaluateBaselineAlerts(): Promise<void> {
+export async function evaluateBaselineAlerts(): Promise<BaselineAlertSweepResult> {
   const rules = await AlertRule.find({ active: true, ruleType: { $in: ["regional_outlier", "sudden_drop"] } });
   const to = new Date();
+
+  let rulesEvaluated = 0;
+  let alertsFired = 0;
 
   for (const rule of rules) {
     const businesses = await resolveRuleBusinesses(rule);
     if (businesses.length === 0) continue;
+    rulesEvaluated += 1;
 
     if (rule.ruleType === "sudden_drop" && rule.baselineWindowDays && rule.dropPercent !== null) {
       const currentFrom = new Date(to.getTime() - METRIC_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -225,7 +239,7 @@ export async function evaluateBaselineAlerts(): Promise<void> {
 
         const dropPercent = ((baselineValue - currentValue) / baselineValue) * 100;
         if (dropPercent >= rule.dropPercent) {
-          await recordFiringAndNotify(rule, business._id, currentValue);
+          if (await recordFiringAndNotify(rule, business._id, currentValue)) alertsFired += 1;
         }
       }
     }
@@ -249,11 +263,13 @@ export async function evaluateBaselineAlerts(): Promise<void> {
       for (const { business, value } of perBusiness) {
         if (value === null) continue;
         if (value < mean - rule.sensitivity * stdDev) {
-          await recordFiringAndNotify(rule, business._id, value);
+          if (await recordFiringAndNotify(rule, business._id, value)) alertsFired += 1;
         }
       }
     }
   }
+
+  return { rulesEvaluated, alertsFired };
 }
 
 async function resolveRuleBusinesses(rule: IAlertRule) {
