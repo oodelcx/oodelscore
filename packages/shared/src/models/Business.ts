@@ -1,5 +1,14 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
-import { AddressSchema, type IAddress, RagThresholdsSchema, type IRagThresholds, DEFAULT_RAG_THRESHOLDS } from "./common";
+import {
+  AddressSchema,
+  type IAddress,
+  RagThresholdsSchema,
+  type IRagThresholds,
+  DEFAULT_RAG_THRESHOLDS,
+  PricingTermsSchema,
+  type IPricingTerms,
+  DEFAULT_PRICING_TERMS,
+} from "./common";
 
 export const BILLING_ASSIGNMENTS = ["group_pays", "branch_pays", "unassigned"] as const;
 export type BillingAssignment = (typeof BILLING_ASSIGNMENTS)[number];
@@ -23,7 +32,13 @@ export interface IDemographicConfig {
  * API routes MUST reject writes to these from Group/Business-level requests
  * even if present in the request body.
  */
-export const BUSINESS_ADMIN_ONLY_FIELDS = ["billingAssignment", "demographicConfig", "questionTemplateId", "ragThresholds"] as const;
+export const BUSINESS_ADMIN_ONLY_FIELDS = [
+  "billingAssignment",
+  "demographicConfig",
+  "questionTemplateId",
+  "ragThresholds",
+  "pricingTerms",
+] as const;
 
 export interface IBusiness {
   name: string;
@@ -36,6 +51,11 @@ export interface IBusiness {
   address: IAddress;
   billingAddressSameAsAddress: boolean;
   billingAssignment: BillingAssignment; // ADMIN-EDITABLE ONLY, ever
+  // ADMIN-EDITABLE ONLY. What this business is actually charged, if it pays
+  // for itself (billingAssignment "branch_pays" or a standalone business).
+  // Meaningless for "group_pays" — the parent org's own pricingTerms covers
+  // it instead, one subscription item per group_pays branch.
+  pricingTerms: IPricingTerms;
   plan: BusinessPlan;
   maxFeedbackPoints: number;
   questionTemplateId: Types.ObjectId | null; // ADMIN-EDITABLE ONLY, ever
@@ -74,6 +94,7 @@ const BusinessSchema = new Schema<IBusiness>(
     address: { type: AddressSchema, default: () => ({}) },
     billingAddressSameAsAddress: { type: Boolean, default: true },
     billingAssignment: { type: String, enum: BILLING_ASSIGNMENTS, default: "unassigned" },
+    pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
     plan: { type: String, enum: BUSINESS_PLANS, default: "business_monthly" },
     maxFeedbackPoints: { type: Number, default: 1 },
     questionTemplateId: { type: Schema.Types.ObjectId, ref: "QuestionTemplate", default: null },

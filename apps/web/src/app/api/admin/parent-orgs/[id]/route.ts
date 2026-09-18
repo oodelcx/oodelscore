@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ParentOrganization, Business, User, BILLING_MODES, canAccessScopedResource } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  ParentOrganization,
+  Business,
+  User,
+  BILLING_MODES,
+  PRICING_INTERVALS,
+  canAccessScopedResource,
+} from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const BILLING_MODE_SET: readonly string[] = BILLING_MODES;
+const PRICING_INTERVAL_SET: readonly string[] = PRICING_INTERVALS;
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -56,10 +65,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.defaultBillingMode !== undefined && !BILLING_MODE_SET.includes(body.defaultBillingMode)) {
     return NextResponse.json({ status: "error", message: "Invalid defaultBillingMode" }, { status: 400 });
   }
+  if (body.pricingTerms !== undefined) {
+    const terms = body.pricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
+    }
+  }
 
-  // Command Center visibility and RAG banding are Admin-only decisions —
-  // same rule as billingAssignment on a Business (spec Section 4).
-  const adminOnlyFields = (["ragThresholds", "commandCenterEnabled"] as const).filter((f) => f in body);
+  // Command Center visibility, RAG banding, and pricing are Admin-only
+  // decisions — same rule as billingAssignment on a Business (spec Section 4).
+  const adminOnlyFields = (["ragThresholds", "commandCenterEnabled", "pricingTerms"] as const).filter((f) => f in body);
   if (adminOnlyFields.length > 0 && !(role.isSystemRole && role.name === "Admin")) {
     return NextResponse.json(
       { status: "error", message: `Not permitted to write field(s): ${adminOnlyFields.join(", ")}` },
@@ -101,6 +118,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "address",
     "billingAddressSameAsAddress",
     "defaultBillingMode",
+    "pricingTerms",
     "accountManagerId",
     "branchSeatLimit",
     "teamMemberSeatLimit",

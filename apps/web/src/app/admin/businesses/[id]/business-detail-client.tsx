@@ -110,6 +110,9 @@ interface FormState {
   compPeriod: string;
   compCustomExpiresAt: string;
   ragThresholds: { starGreenMin: string; starAmberMin: string; npsGreenMin: string; npsAmberMin: string };
+  pricingAmount: string;
+  pricingCurrency: string;
+  pricingInterval: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -132,6 +135,15 @@ const EMPTY_FORM: FormState = {
   compPeriod: "30_days",
   compCustomExpiresAt: "",
   ragThresholds: { starGreenMin: "3.7", starAmberMin: "3.0", npsGreenMin: "30", npsAmberMin: "0" },
+  pricingAmount: "",
+  pricingCurrency: "usd",
+  pricingInterval: "",
+};
+
+const PRICING_INTERVAL_LABELS: Record<string, string> = {
+  monthly: "Monthly",
+  annual_monthly_rate: "Annual commitment, billed monthly",
+  annual_lump_sum: "Annual, one lump-sum payment",
 };
 
 const COMP_PERIOD_LABELS: Record<string, string> = {
@@ -412,6 +424,9 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                 npsAmberMin: String(b.ragThresholds.npsAmberMin),
               }
             : EMPTY_FORM.ragThresholds,
+          pricingAmount: b.pricingTerms?.amount != null ? String(b.pricingTerms.amount) : "",
+          pricingCurrency: b.pricingTerms?.currency ?? "usd",
+          pricingInterval: b.pricingTerms?.interval ?? "",
         });
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -425,14 +440,10 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       .then((d) => setSubscription(d.subscription ?? null));
   }, [isNew, params.id]);
 
-  async function startCheckout(plan: "business_monthly" | "business_yearly") {
+  async function startCheckout() {
     setBillingBusy(true);
     setBillingError(null);
-    const res = await fetch(`/api/admin/businesses/${params.id}/billing/checkout`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
-    });
+    const res = await fetch(`/api/admin/businesses/${params.id}/billing/checkout`, { method: "POST" });
     const data = await res.json().catch(() => null);
     setBillingBusy(false);
     if (!res.ok) {
@@ -514,6 +525,11 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       teamMemberSeatLimit: form.teamMemberSeatLimit.trim() ? Number(form.teamMemberSeatLimit) : null,
       demographicConfig: form.demographicConfig,
       accountManagerId: form.accountManagerId || null,
+      pricingTerms: {
+        amount: form.pricingAmount.trim() ? Number(form.pricingAmount) : null,
+        currency: form.pricingCurrency || "usd",
+        interval: form.pricingInterval || null,
+      },
       ...(!isNew && !form.parentOrgId
         ? {
             ragThresholds: {
@@ -947,6 +963,49 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
 
       {tab === "address" && !isNew && form.billingAssignment !== "group_pays" && (
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
+          <h3>Pricing</h3>
+          <p className="card-sub">
+            What this business is actually charged — set here, never in the Stripe Dashboard. A Checkout link is
+            built from these terms the moment it's created.
+          </p>
+          <div className="field-row">
+            <div className="field">
+              <label>Amount</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 49.00"
+                value={form.pricingAmount}
+                onChange={(e) => setForm((f) => ({ ...f, pricingAmount: e.target.value }))}
+              />
+            </div>
+            <div className="field">
+              <label>Currency</label>
+              <select value={form.pricingCurrency} onChange={(e) => setForm((f) => ({ ...f, pricingCurrency: e.target.value }))}>
+                <option value="usd">USD</option>
+                <option value="eur">EUR</option>
+                <option value="gbp">GBP</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Billing</label>
+              <select value={form.pricingInterval} onChange={(e) => setForm((f) => ({ ...f, pricingInterval: e.target.value }))}>
+                <option value="">Not set</option>
+                <option value="monthly">Monthly</option>
+                <option value="annual_monthly_rate">Annual commitment, billed monthly</option>
+                <option value="annual_lump_sum">Annual, one lump-sum payment</option>
+              </select>
+            </div>
+          </div>
+          <p className="card-sub" style={{ margin: "0 0 12px" }}>
+            Save this page to store the price before starting checkout.
+          </p>
+        </div>
+      )}
+
+      {tab === "address" && !isNew && form.billingAssignment !== "group_pays" && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
           <h3>Subscription</h3>
           {billingError && <p className="error-text">{billingError}</p>}
           {subscription ? (
@@ -961,8 +1020,8 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                   </>
                 ) : (
                   <>
-                    <span className="pill pill-green">{subscription.status}</span> — {subscription.plan} — $
-                    {subscription.mrrValue.toFixed(2)}/mo
+                    <span className="pill pill-green">{subscription.status}</span> —{" "}
+                    {PRICING_INTERVAL_LABELS[subscription.plan] ?? subscription.plan} — ${subscription.mrrValue.toFixed(2)}/mo
                   </>
                 )}
               </p>
@@ -972,8 +1031,22 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                 </button>
               )}
               {subscription.isComp && !editingCompPeriod && (
-                <button className="btn btn-sm" disabled={billingBusy} onClick={startMarkComp}>
+                <button className="btn btn-sm" disabled={billingBusy} onClick={startMarkComp} style={{ marginRight: 8 }}>
                   Edit comp period
+                </button>
+              )}
+              {subscription.isComp && (
+                <button
+                  className="btn btn-dark btn-sm"
+                  disabled={billingBusy || !form.pricingAmount || !form.pricingInterval}
+                  onClick={startCheckout}
+                  title={
+                    !form.pricingAmount || !form.pricingInterval
+                      ? "Set and save a price above first"
+                      : "Converts this account off comp once payment completes"
+                  }
+                >
+                  Convert to paying — start checkout
                 </button>
               )}
             </>
@@ -981,11 +1054,13 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
             <>
               <p className="card-sub">No subscription yet.</p>
               <div className="btn-group">
-                <button className="btn btn-dark" disabled={billingBusy} onClick={() => startCheckout("business_monthly")}>
-                  Start monthly checkout
-                </button>
-                <button className="btn btn-dark" disabled={billingBusy} onClick={() => startCheckout("business_yearly")}>
-                  Start yearly checkout
+                <button
+                  className="btn btn-dark"
+                  disabled={billingBusy || !form.pricingAmount || !form.pricingInterval}
+                  onClick={startCheckout}
+                  title={!form.pricingAmount || !form.pricingInterval ? "Set and save a price above first" : undefined}
+                >
+                  Start checkout
                 </button>
                 <button className="btn" disabled={billingBusy} onClick={startMarkComp}>
                   Mark as Comp
