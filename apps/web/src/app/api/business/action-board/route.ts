@@ -4,6 +4,7 @@ import {
   ActionBoardItem,
   Playbook,
   User,
+  ParentOrganization,
   sendTemplatedEmail,
   ACTION_PRIORITIES,
   autoAttachPlaybook,
@@ -44,7 +45,18 @@ export async function GET() {
     rating: ratingByItemId.get(String((item as unknown as { _id: unknown })._id)) ?? null,
   }));
 
-  return NextResponse.json({ status: "ok", items: itemsWithRatings, playbooks, tier: session.tier, stats });
+  const isBranch = !!session.business.parentOrgId;
+  const org = isBranch ? await ParentOrganization.findById(session.business.parentOrgId) : null;
+
+  return NextResponse.json({
+    status: "ok",
+    items: itemsWithRatings,
+    playbooks,
+    tier: session.tier,
+    stats,
+    isBranch,
+    orgName: org?.name ?? null,
+  });
 }
 
 export async function POST(request: Request) {

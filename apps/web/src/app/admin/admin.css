@@ -189,6 +189,15 @@
      scrollbar. This is what was cutting content off on every portal page
      that reuses this shell (Admin, Business, Group). */
   min-width: 0;
+  /* Without this, height:100% (below) sizes only the content box, and the
+     32px top+bottom padding is added on top of that — 64px taller than
+     .admin-app's fixed viewport height. .admin-app's overflow:hidden then
+     permanently clips that excess off the bottom, so the last ~64px of
+     every page (often an entire card) was unreachable no matter how far
+     you scrolled. Verified with a harness loading this file directly:
+     .admin-main.clientHeight was 64px taller than .admin-app.clientHeight
+     before this, exactly the padding total. */
+  box-sizing: border-box;
   padding: 32px 40px;
   /* oodel-score-admin-rebuild.html .main{max-width:1520px} */
   max-width: 1520px;
