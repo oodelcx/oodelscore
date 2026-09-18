@@ -27,7 +27,7 @@ interface SubmittedAnswer {
  * Public: the actual write path for respondent feedback. Never emails the
  * respondent (spec Section 11 — feedback forms never trigger account-side
  * email triggers), and always triggers the real-time Alert Rules check
- * (fixed_threshold/nps_floor) after the response is recorded.
+ * (fixed_threshold) after the response is recorded.
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { qrToken } = await params;

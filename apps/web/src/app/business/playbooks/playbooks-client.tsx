@@ -31,6 +31,7 @@ interface PlaybookRow {
   triggerThreshold: number | null;
   triggerWindowDays: number | null;
   steps: string[];
+  escalationContactId: string | null;
   usageCount: number;
   usage?: UsageInfo;
   triggerStatus: { isTriggered: boolean; currentValue: number | null; description: string } | null;
@@ -46,16 +47,22 @@ interface CategoryRow {
   _id: string;
   name: string;
 }
+interface TeamRow {
+  userId: string;
+  label: string;
+}
 
 export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record<string, string> }) {
   const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [team, setTeam] = useState<TeamRow[]>([]);
   const [readOnly, setReadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [triggerCondition, setTriggerCondition] = useState("");
   const [steps, setSteps] = useState("");
+  const [escalationContactId, setEscalationContactId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [triggerMetric, setTriggerMetric] = useState<"" | TriggerMetric>("");
@@ -68,6 +75,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editTriggerCondition, setEditTriggerCondition] = useState("");
   const [editSteps, setEditSteps] = useState("");
+  const [editEscalationContactId, setEditEscalationContactId] = useState("");
   const [editTriggerMetric, setEditTriggerMetric] = useState<"" | TriggerMetric>("");
   const [editTriggerComparator, setEditTriggerComparator] = useState<"below" | "above">("below");
   const [editTriggerThreshold, setEditTriggerThreshold] = useState("");
@@ -81,12 +89,15 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
 
   function load() {
     setLoading(true);
-    fetch("/api/business/playbooks")
-      .then((res) => res.json())
-      .then((data) => {
+    Promise.all([
+      fetch("/api/business/playbooks").then((r) => r.json()),
+      fetch("/api/business/team").then((r) => r.json()),
+    ])
+      .then(([data, teamData]) => {
         setPlaybooks(data.playbooks ?? []);
         setCategories(data.categories ?? []);
         setReadOnly(!!data.readOnly);
+        setTeam(teamData.team ?? []);
       })
       .finally(() => setLoading(false));
   }
@@ -98,6 +109,11 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
   function categoryName(id: string | null): string {
     if (!id) return "Any category";
     return categories.find((c) => c._id === id)?.name ?? "Unknown category";
+  }
+
+  function contactLabel(id: string | null) {
+    if (!id) return null;
+    return team.find((t) => t.userId === id)?.label ?? null;
   }
 
   function triggerSummary(p: PlaybookRow): string {
@@ -122,6 +138,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
         categoryId: categoryId || null,
         triggerCondition,
         steps: steps.split("\n").map((s) => s.trim()).filter(Boolean),
+        escalationContactId: escalationContactId || null,
         triggerMetric: triggerMetric || undefined,
         triggerComparator: triggerMetric ? triggerComparator : undefined,
         triggerThreshold: triggerThreshold.trim() ? Number(triggerThreshold) : undefined,
@@ -138,6 +155,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
     setCategoryId("");
     setTriggerCondition("");
     setSteps("");
+    setEscalationContactId("");
     setTriggerMetric("");
     setTriggerThreshold("");
     load();
@@ -155,6 +173,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
     setEditCategoryId(p.categoryId ?? "");
     setEditTriggerCondition(p.triggerCondition);
     setEditSteps(p.steps.join("\n"));
+    setEditEscalationContactId(p.escalationContactId ?? "");
     setEditTriggerMetric(p.triggerMetric ?? "");
     setEditTriggerComparator(p.triggerComparator ?? "below");
     setEditTriggerThreshold(p.triggerThreshold !== null ? String(p.triggerThreshold) : "");
@@ -175,6 +194,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
         categoryId: editCategoryId || null,
         triggerCondition: editTriggerCondition,
         steps: editSteps.split("\n").map((s) => s.trim()).filter(Boolean),
+        escalationContactId: editEscalationContactId || null,
         triggerMetric: editTriggerMetric || null,
         triggerComparator: editTriggerMetric ? editTriggerComparator : null,
         triggerThreshold: editTriggerThreshold.trim() ? Number(editTriggerThreshold) : null,
@@ -255,6 +275,17 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
           <label>Steps (one per line)</label>
           <textarea value={steps} onChange={(e) => setSteps(e.target.value)} />
         </div>
+        <div className="field">
+          <label>Escalation contact (optional)</label>
+          <select value={escalationContactId} onChange={(e) => setEscalationContactId(e.target.value)}>
+            <option value="">None</option>
+            {team.map((t) => (
+              <option key={t.userId} value={t.userId}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="field-row">
           <div className="field">
             <label>
@@ -328,6 +359,17 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                     <label>Steps (one per line)</label>
                     <textarea value={editSteps} onChange={(e) => setEditSteps(e.target.value)} />
                   </div>
+                  <div className="field">
+                    <label>Escalation contact (optional)</label>
+                    <select value={editEscalationContactId} onChange={(e) => setEditEscalationContactId(e.target.value)}>
+                      <option value="">None</option>
+                      {team.map((t) => (
+                        <option key={t.userId} value={t.userId}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="field-row">
                     <div className="field">
                       <label>Auto-check trigger against (optional)</label>
@@ -388,6 +430,11 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                         <span>
                           Steps: <b>{p.steps.length}</b>
                         </span>
+                        {contactLabel(p.escalationContactId) && (
+                          <span>
+                            Escalation contact: <b>{contactLabel(p.escalationContactId)}</b>
+                          </span>
+                        )}
                       </div>
                       <div className="ab-desc">
                         <b>Trigger:</b> {triggerSummary(p)}

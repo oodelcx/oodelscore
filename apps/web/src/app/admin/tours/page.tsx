@@ -46,6 +46,8 @@ export default function AdminToursPage() {
   const [activeTourId, setActiveTourId] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [toursEnabled, setToursEnabled] = useState(true);
+  const [togglingEnabled, setTogglingEnabled] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/tours")
@@ -56,7 +58,22 @@ export default function AdminToursPage() {
         setActiveTourId((prev) => prev ?? list[0]?.tourId ?? null);
       })
       .finally(() => setLoading(false));
+    fetch("/api/admin/platform-settings")
+      .then((res) => res.json())
+      .then((data) => setToursEnabled(data.settings?.toursEnabled ?? true));
   }, []);
+
+  async function toggleToursEnabled() {
+    setTogglingEnabled(true);
+    const next = !toursEnabled;
+    const res = await fetch("/api/admin/platform-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ toursEnabled: next }),
+    });
+    setTogglingEnabled(false);
+    if (res.ok) setToursEnabled(next);
+  }
 
   function updateLabel(tourId: string, tourLabel: string) {
     setTours((prev) => prev.map((t) => (t.tourId !== tourId ? t : { ...t, tourLabel })));
@@ -97,6 +114,24 @@ export default function AdminToursPage() {
         its steps in the order they play.
       </p>
       {savedMsg && <p style={{ color: "var(--accent, #127C57)", fontSize: 13, margin: "10px 0" }}>{savedMsg}</p>}
+
+      <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div>
+          <div style={{ fontWeight: 600 }}>Guided Tour feature</div>
+          <p className="subtitle" style={{ margin: "2px 0 0" }}>
+            When off, the &quot;Take a tour&quot; button and every walkthrough below are hidden from all Business and
+            Parent Org users platform-wide — the content stays saved, it just isn&apos;t shown.
+          </p>
+        </div>
+        <button
+          className={`pill ${toursEnabled ? "pill-green" : "pill-gray"}`}
+          style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+          disabled={togglingEnabled}
+          onClick={toggleToursEnabled}
+        >
+          {togglingEnabled ? "…" : toursEnabled ? "On — click to disable" : "Off — click to enable"}
+        </button>
+      </div>
 
       <div className="cms-tabs" style={{ marginBottom: 16 }}>
         {tours.map((t) => (
