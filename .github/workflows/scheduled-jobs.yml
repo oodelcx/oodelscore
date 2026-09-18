@@ -1,0 +1,64 @@
+name: Scheduled jobs
+
+# Free replacement for Render's paid Cron Job feature — these are the 4
+# timed jobs documented in the README's "Scheduled jobs" table. Each is a
+# plain authenticated POST; GitHub Actions just supplies the clock.
+#
+# Requires one repo secret: CRON_SECRET, matching whatever CRON_SECRET is
+# set to in Render's environment variables for the web service. Add it at
+# https://github.com/oodelcx/oodelscore/settings/secrets/actions — this
+# workflow file never sees the value itself, only its name.
+#
+# Caveats worth knowing: GitHub disables a scheduled workflow automatically
+# after 60 days with no commits to the repo (any commit resets the clock —
+# this whole project is nowhere near that idle). Scheduled runs can also
+# land a few minutes late during platform-wide high load; none of these 4
+# jobs are time-critical enough for that to matter.
+
+on:
+  schedule:
+    - cron: "7 2 * * *" # daily — generate-insights
+    - cron: "11 3 * * *" # daily — measure-decisions
+    - cron: "23 * * * *" # hourly — evaluate-baseline-alerts
+    - cron: "37 4 * * *" # nightly — recompute-cx-pulse
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Run one job on demand instead of waiting for its schedule"
+        type: choice
+        options:
+          - generate-insights
+          - measure-decisions
+          - evaluate-baseline-alerts
+          - recompute-cx-pulse
+
+env:
+  APP_URL: https://oodelcx.com
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine which job this run is for
+        id: which
+        run: |
+          case "${{ github.event.schedule }}${{ github.event.inputs.job }}" in
+            "7 2 * * *") echo "endpoint=generate-insights" >> "$GITHUB_OUTPUT" ;;
+            "11 3 * * *") echo "endpoint=measure-decisions" >> "$GITHUB_OUTPUT" ;;
+            "23 * * * *") echo "endpoint=evaluate-baseline-alerts" >> "$GITHUB_OUTPUT" ;;
+            "37 4 * * *") echo "endpoint=recompute-cx-pulse" >> "$GITHUB_OUTPUT" ;;
+            *) echo "endpoint=${{ github.event.inputs.job }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Call the cron route
+        run: |
+          endpoint="${{ steps.which.outputs.endpoint }}"
+          echo "Calling POST $APP_URL/api/cron/$endpoint"
+          http_status=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -X POST "$APP_URL/api/cron/$endpoint" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}")
+          echo "--- response ($http_status) ---"
+          cat /tmp/response.txt
+          if [ "$http_status" -ge 300 ]; then
+            echo "::error::$endpoint returned HTTP $http_status"
+            exit 1
+          fi
