@@ -193,8 +193,15 @@ export async function computeCxPulseForOwner(ownerType: BillingOwnerType, ownerI
   return { dimensions, compositeScore, level: levelFromComposite(compositeScore) };
 }
 
+export interface CxPulseRecomputeResult {
+  businessesScored: number;
+  parentOrgsScored: number;
+  /** The month the scores were written against, as an ISO date. */
+  period: string;
+}
+
 /** Nightly job (spec Section 10a). Recomputes every business and parent org's score for the current month. */
-export async function recomputeAllCxPulseScores(): Promise<void> {
+export async function recomputeAllCxPulseScores(): Promise<CxPulseRecomputeResult> {
   const now = new Date();
   const period = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -213,4 +220,10 @@ export async function recomputeAllCxPulseScores(): Promise<void> {
     const result = await computeCxPulseForOwner("parentOrg", org._id);
     await CxPulseScore.findOneAndUpdate({ ownerType: "parentOrg", ownerId: org._id, period }, { $set: result }, { upsert: true });
   }
+
+  return {
+    businessesScored: businesses.length,
+    parentOrgsScored: parentOrgs.length,
+    period: period.toISOString(),
+  };
 }
