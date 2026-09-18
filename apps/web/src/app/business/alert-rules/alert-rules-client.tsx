@@ -14,14 +14,17 @@ interface RuleRow {
   activity: { count: number; lastFiredAt: string } | null;
 }
 
-const RULE_TYPE_LABELS: Record<string, string> = { fixed_threshold: "Low rating alert", nps_floor: "Detractor alert" };
 const METRIC_LABELS: Record<string, string> = { star_average: "Star rating", nps: "NPS score" };
+const RULE_TYPE_LABELS: Record<string, string> = {
+  fixed_threshold: "Fixed threshold",
+  regional_outlier: "Regional outlier",
+  sudden_drop: "Sudden drop",
+};
 
 export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Record<string, string> }) {
   const [ownRules, setOwnRules] = useState<RuleRow[]>([]);
   const [inheritedRules, setInheritedRules] = useState<RuleRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ruleType, setRuleType] = useState("fixed_threshold");
   const [metric, setMetric] = useState("star_average");
   const [threshold, setThreshold] = useState("");
   const [recipients, setRecipients] = useState("");
@@ -50,7 +53,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ruleType,
+        ruleType: "fixed_threshold",
         metric,
         threshold: threshold ? Number(threshold) : null,
         recipients: recipients.split(",").map((r) => r.trim()).filter(Boolean),
@@ -94,13 +97,6 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
         <h3>New rule</h3>
         <div className="field-row">
           <div className="field">
-            <label>Type</label>
-            <select value={ruleType} onChange={(e) => setRuleType(e.target.value)}>
-              <option value="fixed_threshold">Fixed threshold</option>
-              <option value="nps_floor">NPS floor</option>
-            </select>
-          </div>
-          <div className="field">
             <label>Metric</label>
             <select value={metric} onChange={(e) => setMetric(e.target.value)}>
               <option value="star_average">Star average</option>
@@ -115,6 +111,12 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
             <input type="number" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
           </div>
         </div>
+        {inheritedRules.some((r) => r.metric === metric) && (
+          <p className="subtitle" style={{ margin: "0 0 12px" }}>
+            Your organization already has a rule watching {METRIC_LABELS[metric] ?? metric} — this one fires
+            independently on top of it, so the same dip could create two cases.
+          </p>
+        )}
         <div className="field">
           <label>
             Recipients (comma-separated emails)
@@ -135,7 +137,6 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
           <table className="clean" data-tour="alert-rules-table">
             <thead>
               <tr>
-                <th>Rule</th>
                 <th>Condition</th>
                 <th>Channel</th>
                 <th>Activity</th>
@@ -146,9 +147,8 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
             <tbody>
               {ownRules.map((r) => (
                 <tr key={r._id}>
-                  <td>{RULE_TYPE_LABELS[r.ruleType] ?? r.ruleType}</td>
                   <td>
-                    {METRIC_LABELS[r.metric] ?? r.metric} {r.ruleType === "nps_floor" ? "below" : "below"} {r.threshold ?? "—"}
+                    {METRIC_LABELS[r.metric] ?? r.metric} below {r.threshold ?? "—"}
                   </td>
                   <td>Email · {r.recipients.join(", ") || "—"}</td>
                   <td>
@@ -171,7 +171,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
               ))}
               {ownRules.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="subtitle">
+                  <td colSpan={5} className="subtitle">
                     No rules yet.
                   </td>
                 </tr>
@@ -196,8 +196,8 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
                 <tbody>
                   {inheritedRules.map((r) => (
                     <tr key={r._id}>
-                      <td>{r.ruleType}</td>
-                      <td>{r.metric}</td>
+                      <td>{RULE_TYPE_LABELS[r.ruleType] ?? r.ruleType}</td>
+                      <td>{METRIC_LABELS[r.metric] ?? r.metric}</td>
                       <td>{r.threshold ?? "—"}</td>
                     </tr>
                   ))}

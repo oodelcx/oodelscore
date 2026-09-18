@@ -216,6 +216,10 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
       setMeasureError("Set an implementation date on this decision first");
       return;
     }
+    if (entry.status !== "implemented") {
+      setMeasureError("Mark this decision Implemented before measuring its outcome");
+      return;
+    }
     setAutoMeasuring(true);
     setMeasureError(null);
     const res = await fetch(`/api/group/decision-log/${entry._id}/measure`, {
@@ -586,6 +590,12 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
                             </div>
                           )}
                         </div>
+                        {e.status !== "implemented" && (
+                          <p className="subtitle" style={{ margin: "0 0 8px" }}>
+                            Set the status to <b>Implemented</b> before measuring — that&apos;s what starts the
+                            14-day clock.
+                          </p>
+                        )}
                         {measureError && <p className="error-text">{measureError}</p>}
                         {verdict && <p className="callout">{VERDICT_LABELS[verdict] ?? verdict}</p>}
                         <button className="btn btn-dark btn-sm" disabled={autoMeasuring} onClick={() => runAutoMeasure(e)}>

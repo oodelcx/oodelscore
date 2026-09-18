@@ -30,6 +30,12 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (!entry.outcomeMetric) {
     return NextResponse.json({ status: "error", message: "Choose a metric to measure" }, { status: 400 });
   }
+  if (entry.status !== "implemented") {
+    return NextResponse.json(
+      { status: "error", message: "Mark this decision Implemented before measuring its outcome" },
+      { status: 400 }
+    );
+  }
 
   const result = await computeDecisionOutcome({
     businessId: entry.businessId,

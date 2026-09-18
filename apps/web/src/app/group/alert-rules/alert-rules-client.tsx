@@ -13,9 +13,9 @@ interface RuleRow {
   dropPercent: number | null;
   region: string;
   recipients: string[];
-  delivery: string;
   active: boolean;
   firedCount: number;
+  warning: string | null;
 }
 interface BusinessRow {
   _id: string;
@@ -67,7 +67,7 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
         ruleType,
         metric,
         region: scope === "parentOrg_region" ? region : undefined,
-        threshold: ruleType === "fixed_threshold" || ruleType === "nps_floor" ? Number(threshold) : null,
+        threshold: ruleType === "fixed_threshold" ? Number(threshold) : null,
         sensitivity: ruleType === "regional_outlier" ? Number(sensitivity) : null,
         dropPercent: ruleType === "sudden_drop" ? Number(dropPercent) : null,
         baselineWindowDays: ruleType === "sudden_drop" ? Number(baselineWindowDays) : null,
@@ -127,14 +127,13 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
             <label>Type</label>
             <select value={ruleType} onChange={(e) => setRuleType(e.target.value)}>
               <option value="fixed_threshold">Fixed threshold</option>
-              <option value="nps_floor">NPS floor</option>
               <option value="regional_outlier">Regional outlier</option>
               <option value="sudden_drop">Sudden drop</option>
             </select>
           </div>
         </div>
 
-        {(ruleType === "fixed_threshold" || ruleType === "nps_floor") && (
+        {ruleType === "fixed_threshold" && (
           <div className="field-row">
             <div className="field">
               <label>Metric</label>
@@ -201,7 +200,6 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
                 <th>Scope</th>
                 <th>Type</th>
                 <th>Condition</th>
-                <th>Delivery</th>
                 <th>Fired this week</th>
                 <th>Active</th>
                 <th></th>
@@ -211,9 +209,15 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
               {orgRules.map((r) => (
                 <tr key={r._id}>
                   <td>{r.scope === "parentOrg_region" ? `Region: ${r.region}` : "All businesses"}</td>
-                  <td>{r.ruleType.replace(/_/g, " ")}</td>
+                  <td>
+                    {r.ruleType.replace(/_/g, " ")}
+                    {r.warning && (
+                      <div className="subtitle" style={{ color: "var(--danger, #b91c1c)", marginTop: 2 }}>
+                        ⚠ {r.warning}
+                      </div>
+                    )}
+                  </td>
                   <td>{r.metric || "—"} {r.threshold ?? r.sensitivity ?? r.dropPercent ?? ""}</td>
-                  <td>{r.delivery === "weekly_digest" ? "Weekly digest" : "Immediate email"}</td>
                   <td>
                     {r.firedCount > 0 ? (
                       <span className="pill pill-red">{r.firedCount} branch{r.firedCount === 1 ? "" : "es"} →</span>
@@ -240,7 +244,7 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
               ))}
               {orgRules.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="subtitle">
+                  <td colSpan={6} className="subtitle">
                     No organization-wide rules yet.
                   </td>
                 </tr>

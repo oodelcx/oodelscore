@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Types } from "mongoose";
 import { connectToDatabase, DecisionLogEntry, DECISION_STATUSES } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
@@ -17,13 +18,23 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const body = await request.json().catch(() => null);
   if (typeof body?.title === "string" && body.title.trim()) entry.title = body.title.trim();
   if (typeof body?.trigger === "string") entry.trigger = body.trigger.trim();
-  if (DECISION_STATUSES.includes(body?.status)) entry.status = body.status;
+  if (DECISION_STATUSES.includes(body?.status)) {
+    entry.status = body.status;
+    // Marking something "Implemented" without ever setting when is a real
+    // gap the status dropdown otherwise has — this is what makes the
+    // 14-day auto-measure clock actually start ticking for someone who
+    // just flips the status instead of separately opening Measure Outcome.
+    if (body.status === "implemented" && !entry.implementationDate) entry.implementationDate = new Date();
+  }
   if (typeof body?.implementationDate === "string") entry.implementationDate = new Date(body.implementationDate);
+  if (typeof body?.outcomeMetricDescription === "string") entry.outcomeMetricDescription = body.outcomeMetricDescription;
   if (typeof body?.outcomeBefore === "number") entry.outcomeBefore = body.outcomeBefore;
   if (typeof body?.outcomeAfter === "number") {
     entry.outcomeAfter = body.outcomeAfter;
     entry.outcomeMeasuredAt = new Date();
   }
+  if (typeof body?.ownerId === "string") entry.ownerId = new Types.ObjectId(body.ownerId);
+  else if ("ownerId" in (body ?? {}) && body.ownerId === null) entry.ownerId = null;
   await entry.save();
 
   return NextResponse.json({ status: "ok", entry });
