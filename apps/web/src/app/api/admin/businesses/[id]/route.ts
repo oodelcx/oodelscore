@@ -5,6 +5,7 @@ import {
   User,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
+  PRICING_INTERVALS,
   assertStaffCanEditBusinessAdminFields,
   canAccessScopedResource,
   ForbiddenFieldWriteError,
@@ -13,6 +14,7 @@ import { requireStaffSession } from "@/lib/adminAuth";
 
 const BILLING_ASSIGNMENT_SET: readonly string[] = BILLING_ASSIGNMENTS;
 const BUSINESS_PLAN_SET: readonly string[] = BUSINESS_PLANS;
+const PRICING_INTERVAL_SET: readonly string[] = PRICING_INTERVALS;
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -77,6 +79,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.plan !== undefined && !BUSINESS_PLAN_SET.includes(body.plan)) {
     return NextResponse.json({ status: "error", message: "Invalid plan" }, { status: 400 });
   }
+  if (body.pricingTerms !== undefined) {
+    const terms = body.pricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
+    }
+  }
 
   // Spec Section 16: never let teamMemberSeatLimit drop below the
   // currently-active team-member count.
@@ -106,6 +116,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "address",
     "billingAddressSameAsAddress",
     "billingAssignment",
+    "pricingTerms",
     "plan",
     "maxFeedbackPoints",
     "questionTemplateId",

@@ -1,5 +1,14 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
-import { AddressSchema, type IAddress, RagThresholdsSchema, type IRagThresholds, DEFAULT_RAG_THRESHOLDS } from "./common";
+import {
+  AddressSchema,
+  type IAddress,
+  RagThresholdsSchema,
+  type IRagThresholds,
+  DEFAULT_RAG_THRESHOLDS,
+  PricingTermsSchema,
+  type IPricingTerms,
+  DEFAULT_PRICING_TERMS,
+} from "./common";
 
 export const BILLING_MODES = ["group_pays", "branch_pays"] as const;
 export type BillingMode = (typeof BILLING_MODES)[number];
@@ -12,6 +21,11 @@ export interface IParentOrganization {
   address: IAddress;
   billingAddressSameAsAddress: boolean;
   defaultBillingMode: BillingMode; // default only for newly created businesses under this org
+  // ADMIN-EDITABLE ONLY (no Group-level route can ever write to this field).
+  // What the org itself is charged for every branch it covers under
+  // "group_pays" — the org's Stripe subscription carries one line item per
+  // such branch, all priced from this same rate.
+  pricingTerms: IPricingTerms;
   accountManagerId: Types.ObjectId | null; // -> users._id (staff)
   branchSeatLimit: number | null; // ADMIN-EDITABLE ONLY. null = unlimited. Enforced against active business count.
   teamMemberSeatLimit: number | null; // ADMIN-EDITABLE ONLY. The Group's own staff pool, independent of any branch's.
@@ -30,6 +44,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     address: { type: AddressSchema, default: () => ({}) },
     billingAddressSameAsAddress: { type: Boolean, default: true },
     defaultBillingMode: { type: String, enum: BILLING_MODES, default: "branch_pays" },
+    pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
     accountManagerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     branchSeatLimit: { type: Number, default: null },
     teamMemberSeatLimit: { type: Number, default: null },

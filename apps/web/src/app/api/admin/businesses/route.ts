@@ -6,6 +6,7 @@ import {
   ParentOrganization,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
+  PRICING_INTERVALS,
   COMP_PERIODS,
   createInviteUser,
   expireStaleInvites,
@@ -18,6 +19,7 @@ import { assertStaffCanEditBusinessAdminFields, ForbiddenFieldWriteError } from 
 
 const BILLING_ASSIGNMENT_SET: readonly string[] = BILLING_ASSIGNMENTS;
 const BUSINESS_PLAN_SET: readonly string[] = BUSINESS_PLANS;
+const PRICING_INTERVAL_SET: readonly string[] = PRICING_INTERVALS;
 const COMP_PERIOD_SET: readonly string[] = COMP_PERIODS;
 
 export async function GET() {
@@ -81,6 +83,14 @@ export async function POST(request: Request) {
   if (body.plan !== undefined && !BUSINESS_PLAN_SET.includes(body.plan)) {
     return NextResponse.json({ status: "error", message: "Invalid plan" }, { status: 400 });
   }
+  if (body.pricingTerms !== undefined) {
+    const terms = body.pricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
+    }
+  }
   const compPeriod: CompPeriod | null = body.compPeriod && COMP_PERIOD_SET.includes(body.compPeriod) ? body.compPeriod : null;
   const compCustomExpiresAt =
     compPeriod === "custom" && typeof body.compCustomExpiresAt === "string" ? new Date(body.compCustomExpiresAt) : null;
@@ -123,6 +133,7 @@ export async function POST(request: Request) {
     address: body.address ?? undefined,
     billingAddressSameAsAddress: body.billingAddressSameAsAddress ?? true,
     billingAssignment: (body.billingAssignment as BillingAssignment) ?? "unassigned",
+    pricingTerms: body.pricingTerms ?? undefined,
     plan: body.plan ?? "business_monthly",
     maxFeedbackPoints: typeof body.maxFeedbackPoints === "number" ? body.maxFeedbackPoints : 1,
     questionTemplateId: body.questionTemplateId || null,

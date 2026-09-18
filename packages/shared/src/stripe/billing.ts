@@ -13,14 +13,17 @@ import { Business } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { User } from "../models/User";
 import { sendTemplatedEmail } from "../email/resend";
+import type { IPricingTerms } from "../models/common";
 
+/**
+ * Legacy Price lookup_keys from before per-owner custom pricing (Admin sets
+ * a real dollar amount in-app now — see IPricingTerms — instead of picking
+ * from a fixed catalog). Kept only so derivePlanKey() can still recognise
+ * `plan` correctly on subscriptions created before this change; nothing
+ * creates a Checkout Session against these anymore.
+ */
 export const CHECKOUT_PLANS = ["business_monthly", "business_yearly"] as const;
 export type CheckoutPlan = (typeof CHECKOUT_PLANS)[number];
-
-const PRICE_ENV_VARS: Record<CheckoutPlan, string> = {
-  business_monthly: "STRIPE_PRICE_ID_MONTHLY",
-  business_yearly: "STRIPE_PRICE_ID_YEARLY",
-};
 
 export class BillingError extends Error {}
 
@@ -75,16 +78,30 @@ async function getOrCreateStripeCustomer(params: {
   return customer.id;
 }
 
+/** Reads whatever Admin has set on the Business/ParentOrganization record — never a Stripe lookup. */
+async function getPricingTermsForOwner(ownerType: BillingOwnerType, ownerId: string): Promise<IPricingTerms> {
+  if (ownerType === "business") {
+    const business = await Business.findById(ownerId).select("pricingTerms");
+    if (!business) throw new BillingError("Business not found");
+    return business.pricingTerms;
+  }
+  const org = await ParentOrganization.findById(ownerId).select("pricingTerms");
+  if (!org) throw new BillingError("Parent organization not found");
+  return org.pricingTerms;
+}
+
 /**
  * Creates a Stripe Checkout Session (hosted, redirect-based — no Stripe.js
- * or publishable key needed) for a business or parent org to subscribe to
- * a plan. The webhook (checkout.session.completed) is what actually
- * persists the resulting subscription — this only starts the flow.
+ * or publishable key needed) for a business or parent org to pay for
+ * whatever Admin has priced them at (IPricingTerms on their own record).
+ * Builds the Stripe price inline (`price_data`) from that stored amount —
+ * Admin never creates a Price in the Stripe Dashboard. The webhook
+ * (checkout.session.completed) is what actually persists the resulting
+ * subscription/payment — this only starts the flow.
  */
 export async function createCheckoutSessionForOwner(params: {
   ownerType: BillingOwnerType;
   ownerId: string;
-  plan: CheckoutPlan;
   successUrl: string;
   cancelUrl: string;
 }): Promise<string> {
@@ -92,29 +109,64 @@ export async function createCheckoutSessionForOwner(params: {
     await assertBusinessCanHaveOwnSubscription(params.ownerId);
   }
 
-  const priceId = process.env[PRICE_ENV_VARS[params.plan]];
-  if (!priceId) {
-    throw new BillingError(`No Stripe Price configured for plan "${params.plan}" — set ${PRICE_ENV_VARS[params.plan]}`);
+  const pricingTerms = await getPricingTermsForOwner(params.ownerType, params.ownerId);
+  if (pricingTerms.amount === null || !pricingTerms.interval) {
+    throw new BillingError("Set a price for this account before creating a checkout link.");
   }
 
   const { name, email } = await resolveOwnerNameEmail(params.ownerType, params.ownerId);
   const customerId = await getOrCreateStripeCustomer({ ownerType: params.ownerType, ownerId: params.ownerId, email, name });
 
   const stripe = getStripeClient();
+  const unitAmount = Math.round(pricingTerms.amount * 100);
+  const metadata = { ownerType: params.ownerType, ownerId: params.ownerId, pricingInterval: pricingTerms.interval };
+  // Same reasoning as before: Stripe's Managed Payments mode requires every
+  // product to carry a tax_code, which an inline price_data product
+  // doesn't — disable it per-session so checkout always works.
+  const managedPayments = { enabled: false } as const;
+
+  if (pricingTerms.interval === "annual_lump_sum") {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer: customerId,
+      line_items: [
+        {
+          price_data: {
+            currency: pricingTerms.currency,
+            unit_amount: unitAmount,
+            product_data: { name: `${name} — OodelCX annual subscription` },
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: params.successUrl,
+      cancel_url: params.cancelUrl,
+      metadata,
+      managed_payments: managedPayments,
+    });
+    if (!session.url) throw new BillingError("Stripe did not return a checkout URL");
+    return session.url;
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [
+      {
+        price_data: {
+          currency: pricingTerms.currency,
+          unit_amount: unitAmount,
+          recurring: { interval: "month" },
+          product_data: { name: `${name} — OodelCX subscription` },
+        },
+        quantity: 1,
+      },
+    ],
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
-    metadata: { ownerType: params.ownerType, ownerId: params.ownerId, plan: params.plan },
-    subscription_data: { metadata: { ownerType: params.ownerType, ownerId: params.ownerId, plan: params.plan } },
-    // Stripe's newer "Managed Payments" (merchant-of-record) mode is
-    // enabled by default on new accounts and requires every product to
-    // carry a tax_code, which ours don't. We don't need Managed Payments
-    // for a straightforward B2B subscription — disable it per-session so
-    // checkout works regardless of the account's default setting.
-    managed_payments: { enabled: false },
+    metadata,
+    subscription_data: { metadata },
+    managed_payments: managedPayments,
   });
 
   if (!session.url) throw new BillingError("Stripe did not return a checkout URL");
@@ -190,6 +242,8 @@ export async function markOwnerComp(params: {
         compPeriod: params.period,
         compStartedAt: startedAt,
         compExpiresAt,
+        // A fresh or changed expiry deserves its own reminder cycle.
+        compExpiryReminderSentAt: null,
         mrrValue: 0,
         status: "active",
         plan: "comp",
@@ -390,34 +444,63 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const session = event.data.object as Stripe.Checkout.Session;
       const ownerType = session.metadata?.ownerType as BillingOwnerType | undefined;
       const ownerId = session.metadata?.ownerId;
-      const plan = session.metadata?.plan ?? "";
+      const pricingInterval = session.metadata?.pricingInterval ?? "";
       if (!ownerType || !ownerId) break;
 
-      const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
       const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+      const stripe = getStripeClient();
 
-      // A Checkout Session carries no price, interval, or payment-method
-      // data, so the subscription it just created is the only place the
-      // MRR figure and the card's last 4 can come from. Without this fetch
-      // `mrrValue` stays at its schema default of 0 and `paymentMethodLast4`
-      // never gets set — both invisible on Billing Oversight and the
-      // account's own billing page.
-      let stripeFields: Partial<IBillingSubscription> = {
-        stripeSubscriptionId: "",
-        plan,
-        status: "active",
-        mrrValue: 0,
-        nextPaymentDate: null,
-        paymentMethodLast4: "",
-      };
-      if (subscriptionId) {
-        const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId, {
-          expand: ["default_payment_method"],
-        });
+      let stripeFields: Partial<IBillingSubscription>;
+
+      if (session.mode === "payment") {
+        // annual_lump_sum: a real one-time charge, not a Stripe
+        // subscription — paidThroughDate (not nextPaymentDate) tracks when
+        // this needs renewing, since Stripe won't auto-bill it again the
+        // way a subscription would.
+        const amountTotal = session.amount_total ?? 0;
+        const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+        let paymentMethodLast4 = "";
+        if (paymentIntentId) {
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["payment_method"] });
+          const pm = paymentIntent.payment_method;
+          if (pm && typeof pm !== "string") paymentMethodLast4 = pm.card?.last4 ?? "";
+        }
         stripeFields = {
-          ...subscriptionFieldsFromStripe(subscription, { planFallback: plan }),
-          paymentMethodLast4: await resolvePaymentMethodLast4(subscription),
+          stripeSubscriptionId: "",
+          plan: pricingInterval || "annual_lump_sum",
+          status: "active",
+          // Normalised to a monthly figure like every other plan, so it
+          // adds meaningfully into Billing Oversight's Platform MRR total.
+          mrrValue: Math.round(amountTotal / 12) / 100,
+          nextPaymentDate: null,
+          paidThroughDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          lumpSumRenewalReminderSentAt: null,
+          paymentMethodLast4,
         };
+      } else {
+        // A Checkout Session carries no price, interval, or payment-method
+        // data of its own, so the subscription it just created is the only
+        // place the MRR figure and the card's last 4 can come from. Without
+        // this fetch `mrrValue` stays at its schema default of 0 and
+        // `paymentMethodLast4` never gets set.
+        const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+        if (subscriptionId) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["default_payment_method"] });
+          stripeFields = {
+            ...subscriptionFieldsFromStripe(subscription, { planFallback: pricingInterval }),
+            paymentMethodLast4: await resolvePaymentMethodLast4(subscription),
+            paidThroughDate: null,
+          };
+        } else {
+          stripeFields = {
+            stripeSubscriptionId: "",
+            plan: pricingInterval,
+            status: "active",
+            mrrValue: 0,
+            nextPaymentDate: null,
+            paymentMethodLast4: "",
+          };
+        }
       }
 
       await BillingSubscription.findOneAndUpdate(
@@ -457,7 +540,7 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const deleted = event.type === "customer.subscription.deleted";
       const fields: Partial<IBillingSubscription> = subscriptionFieldsFromStripe(subscription, {
         deleted,
-        planFallback: subscription.metadata?.plan ?? "",
+        planFallback: subscription.metadata?.pricingInterval ?? "",
       });
       // Skip the extra Stripe lookups on cancellation — the card that used
       // to be on file isn't worth an API call once there's no active
