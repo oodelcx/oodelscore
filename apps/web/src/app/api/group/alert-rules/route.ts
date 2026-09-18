@@ -1,13 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  connectToDatabase,
-  AlertRule,
-  AlertActivity,
-  Business,
-  ALERT_RULE_TYPES,
-  ALERT_DELIVERY_MODES,
-  ALERT_SCOPES,
-} from "@oodelscore/shared";
+import { connectToDatabase, AlertRule, AlertActivity, Business, ALERT_RULE_TYPES, ALERT_SCOPES } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 /**
@@ -43,8 +35,22 @@ export async function GET() {
     set.add(a.businessId.toString());
     firedCounts.set(key, set);
   }
+
+  // Regional outlier needs at least 2 businesses in scope to ever compute a
+  // group average to compare against — with only 1, evaluateBaselineAlerts
+  // silently skips it forever. Surface that instead of leaving a rule that
+  // can never fire look identical to one that's just quiet.
+  function regionalOutlierWarning(rule: (typeof orgRules)[number]): string | null {
+    if (rule.ruleType !== "regional_outlier") return null;
+    const inScope =
+      rule.scope === "parentOrg_region" ? businesses.filter((b) => b.region === rule.region) : businesses;
+    return inScope.length < 2
+      ? "Needs at least 2 businesses with data in scope to ever fire — only " + inScope.length + " right now."
+      : null;
+  }
+
   const withFired = (rules: typeof orgRules) =>
-    rules.map((r) => ({ ...r.toObject(), firedCount: firedCounts.get(r._id.toString())?.size ?? 0 }));
+    rules.map((r) => ({ ...r.toObject(), firedCount: firedCounts.get(r._id.toString())?.size ?? 0, warning: regionalOutlierWarning(r) }));
 
   return NextResponse.json({ status: "ok", orgRules: withFired(orgRules), businessRules: withFired(businessRules), businesses });
 }
@@ -72,7 +78,6 @@ export async function POST(request: Request) {
   }
 
   const recipients = Array.isArray(body?.recipients) ? body.recipients.filter((r: unknown) => typeof r === "string") : [];
-  const delivery = ALERT_DELIVERY_MODES.includes(body?.delivery) ? body.delivery : "immediate";
 
   const rule = await AlertRule.create({
     scope,
@@ -85,7 +90,6 @@ export async function POST(request: Request) {
     baselineWindowDays: typeof body?.baselineWindowDays === "number" ? body.baselineWindowDays : null,
     dropPercent: typeof body?.dropPercent === "number" ? body.dropPercent : null,
     recipients,
-    delivery,
     active: true,
     isInherited: true,
   });

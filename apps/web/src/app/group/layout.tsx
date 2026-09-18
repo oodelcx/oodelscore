@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
-import { connectToDatabase, ParentOrganization } from "@oodelscore/shared";
+import { connectToDatabase, ParentOrganization, PlatformSettings, PLATFORM_SETTINGS_SINGLETON_KEY } from "@oodelscore/shared";
 import "../admin/admin.css";
 import "../business/business.css";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
+import { TourProvider } from "@/components/tour/tour-provider";
+import { TourLauncher } from "@/components/tour/tour-launcher";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -20,6 +22,8 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   await connectToDatabase();
   const org = await ParentOrganization.findById(user.parentId).select("commandCenterEnabled");
   const commandCenterEnabled = org?.commandCenterEnabled ?? true;
+  const platformSettings = await PlatformSettings.findOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }).select("toursEnabled");
+  const toursEnabled = platformSettings?.toursEnabled ?? true;
 
   return (
     <div className="admin-app">
@@ -90,7 +94,16 @@ export default async function GroupLayout({ children }: { children: ReactNode })
           <LogoutLink />
         </div>
       </aside>
-      <main className="admin-main">{children}</main>
+      <main className="admin-main">
+        {toursEnabled ? (
+          <TourProvider initialSeenTours={[...user.seenTours]}>
+            <TourLauncher />
+            {children}
+          </TourProvider>
+        ) : (
+          children
+        )}
+      </main>
     </div>
   );
 }

@@ -51,13 +51,16 @@ export default function GroupCategoryOwnersPage() {
       setInviteError(null);
       return;
     }
-    if (!defaultOwnerId) return;
     setSavingCategoryId(categoryId);
-    await fetch("/api/group/category-owners", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoryId, defaultOwnerId }),
-    });
+    if (!defaultOwnerId) {
+      await fetch(`/api/group/category-owners?categoryId=${encodeURIComponent(categoryId)}`, { method: "DELETE" });
+    } else {
+      await fetch("/api/group/category-owners", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId, defaultOwnerId }),
+      });
+    }
     setSavingCategoryId(null);
     load();
   }
@@ -109,7 +112,7 @@ export default function GroupCategoryOwnersPage() {
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <table className="clean">
+        <table className="clean" data-tour="cat-owners-table">
           <thead>
             <tr>
               <th>Category</th>
@@ -117,10 +120,10 @@ export default function GroupCategoryOwnersPage() {
             </tr>
           </thead>
           <tbody>
-            {categories.map((c) => (
+            {categories.map((c, index) => (
               <tr key={c._id}>
                 <td>{c.name}</td>
-                <td>
+                <td data-tour={index === 0 ? "cat-owners-first-select" : undefined}>
                   {inviteForCategory === c._id ? (
                     <div className="field-row" style={{ alignItems: "flex-end" }}>
                       <div className="field" style={{ margin: 0 }}>

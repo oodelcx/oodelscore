@@ -156,7 +156,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
         </div>
       )}
 
-      <div className="filters">
+      <div className="filters" data-tour="rf-filters">
         {(["all", "negative", "comment"] as FilterId[]).map((f) => (
           <div key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => changeFilter(f)}>
             {f === "all" ? "All" : f === "negative" ? "Negative only" : "Has comment"}
@@ -177,11 +177,12 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
       <div className="content-narrow">
       {!loading && (
         <div className="ab-list">
-          {responses.map((r) => {
+          {responses.map((r, index) => {
             const star = starValue(r);
             const text = comment(r);
+            const isFirst = index === 0;
             return (
-              <div className="card ab-card" key={r._id}>
+              <div className="card ab-card" data-tour={isFirst ? "rf-first-card" : undefined} key={r._id}>
                 <div className="ab-card-head">
                   <div className="ab-title-block">
                     <div className="ab-badges">
@@ -210,7 +211,12 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
                   {loggedIds.has(r._id) ? (
                     <span style={{ color: "var(--accent)", fontSize: "11.5px" }}>✓ Action logged</span>
                   ) : (
-                    <button type="button" className="btn btn-sm action-btn" onClick={() => startLogAction(r)}>
+                    <button
+                      type="button"
+                      className="btn btn-sm action-btn"
+                      data-tour={isFirst ? "rf-first-log-action" : undefined}
+                      onClick={() => startLogAction(r)}
+                    >
                       Log action taken
                     </button>
                   )}

@@ -87,7 +87,7 @@ export default function BusinessDashboardClient() {
           {b.region ? `${b.region} region · ` : ""}Your feedback performance at a glance.
         </p>
 
-        <div className="grid grid-4" style={{ marginBottom: 20 }}>
+        <div className="grid grid-4" data-tour="dash-kpi-strip" style={{ marginBottom: 20 }}>
           <div className="card">
             <div className="metric-label">
               Total responses <InfoTip text={tooltips["total-responses"]} />
@@ -147,7 +147,7 @@ export default function BusinessDashboardClient() {
       <h1>Your Dashboard</h1>
       <p className="subtitle">Your feedback performance at a glance.</p>
 
-      <div className="grid grid-4" style={{ marginBottom: 20 }}>
+      <div className="grid grid-4" data-tour="dash-kpi-strip" style={{ marginBottom: 20 }}>
         <div className="card">
           <div className="metric-label">
             Total responses <InfoTip text={tooltips["total-responses"]} />
@@ -174,10 +174,12 @@ export default function BusinessDashboardClient() {
         </div>
       </div>
 
-      <PeriodComparisonCards comparisons={data.comparisons} />
+      <div data-tour="dash-comparisons">
+        <PeriodComparisonCards comparisons={data.comparisons} />
+      </div>
 
       <div className="grid grid-2" style={{ marginTop: 20 }}>
-        <div className="card">
+        <div className="card" data-tour="dash-trend">
           <h3>
             Response trend <InfoTip text={tooltips["response-trend"]} />
           </h3>
@@ -193,7 +195,7 @@ export default function BusinessDashboardClient() {
             )}
           </svg>
         </div>
-        <div className="card">
+        <div className="card" data-tour="dash-distribution">
           <h3>
             Rating distribution <InfoTip text={tooltips["rating-distribution"]} />
           </h3>
@@ -216,7 +218,7 @@ export default function BusinessDashboardClient() {
       </div>
 
       <div className="section-title">Latest comments</div>
-      <div className="card">
+      <div className="card" data-tour="dash-comments">
         {data.latestComments.length === 0 && <p className="subtitle" style={{ margin: 0 }}>No comments yet.</p>}
         {data.latestComments.map((c, i) => (
           <div key={i}>

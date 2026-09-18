@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AlertRule, AlertActivity, ALERT_RULE_TYPES, ALERT_DELIVERY_MODES } from "@oodelscore/shared";
+import { connectToDatabase, AlertRule, AlertActivity, ALERT_RULE_TYPES } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
@@ -53,7 +53,6 @@ export async function POST(request: Request) {
   }
 
   const recipients = Array.isArray(body?.recipients) ? body.recipients.filter((r: unknown) => typeof r === "string") : [];
-  const delivery = ALERT_DELIVERY_MODES.includes(body?.delivery) ? body.delivery : "immediate";
 
   const rule = await AlertRule.create({
     scope: "business",
@@ -62,7 +61,6 @@ export async function POST(request: Request) {
     metric: typeof body?.metric === "string" ? body.metric : "",
     threshold: typeof body?.threshold === "number" ? body.threshold : null,
     recipients,
-    delivery,
     active: true,
     isInherited: false,
   });

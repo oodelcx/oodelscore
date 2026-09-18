@@ -25,6 +25,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if ("categoryId" in (body ?? {})) playbook.categoryId = typeof body.categoryId === "string" && body.categoryId ? body.categoryId : null;
   if (typeof body?.triggerCondition === "string") playbook.triggerCondition = body.triggerCondition;
   if (Array.isArray(body?.steps)) playbook.steps = body.steps.filter((s: unknown) => typeof s === "string");
+  if ("escalationContactId" in (body ?? {}))
+    playbook.escalationContactId = typeof body.escalationContactId === "string" && body.escalationContactId ? body.escalationContactId : null;
   if ("triggerMetric" in (body ?? {})) playbook.triggerMetric = PLAYBOOK_TRIGGER_METRICS.includes(body.triggerMetric) ? body.triggerMetric : null;
   if ("triggerComparator" in (body ?? {}))
     playbook.triggerComparator = PLAYBOOK_TRIGGER_COMPARATORS.includes(body.triggerComparator) ? body.triggerComparator : null;

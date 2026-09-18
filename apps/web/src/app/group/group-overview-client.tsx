@@ -106,7 +106,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         </div>
       </div>
 
-      <div className="grid grid-4" style={{ marginBottom: 20 }}>
+      <div className="grid grid-4" data-tour="group-kpi-strip" style={{ marginBottom: 20 }}>
         <div className="card">
           <div className="metric-label">Branches</div>
           <div className="metric-val">{data.branchCount}</div>
@@ -152,7 +152,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         Regions
         <InfoTip text={tooltips["region-confidence"]} />
       </div>
-      <table className="clean" style={{ marginBottom: 28 }}>
+      <table className="clean" data-tour="group-branches-table" style={{ marginBottom: 28 }}>
         <thead>
           <tr>
             <th>Region</th>

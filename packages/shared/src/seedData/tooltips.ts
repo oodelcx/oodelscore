@@ -453,7 +453,7 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "regional-outlier",
         label: "Sensitivity",
-        text: "How many standard deviations below the group average a branch has to fall before this rule fires — lower numbers fire more easily, higher numbers only catch the most extreme outliers.",
+        text: "How many standard deviations below the group average a branch has to fall before this rule fires — lower numbers fire more easily, higher numbers only catch the most extreme outliers. Needs at least 2 businesses with recent data in scope to ever fire — with only 1, there's no group average to compare against.",
       },
       {
         key: "sudden-drop",
@@ -484,7 +484,7 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "threshold",
         label: "Threshold",
-        text: "The value that triggers this alert — for a fixed threshold, fires when the metric falls below this number; for an NPS floor, fires when NPS drops below it.",
+        text: "The value that triggers this alert — fires when your chosen metric (star average or NPS) falls below this number. At most one alert per rule per business per hour, so a metric that stays low won't spam every new response.",
       },
       {
         key: "recipients",

@@ -157,10 +157,9 @@ async function recordFiringAndNotify(
 
 /**
  * Real-time check, run right after a new response is written: fixed_threshold
- * and nps_floor are single-data-point comparisons, so there's no need to
- * wait for the hourly sweep (spec Section 10a). `triggeringComment` (the new
- * response's open-text answer, if any) feeds AI-assisted triage — spec
- * Section 16.4.
+ * is a single-data-point comparison, so there's no need to wait for the
+ * hourly sweep (spec Section 10a). `triggeringComment` (the new response's
+ * open-text answer, if any) feeds AI-assisted triage — spec Section 16.4.
  */
 export async function evaluateRealTimeAlertsForBusiness(
   businessId: Types.ObjectId | string,
@@ -179,7 +178,7 @@ export async function evaluateRealTimeAlertsForBusiness(
 
   const rules = await AlertRule.find({
     active: true,
-    ruleType: { $in: ["fixed_threshold", "nps_floor"] },
+    ruleType: "fixed_threshold",
     $or: ownerFilters,
   });
   if (rules.length === 0) return;
@@ -189,7 +188,7 @@ export async function evaluateRealTimeAlertsForBusiness(
   const metrics = await computeBusinessMetrics(business._id, from, to);
 
   for (const rule of rules) {
-    const value = rule.ruleType === "nps_floor" ? metrics.npsScore : metricValue(rule.metric, metrics);
+    const value = metricValue(rule.metric, metrics);
     if (value === null || rule.threshold === null) continue;
     if (value < rule.threshold) {
       await recordFiringAndNotify(rule, business._id, value, triggeringComment);
@@ -200,8 +199,8 @@ export async function evaluateRealTimeAlertsForBusiness(
 /**
  * Hourly sweep (spec Section 10a): regional_outlier and sudden_drop both
  * need a rolling baseline across more than one data point, so they can't be
- * evaluated inline on a single new response the way fixed_threshold/nps_floor
- * are above. No single triggering response exists for these, so AI triage
+ * evaluated inline on a single new response the way fixed_threshold is
+ * above. No single triggering response exists for these, so AI triage
  * runs without a comment (title falls back to describing the rule).
  */
 export async function evaluateBaselineAlerts(): Promise<void> {

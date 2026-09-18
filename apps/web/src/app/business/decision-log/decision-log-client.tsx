@@ -12,15 +12,22 @@ interface EntryRow {
   trigger: string;
   status: string;
   implementationDate: string | null;
+  outcomeMetricDescription: string;
   outcomeMetric: OutcomeMetric | null;
   outcomeCategoryId: string | null;
   outcomeBefore: number | null;
   outcomeAfter: number | null;
+  ownerId: string | null;
 }
 
 interface CategoryOption {
   _id: string;
   name: string;
+}
+
+interface TeamRow {
+  userId: string;
+  label: string;
 }
 
 const METRIC_LABELS: Record<OutcomeMetric, string> = {
@@ -61,14 +68,19 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
   const searchParams = useSearchParams();
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [team, setTeam] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [trigger, setTrigger] = useState("");
+  const [ownerId, setOwnerId] = useState("");
+  const [implementationDate, setImplementationDate] = useState("");
+  const [outcomeMetricDescription, setOutcomeMetricDescription] = useState("");
   const [linkedCaseId, setLinkedCaseId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [measuringId, setMeasuringId] = useState<string | null>(null);
   const [implementationDateDraft, setImplementationDateDraft] = useState("");
+  const [outcomeMetricDescriptionDraft, setOutcomeMetricDescriptionDraft] = useState("");
   const [metricDraft, setMetricDraft] = useState<OutcomeMetric>("starAverage");
   const [categoryDraft, setCategoryDraft] = useState("");
   const [measuring, setMeasuring] = useState(false);
@@ -100,6 +112,9 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     fetch("/api/business/category-owners")
       .then((res) => res.json())
       .then((d) => setCategories(d.categories ?? []));
+    fetch("/api/business/team")
+      .then((res) => res.json())
+      .then((d) => setTeam(d.team ?? []));
   }, []);
 
   // Pre-fill the "New entry" form when arriving from Case Management's
@@ -123,7 +138,14 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     const res = await fetch("/api/business/decision-log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, trigger, linkedActionIds: linkedCaseId ? [linkedCaseId] : [] }),
+      body: JSON.stringify({
+        title,
+        trigger,
+        ownerId: ownerId || null,
+        implementationDate: implementationDate || null,
+        outcomeMetricDescription,
+        linkedActionIds: linkedCaseId ? [linkedCaseId] : [],
+      }),
     });
     const data = await res.json();
     setCreating(false);
@@ -133,6 +155,9 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     }
     setTitle("");
     setTrigger("");
+    setOwnerId("");
+    setImplementationDate("");
+    setOutcomeMetricDescription("");
     setLinkedCaseId(null);
     setShowForm(false);
     load();
@@ -174,6 +199,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
   function startMeasure(entry: EntryRow) {
     setMeasuringId(entry._id);
     setImplementationDateDraft(entry.implementationDate ? entry.implementationDate.slice(0, 10) : "");
+    setOutcomeMetricDescriptionDraft(entry.outcomeMetricDescription ?? "");
     setMetricDraft(entry.outcomeMetric ?? "starAverage");
     setCategoryDraft(entry.outcomeCategoryId ?? "");
     setOutcomeBeforeDraft(entry.outcomeBefore !== null ? String(entry.outcomeBefore) : "");
@@ -183,9 +209,13 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     setEditingId(null);
   }
 
-  async function runAutoMeasure(id: string) {
+  async function runAutoMeasure(id: string, status: string) {
     if (!implementationDateDraft) {
       setMeasureError("Set the implementation date first");
+      return;
+    }
+    if (status !== "implemented") {
+      setMeasureError("Mark this decision Implemented before measuring its outcome");
       return;
     }
     setMeasuring(true);
@@ -193,7 +223,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     await fetch(`/api/business/decision-log/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ implementationDate: implementationDateDraft }),
+      body: JSON.stringify({ implementationDate: implementationDateDraft, outcomeMetricDescription: outcomeMetricDescriptionDraft }),
     });
     const res = await fetch(`/api/business/decision-log/${id}/measure`, {
       method: "POST",
@@ -226,6 +256,11 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     load();
   }
 
+  function ownerLabel(id: string | null) {
+    if (!id) return "Unassigned";
+    return team.find((t) => t.userId === id)?.label ?? "Unassigned";
+  }
+
   const visibleEntries = entries.filter((e) => statusFilter === "all" || e.status === statusFilter);
 
   return (
@@ -241,7 +276,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
         </div>
         {!readOnly && (
           <div style={{ display: "flex", alignItems: "center" }}>
-            <button className="btn btn-dark" onClick={() => setShowForm((v) => !v)}>
+            <button className="btn btn-dark" data-tour="dl-new-button" onClick={() => setShowForm((v) => !v)}>
               {showForm ? "Cancel" : "+ New decision"}
             </button>
           </div>
@@ -258,11 +293,36 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
               <input value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="field">
-              <label>
-                Trigger
-                <InfoTip text={tooltips["trigger"]} />
-              </label>
-              <input value={trigger} onChange={(e) => setTrigger(e.target.value)} />
+              <label>Owner</label>
+              <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+                <option value="">Unassigned</option>
+                {team.map((t) => (
+                  <option key={t.userId} value={t.userId}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="field">
+            <label>
+              Trigger
+              <InfoTip text={tooltips["trigger"]} />
+            </label>
+            <input value={trigger} onChange={(e) => setTrigger(e.target.value)} />
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>Implementation date (optional)</label>
+              <input type="date" value={implementationDate} onChange={(e) => setImplementationDate(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>How will you know it worked?</label>
+              <input
+                value={outcomeMetricDescription}
+                onChange={(e) => setOutcomeMetricDescription(e.target.value)}
+                placeholder="e.g. Cleanliness category average, checked again in 4 weeks"
+              />
             </div>
           </div>
           {error && <p className="error-text">{error}</p>}
@@ -293,12 +353,12 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="ab-list">
-          {visibleEntries.map((e) => {
+          {visibleEntries.map((e, index) => {
             const delta = outcomeDelta(e);
             const triggerExpanded = expandedTriggerFor === e._id;
             const triggerIsLong = e.trigger.length > 160;
             return (
-              <div className="card ab-card" key={e._id}>
+              <div className="card ab-card" data-tour={index === 0 ? "dl-first-card" : undefined} key={e._id}>
                 {editingId === e._id ? (
                   <div className="ab-panel" style={{ margin: 0 }}>
                     <div className="field-row">
@@ -336,6 +396,9 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                         <div className="ab-title">{e.title}</div>
                         <div className="ab-meta-row">
                           <span>
+                            Owner: <b>{ownerLabel(e.ownerId)}</b>
+                          </span>
+                          <span>
                             Status:{" "}
                             {readOnly ? (
                               STATUS_LABELS[e.status] ?? e.status
@@ -370,8 +433,10 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                         <div className="ab-callout">
                           <b>Outcome:</b>{" "}
                           {e.outcomeBefore !== null && e.outcomeAfter !== null
-                            ? `${e.outcomeBefore} → ${e.outcomeAfter} (${delta})`
-                            : "not measured yet"}
+                            ? `${e.outcomeMetricDescription || "Score"} ${e.outcomeBefore} → ${e.outcomeAfter} (${delta})`
+                            : e.outcomeMetricDescription
+                              ? `Measuring: ${e.outcomeMetricDescription}`
+                              : "not measured yet"}
                         </div>
                       </div>
                     </div>
@@ -440,9 +505,23 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                             </div>
                           )}
                         </div>
+                        <div className="field">
+                          <label>How will you know it worked?</label>
+                          <input
+                            value={outcomeMetricDescriptionDraft}
+                            onChange={(ev) => setOutcomeMetricDescriptionDraft(ev.target.value)}
+                            placeholder="e.g. Cleanliness category average, checked again in 4 weeks"
+                          />
+                        </div>
+                        {e.status !== "implemented" && (
+                          <p className="subtitle" style={{ margin: "8px 0 0" }}>
+                            Set the status above to <b>Implemented</b> before measuring — that&apos;s what starts the
+                            14-day clock.
+                          </p>
+                        )}
                         {measureError && <p className="error-text">{measureError}</p>}
                         {verdict && <p className="callout">{VERDICT_LABELS[verdict] ?? verdict}</p>}
-                        <button className="btn btn-dark btn-sm" disabled={measuring} onClick={() => runAutoMeasure(e._id)}>
+                        <button className="btn btn-dark btn-sm" disabled={measuring} onClick={() => runAutoMeasure(e._id, e.status)}>
                           {measuring ? "Measuring…" : "Auto-measure"}
                         </button>{" "}
                         <button className="btn btn-sm" onClick={() => setMeasuringId(null)}>

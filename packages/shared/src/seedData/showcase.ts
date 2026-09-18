@@ -785,12 +785,14 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     escalationContactId: meridian.teamStaff[2]._id,
   });
 
-  // 7. Alert rules — one fixed_threshold + one nps_floor per business, plus
-  // org-wide sudden_drop and negative_sentiment rules for two groups.
+  // 7. Alert rules — one fixed_threshold (star average) + one fixed_threshold
+  // (NPS) per business, plus org-wide sudden_drop and negative_sentiment
+  // rules for two groups.
   async function addAlertRule(params: {
     scope: "business" | "parentOrg_all";
     ownerId: Types.ObjectId;
     ruleType: AlertRuleType;
+    metric?: string;
     threshold?: number | null;
     sensitivity?: number | null;
     baselineWindowDays?: number | null;
@@ -801,13 +803,12 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       scope: params.scope,
       ownerId: params.ownerId,
       ruleType: params.ruleType,
-      metric: "",
+      metric: params.metric ?? "",
       threshold: params.threshold ?? null,
       sensitivity: params.sensitivity ?? null,
       baselineWindowDays: params.baselineWindowDays ?? null,
       dropPercent: params.dropPercent ?? null,
       recipients: params.recipients,
-      delivery: "immediate",
       active: true,
     });
     result.alertRules++;
@@ -820,6 +821,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       scope: "business",
       ownerId: info.business._id,
       ruleType: "fixed_threshold",
+      metric: "star_average",
       threshold: 3,
       recipients: [info.ownerUser.email],
     });
@@ -827,7 +829,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     await addAlertRule({
       scope: "business",
       ownerId: info.business._id,
-      ruleType: "nps_floor",
+      ruleType: "fixed_threshold",
+      metric: "nps",
       threshold: 30,
       recipients: [info.ownerUser.email],
     });

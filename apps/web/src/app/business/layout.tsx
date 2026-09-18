@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
-import { connectToDatabase, Business, ParentOrganization } from "@oodelscore/shared";
+import { connectToDatabase, Business, ParentOrganization, PlatformSettings, PLATFORM_SETTINGS_SINGLETON_KEY } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
+import { TourProvider } from "@/components/tour/tour-provider";
+import { TourLauncher } from "@/components/tour/tour-launcher";
 import "../admin/admin.css";
 import "./business.css";
 
@@ -22,6 +24,8 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const parentOrg = business.parentOrgId ? await ParentOrganization.findById(business.parentOrgId) : null;
   const isBranch = !!parentOrg;
   const isLimitedTeamMember = isBusinessTeamMember && user.tier === "limited";
+  const platformSettings = await PlatformSettings.findOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }).select("toursEnabled");
+  const toursEnabled = platformSettings?.toursEnabled ?? true;
 
   return (
     <div className="admin-app">
@@ -66,14 +70,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 <a href="/business/decision-log">Decision Log</a>
               </nav>
 
-              {isBranch && (
-                <>
-                  <div className="nav-group-label">Measure</div>
-                  <nav className="admin-nav">
-                    <a href="/business/cx-pulse">CX Pulse</a>
-                  </nav>
-                </>
-              )}
+              <div className="nav-group-label">Measure</div>
+              <nav className="admin-nav">
+                <a href="/business/cx-pulse">CX Pulse</a>
+              </nav>
 
               <div className="nav-group-label">Admin</div>
               <nav className="admin-nav">
@@ -99,7 +99,16 @@ export default async function BusinessLayout({ children }: { children: ReactNode
           <LogoutLink />
         </div>
       </aside>
-      <main className="admin-main">{children}</main>
+      <main className="admin-main">
+        {toursEnabled ? (
+          <TourProvider initialSeenTours={[...user.seenTours]}>
+            <TourLauncher />
+            {children}
+          </TourProvider>
+        ) : (
+          children
+        )}
+      </main>
     </div>
   );
 }
