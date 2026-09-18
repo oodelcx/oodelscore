@@ -1,8 +1,8 @@
+// The merged runtime shape CoachMark actually renders — structural wiring
+// (target/placement, from tour-definitions.ts) zipped with fetched text
+// content (title/body, from /api/tours/[tourId]) by matching `key`.
 export interface TourStep {
-  // Matches an element rendered with data-tour="<target>" somewhere on the
-  // current page. If the element isn't found (e.g. conditional content
-  // hasn't loaded yet), the step is skipped automatically rather than
-  // stalling the tour on a spotlight with nothing to point at.
+  key: string;
   target: string;
   title: string;
   body: string;
@@ -11,6 +11,6 @@ export interface TourStep {
 
 export interface TourDefinition {
   id: string;
-  label: string; // shown on the "Take a tour" trigger, e.g. "Take a tour of this page"
+  label: string;
   steps: TourStep[];
 }

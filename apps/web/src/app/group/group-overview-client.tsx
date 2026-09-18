@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PeriodComparisonCards, type Comparisons } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
-import { TourAutostart } from "@/components/tour/tour-autostart";
-import { TakeTourButton } from "@/components/tour/take-tour-button";
 
 interface RegionRow {
   region: string;
@@ -76,8 +74,6 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
 
   return (
     <div>
-      <TourAutostart tourId="group-overview" />
-      <TakeTourButton tourId="group-overview" />
       <div className="page-head">
         <div>
           <h1>Your Organization</h1>

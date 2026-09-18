@@ -317,7 +317,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
       </div>
 
       {!isLimited && (
-        <div className="grid grid-6 kpi-strip" style={{ marginBottom: 20 }}>
+        <div className="grid grid-6 kpi-strip" data-tour="cases-kpi-strip" style={{ marginBottom: 20 }}>
           <div className="card">
             <div className="metric-label">Open</div>
             <div className="metric-val">{openCount}</div>
@@ -352,7 +352,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
       )}
 
       {!isLimited && (
-        <div className="filters">
+        <div className="filters" data-tour="cases-filters">
           {(["all", "unassigned", "overdue", "resolved", "escalated"] as const).map((f) => (
             <div key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
               {f === "all" ? "All" : f === "escalated" ? `Escalated (${escalatedCount})` : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -391,15 +391,20 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="ab-list">
-          {pagedItems.map((item) => {
+          {pagedItems.map((item, index) => {
             const overdue = isOverdue(item);
             const run = item.playbookRun ?? null;
             const descriptionExpanded = expandedDescriptionFor === item._id;
             const descriptionIsLong = item.description.length > 160;
             const age = item.status === "resolved" ? null : ageBadge(item);
             const severityClass = item.priority === "critical" ? " sev-critical" : item.priority === "high" ? " sev-high" : "";
+            const isFirst = index === 0;
             return (
-              <div className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`} key={item._id}>
+              <div
+                className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`}
+                data-tour={isFirst ? "cases-first-card" : undefined}
+                key={item._id}
+              >
                 <div className="ab-card-head">
                   <div className="ab-title-block">
                     <div className="ab-title">{item.title}</div>
@@ -503,6 +508,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                       <button
                         type="button"
                         className={`case-action-btn${item.escalated ? " active" : ""}`}
+                        data-tour={isFirst ? "cases-first-escalate" : undefined}
                         disabled={escalating === item._id}
                         onClick={() => (item.escalated ? unEscalate(item) : startEscalate(item._id))}
                       >

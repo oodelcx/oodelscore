@@ -326,7 +326,7 @@ export default function BusinessCasesClient() {
             ⚙ Playbook Library
           </a>
           {!isLimited && (
-            <button className="btn btn-dark" onClick={() => setShowCreateForm((v) => !v)}>
+            <button className="btn btn-dark" data-tour="cases-new-button" onClick={() => setShowCreateForm((v) => !v)}>
               {showCreateForm ? "Cancel" : "+ New case"}
             </button>
           )}
@@ -334,7 +334,7 @@ export default function BusinessCasesClient() {
       </div>
 
       {!isLimited && (
-        <div className="grid grid-5 kpi-strip" style={{ marginBottom: 20 }}>
+        <div className="grid grid-5 kpi-strip" data-tour="cases-kpi-strip" style={{ marginBottom: 20 }}>
           <div className="card">
             <div className="metric-label">Open</div>
             <div className="metric-val">{openCount}</div>
@@ -412,7 +412,7 @@ export default function BusinessCasesClient() {
       )}
 
       {!isLimited && (
-        <div className="filters">
+        <div className="filters" data-tour="cases-filters">
           {(["all", "unassigned", "overdue", "resolved"] as const).map((f) => (
             <div key={f} className={`chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
               {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -441,14 +441,15 @@ export default function BusinessCasesClient() {
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="ab-list">
-          {pagedItems.map((item) => {
+          {pagedItems.map((item, index) => {
             const overdue = isOverdue(item);
             const run = item.playbookRun ?? null;
             const age = item.status === "resolved" ? null : ageBadge(item);
             const severityClass = item.priority === "critical" ? " sev-critical" : item.priority === "high" ? " sev-high" : "";
+            const isFirst = index === 0;
             return (
               <Fragment key={item._id}>
-                <div className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`}>
+                <div className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`} data-tour={isFirst ? "cases-first-card" : undefined}>
                   <div className="ab-card-head">
                     <div className="ab-title-block">
                       <div className="ab-title">{item.title}</div>
@@ -507,7 +508,11 @@ export default function BusinessCasesClient() {
                         )}
                       </div>
                       {item.status !== "resolved" && resolvingId !== item._id && (
-                        <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
+                        <button
+                          className="btn btn-sm"
+                          data-tour={isFirst ? "cases-first-resolve" : undefined}
+                          onClick={() => startResolve(item._id)}
+                        >
                           Mark resolved
                         </button>
                       )}
@@ -517,7 +522,11 @@ export default function BusinessCasesClient() {
                   <div className="case-footer">
                     <div className="case-footer-actions">
                       {run ? (
-                        <div className="pb-chip" onClick={() => setOpenRunFor({ itemId: item._id, runId: run.id })}>
+                        <div
+                          className="pb-chip"
+                          data-tour={isFirst ? "cases-first-playbook" : undefined}
+                          onClick={() => setOpenRunFor({ itemId: item._id, runId: run.id })}
+                        >
                           <span>
                             Playbook: {run.stepsCompleted} of {run.stepsTotal} steps
                           </span>
