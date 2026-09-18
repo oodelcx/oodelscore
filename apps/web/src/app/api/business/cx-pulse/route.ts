@@ -8,5 +8,8 @@ export async function GET() {
 
   await connectToDatabase();
   const score = await CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id }).sort({ period: -1 });
-  return NextResponse.json({ status: "ok", score });
+  const history = await CxPulseScore.find({ ownerType: "business", ownerId: session.business._id })
+    .sort({ period: -1 })
+    .limit(6);
+  return NextResponse.json({ status: "ok", score, history });
 }

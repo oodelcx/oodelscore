@@ -70,14 +70,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 <a href="/business/decision-log">Decision Log</a>
               </nav>
 
-              {isBranch && (
-                <>
-                  <div className="nav-group-label">Measure</div>
-                  <nav className="admin-nav">
-                    <a href="/business/cx-pulse">CX Pulse</a>
-                  </nav>
-                </>
-              )}
+              <div className="nav-group-label">Measure</div>
+              <nav className="admin-nav">
+                <a href="/business/cx-pulse">CX Pulse</a>
+              </nav>
 
               <div className="nav-group-label">Admin</div>
               <nav className="admin-nav">

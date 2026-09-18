@@ -51,13 +51,16 @@ export default function GroupCategoryOwnersPage() {
       setInviteError(null);
       return;
     }
-    if (!defaultOwnerId) return;
     setSavingCategoryId(categoryId);
-    await fetch("/api/group/category-owners", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoryId, defaultOwnerId }),
-    });
+    if (!defaultOwnerId) {
+      await fetch(`/api/group/category-owners?categoryId=${encodeURIComponent(categoryId)}`, { method: "DELETE" });
+    } else {
+      await fetch("/api/group/category-owners", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId, defaultOwnerId }),
+      });
+    }
     setSavingCategoryId(null);
     load();
   }

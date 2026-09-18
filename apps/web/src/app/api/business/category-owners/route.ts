@@ -43,3 +43,19 @@ export async function PUT(request: Request) {
 
   return NextResponse.json({ status: "ok", mapping });
 }
+
+export async function DELETE(request: Request) {
+  const session = await requireBusinessOwner();
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+
+  const { searchParams } = new URL(request.url);
+  const categoryId = searchParams.get("categoryId") ?? "";
+  if (!categoryId) {
+    return NextResponse.json({ status: "error", message: "categoryId is required" }, { status: 400 });
+  }
+
+  await connectToDatabase();
+  await CategoryOwnerMapping.deleteOne({ ownerScope: "business", ownerScopeId: session.business._id, categoryId });
+
+  return NextResponse.json({ status: "ok" });
+}
