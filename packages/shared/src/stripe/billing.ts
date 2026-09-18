@@ -290,6 +290,41 @@ function subscriptionFieldsFromStripe(
   };
 }
 
+/**
+ * The last 4 digits of the card behind a subscription, for the "Card
+ * ending ____" line on the Business/Group billing pages. Never populated
+ * before this fix — only the demo seed set it, so every real customer's
+ * billing page silently omitted it.
+ *
+ * A subscription's own `default_payment_method` wins when set; otherwise
+ * falls back to the customer's default payment method (the common case —
+ * Checkout typically sets the customer's default rather than the
+ * subscription's own). Returns "" (never populated in the UI) if neither
+ * resolves to a card, e.g. a payment method type with no `card` field.
+ */
+async function resolvePaymentMethodLast4(subscription: Stripe.Subscription): Promise<string> {
+  const stripe = getStripeClient();
+  const dpm = subscription.default_payment_method;
+
+  // Already expanded by the caller (checkout handler passes
+  // { expand: ["default_payment_method"] }) — no extra API call needed.
+  if (dpm && typeof dpm !== "string") return dpm.card?.last4 ?? "";
+
+  let paymentMethodId = dpm ?? null;
+  if (!paymentMethodId) {
+    const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id;
+    if (!customerId) return "";
+    const customer = await stripe.customers.retrieve(customerId);
+    if ("deleted" in customer && customer.deleted) return "";
+    const customerDefault = customer.invoice_settings?.default_payment_method;
+    paymentMethodId = typeof customerDefault === "string" ? customerDefault : (customerDefault?.id ?? null);
+  }
+  if (!paymentMethodId) return "";
+
+  const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+  return paymentMethod.card?.last4 ?? "";
+}
+
 function formatCurrency(amount: number, currency: string): string {
   return `${amount.toFixed(2)} ${currency.toUpperCase()}`;
 }
@@ -361,14 +396,29 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
       const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
 
-      // A Checkout Session carries no price or interval data, so the
-      // subscription it just created is the only place the MRR figure can
-      // come from. Without this fetch `mrrValue` stays at its schema
-      // default of 0 and every real paying customer is invisible to the
-      // Billing Oversight MRR totals.
-      const stripeFields: Partial<IBillingSubscription> = subscriptionId
-        ? subscriptionFieldsFromStripe(await getStripeClient().subscriptions.retrieve(subscriptionId), { planFallback: plan })
-        : { stripeSubscriptionId: "", plan, status: "active", mrrValue: 0, nextPaymentDate: null };
+      // A Checkout Session carries no price, interval, or payment-method
+      // data, so the subscription it just created is the only place the
+      // MRR figure and the card's last 4 can come from. Without this fetch
+      // `mrrValue` stays at its schema default of 0 and `paymentMethodLast4`
+      // never gets set — both invisible on Billing Oversight and the
+      // account's own billing page.
+      let stripeFields: Partial<IBillingSubscription> = {
+        stripeSubscriptionId: "",
+        plan,
+        status: "active",
+        mrrValue: 0,
+        nextPaymentDate: null,
+        paymentMethodLast4: "",
+      };
+      if (subscriptionId) {
+        const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId, {
+          expand: ["default_payment_method"],
+        });
+        stripeFields = {
+          ...subscriptionFieldsFromStripe(subscription, { planFallback: plan }),
+          paymentMethodLast4: await resolvePaymentMethodLast4(subscription),
+        };
+      }
 
       await BillingSubscription.findOneAndUpdate(
         { ownerType, ownerId },
@@ -404,19 +454,23 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const ownerId = subscription.metadata?.ownerId;
       if (!ownerType || !ownerId) break;
 
+      const deleted = event.type === "customer.subscription.deleted";
+      const fields: Partial<IBillingSubscription> = subscriptionFieldsFromStripe(subscription, {
+        deleted,
+        planFallback: subscription.metadata?.plan ?? "",
+      });
+      // Skip the extra Stripe lookups on cancellation — the card that used
+      // to be on file isn't worth an API call once there's no active
+      // subscription to bill it against.
+      if (!deleted) {
+        fields.paymentMethodLast4 = await resolvePaymentMethodLast4(subscription);
+      }
+
       // `isComp: { $ne: true }` so a lingering Stripe subscription can't
       // undo an Admin comp — markOwnerComp() deliberately pins the row to
       // plan "comp" at 0 MRR, and a stray subscription.updated arriving
       // afterwards must not price it back up.
-      await BillingSubscription.findOneAndUpdate(
-        { ownerType, ownerId, isComp: { $ne: true } },
-        {
-          $set: subscriptionFieldsFromStripe(subscription, {
-            deleted: event.type === "customer.subscription.deleted",
-            planFallback: subscription.metadata?.plan ?? "",
-          }),
-        }
-      );
+      await BillingSubscription.findOneAndUpdate({ ownerType, ownerId, isComp: { $ne: true } }, { $set: fields });
       break;
     }
 

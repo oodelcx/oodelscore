@@ -85,6 +85,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [businessSearch, setBusinessSearch] = useState("");
+  const [businessTypeFilter, setBusinessTypeFilter] = useState<"all" | "standalone" | "branch">("all");
   const [orgSearch, setOrgSearch] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
 
@@ -368,7 +369,11 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
     );
   }
 
-  const filteredBusinesses = businesses.filter((b) => b.name.toLowerCase().includes(businessSearch.trim().toLowerCase()));
+  const filteredBusinesses = businesses
+    .filter((b) => b.name.toLowerCase().includes(businessSearch.trim().toLowerCase()))
+    .filter((b) =>
+      businessTypeFilter === "all" ? true : businessTypeFilter === "branch" ? !!b.parentOrgId : !b.parentOrgId
+    );
   const filteredOrgs = parentOrgs.filter((o) => o.name.toLowerCase().includes(orgSearch.trim().toLowerCase()));
   const filteredStaff = staff.filter((s) => s.email.toLowerCase().includes(staffSearch.trim().toLowerCase()));
 
@@ -437,6 +442,11 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
             value={businessSearch}
             onChange={(e) => setBusinessSearch(e.target.value)}
           />
+          <select value={businessTypeFilter} onChange={(e) => setBusinessTypeFilter(e.target.value as typeof businessTypeFilter)}>
+            <option value="all">All types</option>
+            <option value="standalone">Standalone</option>
+            <option value="branch">Branch</option>
+          </select>
         </div>
         <table className="clean">
           <thead>
@@ -489,7 +499,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
             {filteredBusinesses.length === 0 && (
               <tr>
                 <td colSpan={6} className="subtitle">
-                  {businesses.length === 0 ? "No businesses yet." : "No businesses match your search."}
+                  {businesses.length === 0 ? "No businesses yet." : "No businesses match your search/filter."}
                 </td>
               </tr>
             )}
