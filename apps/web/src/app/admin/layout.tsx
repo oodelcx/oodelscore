@@ -128,7 +128,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </div>
         <div className="admin-sidebar-bottom">
           <div className="biz">OodelCX Admin</div>
-          <div className="email">{user.email}</div>
           <LogoutLink />
         </div>
       </aside>

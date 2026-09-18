@@ -96,7 +96,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               👤 Team member{user.teamRole ? ` — ${user.teamRole}` : ""}
             </div>
           )}
-          <div style={{ color: "#787d82", fontSize: 12, marginTop: 6 }}>{user.email}</div>
           <LogoutLink />
         </div>
       </aside>
