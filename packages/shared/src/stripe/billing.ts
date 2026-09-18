@@ -206,6 +206,90 @@ function mapStripeSubscriptionStatus(status: Stripe.Subscription.Status): "activ
   return "active";
 }
 
+/** Average days in a Gregorian month — 365.25 / 12. */
+const DAYS_PER_MONTH = 30.4375;
+
+const MONTHS_PER_INTERVAL: Record<Stripe.Price.Recurring.Interval, number> = {
+  day: 1 / DAYS_PER_MONTH,
+  week: 7 / DAYS_PER_MONTH,
+  month: 1,
+  year: 12,
+};
+
+/**
+ * Monthly recurring revenue for a Stripe subscription, in major currency
+ * units (dollars, not cents). Every billing interval is normalised to a
+ * month so Billing Oversight's "Platform MRR" tile can add a yearly plan
+ * and a monthly plan together and get a number that means something: a
+ * $490/year plan contributes $40.83/mo, not $490.
+ *
+ * Tiered and metered prices carry no `unit_amount` and contribute 0 — we
+ * don't sell any today, and inventing a figure for one would be worse than
+ * an obvious zero.
+ */
+export function computeSubscriptionMrr(subscription: Stripe.Subscription): number {
+  let centsPerMonth = 0;
+
+  for (const item of subscription.items.data) {
+    const recurring = item.price?.recurring;
+    const unitAmount = item.price?.unit_amount;
+    if (!recurring || unitAmount === null || unitAmount === undefined) continue;
+
+    const months = MONTHS_PER_INTERVAL[recurring.interval] * (recurring.interval_count || 1);
+    if (months <= 0) continue;
+
+    centsPerMonth += (unitAmount * (item.quantity ?? 1)) / months;
+  }
+
+  return Math.round(centsPerMonth) / 100;
+}
+
+/**
+ * Our `plan` key for a Stripe subscription. `setup-stripe-prices.ts` gives
+ * each Price a lookup_key matching one of CHECKOUT_PLANS, so reading it
+ * back keeps `plan` right after a plan change made in the Stripe billing
+ * portal — the subscription's metadata still names whatever plan it was
+ * created on.
+ *
+ * Only a lookup_key we recognise is used. Anything else (a Price made by
+ * hand in the Dashboard, say) falls back to the metadata, so a stray
+ * lookup_key can't invent a new plan and fragment Billing Oversight's
+ * by-plan breakdown.
+ */
+function derivePlanKey(subscription: Stripe.Subscription, fallback: string): string {
+  const lookupKey = subscription.items.data[0]?.price?.lookup_key;
+  if (lookupKey && (CHECKOUT_PLANS as readonly string[]).includes(lookupKey)) return lookupKey;
+  return fallback;
+}
+
+/**
+ * The fields a Stripe subscription owns on our local billingSubscriptions
+ * row. Checkout and the customer.subscription.* events both write through
+ * here, so a plan change or a cancellation can never leave `mrrValue`
+ * reporting the revenue of a plan the customer is no longer on.
+ */
+function subscriptionFieldsFromStripe(
+  subscription: Stripe.Subscription,
+  options: { deleted?: boolean; planFallback?: string } = {}
+): Partial<IBillingSubscription> {
+  const status = options.deleted ? "canceled" : mapStripeSubscriptionStatus(subscription.status);
+  const periodEnd = subscription.items.data[0]?.current_period_end;
+  const plan = derivePlanKey(subscription, options.planFallback ?? "");
+
+  return {
+    stripeSubscriptionId: subscription.id,
+    status,
+    // A canceled subscription bills nothing further, so it has to stop
+    // counting towards MRR the moment it ends — otherwise churned revenue
+    // inflates the Platform MRR total forever.
+    mrrValue: status === "canceled" ? 0 : computeSubscriptionMrr(subscription),
+    nextPaymentDate: status === "canceled" || !periodEnd ? null : new Date(periodEnd * 1000),
+    // Never blank out an existing plan just because Stripe gave us nothing
+    // to replace it with.
+    ...(plan ? { plan } : {}),
+  };
+}
+
 function formatCurrency(amount: number, currency: string): string {
   return `${amount.toFixed(2)} ${currency.toUpperCase()}`;
 }
@@ -277,6 +361,15 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
       const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
 
+      // A Checkout Session carries no price or interval data, so the
+      // subscription it just created is the only place the MRR figure can
+      // come from. Without this fetch `mrrValue` stays at its schema
+      // default of 0 and every real paying customer is invisible to the
+      // Billing Oversight MRR totals.
+      const stripeFields: Partial<IBillingSubscription> = subscriptionId
+        ? subscriptionFieldsFromStripe(await getStripeClient().subscriptions.retrieve(subscriptionId), { planFallback: plan })
+        : { stripeSubscriptionId: "", plan, status: "active", mrrValue: 0, nextPaymentDate: null };
+
       await BillingSubscription.findOneAndUpdate(
         { ownerType, ownerId },
         {
@@ -284,10 +377,8 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
             ownerType,
             ownerId,
             stripeCustomerId: customerId ?? "",
-            stripeSubscriptionId: subscriptionId ?? "",
-            plan,
             isComp: false,
-            status: "active",
+            ...stripeFields,
           },
         },
         { upsert: true }
@@ -305,6 +396,7 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       break;
     }
 
+    case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
@@ -312,11 +404,19 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const ownerId = subscription.metadata?.ownerId;
       if (!ownerType || !ownerId) break;
 
-      const status = event.type === "customer.subscription.deleted" ? "canceled" : mapStripeSubscriptionStatus(subscription.status);
-      const periodEnd = subscription.items.data[0]?.current_period_end;
-      const nextPaymentDate = periodEnd ? new Date(periodEnd * 1000) : null;
-
-      await BillingSubscription.findOneAndUpdate({ ownerType, ownerId }, { $set: { status, nextPaymentDate } });
+      // `isComp: { $ne: true }` so a lingering Stripe subscription can't
+      // undo an Admin comp — markOwnerComp() deliberately pins the row to
+      // plan "comp" at 0 MRR, and a stray subscription.updated arriving
+      // afterwards must not price it back up.
+      await BillingSubscription.findOneAndUpdate(
+        { ownerType, ownerId, isComp: { $ne: true } },
+        {
+          $set: subscriptionFieldsFromStripe(subscription, {
+            deleted: event.type === "customer.subscription.deleted",
+            planFallback: subscription.metadata?.plan ?? "",
+          }),
+        }
+      );
       break;
     }
 

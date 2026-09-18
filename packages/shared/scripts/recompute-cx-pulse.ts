@@ -1,11 +1,15 @@
 import { connectToDatabase, disconnectFromDatabase } from "../src/db";
 import { recomputeAllCxPulseScores } from "../src/cxpulse/compute";
 
-/** Render Cron job, nightly (spec Section 7/10a). Never compute CX Pulse live in a page request. */
+/**
+ * Command-line equivalent of POST /api/cron/recompute-cx-pulse, for running
+ * the recompute by hand. The hosted nightly job (spec Section 7/10a) calls
+ * that route. Never compute CX Pulse live in a page request.
+ */
 async function main(): Promise<void> {
   await connectToDatabase();
-  await recomputeAllCxPulseScores();
-  console.log("CX Pulse scores recomputed.");
+  const result = await recomputeAllCxPulseScores();
+  console.log(`CX Pulse scores recomputed: ${result.businessesScored} business(es), ${result.parentOrgsScored} parent org(s).`);
   await disconnectFromDatabase();
 }
 

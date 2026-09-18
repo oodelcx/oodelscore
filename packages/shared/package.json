@@ -10,6 +10,7 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "setup:stripe-prices": "tsx scripts/setup-stripe-prices.ts",
     "check:billing-integrity": "tsx scripts/check-billing-integrity.ts",
+    "backfill:subscription-mrr": "tsx scripts/backfill-subscription-mrr.ts",
     "evaluate:baseline-alerts": "tsx scripts/evaluate-baseline-alerts.ts",
     "recompute:cx-pulse": "tsx scripts/recompute-cx-pulse.ts",
     "typecheck": "tsc --noEmit"
