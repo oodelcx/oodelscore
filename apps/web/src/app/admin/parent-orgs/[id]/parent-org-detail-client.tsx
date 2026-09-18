@@ -172,6 +172,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     stripeCustomerId: string;
   } | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [editingCompPeriod, setEditingCompPeriod] = useState(false);
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
@@ -325,6 +326,22 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       return;
     }
     window.location.href = data.url;
+  }
+
+  async function syncBranches() {
+    setBillingBusy(true);
+    setBillingError(null);
+    setSyncResult(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/billing/sync-branches`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to sync branches");
+      return;
+    }
+    setSyncResult(
+      `${data.synced} branch(es) synced` + (data.failed?.length ? `, ${data.failed.length} failed — see server log` : "")
+    );
   }
 
   async function handleSave() {
@@ -798,6 +815,18 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                   Manage in Stripe
                 </button>
               )}
+              {!subscription.isComp && subscription.status === "active" && (
+                <button
+                  className="btn btn-sm"
+                  disabled={billingBusy}
+                  onClick={syncBranches}
+                  style={{ marginRight: 8 }}
+                  title={'Adds a Stripe line item for any branch already set to "group_pays" that this subscription hasn\'t picked up yet'}
+                >
+                  Sync branch coverage
+                </button>
+              )}
+              {syncResult && <p className="card-sub" style={{ margin: "6px 0 0" }}>{syncResult}</p>}
               {subscription.isComp && !editingCompPeriod && (
                 <button className="btn btn-sm" disabled={billingBusy} onClick={startMarkComp} style={{ marginRight: 8 }}>
                   Edit comp period

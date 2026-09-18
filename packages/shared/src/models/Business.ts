@@ -56,6 +56,13 @@ export interface IBusiness {
   // Meaningless for "group_pays" — the parent org's own pricingTerms covers
   // it instead, one subscription item per group_pays branch.
   pricingTerms: IPricingTerms;
+  // Set only while billingAssignment is "group_pays" and the org has an
+  // active Stripe subscription to attach to — the Stripe subscription item
+  // ID covering this one branch on the org's single subscription. Lets
+  // syncBranchGroupPaysCoverage() remove exactly this branch's line item
+  // (and nothing else) the moment billingAssignment changes away from
+  // "group_pays", without having to search Stripe for it.
+  groupPaysStripeSubscriptionItemId: string;
   plan: BusinessPlan;
   maxFeedbackPoints: number;
   questionTemplateId: Types.ObjectId | null; // ADMIN-EDITABLE ONLY, ever
@@ -95,6 +102,7 @@ const BusinessSchema = new Schema<IBusiness>(
     billingAddressSameAsAddress: { type: Boolean, default: true },
     billingAssignment: { type: String, enum: BILLING_ASSIGNMENTS, default: "unassigned" },
     pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
+    groupPaysStripeSubscriptionItemId: { type: String, default: "" },
     plan: { type: String, enum: BUSINESS_PLANS, default: "business_monthly" },
     maxFeedbackPoints: { type: Number, default: 1 },
     questionTemplateId: { type: Schema.Types.ObjectId, ref: "QuestionTemplate", default: null },

@@ -186,6 +186,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   } | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [groupPaysCovered, setGroupPaysCovered] = useState(false);
   const [editingCompPeriod, setEditingCompPeriod] = useState(false);
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
   const [compCustomDraft, setCompCustomDraft] = useState("");
@@ -428,6 +429,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
           pricingCurrency: b.pricingTerms?.currency ?? "usd",
           pricingInterval: b.pricingTerms?.interval ?? "",
         });
+        setGroupPaysCovered(!!b.groupPaysStripeSubscriptionItemId);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -566,6 +568,12 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         alert(`Business created, but the comp account couldn't be set: ${data.compError}`);
       }
       router.push(`/admin/businesses/${data.business._id}`);
+      return;
+    }
+
+    setGroupPaysCovered(!!data.business?.groupPaysStripeSubscriptionItemId);
+    if (data.billingSyncWarning) {
+      setBillingError(data.billingSyncWarning);
     }
   }
 
@@ -961,7 +969,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         </div>
       )}
 
-      {tab === "address" && !isNew && form.billingAssignment !== "group_pays" && (
+      {tab === "address" && form.billingAssignment !== "group_pays" && (
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
           <h3>Pricing</h3>
           <p className="card-sub">
@@ -999,7 +1007,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
             </div>
           </div>
           <p className="card-sub" style={{ margin: "0 0 12px" }}>
-            Save this page to store the price before starting checkout.
+            {isNew ? "Saved when you create the business." : "Save this page to store the price before starting checkout."}
           </p>
         </div>
       )}
@@ -1101,7 +1109,14 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
           <h3>Subscription</h3>
           <p className="card-sub">
-            This business is billed via its parent organization — manage its subscription from the org's own detail page.
+            This business is billed via its parent organization — manage its price from the org's own detail page.
+          </p>
+          <p className="card-sub">
+            {groupPaysCovered ? (
+              <span className="pill pill-green">Covered on the org&apos;s Stripe subscription</span>
+            ) : (
+              <span className="pill pill-amber">Not yet on Stripe — the org needs an active subscription first</span>
+            )}
           </p>
         </div>
       )}

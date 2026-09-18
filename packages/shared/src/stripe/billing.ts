@@ -181,6 +181,108 @@ export async function createBillingPortalSession(stripeCustomerId: string, retur
 }
 
 /**
+ * Keeps one Business's Stripe coverage in sync with its own
+ * billingAssignment — the mechanism behind "an org's subscription covers
+ * some, all, or none of its branches." Call this whenever a business's
+ * billingAssignment is written (see the admin businesses PATCH route).
+ *
+ * "group_pays": adds a subscription item to the *org's* Stripe
+ * subscription, priced from the org's own pricingTerms, and remembers its
+ * ID on the business (groupPaysStripeSubscriptionItemId) so it can be
+ * removed precisely later. Requires both the org to already have an active
+ * Stripe subscription (start it from the Parent Org's own Billing tab
+ * first) and the org to have a real recurring price set — an
+ * "annual_lump_sum" org price can't back a subscription item at all, since
+ * a lump sum is a one-time charge, not a recurring line.
+ *
+ * Anything else ("branch_pays", "unassigned"): removes the item if one
+ * exists, so a branch reassigned away from the org stops being billed
+ * through it.
+ */
+export async function syncBranchGroupPaysCoverage(businessId: string): Promise<void> {
+  const business = await Business.findById(businessId);
+  if (!business) throw new BillingError("Business not found");
+
+  const stripe = getStripeClient();
+
+  if (business.billingAssignment !== "group_pays") {
+    if (business.groupPaysStripeSubscriptionItemId) {
+      await stripe.subscriptionItems.del(business.groupPaysStripeSubscriptionItemId);
+      business.groupPaysStripeSubscriptionItemId = "";
+      await business.save();
+    }
+    return;
+  }
+
+  if (business.groupPaysStripeSubscriptionItemId) return; // already covered
+
+  if (!business.parentOrgId) throw new BillingError("A standalone business can't be billed group_pays — it has no parent org.");
+  const org = await ParentOrganization.findById(business.parentOrgId);
+  if (!org) throw new BillingError("Parent organization not found");
+
+  const orgSubscription = await BillingSubscription.findOne({ ownerType: "parentOrg", ownerId: org._id });
+  if (!orgSubscription?.stripeSubscriptionId) {
+    throw new BillingError(
+      `${org.name} has no active subscription yet — start its checkout from the Parent Org's own Billing tab before adding branches to it.`
+    );
+  }
+
+  if (org.pricingTerms.interval === "annual_lump_sum") {
+    throw new BillingError(
+      `${org.name} is priced as an annual lump sum, which can't cover a branch's ongoing subscription — change the org's pricing to Monthly or "Annual commitment, billed monthly" first.`
+    );
+  }
+  if (org.pricingTerms.amount === null || !org.pricingTerms.interval) {
+    throw new BillingError(`Set a price for ${org.name} before it can cover any branch.`);
+  }
+
+  // Unlike a Checkout Session's line items, a subscription item's price_data
+  // needs a real Product reference — no inline product_data — so create one
+  // for this branch first.
+  const product = await stripe.products.create({
+    name: `${business.name} — covered by ${org.name}`,
+    metadata: { businessId: business._id.toString(), parentOrgId: org._id.toString() },
+  });
+
+  const item = await stripe.subscriptionItems.create({
+    subscription: orgSubscription.stripeSubscriptionId,
+    price_data: {
+      currency: org.pricingTerms.currency,
+      unit_amount: Math.round(org.pricingTerms.amount * 100),
+      recurring: { interval: "month" },
+      product: product.id,
+    },
+    quantity: 1,
+    metadata: { businessId: business._id.toString() },
+  });
+
+  business.groupPaysStripeSubscriptionItemId = item.id;
+  await business.save();
+}
+
+/**
+ * Bulk version for after an org's own subscription is first created — every
+ * branch already sitting at billingAssignment "group_pays" from before the
+ * org had anywhere to attach to gets its item added now. Best-effort: one
+ * branch's failure (e.g. a data issue) doesn't stop the rest from syncing.
+ */
+export async function syncGroupPaysBranchesForOrg(orgId: string): Promise<{ synced: number; failed: { businessId: string; message: string }[] }> {
+  const branches = await Business.find({ parentOrgId: orgId, billingAssignment: "group_pays" });
+  let synced = 0;
+  const failed: { businessId: string; message: string }[] = [];
+  for (const branch of branches) {
+    if (branch.groupPaysStripeSubscriptionItemId) continue;
+    try {
+      await syncBranchGroupPaysCoverage(branch._id.toString());
+      synced++;
+    } catch (err) {
+      failed.push({ businessId: branch._id.toString(), message: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+  return { synced, failed };
+}
+
+/**
  * Powers the "Download" action on an Invoice History row (Business/Group
  * Billing pages). Read-only — no Stripe side effect — so it's safe to call
  * directly on click, unlike checkout/portal actions.
