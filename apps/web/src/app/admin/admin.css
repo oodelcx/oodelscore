@@ -56,14 +56,27 @@
   justify-content: space-between;
   position: sticky;
   top: 0;
-  /* min-height, not height: a fixed 100vh caps the sidebar's own box at
-     one screen tall. Once a page's main content needs scrolling past
-     that (more nav groups than fit, or a long page), sticky has nothing
-     left to stick to and detaches — you scroll past the sidebar's bottom
-     edge into blank page background while the main column keeps going.
-     min-height lets it stretch to match a taller row instead. */
-  min-height: 100vh;
+  /* A fixed viewport-height box, not min-height: min-height let the
+     sidebar's own box stretch to match a tall main column, and a
+     position:sticky element only "sticks" while its box is shorter than
+     its scroll container — once the sidebar's box was itself page-length,
+     sticky had nothing to stick against and the whole sidebar scrolled
+     away with the page, nav and all. Locking the box to 100vh restores
+     sticky's actual job (staying put) and .admin-sidebar-scroll below
+     handles what min-height was originally added for — a nav-group list
+     longer than one screen — by scrolling internally instead. */
+  height: 100vh;
   align-self: stretch;
+}
+/* The scrollable middle of the sidebar (logo + every nav group) — flexes
+   to fill whatever space is left between the fixed top and
+   .admin-sidebar-bottom, and scrolls on its own when nav groups overflow
+   one screen, instead of dragging the whole sidebar (and its bottom user
+   info) off-screen with it. */
+.admin-sidebar-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 .admin-sidebar-top {
   padding: 22px 18px 14px;
@@ -147,6 +160,7 @@
   border-top: 1px solid #24282c;
   font-size: 13px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 .admin-sidebar-bottom > div {
   overflow-wrap: break-word;

@@ -64,7 +64,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <div className="admin-app">
       <MobileNavToggle label="OodelCX Admin" />
       <aside className="admin-sidebar">
-        <div>
+        <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">ADMIN PORTAL</div>
