@@ -63,6 +63,8 @@ interface Stats {
   avgResolutionHours: number | null;
 }
 
+const CASES_PAGE_SIZE = 10;
+
 function formatHours(hours: number | null | undefined): string {
   if (hours === null || hours === undefined) return "—";
   if (hours >= 24) return `${(hours / 24).toFixed(1)}d`;
@@ -123,11 +125,16 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
   const [openRunFor, setOpenRunFor] = useState<{ itemId: string; runId: string } | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
     return () => clearTimeout(id);
   }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, regionFilter, categoryFilter, search]);
 
   function load() {
     setLoading(true);
@@ -281,6 +288,11 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
     return true;
   });
 
+  const pageableItems = isLimited ? items : visibleItems;
+  const totalPages = Math.max(1, Math.ceil(pageableItems.length / CASES_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedItems = pageableItems.slice((currentPage - 1) * CASES_PAGE_SIZE, currentPage * CASES_PAGE_SIZE);
+
   return (
     <div>
       <div className="page-head">
@@ -377,7 +389,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="ab-list">
-          {(isLimited ? items : visibleItems).map((item) => {
+          {pagedItems.map((item) => {
             const overdue = isOverdue(item);
             const run = item.playbookRun ?? null;
             const descriptionExpanded = expandedDescriptionFor === item._id;
@@ -568,9 +580,23 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
               </div>
             );
           })}
-          {(isLimited ? items : visibleItems).length === 0 && (
+          {pageableItems.length === 0 && (
             <div className="ab-empty">{items.length === 0 ? "No cases yet." : "No cases match this filter."}</div>
           )}
+        </div>
+      )}
+
+      {!loading && pageableItems.length > 0 && totalPages > 1 && (
+        <div className="pagination">
+          <button className="btn btn-sm" disabled={currentPage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            ← Prev
+          </button>
+          <span className="pagination-status">
+            Page {currentPage} of {totalPages} · {pageableItems.length} case{pageableItems.length === 1 ? "" : "s"}
+          </span>
+          <button className="btn btn-sm" disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            Next →
+          </button>
         </div>
       )}
 

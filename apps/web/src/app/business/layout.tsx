@@ -27,7 +27,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
     <div className="admin-app">
       <MobileNavToggle label={business.name} />
       <aside className="admin-sidebar">
-        <div>
+        <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">BUSINESS PORTAL</div>

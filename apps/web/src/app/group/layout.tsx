@@ -25,7 +25,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
     <div className="admin-app">
       <MobileNavToggle label="Parent Organisation Portal" />
       <aside className="admin-sidebar">
-        <div>
+        <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
