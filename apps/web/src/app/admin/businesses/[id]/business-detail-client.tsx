@@ -237,6 +237,8 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   const [enabledFeatures, setEnabledFeatures] = useState<string[]>(ALL_FEATURE_KEYS);
   const [featuresBusy, setFeaturesBusy] = useState(false);
   const [featuresMessage, setFeaturesMessage] = useState<string | null>(null);
+  // Payment gate override (null = follow the platform default).
+  const [paymentGateEnabled, setPaymentGateEnabled] = useState<boolean | null>(null);
   const [escalationAssignments, setEscalationAssignments] = useState<
     { _id: string; level: number; userId: { _id: string; email: string } | null }[]
   >([]);
@@ -486,6 +488,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         setEscalationLevels(b.escalationLevels?.length ? b.escalationLevels : [{ level: 1, label: "Owner" }]);
         setEscalationSlaHours(b.escalationSlaHours != null ? String(b.escalationSlaHours) : "");
         setEnabledFeatures(b.enabledFeatures ?? ALL_FEATURE_KEYS);
+        setPaymentGateEnabled(b.paymentGateEnabled ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -549,7 +552,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     const res = await fetch(`/api/admin/businesses/${params.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabledFeatures }),
+      body: JSON.stringify({ enabledFeatures, paymentGateEnabled }),
     });
     const data = await res.json().catch(() => null);
     setFeaturesBusy(false);
@@ -1521,6 +1524,29 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               </label>
             ))}
           </div>
+
+          <div className="section-label" style={{ marginTop: 18 }}>
+            Payment gate
+          </div>
+          <div className="field" style={{ maxWidth: 320 }}>
+            <label>Require an active subscription to use the dashboard</label>
+            <select
+              value={paymentGateEnabled === null ? "default" : paymentGateEnabled ? "on" : "off"}
+              onChange={(e) =>
+                setPaymentGateEnabled(e.target.value === "default" ? null : e.target.value === "on")
+              }
+            >
+              <option value="default">Follow platform default</option>
+              <option value="on">On — lock this account without an active subscription</option>
+              <option value="off">Off — always let this account in</option>
+            </select>
+            <div className="field-hint">
+              Overrides the platform-wide payment gate setting for just this business. &quot;Follow platform
+              default&quot; means this account behaves however the platform-wide switch (Admin → Platform Settings)
+              is currently set.
+            </div>
+          </div>
+
           <button className="btn btn-dark" disabled={featuresBusy} onClick={saveFeatures} style={{ marginTop: 12 }}>
             {featuresBusy ? "Saving…" : "Save features"}
           </button>

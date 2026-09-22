@@ -7,7 +7,7 @@ import {
   ParentOrganization,
   PlatformSettings,
   PLATFORM_SETTINGS_SINGLETON_KEY,
-  hasLiveBillingAccess,
+  getBillingAccessStatus,
   hasFeature,
 } from "@oodelscore/shared";
 import "../admin/admin.css";
@@ -30,7 +30,9 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   const isLimitedTeamMember = isOrgTeamMember && user.tier === "limited";
 
   await connectToDatabase();
-  const org = await ParentOrganization.findById(user.parentId).select("commandCenterEnabled enabledFeatures");
+  const org = await ParentOrganization.findById(user.parentId).select(
+    "commandCenterEnabled enabledFeatures paymentGateEnabled"
+  );
   if (!org) redirect("/login");
   const commandCenterEnabled = org.commandCenterEnabled ?? true;
   const platformSettings = await PlatformSettings.findOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }).select(
@@ -38,13 +40,12 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   );
   const toursEnabled = platformSettings?.toursEnabled ?? true;
 
-  // See business/layout.tsx for why this stays off unless Admin opts in.
-  const hasBillingAccess = platformSettings?.paymentGateEnabled
-    ? await hasLiveBillingAccess("parentOrg", org._id.toString())
-    : true;
+  // See business/layout.tsx for the same per-account override pattern.
+  const gateEnabled = org.paymentGateEnabled ?? platformSettings?.paymentGateEnabled ?? false;
+  const billingStatus = gateEnabled ? await getBillingAccessStatus("parentOrg", org._id.toString()) : "active";
   const pathname = (await headers()).get("x-pathname") ?? "";
   const isBillingRoute = pathname.startsWith("/group/billing");
-  const isGated = !hasBillingAccess && !isBillingRoute;
+  const isGated = billingStatus !== "active" && !isBillingRoute;
 
   return (
     <div className="admin-app">
@@ -146,7 +147,10 @@ export default async function GroupLayout({ children }: { children: ReactNode })
       </aside>
       <main className="admin-main">
         {isGated ? (
-          <BillingLockedScreen billingHref="/group/billing" />
+          <BillingLockedScreen
+            billingHref="/group/billing"
+            status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
+          />
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />
