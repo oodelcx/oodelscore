@@ -24,6 +24,12 @@ const BASE_TABS: { id: TabId; label: string }[] = [
   { id: "performance", label: "Performance" },
 ];
 
+// Only these 4 steps are reachable while creating a new business — the
+// rest (Feedback Points, Escalation, Group, Performance) genuinely need a
+// real business _id to work against, same reason their tab buttons are
+// already disabled while isNew.
+const CREATE_WIZARD_STEPS: TabId[] = ["general", "contact", "address", "settings"];
+
 const VALID_TAB_IDS: readonly TabId[] = [
   "general",
   "performance",
@@ -781,6 +787,55 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     }
   }
 
+  function goToNextWizardStep() {
+    if (tab === "general" && !form.name.trim()) {
+      setError("Business name is required.");
+      return;
+    }
+    if (tab === "contact" && !form.contactEmail.trim()) {
+      setError("Contact email is required — it becomes this business's login.");
+      return;
+    }
+    setError(null);
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    if (idx >= 0 && idx < CREATE_WIZARD_STEPS.length - 1) {
+      setTab(CREATE_WIZARD_STEPS[idx + 1]);
+    }
+  }
+
+  function goToPrevWizardStep() {
+    setError(null);
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    if (idx > 0) setTab(CREATE_WIZARD_STEPS[idx - 1]);
+  }
+
+  // Shared button row for each of the 4 creation-wizard steps: Back (if not
+  // on the first step) + either Continue or, on the last step, the real
+  // Create business submit. Editing an existing business (!isNew) ignores
+  // this entirely and keeps its plain single Save button.
+  function wizardButtons() {
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    const isLastStep = idx === CREATE_WIZARD_STEPS.length - 1;
+    return (
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        {idx > 0 && (
+          <button className="btn" type="button" onClick={goToPrevWizardStep}>
+            ← Back
+          </button>
+        )}
+        {isLastStep ? (
+          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+            {saving ? "Saving…" : "Create business"}
+          </button>
+        ) : (
+          <button className="btn btn-dark" type="button" onClick={goToNextWizardStep}>
+            Continue →
+          </button>
+        )}
+      </div>
+    );
+  }
+
   function updateDemographic(field: string, value: string) {
     setForm((f) => ({ ...f, demographicConfig: { ...f.demographicConfig, [field]: value } }));
   }
@@ -804,25 +859,35 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         </div>
       </div>
 
-      {isNew && (
-        <div className="callout">
-          Creating a new business. Fill in <b>General</b> and <b>Contact</b> (the contact email becomes its login)
-          before clicking <b>Create business</b>.
+      {isNew ? (
+        <div className="callout" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <span>
+            Step {CREATE_WIZARD_STEPS.indexOf(tab) + 1} of {CREATE_WIZARD_STEPS.length} —{" "}
+            <b>{BASE_TABS.find((t) => t.id === tab)?.label}</b>
+          </span>
+          <span style={{ display: "flex", gap: 4 }}>
+            {CREATE_WIZARD_STEPS.map((step, i) => (
+              <span
+                key={step}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: i <= CREATE_WIZARD_STEPS.indexOf(tab) ? "var(--green, #2F5233)" : "var(--border)",
+                }}
+              />
+            ))}
+          </span>
+        </div>
+      ) : (
+        <div className="subtabs">
+          {tabs.map((t) => (
+            <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
         </div>
       )}
-
-      <div className="subtabs">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            className={tab === t.id ? "active" : ""}
-            disabled={isNew && (t.id === "feedback-points" || t.id === "group" || t.id === "performance" || t.id === "escalation")}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       {error && <p className="error-text">{error}</p>}
 
@@ -872,9 +937,13 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               onClick={() => setForm((f) => ({ ...f, active: !f.active }))}
             />
           </div>
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create business" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       )}
 
@@ -1167,9 +1236,13 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               )}
             </div>
           )}
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create business" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       )}
 
@@ -1381,9 +1454,13 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               />
             </div>
           </div>
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create business" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       )}
 
@@ -1494,9 +1571,13 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               </div>
             ))}
           </div>
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create business" : "Save Settings"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save Settings"}
+            </button>
+          )}
         </div>
       )}
 
