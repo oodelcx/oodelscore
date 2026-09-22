@@ -158,6 +158,25 @@
   min-width: 16px;
   text-align: center;
 }
+/* Collapsible nav-group-label, used by NavSection (Business/Group sidebars)
+   to let a user shrink sections they don't visit often instead of scrolling
+   past ~17 flat items every time. Same look as the plain label, just a
+   clickable full-width button with a disclosure chevron. */
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.nav-group-chevron {
+  font-size: 9px;
+  color: #5c6167;
+}
 
 .admin-sidebar-bottom {
   padding: 16px 18px;

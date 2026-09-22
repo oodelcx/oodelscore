@@ -16,6 +16,7 @@ import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { TourLauncher } from "@/components/tour/tour-launcher";
 import { BillingLockedScreen } from "@/components/billing-locked-screen";
+import { NavSection } from "@/components/nav-section";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -61,37 +62,56 @@ export default async function GroupLayout({ children }: { children: ReactNode })
             </nav>
           ) : (
             <>
-              <div className="nav-group-label">Organisation</div>
-              <nav className="admin-nav">
+              <NavSection
+                storageKey="group-organisation"
+                label="Organisation"
+                hrefs={["/group", "/group/command-center", "/group/branches", "/group/compare"]}
+              >
                 <a href="/group">Overview</a>
                 {commandCenterEnabled && <a href="/group/command-center">Command Center</a>}
                 <a href="/group/branches">Branches</a>
                 <a href="/group/compare">Compare branches</a>
-              </nav>
-              <div className="nav-group-label">Listen</div>
-              <nav className="admin-nav">
+              </NavSection>
+              <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback"]}>
                 <a href="/group/raw-feedback">Raw feedback</a>
-              </nav>
+              </NavSection>
 
-              <div className="nav-group-label">Understand</div>
-              <nav className="admin-nav">
+              <NavSection
+                storageKey="group-understand"
+                label="Understand"
+                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
+              >
                 <a href="/group/insights">Insights</a>
                 <a href="/group/analytics">Analytics</a>
                 <a href="/group/alert-rules">Alert rules</a>
                 <a href="/group/reports">Reports</a>
-              </nav>
-              <div className="nav-group-label">Act</div>
-              <nav className="admin-nav">
+              </NavSection>
+              <NavSection
+                storageKey="group-act"
+                label="Act"
+                hrefs={["/group/cases", "/group/improvement-initiatives", "/group/decision-log"]}
+              >
                 <a href="/group/cases">Case Management</a>
                 <a href="/group/improvement-initiatives">Improvement Initiatives</a>
                 <a href="/group/decision-log">Decision log</a>
-              </nav>
-              <div className="nav-group-label">Measure</div>
-              <nav className="admin-nav">
+              </NavSection>
+              <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
                 <a href="/group/maturity">CX Pulse</a>
-              </nav>
-              <div className="nav-group-label">Admin</div>
-              <nav className="admin-nav">
+              </NavSection>
+              <NavSection
+                storageKey="group-admin"
+                label="Admin"
+                defaultOpen={false}
+                hrefs={[
+                  "/group/team",
+                  "/group/team-members",
+                  "/group/category-owners",
+                  "/group/messages",
+                  "/group/billing",
+                  "/group/playbooks",
+                  "/group/security",
+                ]}
+              >
                 <a href="/group/team">Team &amp; access</a>
                 {!isOrgTeamMember && <a href="/group/team-members">Team Members</a>}
                 {!isOrgTeamMember && <a href="/group/category-owners">Category Owners</a>}
@@ -99,7 +119,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 {!isOrgTeamMember && <a href="/group/billing">Billing</a>}
                 <a href="/group/playbooks">Playbook Library</a>
                 <a href="/group/security">Security</a>
-              </nav>
+              </NavSection>
             </>
           )}
         </div>

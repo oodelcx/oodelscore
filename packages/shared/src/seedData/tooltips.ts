@@ -379,8 +379,8 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       },
       {
         key: "root-cause",
-        label: "Root Cause",
-        text: "An AI-generated read of why a priority category is scoring low, built from the actual comments and ratings behind it — not a guess. Confidence is labeled Likely, Inferred, or Uncertain based on how much evidence supports it.",
+        label: "Investigate further",
+        text: "An AI-generated read of the factors associated with a priority category's low score, built only from the actual comments and ratings behind it. Labeled Likely, Inferred, or Uncertain based on how much evidence supports it — an explanation to investigate, not a settled fact.",
       },
       {
         key: "theme-intelligence",
@@ -410,8 +410,8 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       },
       {
         key: "root-cause",
-        label: "Root Cause",
-        text: "An AI-generated read of why a priority category is scoring low, built from the actual comments and ratings behind it — not a guess. Confidence is labeled Likely, Inferred, or Uncertain based on how much evidence supports it.",
+        label: "Investigate further",
+        text: "An AI-generated read of the factors associated with a priority category's low score, built only from the actual comments and ratings behind it. Labeled Likely, Inferred, or Uncertain based on how much evidence supports it — an explanation to investigate, not a settled fact.",
       },
       {
         key: "theme-intelligence",

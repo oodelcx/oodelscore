@@ -100,12 +100,24 @@ export async function GET() {
     : [];
   const nameByBusinessId = new Map(decisionBusinesses.map((b) => [b._id.toString(), b.name]));
 
+  // CX Pulse as a widget, not a full section, for most Overview visitors:
+  // just the score plus the 2-3 dimensions dragging it down most, so a
+  // glance at Overview answers "what's holding us back" without a trip to
+  // the full 5-dimension maturity drill-down (still available at /maturity).
+  const cxPulseHoldingBack = orgScore
+    ? (Object.entries(orgScore.dimensions) as [keyof typeof orgScore.dimensions, number][])
+        .sort((a, b) => a[1] - b[1])
+        .slice(0, 3)
+        .map(([dimension, value]) => ({ dimension, value }))
+    : [];
+
   return NextResponse.json({
     status: "ok",
     branchCount: businesses.length,
     networkAverage,
     networkNps,
     cxPulseLevel: orgScore?.level ?? null,
+    cxPulseHoldingBack,
     comparisons,
     regions,
     needsAttention,

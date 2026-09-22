@@ -167,7 +167,7 @@ export function DriverAnalysisCard({
                   <td style={{ textAlign: "right" }}>
                     {d.classification === "priority" && (
                       <button className="btn btn-sm" onClick={() => askWhy(d.categoryId)}>
-                        {openCategoryId === d.categoryId ? "Close" : "Why?"}
+                        {openCategoryId === d.categoryId ? "Close" : "Investigate further"}
                       </button>
                     )}
                   </td>
@@ -194,7 +194,7 @@ export function DriverAnalysisCard({
                               </>
                             )}
                             <p>
-                              <b>Likely root cause</b>
+                              <b>Most likely explanation</b>
                               <InfoTip text={rootCauseTooltip} />{" "}
                               <span className="pill pill-amber">{CONFIDENCE_LABEL[analysis.confidenceLabel]}</span>
                               <br />

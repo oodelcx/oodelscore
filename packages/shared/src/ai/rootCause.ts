@@ -48,7 +48,8 @@ export async function analyzeRootCause(evidence: RootCauseEvidence): Promise<Roo
         '"recommendation": {"description": string, "suggestedOwnerRole": string, "priority": "low"|"medium"|"high"|"critical"}} — no other text. ' +
         'contributingFactors must each cite a specific number or fact from the evidence (e.g. "63% of negative comments fell between 12:00-14:00"), not vague statements. ' +
         'confidenceLabel: use "likely" only when multiple independent pieces of evidence point the same way, "inferred" when there\'s a plausible story but thinner support, ' +
-        '"uncertain" when the evidence is genuinely ambiguous or too sparse — in that case say so plainly in likelyRootCause rather than forcing a confident-sounding answer.',
+        '"uncertain" when the evidence is genuinely ambiguous or too sparse — in that case say so plainly in likelyRootCause rather than forcing a confident-sounding answer. ' +
+        'This is survey evidence, not a controlled experiment — phrase likelyRootCause as the explanation the evidence best supports ("the evidence points to...", "most consistent with...") rather than a proven cause, and never claim certainty the evidence doesn\'t have.',
       messages: [{ role: "user", content: `Evidence:\n${JSON.stringify(evidence, null, 2)}` }],
     });
 

@@ -25,14 +25,25 @@ export async function GET() {
   const now = new Date();
   const from30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [overall, comparisons, trend, distribution, feedbackPoints, recentWithComments] = await Promise.all([
+  const [overall, comparisons, trend, distribution, feedbackPoints, recentWithComments, ownCxPulseScore] = await Promise.all([
     computeBusinessMetrics(session.business._id, new Date(0), now),
     computePeriodComparisons(businessIds, now),
     computeDailyTrend(businessIds, TREND_DAYS, now),
     computeRatingDistribution(businessIds, from30d, now),
     FeedbackPoint.find({ businessId: session.business._id }),
     Response.find({ businessId: session.business._id }).sort({ submittedAt: -1 }).limit(20),
+    CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id }).sort({ period: -1 }),
   ]);
+
+  // CX Pulse as an Overview widget, not a full section: the score plus the
+  // 2-3 dimensions dragging it down most. The full 5-dimension drill-down
+  // stays at /business/cx-pulse for whoever wants it.
+  const cxPulseHoldingBack = ownCxPulseScore
+    ? (Object.entries(ownCxPulseScore.dimensions) as [keyof typeof ownCxPulseScore.dimensions, number][])
+        .sort((a, b) => a[1] - b[1])
+        .slice(0, 3)
+        .map(([dimension, value]) => ({ dimension, value }))
+    : [];
 
   const totalScans = feedbackPoints.reduce((sum, fp) => sum + fp.scans, 0);
   const conversionRate = totalScans === 0 ? null : Math.round((overall.responseCount / totalScans) * 1000) / 10;
@@ -69,8 +80,7 @@ export async function GET() {
     }).select("_id");
     const siblingIds = siblingBusinesses.map((b) => b._id);
 
-    const [ownScore, siblingMetrics, decisions] = await Promise.all([
-      CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id }).sort({ period: -1 }),
+    const [siblingMetrics, decisions] = await Promise.all([
       Promise.all(siblingIds.map((id) => computeBusinessMetrics(id, new Date(0), now))),
       DecisionLogEntry.find({ affectedBusinessIds: session.business._id }).sort({ createdAt: -1 }).limit(3),
     ]);
@@ -88,7 +98,7 @@ export async function GET() {
     branch = {
       parentOrgName: parentOrg?.name ?? "",
       region: session.business.region,
-      cxPulseLevel: ownScore?.level ?? null,
+      cxPulseLevel: ownCxPulseScore?.level ?? null,
       regionAverageStarScore,
       regionRank: regionRank > 0 ? regionRank : null,
       regionBusinessCount: siblingIds.length,
@@ -108,5 +118,7 @@ export async function GET() {
     distribution,
     latestComments,
     branch,
+    cxPulseLevel: ownCxPulseScore?.level ?? null,
+    cxPulseHoldingBack,
   });
 }
