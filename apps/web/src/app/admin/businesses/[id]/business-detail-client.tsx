@@ -769,7 +769,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
           <button
             key={t.id}
             className={tab === t.id ? "active" : ""}
-            disabled={isNew && (t.id === "feedback-points" || t.id === "group" || t.id === "performance")}
+            disabled={isNew && (t.id === "feedback-points" || t.id === "group" || t.id === "performance" || t.id === "escalation")}
             onClick={() => setTab(t.id)}
           >
             {t.label}
