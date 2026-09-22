@@ -169,7 +169,15 @@
   width: 100%;
   background: none;
   border: none;
-  font: inherit;
+  /* Only reset the button's default font-family (browsers don't inherit it
+     on form controls) — NOT the whole `font` shorthand, which would also
+     reset font-size/weight/etc. and silently override .nav-group-label's
+     10.5px/uppercase styling below with the page's regular body size. This
+     was the actual bug behind Business/Group sidebar section headers
+     ("Setup", "Listen"…) rendering visibly larger than Admin's own
+     ("Platform", "Accounts"…), which use a plain <div> and never hit a
+     button-reset rule at all. */
+  font-family: inherit;
   cursor: pointer;
   text-align: left;
 }
