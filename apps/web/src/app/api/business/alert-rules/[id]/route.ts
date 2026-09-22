@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AlertRule } from "@oodelscore/shared";
+import { connectToDatabase, AlertRule, hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -7,6 +7,9 @@ type RouteParams = { params: Promise<{ id: string }> };
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
+    return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 
@@ -29,6 +32,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
+    return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

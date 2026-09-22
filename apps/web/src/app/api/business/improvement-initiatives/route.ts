@@ -28,6 +28,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "improvementInitiatives")) {
+    return NextResponse.json({ status: "error", message: "Improvement Initiatives is not enabled for this account" }, { status: 403 });
+  }
   if (session.business.parentOrgId) {
     return NextResponse.json(
       { status: "error", message: "Improvement Initiatives for a branch are managed by your parent organization." },

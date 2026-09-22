@@ -42,8 +42,7 @@ export default async function DashboardPage() {
       <p>Account type: {user.accountType}</p>
       {parentName && <p>Attached to: {parentName}</p>}
       <p style={{ color: "#666" }}>
-        This is a placeholder landing page — the Group and Business portals get built against the
-        mockups in a later milestone.
+        No portal is set up for this account type yet — contact support if you think this is a mistake.
       </p>
       <LogoutButton />
     </main>
