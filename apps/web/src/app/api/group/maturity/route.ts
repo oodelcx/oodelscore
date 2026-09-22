@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, Category, CategoryOwnerMapping, CxPulseScore, Playbook, getCxPulseFrameworkOrDefault } from "@oodelscore/shared";
+import { connectToDatabase, Business, Category, CategoryOwnerMapping, CxPulseScore, Playbook, getCxPulseFrameworkOrDefault , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 const DIMENSION_KEYS = ["awareness", "response", "ownership", "culture", "outcome"] as const;
@@ -11,6 +11,9 @@ const HEALTHY_DIMENSION_FLOOR = 70;
 export async function GET() {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "cxPulse")) {
+    return NextResponse.json({ status: "error", message: "CX Pulse is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

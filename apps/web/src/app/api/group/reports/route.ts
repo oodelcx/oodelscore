@@ -7,6 +7,7 @@ import {
   computeNetworkSummaries,
   groupByRegion,
   computeThemeIntelligence,
+  hasFeature,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
@@ -18,6 +19,9 @@ import { requireParentOrgOwner } from "@/lib/ownerAuth";
 export async function GET(req: Request) {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "reports")) {
+    return NextResponse.json({ status: "error", message: "Reports is not enabled for this account" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
   const fromParam = searchParams.get("from");

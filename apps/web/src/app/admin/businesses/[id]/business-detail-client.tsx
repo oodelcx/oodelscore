@@ -39,6 +39,21 @@ const DEMOGRAPHIC_FIELDS = ["name", "email", "phone", "ageGroup", "gender"] as c
 
 const CX_PULSE_LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
 
+// Keep in sync with packages/shared/src/features/flags.ts — duplicated here
+// (rather than imported) because that package also re-exports server-only
+// Mongoose models, which can't ship in a "use client" bundle.
+const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
+  { key: "insights", label: "Insights", description: "AI-generated feedback insight reports." },
+  { key: "analytics", label: "Analytics", description: "Trend, tag, and driver analytics dashboards." },
+  { key: "alertRules", label: "Alert Rules", description: "Configurable score/volume alert thresholds and notifications." },
+  { key: "reports", label: "Reports", description: "Downloadable period reports (PDF/export)." },
+  { key: "improvementInitiatives", label: "Improvement Initiatives", description: "Structured improvement-initiative tracking." },
+  { key: "decisionLog", label: "Decision Log", description: "Decision log with before/after outcome measurement." },
+  { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },
+  { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
+];
+const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);
+
 function formatSigned(value: number): string {
   return value > 0 ? `+${value}` : String(value);
 }
@@ -215,6 +230,13 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   const [escalationSlaHours, setEscalationSlaHours] = useState("");
   const [escalationBusy, setEscalationBusy] = useState(false);
   const [escalationMessage, setEscalationMessage] = useState<string | null>(null);
+
+  // Feature flags (task #121) — which advanced features Admin has turned on
+  // for this account. null on the business doc means "all on", so the
+  // toggle list starts fully checked until Admin edits it.
+  const [enabledFeatures, setEnabledFeatures] = useState<string[]>(ALL_FEATURE_KEYS);
+  const [featuresBusy, setFeaturesBusy] = useState(false);
+  const [featuresMessage, setFeaturesMessage] = useState<string | null>(null);
   const [escalationAssignments, setEscalationAssignments] = useState<
     { _id: string; level: number; userId: { _id: string; email: string } | null }[]
   >([]);
@@ -463,6 +485,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         setCheckoutEnabled(!!b.checkoutEnabled);
         setEscalationLevels(b.escalationLevels?.length ? b.escalationLevels : [{ level: 1, label: "Owner" }]);
         setEscalationSlaHours(b.escalationSlaHours != null ? String(b.escalationSlaHours) : "");
+        setEnabledFeatures(b.enabledFeatures ?? ALL_FEATURE_KEYS);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -514,6 +537,27 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       return;
     }
     setEscalationMessage("Saved.");
+  }
+
+  function toggleFeature(key: string) {
+    setEnabledFeatures((current) => (current.includes(key) ? current.filter((k) => k !== key) : [...current, key]));
+  }
+
+  async function saveFeatures() {
+    setFeaturesBusy(true);
+    setFeaturesMessage(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabledFeatures }),
+    });
+    const data = await res.json().catch(() => null);
+    setFeaturesBusy(false);
+    if (!res.ok) {
+      setFeaturesMessage(data?.message ?? "Failed to save features");
+      return;
+    }
+    setFeaturesMessage("Saved.");
   }
 
   async function addEscalationAssignment() {
@@ -1450,6 +1494,37 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : isNew ? "Create business" : "Save Settings"}
           </button>
+        </div>
+      )}
+
+      {tab === "settings" && !isNew && (
+        <div className="card" style={{ maxWidth: 720, marginTop: 20 }}>
+          <h3>Features</h3>
+          <p className="card-sub">
+            Turn advanced features on or off for this account — e.g. to match a plan tier or hold something back from a
+            pilot. Core features (Feedback Points, Case Management, Team Members, Billing, Messages, Support) are always
+            on.
+          </p>
+          <div className="field-row" style={{ flexWrap: "wrap", gap: "10px 24px" }}>
+            {FEATURE_TOGGLES.map((f) => (
+              <label key={f.key} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: 260 }}>
+                <input
+                  type="checkbox"
+                  checked={enabledFeatures.includes(f.key)}
+                  onChange={() => toggleFeature(f.key)}
+                  style={{ marginTop: 3 }}
+                />
+                <span>
+                  <div>{f.label}</div>
+                  <div className="field-hint">{f.description}</div>
+                </span>
+              </label>
+            ))}
+          </div>
+          <button className="btn btn-dark" disabled={featuresBusy} onClick={saveFeatures} style={{ marginTop: 12 }}>
+            {featuresBusy ? "Saving…" : "Save features"}
+          </button>
+          {featuresMessage && <p className="field-hint">{featuresMessage}</p>}
         </div>
       )}
 

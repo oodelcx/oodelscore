@@ -10,6 +10,7 @@ import {
   BILLING_MODES,
   PRICING_INTERVALS,
   canAccessScopedResource,
+  isValidFeatureKey,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
@@ -89,12 +90,26 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.escalationSlaHours !== undefined && body.escalationSlaHours !== null && typeof body.escalationSlaHours !== "number") {
     return NextResponse.json({ status: "error", message: "Invalid escalationSlaHours" }, { status: 400 });
   }
+  if (body.enabledFeatures !== undefined && body.enabledFeatures !== null) {
+    const keys = body.enabledFeatures;
+    if (!Array.isArray(keys) || !keys.every((k: unknown) => typeof k === "string" && isValidFeatureKey(k))) {
+      return NextResponse.json({ status: "error", message: "Invalid enabledFeatures" }, { status: 400 });
+    }
+  }
 
-  // Command Center visibility, RAG banding, pricing, and the escalation
-  // chain are Admin-only decisions — same rule as billingAssignment on a
-  // Business (spec Section 4).
+  // Command Center visibility, RAG banding, pricing, the escalation chain,
+  // and which advanced features are enabled are Admin-only decisions — same
+  // rule as billingAssignment on a Business (spec Section 4).
   const adminOnlyFields = (
-    ["ragThresholds", "commandCenterEnabled", "pricingTerms", "checkoutEnabled", "escalationLevels", "escalationSlaHours"] as const
+    [
+      "ragThresholds",
+      "commandCenterEnabled",
+      "pricingTerms",
+      "checkoutEnabled",
+      "escalationLevels",
+      "escalationSlaHours",
+      "enabledFeatures",
+    ] as const
   ).filter((f) => f in body);
   if (adminOnlyFields.length > 0 && !(role.isSystemRole && role.name === "Admin")) {
     return NextResponse.json(
@@ -146,6 +161,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "teamMemberSeatLimit",
     "ragThresholds",
     "commandCenterEnabled",
+    "enabledFeatures",
   ] as const;
 
   for (const field of editableFields) {

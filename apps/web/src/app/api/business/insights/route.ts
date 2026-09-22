@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AiInsightReport } from "@oodelscore/shared";
+import { connectToDatabase, AiInsightReport, hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /** Only ever "approved" — pending reports are never visible on a dashboard (spec Section 10). */
 export async function GET(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "insights")) {
+    return NextResponse.json({ status: "error", message: "Insights is not enabled for this account" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const period = searchParams.get("period");

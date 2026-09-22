@@ -9,6 +9,7 @@ import {
   PlatformSettings,
   PLATFORM_SETTINGS_SINGLETON_KEY,
   hasLiveBillingAccess,
+  hasFeature,
 } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import { BillingLockedScreen } from "@/components/billing-locked-screen";
@@ -96,10 +97,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 label="Understand"
                 hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports"]}
               >
-                <a href="/business/insights">Insights</a>
-                <a href="/business/analytics">Analytics</a>
-                <a href="/business/alert-rules">Alert Rules</a>
-                <a href="/business/reports">Reports</a>
+                {hasFeature(business.enabledFeatures, "insights") && <a href="/business/insights">Insights</a>}
+                {hasFeature(business.enabledFeatures, "analytics") && <a href="/business/analytics">Analytics</a>}
+                {hasFeature(business.enabledFeatures, "alertRules") && <a href="/business/alert-rules">Alert Rules</a>}
+                {hasFeature(business.enabledFeatures, "reports") && <a href="/business/reports">Reports</a>}
               </NavSection>
 
               <NavSection
@@ -108,13 +109,17 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 hrefs={["/business/cases", "/business/improvement-initiatives", "/business/decision-log"]}
               >
                 <a href="/business/cases">Case Management</a>
-                <a href="/business/improvement-initiatives">Improvement Initiatives</a>
-                <a href="/business/decision-log">Decision Log</a>
+                {hasFeature(business.enabledFeatures, "improvementInitiatives") && (
+                  <a href="/business/improvement-initiatives">Improvement Initiatives</a>
+                )}
+                {hasFeature(business.enabledFeatures, "decisionLog") && <a href="/business/decision-log">Decision Log</a>}
               </NavSection>
 
-              <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
-                <a href="/business/cx-pulse">CX Pulse</a>
-              </NavSection>
+              {hasFeature(business.enabledFeatures, "cxPulse") && (
+                <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
+                  <a href="/business/cx-pulse">CX Pulse</a>
+                </NavSection>
+              )}
 
               <NavSection
                 storageKey="business-admin"
@@ -133,7 +138,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 <a href="/business/messages">Messages</a>
                 <a href="/business/support">Support</a>
                 {!isBusinessTeamMember && <a href="/business/billing">Billing</a>}
-                <a href="/business/playbooks">Playbook Library</a>
+                {hasFeature(business.enabledFeatures, "playbooks") && <a href="/business/playbooks">Playbook Library</a>}
                 <a href="/business/security">Security</a>
               </NavSection>
             </>

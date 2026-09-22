@@ -7,6 +7,7 @@ import {
   evaluatePlaybookTrigger,
   PLAYBOOK_TRIGGER_METRICS,
   PLAYBOOK_TRIGGER_COMPARATORS,
+  hasFeature,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
@@ -28,6 +29,9 @@ import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "playbooks")) {
+    return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

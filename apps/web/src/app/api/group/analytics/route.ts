@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, Response, Category, computeDailyTrend } from "@oodelscore/shared";
+import { connectToDatabase, Business, Response, Category, computeDailyTrend , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 const TREND_DAYS = 30;
@@ -31,6 +31,9 @@ function extractTags(comments: string[]): { word: string; count: number; negativ
 export async function GET() {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "analytics")) {
+    return NextResponse.json({ status: "error", message: "Analytics is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
   const businesses = await Business.find({ parentOrgId: session.org._id }).select("_id");
