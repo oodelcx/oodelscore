@@ -52,6 +52,9 @@ export interface IParentOrganization {
   // undefined/null means "all on" so existing orgs are unaffected until
   // Admin explicitly edits one.
   enabledFeatures: string[] | null;
+  // ADMIN-EDITABLE ONLY. Same per-account override as Business.paymentGateEnabled
+  // — null follows the platform default, true/false forces the gate for this org.
+  paymentGateEnabled: boolean | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +78,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     commandCenterEnabled: { type: Boolean, default: true },
     enabledFeatures: { type: [String], default: null },
+    paymentGateEnabled: { type: Boolean, default: null },
   },
   { timestamps: true }
 );

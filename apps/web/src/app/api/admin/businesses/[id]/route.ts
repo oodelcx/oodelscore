@@ -111,6 +111,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ status: "error", message: "Invalid enabledFeatures" }, { status: 400 });
     }
   }
+  if (body.paymentGateEnabled !== undefined && body.paymentGateEnabled !== null && typeof body.paymentGateEnabled !== "boolean") {
+    return NextResponse.json({ status: "error", message: "Invalid paymentGateEnabled" }, { status: 400 });
+  }
 
   // Spec Section 16: never let teamMemberSeatLimit drop below the
   // currently-active team-member count.
@@ -152,6 +155,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "teamMemberSeatLimit",
     "ragThresholds",
     "enabledFeatures",
+    "paymentGateEnabled",
     "active",
   ] as const;
 

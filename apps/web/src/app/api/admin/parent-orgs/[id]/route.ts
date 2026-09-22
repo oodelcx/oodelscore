@@ -96,10 +96,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ status: "error", message: "Invalid enabledFeatures" }, { status: 400 });
     }
   }
+  if (body.paymentGateEnabled !== undefined && body.paymentGateEnabled !== null && typeof body.paymentGateEnabled !== "boolean") {
+    return NextResponse.json({ status: "error", message: "Invalid paymentGateEnabled" }, { status: 400 });
+  }
 
   // Command Center visibility, RAG banding, pricing, the escalation chain,
-  // and which advanced features are enabled are Admin-only decisions — same
-  // rule as billingAssignment on a Business (spec Section 4).
+  // which advanced features are enabled, and the payment gate override are
+  // Admin-only decisions — same rule as billingAssignment on a Business
+  // (spec Section 4).
   const adminOnlyFields = (
     [
       "ragThresholds",
@@ -109,6 +113,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       "escalationLevels",
       "escalationSlaHours",
       "enabledFeatures",
+      "paymentGateEnabled",
     ] as const
   ).filter((f) => f in body);
   if (adminOnlyFields.length > 0 && !(role.isSystemRole && role.name === "Admin")) {
@@ -162,6 +167,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "ragThresholds",
     "commandCenterEnabled",
     "enabledFeatures",
+    "paymentGateEnabled",
   ] as const;
 
   for (const field of editableFields) {

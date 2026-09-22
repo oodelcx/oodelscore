@@ -45,6 +45,7 @@ export const BUSINESS_ADMIN_ONLY_FIELDS = [
   "escalationLevels",
   "escalationSlaHours",
   "enabledFeatures",
+  "paymentGateEnabled",
 ] as const;
 
 export interface IBusiness {
@@ -103,6 +104,12 @@ export interface IBusiness {
   // (any record saved before this field existed) means "all on" — see
   // hasFeature() — so this never silently locks an existing account out.
   enabledFeatures: string[] | null;
+  // ADMIN-EDITABLE ONLY. Per-account override of PlatformSettings'
+  // paymentGateEnabled kill switch: null = follow the platform default,
+  // true/false = force the gate on/off for this account regardless of the
+  // platform default. Lets Admin turn billing enforcement on for one
+  // account being tested without affecting every other account.
+  paymentGateEnabled: boolean | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -144,6 +151,7 @@ const BusinessSchema = new Schema<IBusiness>(
     teamMemberSeatLimit: { type: Number, default: null },
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     enabledFeatures: { type: [String], default: null },
+    paymentGateEnabled: { type: Boolean, default: null },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

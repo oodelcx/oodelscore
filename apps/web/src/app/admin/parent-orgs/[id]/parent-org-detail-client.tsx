@@ -220,6 +220,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   const [enabledFeatures, setEnabledFeatures] = useState<string[]>(ALL_FEATURE_KEYS);
   const [featuresBusy, setFeaturesBusy] = useState(false);
   const [featuresMessage, setFeaturesMessage] = useState<string | null>(null);
+  const [paymentGateEnabled, setPaymentGateEnabled] = useState<boolean | null>(null);
   const [escalationAssignments, setEscalationAssignments] = useState<
     { _id: string; level: number; region: string; userId: { _id: string; email: string } | null }[]
   >([]);
@@ -315,6 +316,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         setEscalationLevels(o.escalationLevels?.length ? o.escalationLevels : [{ level: 1, label: "Owner" }]);
         setEscalationSlaHours(o.escalationSlaHours != null ? String(o.escalationSlaHours) : "");
         setEnabledFeatures(o.enabledFeatures ?? ALL_FEATURE_KEYS);
+        setPaymentGateEnabled(o.paymentGateEnabled ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -378,7 +380,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabledFeatures }),
+      body: JSON.stringify({ enabledFeatures, paymentGateEnabled }),
     });
     const data = await res.json().catch(() => null);
     setFeaturesBusy(false);
@@ -1446,6 +1448,28 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               </label>
             ))}
           </div>
+
+          <div className="section-label" style={{ marginTop: 18 }}>
+            Payment gate
+          </div>
+          <div className="field" style={{ maxWidth: 320 }}>
+            <label>Require an active subscription to use the dashboard</label>
+            <select
+              value={paymentGateEnabled === null ? "default" : paymentGateEnabled ? "on" : "off"}
+              onChange={(e) =>
+                setPaymentGateEnabled(e.target.value === "default" ? null : e.target.value === "on")
+              }
+            >
+              <option value="default">Follow platform default</option>
+              <option value="on">On — lock this org without an active subscription</option>
+              <option value="off">Off — always let this org in</option>
+            </select>
+            <div className="field-hint">
+              Overrides the platform-wide payment gate setting for just this organisation. Branches under this org
+              have their own, independent override on their own Business detail page.
+            </div>
+          </div>
+
           <button className="btn btn-dark" disabled={featuresBusy} onClick={saveFeatures} style={{ marginTop: 12 }}>
             {featuresBusy ? "Saving…" : "Save features"}
           </button>

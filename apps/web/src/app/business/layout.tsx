@@ -8,7 +8,7 @@ import {
   ParentOrganization,
   PlatformSettings,
   PLATFORM_SETTINGS_SINGLETON_KEY,
-  hasLiveBillingAccess,
+  getBillingAccessStatus,
   hasFeature,
 } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
@@ -41,22 +41,23 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const toursEnabled = platformSettings?.toursEnabled ?? true;
 
   // Payment gate: a group_pays branch rides its org's subscription, not one
-  // of its own. The Billing page itself is always let through — otherwise
-  // there'd be no way left to pay once gated. Off entirely unless Admin has
-  // turned paymentGateEnabled on (see PlatformSettings.ts) — accounts
+  // of its own, so the gate follows whichever entity actually owns the
+  // billing. Each Business/ParentOrganization can override the platform
+  // default individually (paymentGateEnabled: null = follow the platform
+  // default, true/false = force it for this one account) — accounts
   // created before Stripe billing existed have no BillingSubscription row
   // at all, so this must stay off by default rather than lock them out the
-  // moment this ships.
+  // moment gating is turned on somewhere else on the platform.
   const billingOwner =
     business.billingAssignment === "group_pays" && business.parentOrgId
       ? ({ ownerType: "parentOrg" as const, ownerId: business.parentOrgId.toString() })
       : ({ ownerType: "business" as const, ownerId: business._id.toString() });
-  const hasBillingAccess = platformSettings?.paymentGateEnabled
-    ? await hasLiveBillingAccess(billingOwner.ownerType, billingOwner.ownerId)
-    : true;
+  const gateOverride = billingOwner.ownerType === "parentOrg" ? parentOrg?.paymentGateEnabled : business.paymentGateEnabled;
+  const gateEnabled = gateOverride ?? platformSettings?.paymentGateEnabled ?? false;
+  const billingStatus = gateEnabled ? await getBillingAccessStatus(billingOwner.ownerType, billingOwner.ownerId) : "active";
   const pathname = (await headers()).get("x-pathname") ?? "";
   const isBillingRoute = pathname.startsWith("/business/billing");
-  const isGated = !hasBillingAccess && !isBillingRoute;
+  const isGated = billingStatus !== "active" && !isBillingRoute;
 
   return (
     <div className="admin-app">
@@ -159,7 +160,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
       </aside>
       <main className="admin-main">
         {isGated ? (
-          <BillingLockedScreen billingHref="/business/billing" />
+          <BillingLockedScreen
+            billingHref="/business/billing"
+            status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
+          />
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />

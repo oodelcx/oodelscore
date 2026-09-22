@@ -173,10 +173,59 @@ export async function createCheckoutSessionForOwner(params: {
   return session.url;
 }
 
+// A business/org self-canceling its own subscription from the Stripe portal
+// is never how OodelCX wants cancellation to happen — per CLAUDE.md,
+// cancellation is something we do on request, not something a customer
+// does unilaterally. Stripe's default portal configuration includes a
+// self-service "Cancel subscription" button unless a configuration says
+// otherwise, so every portal session this app creates is pinned to a
+// restricted configuration with that one feature turned off — everything
+// else (payment method update, invoice history, customer details) mirrors
+// whatever the account's own default configuration already allows, so this
+// never silently disables something Admin set up in the Stripe Dashboard.
+const RESTRICTED_PORTAL_CONFIG_NAME = "OodelCX — no self-cancel";
+let cachedRestrictedPortalConfigId: string | null = null;
+
+async function getRestrictedPortalConfigurationId(stripe: Stripe): Promise<string> {
+  if (cachedRestrictedPortalConfigId) return cachedRestrictedPortalConfigId;
+
+  // Reuse one already created (idempotent across cold starts / redeploys)
+  // rather than accumulating a new configuration on every call.
+  const existing = await stripe.billingPortal.configurations.list({ limit: 100 });
+  const found = existing.data.find((c) => c.name === RESTRICTED_PORTAL_CONFIG_NAME);
+  if (found) {
+    cachedRestrictedPortalConfigId = found.id;
+    return found.id;
+  }
+
+  const defaults = await stripe.billingPortal.configurations.list({ is_default: true, limit: 1 });
+  const base = defaults.data[0];
+
+  const created = await stripe.billingPortal.configurations.create({
+    name: RESTRICTED_PORTAL_CONFIG_NAME,
+    business_profile: base
+      ? {
+          headline: base.business_profile.headline ?? undefined,
+          privacy_policy_url: base.business_profile.privacy_policy_url || undefined,
+          terms_of_service_url: base.business_profile.terms_of_service_url || undefined,
+        }
+      : undefined,
+    features: {
+      customer_update: base?.features.customer_update,
+      invoice_history: base?.features.invoice_history,
+      payment_method_update: base?.features.payment_method_update,
+      subscription_cancel: { enabled: false },
+    },
+  });
+  cachedRestrictedPortalConfigId = created.id;
+  return created.id;
+}
+
 /** Stripe's hosted "manage my subscription/payment method" page. */
 export async function createBillingPortalSession(stripeCustomerId: string, returnUrl: string): Promise<string> {
   const stripe = getStripeClient();
-  const session = await stripe.billingPortal.sessions.create({ customer: stripeCustomerId, return_url: returnUrl });
+  const configuration = await getRestrictedPortalConfigurationId(stripe);
+  const session = await stripe.billingPortal.sessions.create({ customer: stripeCustomerId, return_url: returnUrl, configuration });
   return session.url;
 }
 
