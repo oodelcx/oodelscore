@@ -1,13 +1,21 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
-import { connectToDatabase, ParentOrganization, PlatformSettings, PLATFORM_SETTINGS_SINGLETON_KEY } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  ParentOrganization,
+  PlatformSettings,
+  PLATFORM_SETTINGS_SINGLETON_KEY,
+  hasLiveBillingAccess,
+} from "@oodelscore/shared";
 import "../admin/admin.css";
 import "../business/business.css";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { TourLauncher } from "@/components/tour/tour-launcher";
+import { BillingLockedScreen } from "@/components/billing-locked-screen";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -21,9 +29,20 @@ export default async function GroupLayout({ children }: { children: ReactNode })
 
   await connectToDatabase();
   const org = await ParentOrganization.findById(user.parentId).select("commandCenterEnabled");
-  const commandCenterEnabled = org?.commandCenterEnabled ?? true;
-  const platformSettings = await PlatformSettings.findOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }).select("toursEnabled");
+  if (!org) redirect("/login");
+  const commandCenterEnabled = org.commandCenterEnabled ?? true;
+  const platformSettings = await PlatformSettings.findOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }).select(
+    "toursEnabled paymentGateEnabled"
+  );
   const toursEnabled = platformSettings?.toursEnabled ?? true;
+
+  // See business/layout.tsx for why this stays off unless Admin opts in.
+  const hasBillingAccess = platformSettings?.paymentGateEnabled
+    ? await hasLiveBillingAccess("parentOrg", org._id.toString())
+    : true;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const isBillingRoute = pathname.startsWith("/group/billing");
+  const isGated = !hasBillingAccess && !isBillingRoute;
 
   return (
     <div className="admin-app">
@@ -61,6 +80,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
                 <a href="/group/cases">Case Management</a>
+                <a href="/group/improvement-initiatives">Improvement Initiatives</a>
                 <a href="/group/decision-log">Decision log</a>
               </nav>
               <div className="nav-group-label">Measure</div>
@@ -95,7 +115,9 @@ export default async function GroupLayout({ children }: { children: ReactNode })
         </div>
       </aside>
       <main className="admin-main">
-        {toursEnabled ? (
+        {isGated ? (
+          <BillingLockedScreen billingHref="/group/billing" />
+        ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />
             {children}

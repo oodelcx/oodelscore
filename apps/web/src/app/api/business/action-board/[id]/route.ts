@@ -1,41 +1,70 @@
 import { NextResponse } from "next/server";
-import { Types, type HydratedDocument } from "mongoose";
+import { Types } from "mongoose";
 import {
   connectToDatabase,
   ActionBoardItem,
-  DecisionLogEntry,
+  ActionItemComment,
+  Response,
+  Playbook,
   User,
   ParentOrganization,
   sendTemplatedEmail,
   ACTION_PRIORITIES,
   ACTION_STATUSES,
-  type IActionBoardItem,
+  CASE_TYPES,
 } from "@oodelscore/shared";
-import { requireBusinessOwner, type BusinessOwnerSession } from "@/lib/ownerAuth";
+import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { attachPlaybookRunsToItems } from "@/lib/caseStats";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 /**
- * Resolving with a note is how a decision gets recorded now — no separate
- * manual Decision Log entry step (product feedback: nobody thought to check
- * a separate page for it). One DecisionLogEntry per resolution, linked back
- * to the action item.
+ * The unified case trail: one case's full audit history — original
+ * feedback, comments, escalation history (with each level's holder
+ * resolved to an email), linked playbook run, resolution. The same shape
+ * every persona's drill-down reads from (see /group/action-board/[id] for
+ * the org-scoped twin).
  */
-async function logDecisionForResolution(
-  item: HydratedDocument<IActionBoardItem>,
-  session: BusinessOwnerSession,
-  resolutionNote: string
-) {
-  await DecisionLogEntry.create({
-    parentOrgId: session.business.parentOrgId ?? null,
-    businessId: session.business.parentOrgId ? null : session.business._id,
-    title: item.title,
-    trigger: resolutionNote,
-    linkedActionIds: [item._id],
-    affectedBusinessIds: [item.businessId],
-    ownerId: item.ownerId,
-    implementationDate: new Date(),
-    status: "implemented",
+export async function GET(_request: Request, { params }: RouteParams) {
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+
+  await connectToDatabase();
+  const { id } = await params;
+  const item = await ActionBoardItem.findOne({ _id: id, businessId: session.business._id });
+  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (session.tier === "limited" && item.ownerId?.toString() !== session.user._id.toString()) {
+    return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  }
+
+  const [sourceResponses, comments, playbooks] = await Promise.all([
+    Response.find({ _id: { $in: item.sourceResponseIds } }),
+    ActionItemComment.find({ actionItemId: item._id }).sort({ createdAt: 1 }),
+    Playbook.find(session.business.parentOrgId ? { parentOrgId: session.business.parentOrgId } : { businessId: session.business._id }),
+  ]);
+
+  const escalationUserIds = [
+    ...new Set(item.escalationHistory.map((h) => h.userId?.toString()).filter((x): x is string => !!x)),
+  ];
+  const escalationUsers = await User.find({ _id: { $in: escalationUserIds } }).select("email");
+  const emailByUserId = new Map(escalationUsers.map((u) => [u._id.toString(), u.email]));
+
+  const [itemWithRun] = await attachPlaybookRunsToItems([item], playbooks);
+
+  return NextResponse.json({
+    status: "ok",
+    item: {
+      ...itemWithRun,
+      escalationHistory: item.escalationHistory.map((h) => ({
+        level: h.level,
+        action: h.action,
+        note: h.note,
+        at: h.at,
+        userEmail: h.userId ? (emailByUserId.get(h.userId.toString()) ?? null) : null,
+      })),
+    },
+    sourceResponses,
+    comments,
   });
 }
 
@@ -63,9 +92,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (typeof body?.resolutionNote === "string") item.resolutionNote = body.resolutionNote;
     if (typeof body?.suggestedAction === "string") item.suggestedAction = body.suggestedAction;
     await item.save();
-    if (body?.status === "resolved" && typeof body?.resolutionNote === "string" && body.resolutionNote.trim()) {
-      await logDecisionForResolution(item, session, body.resolutionNote.trim());
-    }
     return NextResponse.json({ status: "ok", item });
   }
 
@@ -74,6 +100,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (typeof body?.title === "string") item.title = body.title;
   if (typeof body?.description === "string") item.description = body.description;
   if (typeof body?.categoryId === "string") item.categoryId = new Types.ObjectId(body.categoryId);
+  if (CASE_TYPES.includes(body?.caseType)) item.caseType = body.caseType;
   if (ACTION_PRIORITIES.includes(body?.priority)) item.priority = body.priority;
   if (ACTION_STATUSES.includes(body?.status)) item.status = body.status;
   if (body?.status === "resolved") {
@@ -103,10 +130,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await item.save();
-
-  if (body?.status === "resolved" && typeof body?.resolutionNote === "string" && body.resolutionNote.trim()) {
-    await logDecisionForResolution(item, session, body.resolutionNote.trim());
-  }
 
   const newOwnerId = item.ownerId?.toString() ?? null;
   if (newOwnerId && newOwnerId !== previousOwnerId) {

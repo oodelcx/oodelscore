@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { InfoTip } from "@/components/info-tip";
 import { OwnerBadge } from "@/components/owner-badge";
 import { PlaybookRunPanelSlideout } from "@/components/playbook-run-panel-slideout";
@@ -17,11 +18,18 @@ interface PlaybookRunSummary {
   status: "active" | "completed" | "abandoned";
   attachReason: string;
 }
+const CASE_TYPE_LABELS: Record<string, string> = {
+  customer_recovery: "Customer recovery",
+  operational_fix: "Operational fix",
+  investigation: "Investigation",
+};
+
 interface ItemRow {
   _id: string;
   title: string;
   description: string;
   categoryId: string | null;
+  caseType: string;
   ownerId: string | null;
   priority: string;
   status: string;
@@ -33,6 +41,8 @@ interface ItemRow {
   playbookRun?: PlaybookRunSummary | null;
   escalatedToOrg: boolean;
   escalatedToOrgNote: string;
+  currentEscalationLevel: number;
+  escalationHistory: { level: number; action: string; note: string; at: string }[];
 }
 interface TeamRow {
   userId: string;
@@ -116,6 +126,7 @@ export default function BusinessCasesClient() {
   const [escalationNoteDraft, setEscalationNoteDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
+  const [caseType, setCaseType] = useState("operational_fix");
   const [priority, setPriority] = useState("medium");
   const [ownerId, setOwnerId] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -211,7 +222,7 @@ export default function BusinessCasesClient() {
     const res = await fetch("/api/business/action-board", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
+      body: JSON.stringify({ title, caseType, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
     });
     const data = await res.json();
     setCreating(false);
@@ -220,6 +231,7 @@ export default function BusinessCasesClient() {
       return;
     }
     setTitle("");
+    setCaseType("operational_fix");
     setOwnerId("");
     setDueDate("");
     setShowCreateForm(false);
@@ -246,6 +258,22 @@ export default function BusinessCasesClient() {
     setEscalating(null);
     setEscalatingId(null);
     setEscalationNoteDraft("");
+  }
+
+  async function escalateToNextLevel(id: string) {
+    setEscalating(id);
+    const res = await fetch(`/api/business/action-board/${id}/escalate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "" }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalating(null);
+    if (!res.ok) {
+      alert(data?.message ?? "Failed to escalate");
+      return;
+    }
+    load();
   }
 
   async function unEscalate(id: string) {
@@ -374,6 +402,14 @@ export default function BusinessCasesClient() {
               <input value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="field">
+              <label>Type</label>
+              <select value={caseType} onChange={(e) => setCaseType(e.target.value)}>
+                <option value="customer_recovery">Customer recovery — reach out and make it right</option>
+                <option value="operational_fix">Operational fix — fix the problem</option>
+                <option value="investigation">Investigation — figure out what's happening</option>
+              </select>
+            </div>
+            <div className="field">
               <label>
                 Priority <InfoTip text={tooltips["priority"]} />
               </label>
@@ -452,7 +488,9 @@ export default function BusinessCasesClient() {
                 <div className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`} data-tour={isFirst ? "cases-first-card" : undefined}>
                   <div className="ab-card-head">
                     <div className="ab-title-block">
-                      <div className="ab-title">{item.title}</div>
+                      <div className="ab-title">
+                        {item.title} <Link href={`/business/cases/${item._id}`} className="ab-show-more">View full trail →</Link>
+                      </div>
                       {!isLimited && (
                         <div className="ab-meta-row">
                           <Stars rating={item.rating} />
@@ -501,10 +539,16 @@ export default function BusinessCasesClient() {
                             {item.priority}
                           </span>
                         )}
+                        {item.caseType && item.caseType !== "operational_fix" && (
+                          <span className="pill pill-gray">{CASE_TYPE_LABELS[item.caseType] ?? item.caseType}</span>
+                        )}
                         {item.escalatedToOrg && (
                           <span className="pill pill-red" title={item.escalatedToOrgNote || undefined}>
                             Escalated to {orgName ?? "org"}
                           </span>
+                        )}
+                        {item.currentEscalationLevel > 1 && (
+                          <span className="pill pill-amber">Escalation level {item.currentEscalationLevel}</span>
                         )}
                       </div>
                       {item.status !== "resolved" && resolvingId !== item._id && (
@@ -567,12 +611,33 @@ export default function BusinessCasesClient() {
                           {item.escalatedToOrg ? "↩ Un-escalate" : `↗ Escalate to ${orgName ?? "org"}`}
                         </button>
                       )}
+                      {!isLimited && item.status !== "resolved" && (
+                        <button
+                          type="button"
+                          className="case-action-btn"
+                          disabled={escalating === item._id}
+                          onClick={() => escalateToNextLevel(item._id)}
+                          title="Advance this case to the next configured escalation level"
+                        >
+                          ↑ Escalate to next level
+                        </button>
+                      )}
                     </div>
                     {!isLimited && <OwnerBadge label={team.find((t) => t.userId === item.ownerId)?.label ?? null} tip={tooltips["owner"]} />}
                   </div>
 
                   {expandedCommentsFor === item._id && (
                     <div className="ab-panel">
+                      {item.escalationHistory && item.escalationHistory.length > 0 && (
+                        <ul style={{ margin: "0 0 10px", paddingLeft: 0, listStyle: "none" }}>
+                          {item.escalationHistory.map((h, i) => (
+                            <li key={i} style={{ marginBottom: 6, fontSize: "12.5px", color: "var(--text-3)" }}>
+                              ↑ Level {h.level} → escalated{h.note ? `: ${h.note}` : ""} —{" "}
+                              {new Date(h.at).toLocaleString()}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {(commentsByItem[item._id] ?? []).length === 0 ? (
                         <p className="subtitle" style={{ margin: "0 0 8px" }}>
                           No comments yet — start the trail below.

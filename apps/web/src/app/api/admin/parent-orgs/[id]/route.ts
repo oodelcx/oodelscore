@@ -74,11 +74,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
   }
 
-  // Command Center visibility, RAG banding, and pricing are Admin-only
-  // decisions — same rule as billingAssignment on a Business (spec Section 4).
-  const adminOnlyFields = (["ragThresholds", "commandCenterEnabled", "pricingTerms", "checkoutEnabled"] as const).filter(
-    (f) => f in body
-  );
+  if (body.escalationLevels !== undefined) {
+    const levels = body.escalationLevels;
+    const valid =
+      Array.isArray(levels) &&
+      levels.every((l: unknown) => l && typeof (l as { level?: unknown }).level === "number" && typeof (l as { label?: unknown }).label === "string");
+    if (!valid) {
+      return NextResponse.json({ status: "error", message: "Invalid escalationLevels" }, { status: 400 });
+    }
+  }
+  if (body.escalationSlaHours !== undefined && body.escalationSlaHours !== null && typeof body.escalationSlaHours !== "number") {
+    return NextResponse.json({ status: "error", message: "Invalid escalationSlaHours" }, { status: 400 });
+  }
+
+  // Command Center visibility, RAG banding, pricing, and the escalation
+  // chain are Admin-only decisions — same rule as billingAssignment on a
+  // Business (spec Section 4).
+  const adminOnlyFields = (
+    ["ragThresholds", "commandCenterEnabled", "pricingTerms", "checkoutEnabled", "escalationLevels", "escalationSlaHours"] as const
+  ).filter((f) => f in body);
   if (adminOnlyFields.length > 0 && !(role.isSystemRole && role.name === "Admin")) {
     return NextResponse.json(
       { status: "error", message: `Not permitted to write field(s): ${adminOnlyFields.join(", ")}` },
@@ -122,6 +136,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "defaultBillingMode",
     "pricingTerms",
     "checkoutEnabled",
+    "escalationLevels",
+    "escalationSlaHours",
     "accountManagerId",
     "branchSeatLimit",
     "teamMemberSeatLimit",

@@ -34,3 +34,5 @@ export * from "./CxGoal";
 export * from "./PlaybookRun";
 export * from "./AuditLogEntry";
 export * from "./PlatformSettings";
+export * from "./EscalationAssignment";
+export * from "./ImprovementInitiative";

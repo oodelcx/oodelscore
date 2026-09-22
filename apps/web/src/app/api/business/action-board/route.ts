@@ -7,6 +7,7 @@ import {
   ParentOrganization,
   sendTemplatedEmail,
   ACTION_PRIORITIES,
+  CASE_TYPES,
   autoAttachPlaybook,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     title,
     description: typeof body?.description === "string" ? body.description : "",
     categoryId: typeof body?.categoryId === "string" ? body.categoryId : null,
+    caseType: CASE_TYPES.includes(body?.caseType) ? body.caseType : "operational_fix",
     priority,
     ownerId: typeof body?.ownerId === "string" ? body.ownerId : null,
     dueDate: typeof body?.dueDate === "string" ? new Date(body.dueDate) : null,

@@ -785,3 +785,57 @@ export async function findBillingIntegrityIssues(): Promise<BillingIntegrityIssu
 
   return { orphanedSubscriptionIds, groupPaysWithOwnSubscriptionIds };
 }
+
+/**
+ * Daily sweep (task #139): reminds the account's own account manager 7 days
+ * before a comp/pilot expires, so there's a real chance to convert it
+ * before the payment gate (see packages/shared/src/billing/gate.ts) locks
+ * the customer out. Dedup via compExpiryReminderSentAt — markOwnerComp()
+ * clears it whenever the expiry itself changes, so extending a pilot
+ * re-arms the reminder instead of it firing again for the old date.
+ * Unlimited comp (compExpiresAt === null) never reminds — nothing to warn
+ * about.
+ */
+export async function sendCompExpiryReminders(): Promise<{ reminded: number; skipped: number }> {
+  let reminded = 0;
+  let skipped = 0;
+
+  const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const dueForReminder = await BillingSubscription.find({
+    isComp: true,
+    compExpiresAt: { $ne: null, $lte: sevenDaysFromNow, $gt: new Date() },
+    compExpiryReminderSentAt: null,
+  });
+
+  for (const subscription of dueForReminder) {
+    const accountManagerId =
+      subscription.ownerType === "business"
+        ? (await Business.findById(subscription.ownerId))?.accountManagerId
+        : (await ParentOrganization.findById(subscription.ownerId))?.accountManagerId;
+    if (!accountManagerId) {
+      skipped++;
+      continue;
+    }
+    const manager = await User.findById(accountManagerId);
+    const { name } = await resolveOwnerNameEmail(subscription.ownerType, subscription.ownerId.toString()).catch(() => ({
+      name: "(deleted account)",
+    }));
+    if (!manager) {
+      skipped++;
+      continue;
+    }
+
+    await sendTemplatedEmail("comp_expiry_reminder", manager.email, {
+      name: manager.email,
+      account_name: name,
+      expires_on: subscription.compExpiresAt!.toISOString().slice(0, 10),
+      account_link: `${process.env.APP_URL ?? ""}/admin/${subscription.ownerType === "business" ? "businesses" : "parent-orgs"}/${subscription.ownerId.toString()}`,
+    }).catch((err) => console.error("[billing] failed to send comp_expiry_reminder", err));
+
+    subscription.compExpiryReminderSentAt = new Date();
+    await subscription.save();
+    reminded++;
+  }
+
+  return { reminded, skipped };
+}

@@ -21,6 +21,8 @@ on:
     - cron: "11 3 * * *" # daily — measure-decisions
     - cron: "23 * * * *" # hourly — evaluate-baseline-alerts
     - cron: "37 4 * * *" # nightly — recompute-cx-pulse
+    - cron: "43 * * * *" # hourly — auto-escalate-cases
+    - cron: "17 5 * * *" # daily — comp-expiry-reminders
   workflow_dispatch:
     inputs:
       job:
@@ -31,6 +33,8 @@ on:
           - measure-decisions
           - evaluate-baseline-alerts
           - recompute-cx-pulse
+          - auto-escalate-cases
+          - comp-expiry-reminders
 
 env:
   APP_URL: https://oodelcx.com
@@ -47,6 +51,8 @@ jobs:
             "11 3 * * *") echo "endpoint=measure-decisions" >> "$GITHUB_OUTPUT" ;;
             "23 * * * *") echo "endpoint=evaluate-baseline-alerts" >> "$GITHUB_OUTPUT" ;;
             "37 4 * * *") echo "endpoint=recompute-cx-pulse" >> "$GITHUB_OUTPUT" ;;
+            "43 * * * *") echo "endpoint=auto-escalate-cases" >> "$GITHUB_OUTPUT" ;;
+            "17 5 * * *") echo "endpoint=comp-expiry-reminders" >> "$GITHUB_OUTPUT" ;;
             *) echo "endpoint=${{ github.event.inputs.job }}" >> "$GITHUB_OUTPUT" ;;
           esac
       - name: Call the cron route

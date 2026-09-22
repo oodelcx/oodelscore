@@ -1,8 +1,17 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
-import { connectToDatabase, Business, ParentOrganization, PlatformSettings, PLATFORM_SETTINGS_SINGLETON_KEY } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  Business,
+  ParentOrganization,
+  PlatformSettings,
+  PLATFORM_SETTINGS_SINGLETON_KEY,
+  hasLiveBillingAccess,
+} from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
+import { BillingLockedScreen } from "@/components/billing-locked-screen";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { TourLauncher } from "@/components/tour/tour-launcher";
@@ -24,8 +33,28 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const parentOrg = business.parentOrgId ? await ParentOrganization.findById(business.parentOrgId) : null;
   const isBranch = !!parentOrg;
   const isLimitedTeamMember = isBusinessTeamMember && user.tier === "limited";
-  const platformSettings = await PlatformSettings.findOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }).select("toursEnabled");
+  const platformSettings = await PlatformSettings.findOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }).select(
+    "toursEnabled paymentGateEnabled"
+  );
   const toursEnabled = platformSettings?.toursEnabled ?? true;
+
+  // Payment gate: a group_pays branch rides its org's subscription, not one
+  // of its own. The Billing page itself is always let through — otherwise
+  // there'd be no way left to pay once gated. Off entirely unless Admin has
+  // turned paymentGateEnabled on (see PlatformSettings.ts) — accounts
+  // created before Stripe billing existed have no BillingSubscription row
+  // at all, so this must stay off by default rather than lock them out the
+  // moment this ships.
+  const billingOwner =
+    business.billingAssignment === "group_pays" && business.parentOrgId
+      ? ({ ownerType: "parentOrg" as const, ownerId: business.parentOrgId.toString() })
+      : ({ ownerType: "business" as const, ownerId: business._id.toString() });
+  const hasBillingAccess = platformSettings?.paymentGateEnabled
+    ? await hasLiveBillingAccess(billingOwner.ownerType, billingOwner.ownerId)
+    : true;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const isBillingRoute = pathname.startsWith("/business/billing");
+  const isGated = !hasBillingAccess && !isBillingRoute;
 
   return (
     <div className="admin-app">
@@ -67,6 +96,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
                 <a href="/business/cases">Case Management</a>
+                <a href="/business/improvement-initiatives">Improvement Initiatives</a>
                 <a href="/business/decision-log">Decision Log</a>
               </nav>
 
@@ -100,7 +130,9 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         </div>
       </aside>
       <main className="admin-main">
-        {toursEnabled ? (
+        {isGated ? (
+          <BillingLockedScreen billingHref="/business/billing" />
+        ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />
             {children}

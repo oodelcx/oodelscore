@@ -23,14 +23,27 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  if (typeof body?.toursEnabled !== "boolean") {
-    return NextResponse.json({ status: "error", message: "toursEnabled must be a boolean" }, { status: 400 });
+  const update: Record<string, boolean> = {};
+  if (body?.toursEnabled !== undefined) {
+    if (typeof body.toursEnabled !== "boolean") {
+      return NextResponse.json({ status: "error", message: "toursEnabled must be a boolean" }, { status: 400 });
+    }
+    update.toursEnabled = body.toursEnabled;
+  }
+  if (body?.paymentGateEnabled !== undefined) {
+    if (typeof body.paymentGateEnabled !== "boolean") {
+      return NextResponse.json({ status: "error", message: "paymentGateEnabled must be a boolean" }, { status: 400 });
+    }
+    update.paymentGateEnabled = body.paymentGateEnabled;
+  }
+  if (Object.keys(update).length === 0) {
+    return NextResponse.json({ status: "error", message: "Nothing to update" }, { status: 400 });
   }
 
   await connectToDatabase();
   const settings = await PlatformSettings.findOneAndUpdate(
     { singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY },
-    { $set: { toursEnabled: body.toursEnabled } },
+    { $set: update },
     { upsert: true, new: true }
   );
 

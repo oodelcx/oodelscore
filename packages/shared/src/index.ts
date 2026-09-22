@@ -38,3 +38,5 @@ export * from "./qr/generate";
 export * from "./feedback/dedup";
 export * from "./categories/usage";
 export * from "./seedData/showcase";
+export * from "./escalation/engine";
+export * from "./billing/gate";

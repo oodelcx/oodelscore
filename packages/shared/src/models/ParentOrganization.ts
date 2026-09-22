@@ -8,6 +8,9 @@ import {
   PricingTermsSchema,
   type IPricingTerms,
   DEFAULT_PRICING_TERMS,
+  EscalationLevelSchema,
+  type IEscalationLevel,
+  DEFAULT_ESCALATION_LEVELS,
 } from "./common";
 
 export const BILLING_MODES = ["group_pays", "branch_pays"] as const;
@@ -30,6 +33,15 @@ export interface IParentOrganization {
   // self-service "Continue to payment" link straight to Stripe Checkout —
   // covers the org paying for itself and/or its group_pays branches.
   checkoutEnabled: boolean;
+  // ADMIN-EDITABLE ONLY. The org's own escalation chain, inherited by every
+  // branch under it (same inheritance rule as ragThresholds) — level 1 is
+  // always a branch's own owner regardless of this config; this defines
+  // level 2 and above, labeled however the organisation calls them
+  // ("Cluster Manager", "Regional Head", "President" — never hardcoded).
+  escalationLevels: IEscalationLevel[];
+  // ADMIN-EDITABLE ONLY. Hours an unresolved case may sit at its current
+  // level before the cron auto-escalates it one level. null = manual only.
+  escalationSlaHours: number | null;
   accountManagerId: Types.ObjectId | null; // -> users._id (staff)
   branchSeatLimit: number | null; // ADMIN-EDITABLE ONLY. null = unlimited. Enforced against active business count.
   teamMemberSeatLimit: number | null; // ADMIN-EDITABLE ONLY. The Group's own staff pool, independent of any branch's.
@@ -50,6 +62,8 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     defaultBillingMode: { type: String, enum: BILLING_MODES, default: "branch_pays" },
     pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
     checkoutEnabled: { type: Boolean, default: false },
+    escalationLevels: { type: [EscalationLevelSchema], default: () => DEFAULT_ESCALATION_LEVELS.map((l) => ({ ...l })) },
+    escalationSlaHours: { type: Number, default: null },
     accountManagerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     branchSeatLimit: { type: Number, default: null },
     teamMemberSeatLimit: { type: Number, default: null },

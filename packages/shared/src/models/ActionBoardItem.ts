@@ -9,6 +9,40 @@ export type ActionStatus = (typeof ACTION_STATUSES)[number];
 export const ACTION_SOURCES = ["manual", "auto_suggested", "auto_assigned", "escalated"] as const;
 export type ActionSource = (typeof ACTION_SOURCES)[number];
 
+// What kind of response this case actually needs — distinguishes "say
+// sorry to this one customer" from "fix the underlying process," which
+// were previously the same undifferentiated Action Board item.
+// "operational_fix" is the default: the safest read of what most existing
+// cases already are.
+export const CASE_TYPES = ["customer_recovery", "operational_fix", "investigation"] as const;
+export type CaseType = (typeof CASE_TYPES)[number];
+
+export const ESCALATION_TRAIL_ACTIONS = ["escalated", "auto_escalated"] as const;
+export type EscalationTrailAction = (typeof ESCALATION_TRAIL_ACTIONS)[number];
+
+// One entry per level this case has passed through — the audit trail behind
+// the "case trail" view (who held it, how long, what happened). Appended by
+// escalateActionBoardItem() in packages/shared/src/escalation.ts; never
+// edited or removed afterward.
+export interface IEscalationHistoryEntry {
+  level: number; // the level the case was AT when this entry was recorded
+  userId: Types.ObjectId | null; // whoever held it at that level, if resolved
+  action: EscalationTrailAction;
+  note: string;
+  at: Date;
+}
+
+const EscalationHistoryEntrySchema = new Schema<IEscalationHistoryEntry>(
+  {
+    level: { type: Number, required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    action: { type: String, enum: ESCALATION_TRAIL_ACTIONS, required: true },
+    note: { type: String, default: "" },
+    at: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 export interface IActionBoardItem {
   // null when businessId is a standalone business (spec Section 16 correction:
   // AI-assisted triage fires on any business's Alert Rule, including one with
@@ -18,6 +52,7 @@ export interface IActionBoardItem {
   description: string;
   businessId: Types.ObjectId;
   categoryId: Types.ObjectId | null;
+  caseType: CaseType;
   priority: ActionPriority;
   status: ActionStatus;
   ownerId: Types.ObjectId | null;
@@ -55,6 +90,13 @@ export interface IActionBoardItem {
   escalatedToOrg: boolean;
   escalatedToOrgAt: Date | null;
   escalatedToOrgNote: string;
+  // The configured escalation chain (packages/shared/src/escalation.ts):
+  // which level currently owns this case, when it entered that level (the
+  // cron's SLA clock), and the full history of every level it has passed
+  // through. Level 1 = the branch's own owner, always, by convention.
+  currentEscalationLevel: number;
+  levelEnteredAt: Date;
+  escalationHistory: IEscalationHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +108,7 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     description: { type: String, default: "" },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
     categoryId: { type: Schema.Types.ObjectId, ref: "Category", default: null },
+    caseType: { type: String, enum: CASE_TYPES, default: "operational_fix" },
     priority: { type: String, enum: ACTION_PRIORITIES, default: "medium" },
     status: { type: String, enum: ACTION_STATUSES, default: "open" },
     ownerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
@@ -81,6 +124,9 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     escalatedToOrg: { type: Boolean, default: false },
     escalatedToOrgAt: { type: Date, default: null },
     escalatedToOrgNote: { type: String, default: "" },
+    currentEscalationLevel: { type: Number, default: 1 },
+    levelEnteredAt: { type: Date, default: Date.now },
+    escalationHistory: { type: [EscalationHistoryEntrySchema], default: [] },
   },
   { timestamps: true }
 );
