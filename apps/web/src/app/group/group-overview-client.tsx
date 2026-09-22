@@ -27,6 +27,24 @@ interface TopRow {
   starAverage: number | null;
   responseCount: number;
 }
+interface ValueDelivered {
+  casesResolvedThisPeriod: number;
+  casesResolvedPrevPeriod: number;
+  customersRespondedTo: number;
+  activeInitiatives: number;
+  completedInitiatives: number;
+}
+interface DecisionRow {
+  _id: string;
+  title: string;
+  businessName: string;
+}
+interface ThemeRow {
+  theme: string;
+  frequency: number;
+  sentimentBreakdown: { positive: number; neutral: number; negative: number };
+  trend: "up" | "down" | "flat" | null;
+}
 interface OverviewData {
   branchCount: number;
   networkAverage: number | null;
@@ -36,6 +54,9 @@ interface OverviewData {
   regions: RegionRow[];
   needsAttention: OutlierRow[];
   topPerformers: TopRow[];
+  headline: string | null;
+  valueDelivered: ValueDelivered;
+  needsYourDecision: DecisionRow[];
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
@@ -46,12 +67,16 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
   const [loading, setLoading] = useState(true);
   const [jump, setJump] = useState("");
   const [jumpResults, setJumpResults] = useState<{ businessId: string; name: string }[]>([]);
+  const [topThemes, setTopThemes] = useState<ThemeRow[]>([]);
 
   useEffect(() => {
     fetch("/api/group/overview")
       .then((res) => res.json())
       .then(setData)
       .finally(() => setLoading(false));
+    fetch("/api/group/theme-intelligence")
+      .then((res) => res.json())
+      .then((d) => setTopThemes((d.themes ?? []).slice(0, 3)));
   }, []);
 
   useEffect(() => {
@@ -105,6 +130,76 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
           )}
         </div>
       </div>
+
+      {data.headline && (
+        <div className="callout" style={{ marginBottom: 16, fontSize: 15 }}>
+          {data.headline}
+        </div>
+      )}
+
+      {data.needsYourDecision.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #b57a00)" }}>
+          <h3 style={{ margin: "0 0 8px" }}>Needs a decision from you</h3>
+          <p className="card-sub">Cases that reached the top of your escalation chain and are still unresolved.</p>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {data.needsYourDecision.map((d) => (
+              <li key={d._id} style={{ marginBottom: 4 }}>
+                <b>{d.businessName}</b> — {d.title}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="section-title">Value delivered this period</div>
+      <div className="grid grid-4" style={{ marginBottom: 20 }}>
+        <div className="card">
+          <div className="metric-label">Cases resolved</div>
+          <div className="metric-val">{data.valueDelivered.casesResolvedThisPeriod}</div>
+          <div className="metric-note">
+            {data.valueDelivered.casesResolvedPrevPeriod > 0
+              ? `vs ${data.valueDelivered.casesResolvedPrevPeriod} previous 30 days`
+              : "previous period had none"}
+          </div>
+        </div>
+        <div className="card">
+          <div className="metric-label">Customers personally responded to</div>
+          <div className="metric-val">{data.valueDelivered.customersRespondedTo}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">Improvement initiatives in progress</div>
+          <div className="metric-val">{data.valueDelivered.activeInitiatives}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">Initiatives completed this period</div>
+          <div className="metric-val">{data.valueDelivered.completedInitiatives}</div>
+        </div>
+      </div>
+
+      {topThemes.length > 0 && (
+        <>
+          <div className="section-title">Top themes this month</div>
+          <div className="grid grid-3" style={{ marginBottom: 20 }}>
+            {topThemes.map((t) => (
+              <div className="card" key={t.theme}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <b>{t.theme}</b>
+                  {t.trend && (
+                    <span className={`pill ${t.trend === "up" ? "pill-green" : t.trend === "down" ? "pill-red" : "pill-gray"}`}>
+                      {t.trend === "up" ? "▲" : t.trend === "down" ? "▼" : "—"}
+                    </span>
+                  )}
+                </div>
+                <div className="metric-note">{t.frequency} mentions</div>
+                <div className="metric-note">
+                  {t.sentimentBreakdown.positive} positive · {t.sentimentBreakdown.neutral} neutral ·{" "}
+                  {t.sentimentBreakdown.negative} negative
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="grid grid-4" data-tour="group-kpi-strip" style={{ marginBottom: 20 }}>
         <div className="card">

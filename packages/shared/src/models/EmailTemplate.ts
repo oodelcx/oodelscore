@@ -15,6 +15,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "invoice_receipt",
   "payment_failed",
   "comp_expiry_reminder",
+  "customer_response",
   "demo_request",
   "contact_form_submission",
   "feedback_point_request",

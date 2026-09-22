@@ -14,3 +14,21 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/*
+ * Reports pages print with the portal chrome (sidebar, top bar, nav) hidden
+ * so "Print / Save as PDF" produces a clean document instead of a browser
+ * screenshot. Any element the surrounding layout wants hidden from print
+ * carries [data-no-print]; the report body itself carries .report-print-area
+ * so it can widen to the full page once the sidebar is gone.
+ */
+@media print {
+  [data-no-print] {
+    display: none !important;
+  }
+  .report-print-area {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}

@@ -46,8 +46,10 @@ export default async function GroupLayout({ children }: { children: ReactNode })
 
   return (
     <div className="admin-app">
-      <MobileNavToggle label="Parent Organisation Portal" />
-      <aside className="admin-sidebar">
+      <div data-no-print>
+        <MobileNavToggle label="Parent Organisation Portal" />
+      </div>
+      <aside className="admin-sidebar" data-no-print>
         <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
@@ -76,6 +78,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 <a href="/group/insights">Insights</a>
                 <a href="/group/analytics">Analytics</a>
                 <a href="/group/alert-rules">Alert rules</a>
+                <a href="/group/reports">Reports</a>
               </nav>
               <div className="nav-group-label">Act</div>
               <nav className="admin-nav">

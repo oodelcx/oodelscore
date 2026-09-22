@@ -45,6 +45,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A comp/pilot account's expiry is 7 days away",
     category: "billing",
   },
+  customer_response: {
+    label: "Customer Response",
+    trigger: "A business/branch sends a personal reply to a feedback respondent",
+    category: "alerts",
+  },
   case_escalated_to_org: {
     label: "Case Escalated to Org",
     trigger: "A branch escalates one of its own cases to its parent org",
