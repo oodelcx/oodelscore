@@ -14,11 +14,16 @@ export const QUESTION_TYPES = [
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
 export interface IQuestion {
+  // Stable identity for this question, so a Response's answer can reference
+  // exactly which question was asked (see Response.answers[].questionId) —
+  // this is what makes a per-question trend chart possible. Optional on a
+  // plain literal being constructed for the first time; Mongoose assigns it
+  // once the question is actually persisted as a subdocument.
+  _id?: Types.ObjectId;
   text: string;
   type: QuestionType;
   categoryId: Types.ObjectId | null;
   required: boolean;
-  isTracker: boolean;
   options: string[]; // for multiple_choice / multi_select / dropdown
 }
 
@@ -31,17 +36,13 @@ export interface IQuestionTemplate {
   updatedAt: Date;
 }
 
-const QuestionSchema = new Schema<IQuestion>(
-  {
-    text: { type: String, required: true },
-    type: { type: String, enum: QUESTION_TYPES, required: true },
-    categoryId: { type: Schema.Types.ObjectId, ref: "Category", default: null },
-    required: { type: Boolean, default: false },
-    isTracker: { type: Boolean, default: false },
-    options: { type: [String], default: [] },
-  },
-  { _id: false }
-);
+const QuestionSchema = new Schema<IQuestion>({
+  text: { type: String, required: true },
+  type: { type: String, enum: QUESTION_TYPES, required: true },
+  categoryId: { type: Schema.Types.ObjectId, ref: "Category", default: null },
+  required: { type: Boolean, default: false },
+  options: { type: [String], default: [] },
+});
 
 const QuestionTemplateSchema = new Schema<IQuestionTemplate>(
   {

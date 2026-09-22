@@ -7,7 +7,7 @@ import { QrModal } from "@/components/qr-modal";
 import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
 
-type TabId = "general" | "performance" | "address" | "contact" | "settings" | "feedback-points" | "escalation" | "group";
+type TabId = "general" | "performance" | "address" | "contact" | "settings" | "feedback-points" | "team" | "escalation" | "group";
 
 // Order matters here — it's the literal left-to-right order Admin sees
 // while setting up a new business: identity, then how to reach them, then
@@ -20,6 +20,7 @@ const BASE_TABS: { id: TabId; label: string }[] = [
   { id: "address", label: "Address & Billing" },
   { id: "feedback-points", label: "Feedback Points" },
   { id: "settings", label: "Settings" },
+  { id: "team", label: "Team" },
   { id: "escalation", label: "Escalation" },
   { id: "performance", label: "Performance" },
 ];
@@ -37,6 +38,7 @@ const VALID_TAB_IDS: readonly TabId[] = [
   "contact",
   "settings",
   "feedback-points",
+  "team",
   "escalation",
   "group",
 ];
@@ -250,6 +252,90 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   >([]);
   const [assignLevel, setAssignLevel] = useState("");
   const [assignEmail, setAssignEmail] = useState("");
+
+  // Team Members — Admin-provisioned only (task #P7.3): a business can no
+  // longer self-invite, so this tab is the one place logins get added,
+  // edited, or removed. Also feeds the escalation "who holds each level"
+  // dropdown above/below with real people instead of a free-text email.
+  interface TeamMemberRow {
+    _id: string;
+    email: string;
+    teamRole: string;
+    tier: "full" | "limited";
+    inviteStatus: string;
+  }
+  const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
+  const [teamSeatLimit, setTeamSeatLimit] = useState<number | null>(null);
+  const [teamActiveCount, setTeamActiveCount] = useState(0);
+  const [teamAddEmail, setTeamAddEmail] = useState("");
+  const [teamAddRole, setTeamAddRole] = useState("");
+  const [teamAddTier, setTeamAddTier] = useState<"full" | "limited">("full");
+  const [teamAdding, setTeamAdding] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [teamEditingId, setTeamEditingId] = useState<string | null>(null);
+  const [teamEditRole, setTeamEditRole] = useState("");
+  const [teamEditTier, setTeamEditTier] = useState<"full" | "limited">("full");
+
+  function loadTeamMembers() {
+    fetch(`/api/admin/businesses/${params.id}/team-members`)
+      .then((r) => r.json())
+      .then((d) => {
+        setTeamMembers(d.members ?? []);
+        setTeamSeatLimit(d.seatLimit ?? null);
+        setTeamActiveCount(d.activeCount ?? 0);
+      });
+  }
+
+  useEffect(() => {
+    if (isNew) return;
+    loadTeamMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, params.id]);
+
+  async function addTeamMember() {
+    if (!teamAddEmail.trim()) return;
+    setTeamAdding(true);
+    setTeamError(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}/team-members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: teamAddEmail.trim(), teamRole: teamAddRole.trim(), tier: teamAddTier }),
+    });
+    const data = await res.json().catch(() => null);
+    setTeamAdding(false);
+    if (!res.ok) {
+      setTeamError(data?.message ?? "Failed to add team member");
+      return;
+    }
+    setTeamAddEmail("");
+    setTeamAddRole("");
+    setTeamAddTier("full");
+    loadTeamMembers();
+  }
+
+  function startTeamEdit(m: TeamMemberRow) {
+    setTeamEditingId(m._id);
+    setTeamEditRole(m.teamRole);
+    setTeamEditTier(m.tier);
+  }
+
+  async function saveTeamEdit(memberId: string) {
+    const res = await fetch(`/api/admin/businesses/${params.id}/team-members/${memberId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamRole: teamEditRole, tier: teamEditTier }),
+    });
+    if (res.ok) {
+      setTeamEditingId(null);
+      loadTeamMembers();
+    }
+  }
+
+  async function removeTeamMember(memberId: string) {
+    if (!confirm("Remove this team member's access?")) return;
+    const res = await fetch(`/api/admin/businesses/${params.id}/team-members/${memberId}`, { method: "DELETE" });
+    if (res.ok) loadTeamMembers();
+  }
 
   interface FeedbackPointRow {
     _id: string;
@@ -1648,6 +1734,115 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         </div>
       )}
 
+      {tab === "team" && !isNew && (
+        <div className="card" style={{ maxWidth: 720 }}>
+          <h3>Team Members</h3>
+          <p className="card-sub">
+            Adding, editing, or removing a login here is the only way a team member gets set up — this business can no
+            longer self-invite; a change request comes in as a support ticket.
+          </p>
+          <p className="card-sub">
+            {teamSeatLimit === null ? "Unlimited team seats." : `${teamActiveCount} of ${teamSeatLimit} team seats used.`}
+          </p>
+          <table className="clean" style={{ marginBottom: 16 }}>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Access</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamMembers.map((m) =>
+                teamEditingId === m._id ? (
+                  <tr key={m._id}>
+                    <td>{m.email}</td>
+                    <td>
+                      <input value={teamEditRole} onChange={(e) => setTeamEditRole(e.target.value)} placeholder="e.g. Shift Lead" />
+                    </td>
+                    <td>
+                      <select value={teamEditTier} onChange={(e) => setTeamEditTier(e.target.value as "full" | "limited")}>
+                        <option value="full">Full</option>
+                        <option value="limited">Limited</option>
+                      </select>
+                    </td>
+                    <td>
+                      <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => saveTeamEdit(m._id)}>
+                        Save
+                      </button>
+                      <button className="btn btn-sm" onClick={() => setTeamEditingId(null)}>
+                        Cancel
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={m._id}>
+                    <td>{m.email}</td>
+                    <td>{m.teamRole || "—"}</td>
+                    <td>{m.tier === "full" ? "Full" : "Limited"}</td>
+                    <td>
+                      <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button className="icon-btn" style={{ marginRight: 4 }} onClick={() => startTeamEdit(m)} title="Edit role/access">
+                        ✎
+                      </button>
+                      <button className="icon-btn btn-danger" onClick={() => removeTeamMember(m._id)} title="Remove">
+                        🗑
+                      </button>
+                    </td>
+                  </tr>
+                )
+              )}
+              {teamMembers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="card-sub">
+                    No team members yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          <h3>Add a team member</h3>
+          <div className="field-row">
+            <div className="field">
+              <label>Email</label>
+              <input
+                type="email"
+                value={teamAddEmail}
+                onChange={(e) => setTeamAddEmail(e.target.value)}
+                disabled={teamSeatLimit !== null && teamActiveCount >= teamSeatLimit}
+              />
+            </div>
+            <div className="field">
+              <label>Role (optional, e.g. &ldquo;Shift Lead&rdquo;)</label>
+              <input type="text" value={teamAddRole} onChange={(e) => setTeamAddRole(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Access</label>
+              <select value={teamAddTier} onChange={(e) => setTeamAddTier(e.target.value as "full" | "limited")}>
+                <option value="full">Full — same as the owner, minus billing &amp; team management</option>
+                <option value="limited">Limited — only their own assigned cases</option>
+              </select>
+            </div>
+          </div>
+          {teamError && <p className="error-text">{teamError}</p>}
+          <button
+            className="btn btn-dark btn-sm"
+            disabled={teamAdding || (teamSeatLimit !== null && teamActiveCount >= teamSeatLimit)}
+            onClick={addTeamMember}
+          >
+            {teamAdding ? "Adding…" : "+ Add team member"}
+          </button>
+        </div>
+      )}
+
       {tab === "escalation" && !isNew && form.parentOrgId && (
         <div className="card" style={{ maxWidth: 640 }}>
           <h3>Escalation</h3>
@@ -1771,10 +1966,23 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                   </select>
                 </div>
                 <div className="field">
-                  <label>Person&apos;s email</label>
-                  <input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} placeholder="name@company.com" />
+                  <label>Person</label>
+                  <select value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)}>
+                    <option value="">Choose…</option>
+                    {teamMembers.map((m) => (
+                      <option key={m._id} value={m.email}>
+                        {m.email}
+                        {m.teamRole ? ` — ${m.teamRole}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {teamMembers.length === 0 && (
+                    <p className="card-sub" style={{ margin: "4px 0 0" }}>
+                      No team members yet — add one on the Team tab first.
+                    </p>
+                  )}
                 </div>
-                <button className="btn btn-dark btn-sm" disabled={escalationBusy} onClick={addEscalationAssignment}>
+                <button className="btn btn-dark btn-sm" disabled={escalationBusy || !assignEmail} onClick={addEscalationAssignment}>
                   Assign
                 </button>
               </div>

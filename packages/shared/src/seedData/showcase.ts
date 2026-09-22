@@ -517,7 +517,6 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       type: q.type,
       categoryId: q.category ? categoryByName.get(q.category)! : null,
       required: q.required ?? false,
-      isTracker: q.type === "star_1_5",
       options: q.options ?? [],
     }));
     const template = await QuestionTemplate.findOneAndUpdate(
@@ -905,7 +904,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
           if (question.type === "open_text" && typeof value === "string" && value) {
             openTextComment = value;
           }
-          return { questionId: new Types.ObjectId(), type: question.type, value, categoryId: question.categoryId };
+          return { questionId: question._id!, type: question.type, value, categoryId: question.categoryId };
         });
 
         const hasDemographics = Math.random() < 0.5;

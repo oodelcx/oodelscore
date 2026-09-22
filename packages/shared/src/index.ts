@@ -27,6 +27,7 @@ export * from "./scoring/themeIntelligence";
 export * from "./scoring/rootCauseEvidence";
 export * from "./scoring/playbookTrigger";
 export * from "./scoring/caseAutoAttach";
+export * from "./analytics/questionTrend";
 export * from "./alerts/evaluate";
 export * from "./ai/triage";
 export * from "./ai/themeSentiment";

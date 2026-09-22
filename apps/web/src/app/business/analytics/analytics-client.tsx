@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ThemeIntelligenceCard } from "@/components/theme-intelligence-card";
 import { DriverAnalysisCard } from "@/components/driver-analysis-card";
 import { InfoTip } from "@/components/info-tip";
+import { QuestionTrendCard } from "@/components/question-trend-card";
 
 interface AnalyticsData {
   feedbackPoints: { _id: string; name: string }[];
@@ -99,6 +100,8 @@ export default function AnalyticsClient({ tooltips }: { tooltips: Record<string,
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
+
+      <QuestionTrendCard questionsApi="/api/business/analytics/questions" trendApi="/api/business/analytics/question-trend" />
 
       <div className="grid grid-2">
         <div className="card">

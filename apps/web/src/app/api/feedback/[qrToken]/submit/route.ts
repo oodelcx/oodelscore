@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Types } from "mongoose";
 import {
   connectToDatabase,
   FeedbackPoint,
@@ -131,7 +130,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const isNumericType = question.type === "star_1_5" || question.type === "nps_0_10" || question.type === "slider";
     const value = isNumericType && raw !== null && raw !== "" ? Number(raw) : raw;
     return {
-      questionId: new Types.ObjectId(),
+      questionId: question._id!,
       type: question.type as QuestionType,
       value,
       categoryId: question.categoryId,

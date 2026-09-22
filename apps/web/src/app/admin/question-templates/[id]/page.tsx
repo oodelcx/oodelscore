@@ -76,7 +76,6 @@ interface QuestionRow {
   type: string;
   categoryId: string;
   required: boolean;
-  isTracker: boolean;
   options: string[];
 }
 
@@ -85,7 +84,6 @@ const EMPTY_QUESTION: QuestionRow = {
   type: "star_1_5",
   categoryId: "",
   required: false,
-  isTracker: false,
   options: [],
 };
 
@@ -127,7 +125,6 @@ export default function QuestionTemplateBuilderPage() {
             type: q.type ?? "star_1_5",
             categoryId: q.categoryId ?? "",
             required: !!q.required,
-            isTracker: !!q.isTracker,
             options: q.options ?? [],
           }))
         );
@@ -205,7 +202,6 @@ export default function QuestionTemplateBuilderPage() {
         type: q.type,
         categoryId: q.categoryId || null,
         required: q.required,
-        isTracker: q.isTracker,
         options: q.options.map((o) => o.trim()).filter(Boolean),
       })),
     };
@@ -343,10 +339,6 @@ export default function QuestionTemplateBuilderPage() {
                 <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
                   <input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(i, { required: e.target.checked })} />
                   Required
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-                  <input type="checkbox" checked={q.isTracker} onChange={(e) => updateQuestion(i, { isTracker: e.target.checked })} />
-                  Tracker
                 </label>
               </div>
               {OPTION_BASED_TYPES.includes(q.type as (typeof OPTION_BASED_TYPES)[number]) && (
