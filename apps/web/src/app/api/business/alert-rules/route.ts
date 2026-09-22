@@ -40,6 +40,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
+    return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

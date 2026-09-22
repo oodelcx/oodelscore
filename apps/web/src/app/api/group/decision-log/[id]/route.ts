@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Types } from "mongoose";
-import { connectToDatabase, DecisionLogEntry, Business, DECISION_STATUSES } from "@oodelscore/shared";
+import { connectToDatabase, DecisionLogEntry, Business, DECISION_STATUSES , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -8,6 +8,9 @@ type RouteParams = { params: Promise<{ id: string }> };
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 
@@ -47,6 +50,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 
