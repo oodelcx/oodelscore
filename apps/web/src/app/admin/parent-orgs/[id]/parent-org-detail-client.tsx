@@ -603,7 +603,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
           <button
             key={t.id}
             className={tab === t.id ? "active" : ""}
-            disabled={isNew && (t.id === "businesses" || t.id === "command-center" || t.id === "performance")}
+            disabled={isNew && (t.id === "businesses" || t.id === "command-center" || t.id === "performance" || t.id === "escalation")}
             onClick={() => setTab(t.id)}
           >
             {t.label}
