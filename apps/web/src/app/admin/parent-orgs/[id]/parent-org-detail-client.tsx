@@ -21,6 +21,11 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "performance", label: "Performance" },
 ];
 
+// Only these 3 steps are reachable while creating a new org — the rest
+// (Businesses, Escalation, Command Center, Performance) need a real org
+// _id, same reason their tab buttons are already disabled while isNew.
+const CREATE_WIZARD_STEPS: TabId[] = ["general", "contact", "address"];
+
 const VALID_TAB_IDS: readonly TabId[] = [
   "general",
   "performance",
@@ -610,6 +615,53 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     }
   }
 
+  function goToNextWizardStep() {
+    if (tab === "general" && !form.name.trim()) {
+      setError("Organization name is required.");
+      return;
+    }
+    if (tab === "contact" && !form.contactEmail.trim()) {
+      setError("Contact email is required — it becomes this organization's login.");
+      return;
+    }
+    setError(null);
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    if (idx >= 0 && idx < CREATE_WIZARD_STEPS.length - 1) {
+      setTab(CREATE_WIZARD_STEPS[idx + 1]);
+    }
+  }
+
+  function goToPrevWizardStep() {
+    setError(null);
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    if (idx > 0) setTab(CREATE_WIZARD_STEPS[idx - 1]);
+  }
+
+  // Shared button row for each of the 3 creation-wizard steps — see the
+  // matching helper on the Business detail page for the full rationale.
+  function wizardButtons() {
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    const isLastStep = idx === CREATE_WIZARD_STEPS.length - 1;
+    return (
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        {idx > 0 && (
+          <button className="btn" type="button" onClick={goToPrevWizardStep}>
+            ← Back
+          </button>
+        )}
+        {isLastStep ? (
+          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+            {saving ? "Saving…" : "Create organization"}
+          </button>
+        ) : (
+          <button className="btn btn-dark" type="button" onClick={goToNextWizardStep}>
+            Continue →
+          </button>
+        )}
+      </div>
+    );
+  }
+
   async function updateBusinessBilling(businessId: string, billingAssignment: string) {
     const res = await fetch(`/api/admin/businesses/${businessId}`, {
       method: "PATCH",
@@ -635,25 +687,35 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         </div>
       </div>
 
-      {isNew && (
-        <div className="callout">
-          Creating a new Parent Organization. Fill in <b>General</b> and <b>Contact</b> (the contact email becomes its
-          login) before clicking <b>Create organization</b> — Businesses &amp; Billing unlocks once it exists.
+      {isNew ? (
+        <div className="callout" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <span>
+            Step {CREATE_WIZARD_STEPS.indexOf(tab) + 1} of {CREATE_WIZARD_STEPS.length} —{" "}
+            <b>{TABS.find((t) => t.id === tab)?.label}</b>
+          </span>
+          <span style={{ display: "flex", gap: 4 }}>
+            {CREATE_WIZARD_STEPS.map((step, i) => (
+              <span
+                key={step}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: i <= CREATE_WIZARD_STEPS.indexOf(tab) ? "var(--green, #2F5233)" : "var(--border)",
+                }}
+              />
+            ))}
+          </span>
+        </div>
+      ) : (
+        <div className="subtabs">
+          {TABS.map((t) => (
+            <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
         </div>
       )}
-
-      <div className="subtabs">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={tab === t.id ? "active" : ""}
-            disabled={isNew && (t.id === "businesses" || t.id === "command-center" || t.id === "performance" || t.id === "escalation")}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       {error && <p className="error-text">{error}</p>}
 
@@ -746,9 +808,13 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               )}
             </div>
           )}
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create organization" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       )}
 
@@ -936,9 +1002,13 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
             />
             Billing address same as above
           </div>
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create organization" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       )}
 
@@ -1147,9 +1217,13 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               />
             </div>
           </div>
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create organization" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       )}
 
