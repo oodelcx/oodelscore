@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, getStripeClient, handleStripeWebhookEvent } from "@oodelscore/shared";
+import { connectToDatabase, getStripeClient, handleStripeWebhookEvent, logSystemHealthEvent } from "@oodelscore/shared";
 
 export const runtime = "nodejs";
 
@@ -36,6 +36,10 @@ export async function POST(request: Request) {
     await handleStripeWebhookEvent(event);
   } catch (err) {
     console.error("[stripe webhook] handler failed", event.type, err);
+    await logSystemHealthEvent("stripe_webhook_failure", (err as Error).message ?? "Handler failed", {
+      eventType: event.type,
+      eventId: event.id,
+    });
     return NextResponse.json({ error: "Handler failed" }, { status: 500 });
   }
 

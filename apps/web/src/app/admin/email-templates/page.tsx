@@ -72,6 +72,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A business requests a new feedback point or changes to one",
     category: "alerts",
   },
+  support_ticket_created: {
+    label: "Support Ticket Created",
+    trigger: "A business/group owner submits a ticket via the Support Queue",
+    category: "alerts",
+  },
   decision_outcome_measured: {
     label: "Decision Outcome Measured",
     trigger: "The daily sweep computes a real verdict (not \"not ready\"/\"insufficient data\") for a logged decision",

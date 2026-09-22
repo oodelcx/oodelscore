@@ -13,6 +13,7 @@ import {
   assertStaffCanEditBusinessAdminFields,
   canAccessScopedResource,
   ForbiddenFieldWriteError,
+  logSystemHealthEvent,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
@@ -164,6 +165,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       await syncBranchGroupPaysCoverage(business._id.toString());
     } catch (err) {
       billingSyncWarning = err instanceof Error ? err.message : "Failed to sync Stripe billing coverage";
+      await logSystemHealthEvent("billing_sync_failure", billingSyncWarning, {
+        businessId: business._id.toString(),
+        businessName: business.name,
+      });
     }
   }
 
