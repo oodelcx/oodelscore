@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ImprovementInitiative, Business } from "@oodelscore/shared";
+import { connectToDatabase, ImprovementInitiative, Business , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 export async function GET() {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "improvementInitiatives")) {
+    return NextResponse.json({ status: "error", message: "Improvement Initiatives is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

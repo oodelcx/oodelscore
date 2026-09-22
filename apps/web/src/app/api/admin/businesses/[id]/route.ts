@@ -14,6 +14,7 @@ import {
   canAccessScopedResource,
   ForbiddenFieldWriteError,
   logSystemHealthEvent,
+  isValidFeatureKey,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
@@ -104,6 +105,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.escalationSlaHours !== undefined && body.escalationSlaHours !== null && typeof body.escalationSlaHours !== "number") {
     return NextResponse.json({ status: "error", message: "Invalid escalationSlaHours" }, { status: 400 });
   }
+  if (body.enabledFeatures !== undefined && body.enabledFeatures !== null) {
+    const keys = body.enabledFeatures;
+    if (!Array.isArray(keys) || !keys.every((k: unknown) => typeof k === "string" && isValidFeatureKey(k))) {
+      return NextResponse.json({ status: "error", message: "Invalid enabledFeatures" }, { status: 400 });
+    }
+  }
 
   // Spec Section 16: never let teamMemberSeatLimit drop below the
   // currently-active team-member count.
@@ -144,6 +151,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "accountManagerId",
     "teamMemberSeatLimit",
     "ragThresholds",
+    "enabledFeatures",
     "active",
   ] as const;
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AlertRule, AlertActivity, ALERT_RULE_TYPES } from "@oodelscore/shared";
+import { connectToDatabase, AlertRule, AlertActivity, ALERT_RULE_TYPES , hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
@@ -9,6 +9,9 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
+    return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, DecisionLogEntry } from "@oodelscore/shared";
+import { connectToDatabase, DecisionLogEntry , hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 // Mirrors /api/group/decision-log, scoped to businessId instead of
@@ -20,6 +20,9 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Response, Category, FeedbackPoint } from "@oodelscore/shared";
+import { connectToDatabase, Response, Category, FeedbackPoint , hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import type { FilterQuery } from "mongoose";
 import type { IResponse } from "@oodelscore/shared";
@@ -57,6 +57,9 @@ function trendFromResponses(responses: IResponse[], from: Date, to: Date) {
 export async function GET(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "analytics")) {
+    return NextResponse.json({ status: "error", message: "Analytics is not enabled for this account" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const feedbackPointId = searchParams.get("feedbackPointId");

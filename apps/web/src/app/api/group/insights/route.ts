@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AiInsightReport } from "@oodelscore/shared";
+import { connectToDatabase, AiInsightReport , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 export async function GET(request: Request) {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "insights")) {
+    return NextResponse.json({ status: "error", message: "Insights is not enabled for this account" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const period = searchParams.get("period");

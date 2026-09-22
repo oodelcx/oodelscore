@@ -44,6 +44,7 @@ export const BUSINESS_ADMIN_ONLY_FIELDS = [
   "checkoutEnabled",
   "escalationLevels",
   "escalationSlaHours",
+  "enabledFeatures",
 ] as const;
 
 export interface IBusiness {
@@ -96,6 +97,12 @@ export interface IBusiness {
   // branch always inherits its parent org's ragThresholds instead (spec: "drill
   // down businesses will have the same what is set for the group").
   ragThresholds: IRagThresholds;
+  // ADMIN-EDITABLE ONLY. Which advanced features (see features/flags.ts)
+  // are turned on for this account — e.g. gating Reports/Playbooks by plan
+  // tier, or holding a feature back from a pilot account. undefined/null
+  // (any record saved before this field existed) means "all on" — see
+  // hasFeature() — so this never silently locks an existing account out.
+  enabledFeatures: string[] | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -136,6 +143,7 @@ const BusinessSchema = new Schema<IBusiness>(
     accountManagerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     teamMemberSeatLimit: { type: Number, default: null },
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
+    enabledFeatures: { type: [String], default: null },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

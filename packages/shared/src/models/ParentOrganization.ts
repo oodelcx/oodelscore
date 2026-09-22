@@ -47,6 +47,11 @@ export interface IParentOrganization {
   teamMemberSeatLimit: number | null; // ADMIN-EDITABLE ONLY. The Group's own staff pool, independent of any branch's.
   ragThresholds: IRagThresholds; // ADMIN-EDITABLE ONLY. Inherited by every branch under this org.
   commandCenterEnabled: boolean; // ADMIN-EDITABLE ONLY. Whether the Group Command Center page is shown to this org's users.
+  // ADMIN-EDITABLE ONLY. Which advanced features (see features/flags.ts) are
+  // turned on for this org (and its branches — see hasFeature() call sites).
+  // undefined/null means "all on" so existing orgs are unaffected until
+  // Admin explicitly edits one.
+  enabledFeatures: string[] | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +74,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     teamMemberSeatLimit: { type: Number, default: null },
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     commandCenterEnabled: { type: Boolean, default: true },
+    enabledFeatures: { type: [String], default: null },
   },
   { timestamps: true }
 );

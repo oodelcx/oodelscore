@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AlertRule, AlertActivity, Business, ALERT_RULE_TYPES, ALERT_SCOPES } from "@oodelscore/shared";
+import { connectToDatabase, AlertRule, AlertActivity, Business, ALERT_RULE_TYPES, ALERT_SCOPES , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 /**
@@ -10,6 +10,9 @@ import { requireParentOrgOwner } from "@/lib/ownerAuth";
 export async function GET() {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "alertRules")) {
+    return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

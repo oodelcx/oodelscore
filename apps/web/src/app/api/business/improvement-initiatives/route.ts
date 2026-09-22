@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ImprovementInitiative } from "@oodelscore/shared";
+import { connectToDatabase, ImprovementInitiative , hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 // Mirrors /api/group/improvement-initiatives, scoped to a standalone
@@ -9,6 +9,9 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "improvementInitiatives")) {
+    return NextResponse.json({ status: "error", message: "Improvement Initiatives is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

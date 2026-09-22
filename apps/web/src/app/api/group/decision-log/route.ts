@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, DecisionLogEntry, Business } from "@oodelscore/shared";
+import { connectToDatabase, DecisionLogEntry, Business , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 export async function GET() {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

@@ -8,6 +8,7 @@ import {
   PlatformSettings,
   PLATFORM_SETTINGS_SINGLETON_KEY,
   hasLiveBillingAccess,
+  hasFeature,
 } from "@oodelscore/shared";
 import "../admin/admin.css";
 import "../business/business.css";
@@ -29,7 +30,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   const isLimitedTeamMember = isOrgTeamMember && user.tier === "limited";
 
   await connectToDatabase();
-  const org = await ParentOrganization.findById(user.parentId).select("commandCenterEnabled");
+  const org = await ParentOrganization.findById(user.parentId).select("commandCenterEnabled enabledFeatures");
   if (!org) redirect("/login");
   const commandCenterEnabled = org.commandCenterEnabled ?? true;
   const platformSettings = await PlatformSettings.findOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }).select(
@@ -81,10 +82,10 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 label="Understand"
                 hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
               >
-                <a href="/group/insights">Insights</a>
-                <a href="/group/analytics">Analytics</a>
-                <a href="/group/alert-rules">Alert rules</a>
-                <a href="/group/reports">Reports</a>
+                {hasFeature(org.enabledFeatures, "insights") && <a href="/group/insights">Insights</a>}
+                {hasFeature(org.enabledFeatures, "analytics") && <a href="/group/analytics">Analytics</a>}
+                {hasFeature(org.enabledFeatures, "alertRules") && <a href="/group/alert-rules">Alert rules</a>}
+                {hasFeature(org.enabledFeatures, "reports") && <a href="/group/reports">Reports</a>}
               </NavSection>
               <NavSection
                 storageKey="group-act"
@@ -92,12 +93,16 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 hrefs={["/group/cases", "/group/improvement-initiatives", "/group/decision-log"]}
               >
                 <a href="/group/cases">Case Management</a>
-                <a href="/group/improvement-initiatives">Improvement Initiatives</a>
-                <a href="/group/decision-log">Decision log</a>
+                {hasFeature(org.enabledFeatures, "improvementInitiatives") && (
+                  <a href="/group/improvement-initiatives">Improvement Initiatives</a>
+                )}
+                {hasFeature(org.enabledFeatures, "decisionLog") && <a href="/group/decision-log">Decision log</a>}
               </NavSection>
-              <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
-                <a href="/group/maturity">CX Pulse</a>
-              </NavSection>
+              {hasFeature(org.enabledFeatures, "cxPulse") && (
+                <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
+                  <a href="/group/maturity">CX Pulse</a>
+                </NavSection>
+              )}
               <NavSection
                 storageKey="group-admin"
                 label="Admin"
@@ -119,7 +124,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 <a href="/group/messages">Messages</a>
                 <a href="/group/support">Support</a>
                 {!isOrgTeamMember && <a href="/group/billing">Billing</a>}
-                <a href="/group/playbooks">Playbook Library</a>
+                {hasFeature(org.enabledFeatures, "playbooks") && <a href="/group/playbooks">Playbook Library</a>}
                 <a href="/group/security">Security</a>
               </NavSection>
             </>
