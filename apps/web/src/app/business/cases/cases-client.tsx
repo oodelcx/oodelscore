@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { InfoTip } from "@/components/info-tip";
 import { OwnerBadge } from "@/components/owner-badge";
 import { PlaybookRunPanelSlideout } from "@/components/playbook-run-panel-slideout";
@@ -17,11 +18,18 @@ interface PlaybookRunSummary {
   status: "active" | "completed" | "abandoned";
   attachReason: string;
 }
+const CASE_TYPE_LABELS: Record<string, string> = {
+  customer_recovery: "Customer recovery",
+  operational_fix: "Operational fix",
+  investigation: "Investigation",
+};
+
 interface ItemRow {
   _id: string;
   title: string;
   description: string;
   categoryId: string | null;
+  caseType: string;
   ownerId: string | null;
   priority: string;
   status: string;
@@ -118,6 +126,7 @@ export default function BusinessCasesClient() {
   const [escalationNoteDraft, setEscalationNoteDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
+  const [caseType, setCaseType] = useState("operational_fix");
   const [priority, setPriority] = useState("medium");
   const [ownerId, setOwnerId] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -213,7 +222,7 @@ export default function BusinessCasesClient() {
     const res = await fetch("/api/business/action-board", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
+      body: JSON.stringify({ title, caseType, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
     });
     const data = await res.json();
     setCreating(false);
@@ -222,6 +231,7 @@ export default function BusinessCasesClient() {
       return;
     }
     setTitle("");
+    setCaseType("operational_fix");
     setOwnerId("");
     setDueDate("");
     setShowCreateForm(false);
@@ -392,6 +402,14 @@ export default function BusinessCasesClient() {
               <input value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="field">
+              <label>Type</label>
+              <select value={caseType} onChange={(e) => setCaseType(e.target.value)}>
+                <option value="customer_recovery">Customer recovery — reach out and make it right</option>
+                <option value="operational_fix">Operational fix — fix the problem</option>
+                <option value="investigation">Investigation — figure out what's happening</option>
+              </select>
+            </div>
+            <div className="field">
               <label>
                 Priority <InfoTip text={tooltips["priority"]} />
               </label>
@@ -470,7 +488,9 @@ export default function BusinessCasesClient() {
                 <div className={`card ab-card${severityClass}${overdue ? " overdue" : ""}`} data-tour={isFirst ? "cases-first-card" : undefined}>
                   <div className="ab-card-head">
                     <div className="ab-title-block">
-                      <div className="ab-title">{item.title}</div>
+                      <div className="ab-title">
+                        {item.title} <Link href={`/business/cases/${item._id}`} className="ab-show-more">View full trail →</Link>
+                      </div>
                       {!isLimited && (
                         <div className="ab-meta-row">
                           <Stars rating={item.rating} />
@@ -518,6 +538,9 @@ export default function BusinessCasesClient() {
                           <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
                             {item.priority}
                           </span>
+                        )}
+                        {item.caseType && item.caseType !== "operational_fix" && (
+                          <span className="pill pill-gray">{CASE_TYPE_LABELS[item.caseType] ?? item.caseType}</span>
                         )}
                         {item.escalatedToOrg && (
                           <span className="pill pill-red" title={item.escalatedToOrgNote || undefined}>

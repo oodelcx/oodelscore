@@ -96,6 +96,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
                 <a href="/business/cases">Case Management</a>
+                <a href="/business/improvement-initiatives">Improvement Initiatives</a>
                 <a href="/business/decision-log">Decision Log</a>
               </nav>
 

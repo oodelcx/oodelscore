@@ -300,7 +300,11 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
             Decision Log
             <InfoTip text={tooltips["decision-log"]} />
           </h1>
-          <p className="subtitle">What actually changed because of what customers told you, and whether it worked.</p>
+          <p className="subtitle">
+            What actually changed because of what customers told you, and whether it worked. For a genuine management
+            decision, not a routine case — a recurring pattern across several branches belongs in Improvement
+            Initiatives instead.
+          </p>
         </div>
         <div style={{ display: "flex", alignItems: "center" }}>
           <button className="btn btn-dark" data-tour="dl-new-button" onClick={() => setShowForm((v) => !v)}>

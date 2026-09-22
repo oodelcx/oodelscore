@@ -270,8 +270,8 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
           <h1>Decision Log</h1>
           <p className="subtitle">
             {readOnly
-              ? "Managed by your parent organization — resolving a case here with a note logs it to the org's Decision Log automatically, and it shows up below read-only."
-              : "Track decisions and changes made in response to feedback, and measure the outcome. Resolving a case in Case Management with a note logs one here automatically."}
+              ? "Managed by your parent organization — shown here read-only when it affects this branch."
+              : "For a genuine management decision, not a routine case resolution — log it here deliberately, then measure whether it moved the metric. Routine cases stay in Case Management; a recurring pattern across several belongs in Improvement Initiatives instead."}
           </p>
         </div>
         {!readOnly && (

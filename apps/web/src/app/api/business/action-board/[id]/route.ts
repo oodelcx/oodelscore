@@ -3,6 +3,9 @@ import { Types } from "mongoose";
 import {
   connectToDatabase,
   ActionBoardItem,
+  ActionItemComment,
+  Response,
+  Playbook,
   User,
   ParentOrganization,
   sendTemplatedEmail,
@@ -11,8 +14,59 @@ import {
   CASE_TYPES,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { attachPlaybookRunsToItems } from "@/lib/caseStats";
 
 type RouteParams = { params: Promise<{ id: string }> };
+
+/**
+ * The unified case trail: one case's full audit history — original
+ * feedback, comments, escalation history (with each level's holder
+ * resolved to an email), linked playbook run, resolution. The same shape
+ * every persona's drill-down reads from (see /group/action-board/[id] for
+ * the org-scoped twin).
+ */
+export async function GET(_request: Request, { params }: RouteParams) {
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+
+  await connectToDatabase();
+  const { id } = await params;
+  const item = await ActionBoardItem.findOne({ _id: id, businessId: session.business._id });
+  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (session.tier === "limited" && item.ownerId?.toString() !== session.user._id.toString()) {
+    return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  }
+
+  const [sourceResponses, comments, playbooks] = await Promise.all([
+    Response.find({ _id: { $in: item.sourceResponseIds } }),
+    ActionItemComment.find({ actionItemId: item._id }).sort({ createdAt: 1 }),
+    Playbook.find(session.business.parentOrgId ? { parentOrgId: session.business.parentOrgId } : { businessId: session.business._id }),
+  ]);
+
+  const escalationUserIds = [
+    ...new Set(item.escalationHistory.map((h) => h.userId?.toString()).filter((x): x is string => !!x)),
+  ];
+  const escalationUsers = await User.find({ _id: { $in: escalationUserIds } }).select("email");
+  const emailByUserId = new Map(escalationUsers.map((u) => [u._id.toString(), u.email]));
+
+  const [itemWithRun] = await attachPlaybookRunsToItems([item], playbooks);
+
+  return NextResponse.json({
+    status: "ok",
+    item: {
+      ...itemWithRun,
+      escalationHistory: item.escalationHistory.map((h) => ({
+        level: h.level,
+        action: h.action,
+        note: h.note,
+        at: h.at,
+        userEmail: h.userId ? (emailByUserId.get(h.userId.toString()) ?? null) : null,
+      })),
+    },
+    sourceResponses,
+    comments,
+  });
+}
 
 /** Fires spec Section 11's action_assigned trigger whenever ownerId is set or changed.
  * A "limited" tier Team Member may only update status/resolutionNote on an item already

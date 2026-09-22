@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { InfoTip } from "@/components/info-tip";
 import { OwnerBadge } from "@/components/owner-badge";
 import { PlaybookRunPanelSlideout } from "@/components/playbook-run-panel-slideout";
@@ -16,12 +17,19 @@ interface PlaybookRunSummary {
   status: "active" | "completed" | "abandoned";
   attachReason: string;
 }
+const CASE_TYPE_LABELS: Record<string, string> = {
+  customer_recovery: "Customer recovery",
+  operational_fix: "Operational fix",
+  investigation: "Investigation",
+};
+
 interface ItemRow {
   _id: string;
   title: string;
   description: string;
   businessId: string;
   categoryId: string | null;
+  caseType: string;
   ownerId: string | null;
   priority: string;
   status: string;
@@ -425,7 +433,9 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
               >
                 <div className="ab-card-head">
                   <div className="ab-title-block">
-                    <div className="ab-title">{item.title}</div>
+                    <div className="ab-title">
+                      {item.title} <Link href={`/group/cases/${item._id}`} className="ab-show-more">View full trail →</Link>
+                    </div>
                     <div className="ab-meta-row">
                       <Stars rating={item.rating} />
                       {!isLimited && (
@@ -492,6 +502,9 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                       <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
                         {item.priority}
                       </span>
+                      {item.caseType && item.caseType !== "operational_fix" && (
+                        <span className="pill pill-gray">{CASE_TYPE_LABELS[item.caseType] ?? item.caseType}</span>
+                      )}
                     </div>
                     {isLimited && item.status !== "resolved" && resolvingId !== item._id && (
                       <button className="btn btn-sm" onClick={() => startResolve(item._id)}>

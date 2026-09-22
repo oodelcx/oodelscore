@@ -80,6 +80,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <div className="nav-group-label">Act</div>
               <nav className="admin-nav">
                 <a href="/group/cases">Case Management</a>
+                <a href="/group/improvement-initiatives">Improvement Initiatives</a>
                 <a href="/group/decision-log">Decision log</a>
               </nav>
               <div className="nav-group-label">Measure</div>
