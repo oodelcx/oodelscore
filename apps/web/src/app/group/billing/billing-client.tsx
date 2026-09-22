@@ -20,6 +20,7 @@ interface BillingData {
     paymentMethodLast4: string;
   } | null;
   invoices: { _id: string; amount: number; currency: string; status: string; issuedAt: string }[];
+  credits: { _id: string; type: string; amount: number; reason: string; issuedAt: string }[];
   totalBranches: number;
   groupPaysBranchCount: number;
   branchPaysBranchCount: number;
@@ -249,6 +250,34 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
           )}
         </tbody>
       </table>
+
+      {data.credits.length > 0 && (
+        <>
+          <div className="section-title">Credits &amp; refunds</div>
+          <table className="clean">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.credits.map((c) => (
+                <tr key={c._id}>
+                  <td>{new Date(c.issuedAt).toLocaleDateString()}</td>
+                  <td>
+                    <span className={`pill ${c.type === "refund" ? "pill-amber" : "pill-green"}`}>{c.type}</span>
+                  </td>
+                  <td>{c.amount.toFixed(2)}</td>
+                  <td>{c.reason || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 }
