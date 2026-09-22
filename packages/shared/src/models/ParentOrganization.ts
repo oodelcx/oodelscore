@@ -26,6 +26,10 @@ export interface IParentOrganization {
   // "group_pays" — the org's Stripe subscription carries one line item per
   // such branch, all priced from this same rate.
   pricingTerms: IPricingTerms;
+  // ADMIN-EDITABLE ONLY. When true, the org's own billing page shows a
+  // self-service "Continue to payment" link straight to Stripe Checkout —
+  // covers the org paying for itself and/or its group_pays branches.
+  checkoutEnabled: boolean;
   accountManagerId: Types.ObjectId | null; // -> users._id (staff)
   branchSeatLimit: number | null; // ADMIN-EDITABLE ONLY. null = unlimited. Enforced against active business count.
   teamMemberSeatLimit: number | null; // ADMIN-EDITABLE ONLY. The Group's own staff pool, independent of any branch's.
@@ -45,6 +49,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     billingAddressSameAsAddress: { type: Boolean, default: true },
     defaultBillingMode: { type: String, enum: BILLING_MODES, default: "branch_pays" },
     pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
+    checkoutEnabled: { type: Boolean, default: false },
     accountManagerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     branchSeatLimit: { type: Number, default: null },
     teamMemberSeatLimit: { type: Number, default: null },

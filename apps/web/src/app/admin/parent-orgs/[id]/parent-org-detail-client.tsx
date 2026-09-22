@@ -177,6 +177,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   const [billingBusy, setBillingBusy] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [priceSaveMessage, setPriceSaveMessage] = useState<string | null>(null);
+  const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [editingCompPeriod, setEditingCompPeriod] = useState(false);
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
@@ -266,6 +267,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
             : EMPTY_FORM.ragThresholds,
         });
         setBusinesses(d.businesses ?? []);
+        setCheckoutEnabled(!!o.checkoutEnabled);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -311,6 +313,24 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       return;
     }
     setPriceSaveMessage(data.message);
+  }
+
+  async function toggleCheckoutEnabled() {
+    setBillingBusy(true);
+    setBillingError(null);
+    const next = !checkoutEnabled;
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checkoutEnabled: next }),
+    });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to update checkout access");
+      return;
+    }
+    setCheckoutEnabled(next);
   }
 
   function startMarkComp() {
@@ -838,6 +858,19 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
           <h3>Subscription</h3>
           {billingError && <p className="error-text">{billingError}</p>}
+          <div className="row-flex" style={{ marginBottom: 10, alignItems: "center", gap: 10 }}>
+            <span className={`pill ${checkoutEnabled ? "pill-green" : "pill-gray"}`}>
+              {checkoutEnabled ? "Self-service checkout: open" : "Self-service checkout: closed"}
+            </span>
+            <button className="btn btn-sm" disabled={billingBusy} onClick={toggleCheckoutEnabled}>
+              {checkoutEnabled ? "Turn off" : "Enable checkout"}
+            </button>
+            {checkoutEnabled && (
+              <span className="card-sub" style={{ margin: 0 }}>
+                A &quot;Continue to payment&quot; link is now live on this org&apos;s own billing page.
+              </span>
+            )}
+          </div>
           {subscription ? (
             <>
               <p className="card-sub">

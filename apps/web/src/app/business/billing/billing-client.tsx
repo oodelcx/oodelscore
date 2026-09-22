@@ -17,6 +17,7 @@ interface BillingData {
   billingAssignment: string;
   groupName: string | null;
   groupBranchCount: number | null;
+  checkoutLinkAvailable: boolean;
 }
 
 export default function BillingClient({ tooltips }: { tooltips: Record<string, string> }) {
@@ -34,6 +35,15 @@ export default function BillingClient({ tooltips }: { tooltips: Record<string, s
   async function openPortal() {
     setBusy(true);
     const res = await fetch("/api/business/billing/portal", { method: "POST" });
+    const responseData = await res.json();
+    setBusy(false);
+    if (res.ok) window.location.href = responseData.url;
+    else alert(responseData.message);
+  }
+
+  async function continueToPayment() {
+    setBusy(true);
+    const res = await fetch("/api/business/billing/checkout", { method: "POST" });
     const responseData = await res.json();
     setBusy(false);
     if (res.ok) window.location.href = responseData.url;
@@ -74,6 +84,17 @@ export default function BillingClient({ tooltips }: { tooltips: Record<string, s
       <h1>Billing</h1>
       <p className="subtitle">Manage your subscription.</p>
 
+      {data.checkoutLinkAvailable && (
+        <div className="callout callout-amber" style={{ marginBottom: 20 }}>
+          <b>Ready to continue with OodelCX?</b> Click below to enter your card details and start your subscription.
+          <div style={{ marginTop: 10 }}>
+            <button className="btn btn-primary" disabled={busy} onClick={continueToPayment}>
+              Continue to payment →
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-2">
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -86,7 +107,7 @@ export default function BillingClient({ tooltips }: { tooltips: Record<string, s
             <div className="metric-note">Next payment: {new Date(data.subscription.nextPaymentDate).toLocaleDateString()}</div>
           )}
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-            <button className="btn" disabled={busy} onClick={openPortal}>
+            <button className="btn" disabled={busy || data.checkoutLinkAvailable} onClick={openPortal}>
               Manage subscription
             </button>
           </div>

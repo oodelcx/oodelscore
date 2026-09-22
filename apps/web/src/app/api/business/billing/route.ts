@@ -21,6 +21,14 @@ export async function GET() {
     groupBranchCount = await Business.countDocuments({ parentOrgId: parentOrg._id, billingAssignment: "group_pays" });
   }
 
+  // Admin flips checkoutEnabled on once a pilot ends and the customer wants
+  // to continue — the self-service "Continue to payment" link only shows
+  // once that's on AND there's no live subscription behind it yet (so it
+  // disappears again the moment checkout actually completes).
+  const hasLiveSubscription = Boolean(subscription && !subscription.isComp && (subscription.stripeSubscriptionId || subscription.paidThroughDate));
+  const checkoutLinkAvailable =
+    session.business.checkoutEnabled && session.business.billingAssignment !== "group_pays" && !hasLiveSubscription;
+
   return NextResponse.json({
     status: "ok",
     subscription,
@@ -33,5 +41,6 @@ export async function GET() {
     billingAssignment: session.business.billingAssignment,
     groupName: parentOrg?.name ?? null,
     groupBranchCount,
+    checkoutLinkAvailable,
   });
 }

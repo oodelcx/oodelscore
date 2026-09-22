@@ -38,6 +38,7 @@ export const BUSINESS_ADMIN_ONLY_FIELDS = [
   "questionTemplateId",
   "ragThresholds",
   "pricingTerms",
+  "checkoutEnabled",
 ] as const;
 
 export interface IBusiness {
@@ -63,6 +64,11 @@ export interface IBusiness {
   // (and nothing else) the moment billingAssignment changes away from
   // "group_pays", without having to search Stripe for it.
   groupPaysStripeSubscriptionItemId: string;
+  // ADMIN-EDITABLE ONLY. When true, this business's own billing page shows a
+  // self-service "Continue to payment" link straight to Stripe Checkout.
+  // Meaningless while billingAssignment is "group_pays" — that link lives on
+  // the org's own billing page instead.
+  checkoutEnabled: boolean;
   plan: BusinessPlan;
   maxFeedbackPoints: number;
   questionTemplateId: Types.ObjectId | null; // ADMIN-EDITABLE ONLY, ever
@@ -103,6 +109,7 @@ const BusinessSchema = new Schema<IBusiness>(
     billingAssignment: { type: String, enum: BILLING_ASSIGNMENTS, default: "unassigned" },
     pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
     groupPaysStripeSubscriptionItemId: { type: String, default: "" },
+    checkoutEnabled: { type: Boolean, default: false },
     plan: { type: String, enum: BUSINESS_PLANS, default: "business_monthly" },
     maxFeedbackPoints: { type: Number, default: 1 },
     questionTemplateId: { type: Schema.Types.ObjectId, ref: "QuestionTemplate", default: null },
