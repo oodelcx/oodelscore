@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ThemeIntelligenceCard } from "@/components/theme-intelligence-card";
 import { DriverAnalysisCard } from "@/components/driver-analysis-card";
 import { InfoTip } from "@/components/info-tip";
+import { QuestionTrendCard } from "@/components/question-trend-card";
 
 interface AnalyticsData {
   trend: { date: string; starAverage: number | null }[];
@@ -72,6 +73,8 @@ export default function GroupAnalyticsClient({ tooltips }: { tooltips: Record<st
         </div>
         <button className="btn" onClick={exportCsv}>⬇ Export CSV</button>
       </div>
+
+      <QuestionTrendCard questionsApi="/api/group/analytics/questions" trendApi="/api/group/analytics/question-trend" />
 
       <div className="grid grid-2">
         <div className="card">
