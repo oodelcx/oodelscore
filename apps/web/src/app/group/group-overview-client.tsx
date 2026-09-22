@@ -45,11 +45,16 @@ interface ThemeRow {
   sentimentBreakdown: { positive: number; neutral: number; negative: number };
   trend: "up" | "down" | "flat" | null;
 }
+interface HoldingBackDimension {
+  dimension: "awareness" | "response" | "ownership" | "culture" | "outcome";
+  value: number;
+}
 interface OverviewData {
   branchCount: number;
   networkAverage: number | null;
   networkNps: number | null;
   cxPulseLevel: number | null;
+  cxPulseHoldingBack: HoldingBackDimension[];
   comparisons: Comparisons;
   regions: RegionRow[];
   needsAttention: OutlierRow[];
@@ -60,6 +65,23 @@ interface OverviewData {
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+const DIMENSION_LABELS: Record<HoldingBackDimension["dimension"], string> = {
+  awareness: "Awareness",
+  response: "Response",
+  ownership: "Ownership",
+  culture: "Culture",
+  outcome: "Outcome",
+};
+
+/** CX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /group/maturity. */
+function CxPulseHoldingBack({ dimensions }: { dimensions: HoldingBackDimension[] }) {
+  if (dimensions.length === 0) return null;
+  return (
+    <div className="metric-note" style={{ marginTop: 8 }}>
+      Holding the network back: {dimensions.map((d) => `${DIMENSION_LABELS[d.dimension]} (${d.value})`).join(" · ")}
+    </div>
+  );
+}
 
 export default function GroupOverviewClient({ tooltips }: { tooltips: Record<string, string> }) {
   const router = useRouter();
@@ -228,6 +250,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
           <div className="metric-val" style={{ fontSize: 18 }}>
             {data.cxPulseLevel ? `Level ${data.cxPulseLevel} · ${LEVEL_LABELS[data.cxPulseLevel]}` : "Not yet scored"}
           </div>
+          <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} />
           <div className="metric-note">
             <Link href="/group/maturity" style={{ color: "var(--accent)" }}>
               See what&apos;s behind this →

@@ -29,6 +29,10 @@ interface BranchInfo {
   regionBusinessCount: number;
   recentDecisions: { title: string; description: string; loggedAt: string }[];
 }
+interface HoldingBackDimension {
+  dimension: "awareness" | "response" | "ownership" | "culture" | "outcome";
+  value: number;
+}
 interface DashboardData {
   totalResponses: number;
   starAverage: number | null;
@@ -39,9 +43,32 @@ interface DashboardData {
   distribution: { highPercent: number; midPercent: number; lowPercent: number };
   latestComments: Comment[];
   branch: BranchInfo | null;
+  cxPulseLevel: number | null;
+  cxPulseHoldingBack: HoldingBackDimension[];
 }
 
 const CX_PULSE_LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+const DIMENSION_LABELS: Record<HoldingBackDimension["dimension"], string> = {
+  awareness: "Awareness",
+  response: "Response",
+  ownership: "Ownership",
+  culture: "Culture",
+  outcome: "Outcome",
+};
+
+/** CX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /business/cx-pulse. */
+function CxPulseHoldingBack({ dimensions }: { dimensions: HoldingBackDimension[] }) {
+  if (dimensions.length === 0) return null;
+  return (
+    <div className="metric-note" style={{ marginTop: 8 }}>
+      Holding you back: {dimensions.map((d) => `${DIMENSION_LABELS[d.dimension]} (${d.value})`).join(" · ")}
+      {" — "}
+      <a href="/business/cx-pulse" style={{ color: "var(--accent)" }}>
+        full breakdown →
+      </a>
+    </div>
+  );
+}
 
 function trendSvgPoints(trend: TrendPoint[]): string {
   const values = trend.map((t) => t.starAverage);
@@ -113,6 +140,7 @@ export default function BusinessDashboardClient() {
             <div className="metric-val" style={{ fontSize: 18 }}>
               {b.cxPulseLevel ? `Level ${b.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[b.cxPulseLevel]}` : "Not yet scored"}
             </div>
+            <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} />
           </div>
         </div>
 
@@ -172,6 +200,16 @@ export default function BusinessDashboardClient() {
           </div>
           <div className="metric-val">{data.conversionRate !== null ? `${data.conversionRate}%` : "—"}</div>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="metric-label">
+          CX Pulse <InfoTip text={tooltips["cx-pulse"]} />
+        </div>
+        <div className="metric-val" style={{ fontSize: 18 }}>
+          {data.cxPulseLevel ? `Level ${data.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[data.cxPulseLevel]}` : "Not yet scored"}
+        </div>
+        <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} />
       </div>
 
       <div data-tour="dash-comparisons">

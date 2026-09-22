@@ -15,6 +15,7 @@ import { BillingLockedScreen } from "@/components/billing-locked-screen";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { TourLauncher } from "@/components/tour/tour-launcher";
+import { NavSection } from "@/components/nav-section";
 import "../admin/admin.css";
 import "./business.css";
 
@@ -77,45 +78,56 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 <a href="/business">Dashboard</a>
               </nav>
 
-              <div className="nav-group-label">Setup</div>
-              <nav className="admin-nav">
+              <NavSection
+                storageKey="business-setup"
+                label="Setup"
+                hrefs={["/business/feedback-points", "/business/category-owners"]}
+              >
                 <a href="/business/feedback-points">Feedback Points</a>
                 {!isBusinessTeamMember && <a href="/business/category-owners">Category Owners</a>}
-              </nav>
+              </NavSection>
 
-              <div className="nav-group-label">Listen</div>
-              <nav className="admin-nav">
+              <NavSection storageKey="business-listen" label="Listen" hrefs={["/business/responses"]}>
                 <a href="/business/responses">Raw Feedback</a>
-              </nav>
+              </NavSection>
 
-              <div className="nav-group-label">Understand</div>
-              <nav className="admin-nav">
+              <NavSection
+                storageKey="business-understand"
+                label="Understand"
+                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports"]}
+              >
                 <a href="/business/insights">Insights</a>
                 <a href="/business/analytics">Analytics</a>
                 <a href="/business/alert-rules">Alert Rules</a>
                 <a href="/business/reports">Reports</a>
-              </nav>
+              </NavSection>
 
-              <div className="nav-group-label">Act</div>
-              <nav className="admin-nav">
+              <NavSection
+                storageKey="business-act"
+                label="Act"
+                hrefs={["/business/cases", "/business/improvement-initiatives", "/business/decision-log"]}
+              >
                 <a href="/business/cases">Case Management</a>
                 <a href="/business/improvement-initiatives">Improvement Initiatives</a>
                 <a href="/business/decision-log">Decision Log</a>
-              </nav>
+              </NavSection>
 
-              <div className="nav-group-label">Measure</div>
-              <nav className="admin-nav">
+              <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
                 <a href="/business/cx-pulse">CX Pulse</a>
-              </nav>
+              </NavSection>
 
-              <div className="nav-group-label">Admin</div>
-              <nav className="admin-nav">
+              <NavSection
+                storageKey="business-admin"
+                label="Admin"
+                defaultOpen={false}
+                hrefs={["/business/team-members", "/business/messages", "/business/billing", "/business/playbooks", "/business/security"]}
+              >
                 {!isBusinessTeamMember && <a href="/business/team-members">Team Members</a>}
                 <a href="/business/messages">Messages</a>
                 {!isBusinessTeamMember && <a href="/business/billing">Billing</a>}
                 <a href="/business/playbooks">Playbook Library</a>
                 <a href="/business/security">Security</a>
-              </nav>
+              </NavSection>
             </>
           )}
         </div>
