@@ -33,11 +33,21 @@ export async function PUT(request: Request) {
   if (!categoryId || !defaultOwnerId) {
     return NextResponse.json({ status: "error", message: "categoryId and defaultOwnerId are required" }, { status: 400 });
   }
+  const repeatThresholdCount =
+    body?.repeatThresholdCount === null || typeof body?.repeatThresholdCount === "number" ? body.repeatThresholdCount : undefined;
+  const repeatWindowDays =
+    body?.repeatWindowDays === null || typeof body?.repeatWindowDays === "number" ? body.repeatWindowDays : undefined;
 
   await connectToDatabase();
   const mapping = await CategoryOwnerMapping.findOneAndUpdate(
     { ownerScope: "business", ownerScopeId: session.business._id, categoryId },
-    { $set: { defaultOwnerId } },
+    {
+      $set: {
+        defaultOwnerId,
+        ...(repeatThresholdCount !== undefined ? { repeatThresholdCount } : {}),
+        ...(repeatWindowDays !== undefined ? { repeatWindowDays } : {}),
+      },
+    },
     { upsert: true, new: true }
   );
 

@@ -7,6 +7,8 @@ import {
   Playbook,
   User,
   Business,
+  RecurringIssueFlag,
+  Category,
   sendTemplatedEmail,
   ACTION_STATUSES,
 } from "@oodelscore/shared";
@@ -43,6 +45,25 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const [itemWithRun] = await attachPlaybookRunsToItems([item], playbooks);
 
+  const flag = await RecurringIssueFlag.findOne({ caseIds: item._id, status: "active" });
+  let recurringFlag: {
+    _id: string;
+    ownerScope: string;
+    categoryName: string | null;
+    caseCount: number;
+    branchCount: number;
+  } | null = null;
+  if (flag) {
+    const category = flag.categoryId ? await Category.findById(flag.categoryId).select("name") : null;
+    recurringFlag = {
+      _id: flag._id.toString(),
+      ownerScope: flag.ownerScope,
+      categoryName: category?.name ?? null,
+      caseCount: flag.caseIds.length,
+      branchCount: flag.businessIds.length,
+    };
+  }
+
   return NextResponse.json({
     status: "ok",
     item: {
@@ -58,6 +79,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     sourceResponses,
     comments,
     businessName: business?.name ?? null,
+    recurringFlag,
   });
 }
 

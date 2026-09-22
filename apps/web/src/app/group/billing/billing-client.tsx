@@ -197,8 +197,8 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
               <td>{statusPill(b.status)}</td>
               <td style={{ textAlign: "right" }}>
                 {b.status === "overdue" ? (
-                  <Link className="btn btn-sm" href="/group/messages">
-                    Message about this →
+                  <Link className="btn btn-sm" href="/group/support">
+                    Report this →
                   </Link>
                 ) : (
                   <Link className="btn btn-sm" href={`/group/branches/${b.businessId}`}>

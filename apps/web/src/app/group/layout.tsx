@@ -112,7 +112,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   "/group/team",
                   "/group/team-members",
                   "/group/category-owners",
-                  "/group/messages",
                   "/group/support",
                   "/group/billing",
                   "/group/playbooks",
@@ -122,7 +121,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 <a href="/group/team">Team &amp; access</a>
                 {!isOrgTeamMember && <a href="/group/team-members">Team Members</a>}
                 {!isOrgTeamMember && <a href="/group/category-owners">Category Owners</a>}
-                <a href="/group/messages">Messages</a>
                 <a href="/group/support">Support</a>
                 {!isOrgTeamMember && <a href="/group/billing">Billing</a>}
                 {hasFeature(org.enabledFeatures, "playbooks") && <a href="/group/playbooks">Playbook Library</a>}

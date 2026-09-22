@@ -38,3 +38,4 @@ export * from "./EscalationAssignment";
 export * from "./ImprovementInitiative";
 export * from "./SystemHealthEvent";
 export * from "./SupportTicket";
+export * from "./RecurringIssueFlag";

@@ -43,3 +43,4 @@ export * from "./seedData/showcase";
 export * from "./escalation/engine";
 export * from "./billing/gate";
 export * from "./features/flags";
+export * from "./patterns/recurringIssues";

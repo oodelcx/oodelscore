@@ -33,6 +33,13 @@ interface PlaybookRunSummary {
   stepsCompleted: number;
   status: string;
 }
+interface RecurringFlagSummary {
+  _id: string;
+  ownerScope: string;
+  categoryName: string | null;
+  caseCount: number;
+  branchCount: number;
+}
 interface CaseDetail {
   _id: string;
   title: string;
@@ -65,6 +72,7 @@ const CASE_TYPE_LABELS: Record<string, string> = {
  */
 export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) {
   const [item, setItem] = useState<CaseDetail | null>(null);
+  const [recurringFlag, setRecurringFlag] = useState<RecurringFlagSummary | null>(null);
   const [sourceResponses, setSourceResponses] = useState<ResponseRow[]>([]);
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +94,7 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
         const data = await res.json();
         if (!res.ok) throw new Error(data.message ?? "Failed to load");
         setItem(data.item);
+        setRecurringFlag(data.recurringFlag ?? null);
         setSourceResponses(data.sourceResponses ?? []);
         setComments(data.comments ?? []);
         setResolutionDraft(data.item.resolutionNote ?? "");
@@ -180,6 +189,24 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
           </div>
         </div>
       </div>
+
+      {recurringFlag && (
+        <div className="card" style={{ marginBottom: 16, borderLeft: "3px solid var(--amber, #b45309)" }}>
+          <h3 style={{ margin: "0 0 4px" }}>⚠ This looks like a recurring issue</h3>
+          <p className="card-sub" style={{ margin: 0 }}>
+            {recurringFlag.categoryName ?? "This category"} has come up {recurringFlag.caseCount} times
+            {recurringFlag.branchCount > 1 ? ` across ${recurringFlag.branchCount} branches` : ""} recently.
+            {recurringFlag.ownerScope === "business" ? (
+              <>
+                {" "}
+                <Link href="/business/improvement-initiatives">Turn this into an Improvement Initiative →</Link>
+              </>
+            ) : (
+              " Your Group owner has been flagged to review this as a cross-branch pattern."
+            )}
+          </p>
+        </div>
+      )}
 
       {item.description && (
         <div className="card" style={{ marginBottom: 16 }}>

@@ -104,7 +104,7 @@ export default function BusinessTeamMembersPage() {
             {activeCount} of {seatLimit} team seats used.{" "}
             {atLimit && (
               <>
-                Need more? <a href="/business/messages">Request more seats →</a>
+                Need more? <a href="/business/support">Request more seats →</a>
               </>
             )}
           </>
