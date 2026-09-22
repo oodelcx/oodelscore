@@ -88,6 +88,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
     }
   }
+  if (body.escalationLevels !== undefined) {
+    const levels = body.escalationLevels;
+    const valid =
+      Array.isArray(levels) &&
+      levels.every((l: unknown) => l && typeof (l as { level?: unknown }).level === "number" && typeof (l as { label?: unknown }).label === "string");
+    if (!valid) {
+      return NextResponse.json({ status: "error", message: "Invalid escalationLevels" }, { status: 400 });
+    }
+  }
+  if (body.escalationSlaHours !== undefined && body.escalationSlaHours !== null && typeof body.escalationSlaHours !== "number") {
+    return NextResponse.json({ status: "error", message: "Invalid escalationSlaHours" }, { status: 400 });
+  }
 
   // Spec Section 16: never let teamMemberSeatLimit drop below the
   // currently-active team-member count.
@@ -119,6 +131,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "billingAssignment",
     "pricingTerms",
     "checkoutEnabled",
+    "escalationLevels",
+    "escalationSlaHours",
     "plan",
     "maxFeedbackPoints",
     "questionTemplateId",

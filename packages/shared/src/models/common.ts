@@ -95,3 +95,28 @@ export const PricingTermsSchema = new Schema<IPricingTerms>(
   },
   { _id: false }
 );
+
+/**
+ * One rung of an org's own escalation chain — ADMIN-EDITABLE ONLY, configured
+ * once per Business or ParentOrganization (branches inherit the org's the
+ * same way ragThresholds does). `level` is an ordinal (1 = the branch's own
+ * owner, always), `label` is whatever the organisation calls that rung
+ * ("Cluster Manager", "Area Manager", "President") — never a hardcoded job
+ * title, so the same mechanism fits any customer's real hierarchy.
+ */
+export interface IEscalationLevel {
+  level: number;
+  label: string;
+}
+
+export const EscalationLevelSchema = new Schema<IEscalationLevel>(
+  {
+    level: { type: Number, required: true },
+    label: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
+// A brand-new account starts with just the one rung every business already
+// has for free — its own owner. Admin adds more during implementation.
+export const DEFAULT_ESCALATION_LEVELS: IEscalationLevel[] = [{ level: 1, label: "Owner" }];

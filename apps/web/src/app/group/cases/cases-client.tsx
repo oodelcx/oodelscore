@@ -33,6 +33,8 @@ interface ItemRow {
   escalationNote: string;
   escalatedToOrg: boolean;
   escalatedToOrgNote: string;
+  currentEscalationLevel: number;
+  escalationHistory: { level: number; action: string; note: string; at: string }[];
   suggestedAction: string;
   rating: number | null;
   playbookRun?: PlaybookRunSummary | null;
@@ -220,6 +222,22 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
     setEscalating(item._id);
     await updateItem(item._id, { escalated: false });
     setEscalating(null);
+  }
+
+  async function escalateToNextLevel(id: string) {
+    setEscalating(id);
+    const res = await fetch(`/api/group/action-board/${id}/escalate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "" }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalating(null);
+    if (!res.ok) {
+      alert(data?.message ?? "Failed to escalate");
+      return;
+    }
+    load();
   }
 
   async function toggleComments(id: string) {
@@ -467,6 +485,9 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                       <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
                         {item.status.replace(/_/g, " ")}
                       </span>
+                      {item.currentEscalationLevel > 1 && (
+                        <span className="pill pill-amber">Escalation level {item.currentEscalationLevel}</span>
+                      )}
                       {age && <span className={`pill ${age.overdue ? "pill-red" : "pill-gray"}`}>{age.label}</span>}
                       <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
                         {item.priority}
@@ -515,6 +536,17 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                         {item.escalated ? "↩ Un-escalate" : "↗ Escalate"}
                       </button>
                     )}
+                    {!isLimited && item.status !== "resolved" && (
+                      <button
+                        type="button"
+                        className="case-action-btn"
+                        disabled={escalating === item._id}
+                        onClick={() => escalateToNextLevel(item._id)}
+                        title="Advance this case to the next configured escalation level"
+                      >
+                        ↑ Escalate to next level
+                      </button>
+                    )}
                   </div>
                   <OwnerBadge label={item.ownerId ? ownerLabel(item.ownerId) : null} tip={tooltips["owner"]} />
                 </div>
@@ -541,6 +573,15 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
 
                 {expandedCommentsFor === item._id && (
                   <div className="ab-panel">
+                    {item.escalationHistory && item.escalationHistory.length > 0 && (
+                      <ul style={{ margin: "0 0 10px", paddingLeft: 0, listStyle: "none" }}>
+                        {item.escalationHistory.map((h, i) => (
+                          <li key={i} style={{ marginBottom: 6, fontSize: "12.5px", color: "var(--text-3)" }}>
+                            ↑ Level {h.level} → escalated{h.note ? `: ${h.note}` : ""} — {new Date(h.at).toLocaleString()}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                     {(commentsByItem[item._id] ?? []).length === 0 ? (
                       <p className="subtitle" style={{ margin: "0 0 8px" }}>
                         No comments yet — start the trail below.

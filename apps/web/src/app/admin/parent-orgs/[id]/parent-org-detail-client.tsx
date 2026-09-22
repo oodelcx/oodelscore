@@ -6,7 +6,7 @@ import Link from "next/link";
 import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
 
-type TabId = "general" | "performance" | "address" | "contact" | "businesses" | "command-center";
+type TabId = "general" | "performance" | "address" | "contact" | "businesses" | "escalation" | "command-center";
 
 // Same reasoning as the Business detail page: identity, then contact, then
 // pricing, then the rest — Performance last since there's nothing to show
@@ -16,11 +16,20 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "contact", label: "Contact" },
   { id: "address", label: "Address & Billing" },
   { id: "businesses", label: "Businesses & Billing" },
+  { id: "escalation", label: "Escalation" },
   { id: "command-center", label: "Command Center" },
   { id: "performance", label: "Performance" },
 ];
 
-const VALID_TAB_IDS: readonly TabId[] = ["general", "performance", "address", "contact", "businesses", "command-center"];
+const VALID_TAB_IDS: readonly TabId[] = [
+  "general",
+  "performance",
+  "address",
+  "contact",
+  "businesses",
+  "escalation",
+  "command-center",
+];
 
 const CX_PULSE_LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
 
@@ -183,6 +192,19 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
   const [compCustomDraft, setCompCustomDraft] = useState("");
 
+  // Escalation chain — inherited by every branch under this org (same rule
+  // as ragThresholds). Level 1 stays fixed at "the branch's own owner."
+  const [escalationLevels, setEscalationLevels] = useState<{ level: number; label: string }[]>([{ level: 1, label: "Owner" }]);
+  const [escalationSlaHours, setEscalationSlaHours] = useState("");
+  const [escalationBusy, setEscalationBusy] = useState(false);
+  const [escalationMessage, setEscalationMessage] = useState<string | null>(null);
+  const [escalationAssignments, setEscalationAssignments] = useState<
+    { _id: string; level: number; region: string; userId: { _id: string; email: string } | null }[]
+  >([]);
+  const [assignLevel, setAssignLevel] = useState("");
+  const [assignRegion, setAssignRegion] = useState("");
+  const [assignEmail, setAssignEmail] = useState("");
+
   interface Comparison {
     starAverage: number | null;
     npsScore: number | null;
@@ -268,6 +290,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         });
         setBusinesses(d.businesses ?? []);
         setCheckoutEnabled(!!o.checkoutEnabled);
+        setEscalationLevels(o.escalationLevels?.length ? o.escalationLevels : [{ level: 1, label: "Owner" }]);
+        setEscalationSlaHours(o.escalationSlaHours != null ? String(o.escalationSlaHours) : "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -279,6 +303,74 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       .then((r) => r.json())
       .then((d) => setSubscription(d.subscription ?? null));
   }, [isNew, params.id]);
+
+  function loadEscalationAssignments() {
+    fetch(`/api/admin/parent-orgs/${params.id}/escalation-assignments`)
+      .then((r) => r.json())
+      .then((d) => setEscalationAssignments(d.assignments ?? []));
+  }
+
+  useEffect(() => {
+    if (isNew) return;
+    loadEscalationAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, params.id]);
+
+  function addEscalationLevel() {
+    const nextLevel = Math.max(0, ...escalationLevels.map((l) => l.level)) + 1;
+    setEscalationLevels((levels) => [...levels, { level: nextLevel, label: "" }]);
+  }
+
+  function removeEscalationLevel(level: number) {
+    setEscalationLevels((levels) => levels.filter((l) => l.level !== level));
+  }
+
+  async function saveEscalationConfig() {
+    setEscalationBusy(true);
+    setEscalationMessage(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        escalationLevels: escalationLevels.filter((l) => l.label.trim()),
+        escalationSlaHours: escalationSlaHours.trim() ? Number(escalationSlaHours) : null,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalationBusy(false);
+    if (!res.ok) {
+      setEscalationMessage(data?.message ?? "Failed to save escalation config");
+      return;
+    }
+    setEscalationMessage("Saved.");
+  }
+
+  async function addEscalationAssignment() {
+    if (!assignLevel || !assignEmail.trim()) return;
+    setEscalationBusy(true);
+    setEscalationMessage(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/escalation-assignments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ level: Number(assignLevel), region: assignRegion.trim(), email: assignEmail.trim() }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalationBusy(false);
+    if (!res.ok) {
+      setEscalationMessage(data?.message ?? "Failed to assign");
+      return;
+    }
+    setAssignEmail("");
+    setAssignRegion("");
+    loadEscalationAssignments();
+  }
+
+  async function removeEscalationAssignment(assignmentId: string) {
+    setEscalationBusy(true);
+    await fetch(`/api/admin/parent-orgs/${params.id}/escalation-assignments/${assignmentId}`, { method: "DELETE" });
+    setEscalationBusy(false);
+    loadEscalationAssignments();
+  }
 
   async function startCheckout() {
     setBillingBusy(true);
@@ -400,6 +492,20 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       setTab("contact");
       setError("Contact email is required — it becomes this organization's login.");
       return;
+    }
+
+    // Account activation completeness check — see the same block on the
+    // Business detail page for why this matters before the welcome email fires.
+    if (isNew) {
+      const missing: string[] = [];
+      if (!form.pricingAmount.trim()) missing.push("Pricing (Address & Billing tab)");
+      if (!form.contactPhone.trim()) missing.push("Contact phone (Contact tab)");
+      if (missing.length > 0) {
+        const proceed = confirm(
+          `This organization looks incomplete:\n\n${missing.map((m) => `• ${m}`).join("\n")}\n\nCreate it anyway? The welcome email will still be sent.`
+        );
+        if (!proceed) return;
+      }
     }
 
     setSaving(true);
@@ -1048,6 +1154,138 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === "escalation" && !isNew && (
+        <div className="card" style={{ maxWidth: 760 }}>
+          <h3>Escalation chain</h3>
+          <p className="card-sub">
+            Who a case goes to if a branch doesn&apos;t resolve it. Level 1 is always the branch&apos;s own owner. Levels
+            above that are yours to label however this organisation calls them (Cluster Manager, Regional Head,
+            President…) — inherited by every branch under this org.
+          </p>
+          {escalationMessage && <p className="card-sub">{escalationMessage}</p>}
+          <table className="clean" style={{ marginBottom: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ width: 60 }}>Level</th>
+                <th>Label</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>Branch owner (fixed)</td>
+                <td></td>
+              </tr>
+              {escalationLevels
+                .filter((l) => l.level > 1)
+                .map((l) => (
+                  <tr key={l.level}>
+                    <td>{l.level}</td>
+                    <td>
+                      <input
+                        value={l.label}
+                        onChange={(e) =>
+                          setEscalationLevels((levels) =>
+                            levels.map((x) => (x.level === l.level ? { ...x, label: e.target.value } : x))
+                          )
+                        }
+                        placeholder="e.g. Cluster Manager"
+                      />
+                    </td>
+                    <td>
+                      <button className="btn btn-sm" onClick={() => removeEscalationLevel(l.level)}>
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+          <button className="btn btn-sm" onClick={addEscalationLevel} style={{ marginRight: 8 }}>
+            + Add level
+          </button>
+          <div className="field" style={{ maxWidth: 260, marginTop: 14 }}>
+            <label>Auto-escalate after (hours)</label>
+            <input
+              type="number"
+              value={escalationSlaHours}
+              onChange={(e) => setEscalationSlaHours(e.target.value)}
+              placeholder="Leave blank for manual only"
+            />
+          </div>
+          <button className="btn btn-dark btn-sm" disabled={escalationBusy} onClick={saveEscalationConfig} style={{ marginTop: 10 }}>
+            {escalationBusy ? "Saving…" : "Save escalation chain"}
+          </button>
+
+          {escalationLevels.filter((l) => l.level > 1).length > 0 && (
+            <>
+              <h3 style={{ marginTop: 24 }}>Who holds each level</h3>
+              <p className="card-sub">
+                Scope a person to one region (covers every branch in it) or leave region blank for org-wide.
+              </p>
+              <table className="clean" style={{ marginBottom: 12 }}>
+                <thead>
+                  <tr>
+                    <th>Level</th>
+                    <th>Region</th>
+                    <th>Person</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {escalationAssignments.map((a) => (
+                    <tr key={a._id}>
+                      <td>{a.level}</td>
+                      <td>{a.region || "Org-wide"}</td>
+                      <td>{a.userId?.email ?? "(user removed)"}</td>
+                      <td>
+                        <button className="btn btn-sm" onClick={() => removeEscalationAssignment(a._id)}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {escalationAssignments.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="card-sub">
+                        No one assigned yet — cases can&apos;t escalate past level 1 until you add someone.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="field-row" style={{ alignItems: "flex-end" }}>
+                <div className="field">
+                  <label>Level</label>
+                  <select value={assignLevel} onChange={(e) => setAssignLevel(e.target.value)}>
+                    <option value="">Choose…</option>
+                    {escalationLevels
+                      .filter((l) => l.level > 1)
+                      .map((l) => (
+                        <option key={l.level} value={l.level}>
+                          {l.level} — {l.label || "(unlabeled)"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Region (blank = org-wide)</label>
+                  <input value={assignRegion} onChange={(e) => setAssignRegion(e.target.value)} placeholder="e.g. North" />
+                </div>
+                <div className="field">
+                  <label>Person&apos;s email</label>
+                  <input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} placeholder="name@company.com" />
+                </div>
+                <button className="btn btn-dark btn-sm" disabled={escalationBusy} onClick={addEscalationAssignment}>
+                  Assign
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

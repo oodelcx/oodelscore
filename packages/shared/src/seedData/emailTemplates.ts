@@ -71,6 +71,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["name", "escalator_name", "business_name", "org_name", "action_title", "escalation_note", "action_link"],
   },
   {
+    key: "case_escalated",
+    subject: "Escalated to you ({{level_label}}): {{action_title}}",
+    body: "Hi {{name}}, a case at {{business_name}} has been escalated to you as {{level_label}}: {{action_title}}.\n\n{{escalation_note}}\n\nView it here: {{action_link}}",
+    availableVars: ["name", "level_label", "business_name", "action_title", "escalation_note", "action_link"],
+  },
+  {
     key: "invoice_receipt",
     subject: "Your OodelCX payment receipt",
     body: "Hi {{name}}, we've received your payment of {{invoice_amount}}. Thank you.",
@@ -81,6 +87,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     subject: "Payment failed for {{business_name}}",
     body: "Hi {{name}}, a payment for {{business_name}} failed. Please update your payment method: {{billing_link}}",
     availableVars: ["name", "business_name", "billing_link"],
+  },
+  {
+    key: "comp_expiry_reminder",
+    subject: "{{account_name}}'s pilot expires {{expires_on}}",
+    body: "Hi {{name}}, {{account_name}}'s comp/pilot period expires on {{expires_on}}. If they're continuing, enable checkout or start a real subscription before then: {{account_link}}",
+    availableVars: ["name", "account_name", "expires_on", "account_link"],
   },
   {
     key: "demo_request",

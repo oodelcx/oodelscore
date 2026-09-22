@@ -1,42 +1,15 @@
 import { NextResponse } from "next/server";
-import { type HydratedDocument } from "mongoose";
 import {
   connectToDatabase,
   ActionBoardItem,
-  DecisionLogEntry,
   User,
   Business,
   sendTemplatedEmail,
   ACTION_STATUSES,
-  type IActionBoardItem,
 } from "@oodelscore/shared";
-import { requireParentOrgOwner, type ParentOrgOwnerSession } from "@/lib/ownerAuth";
+import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
-
-/**
- * Resolving with a note is how a decision gets recorded now — no separate
- * manual Decision Log entry step (product feedback: nobody thought to check
- * a separate page for it). One DecisionLogEntry per resolution, linked back
- * to the action item.
- */
-async function logDecisionForResolution(
-  item: HydratedDocument<IActionBoardItem>,
-  session: ParentOrgOwnerSession,
-  resolutionNote: string
-) {
-  await DecisionLogEntry.create({
-    parentOrgId: session.org._id,
-    businessId: null,
-    title: item.title,
-    trigger: resolutionNote,
-    linkedActionIds: [item._id],
-    affectedBusinessIds: [item.businessId],
-    ownerId: item.ownerId,
-    implementationDate: new Date(),
-    status: "implemented",
-  });
-}
 
 /**
  * Product decision: Group is read-only on branch Action Board items —
@@ -72,9 +45,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (body?.status === "resolved") item.resolvedAt = new Date();
     if (typeof body?.resolutionNote === "string") item.resolutionNote = body.resolutionNote;
     await item.save();
-    if (body?.status === "resolved" && typeof body?.resolutionNote === "string" && body.resolutionNote.trim()) {
-      await logDecisionForResolution(item, session, body.resolutionNote.trim());
-    }
     return NextResponse.json({ status: "ok", item });
   }
 

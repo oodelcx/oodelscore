@@ -7,7 +7,7 @@ import { QrModal } from "@/components/qr-modal";
 import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
 
-type TabId = "general" | "performance" | "address" | "contact" | "settings" | "feedback-points" | "group";
+type TabId = "general" | "performance" | "address" | "contact" | "settings" | "feedback-points" | "escalation" | "group";
 
 // Order matters here — it's the literal left-to-right order Admin sees
 // while setting up a new business: identity, then how to reach them, then
@@ -20,10 +20,20 @@ const BASE_TABS: { id: TabId; label: string }[] = [
   { id: "address", label: "Address & Billing" },
   { id: "feedback-points", label: "Feedback Points" },
   { id: "settings", label: "Settings" },
+  { id: "escalation", label: "Escalation" },
   { id: "performance", label: "Performance" },
 ];
 
-const VALID_TAB_IDS: readonly TabId[] = ["general", "performance", "address", "contact", "settings", "feedback-points", "group"];
+const VALID_TAB_IDS: readonly TabId[] = [
+  "general",
+  "performance",
+  "address",
+  "contact",
+  "settings",
+  "feedback-points",
+  "escalation",
+  "group",
+];
 
 const DEMOGRAPHIC_FIELDS = ["name", "email", "phone", "ageGroup", "gender"] as const;
 
@@ -197,6 +207,19 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   const [editingCompPeriod, setEditingCompPeriod] = useState(false);
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
   const [compCustomDraft, setCompCustomDraft] = useState("");
+
+  // Escalation chain — only meaningful/editable while this business is
+  // standalone (a branch inherits its org's chain instead, see the "group"
+  // tab and packages/shared/src/escalation/engine.ts).
+  const [escalationLevels, setEscalationLevels] = useState<{ level: number; label: string }[]>([{ level: 1, label: "Owner" }]);
+  const [escalationSlaHours, setEscalationSlaHours] = useState("");
+  const [escalationBusy, setEscalationBusy] = useState(false);
+  const [escalationMessage, setEscalationMessage] = useState<string | null>(null);
+  const [escalationAssignments, setEscalationAssignments] = useState<
+    { _id: string; level: number; userId: { _id: string; email: string } | null }[]
+  >([]);
+  const [assignLevel, setAssignLevel] = useState("");
+  const [assignEmail, setAssignEmail] = useState("");
 
   interface FeedbackPointRow {
     _id: string;
@@ -438,6 +461,8 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         });
         setGroupPaysCovered(!!b.groupPaysStripeSubscriptionItemId);
         setCheckoutEnabled(!!b.checkoutEnabled);
+        setEscalationLevels(b.escalationLevels?.length ? b.escalationLevels : [{ level: 1, label: "Owner" }]);
+        setEscalationSlaHours(b.escalationSlaHours != null ? String(b.escalationSlaHours) : "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -449,6 +474,73 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       .then((r) => r.json())
       .then((d) => setSubscription(d.subscription ?? null));
   }, [isNew, params.id]);
+
+  function loadEscalationAssignments() {
+    fetch(`/api/admin/businesses/${params.id}/escalation-assignments`)
+      .then((r) => r.json())
+      .then((d) => setEscalationAssignments(d.assignments ?? []));
+  }
+
+  useEffect(() => {
+    if (isNew) return;
+    loadEscalationAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, params.id]);
+
+  function addEscalationLevel() {
+    const nextLevel = Math.max(0, ...escalationLevels.map((l) => l.level)) + 1;
+    setEscalationLevels((levels) => [...levels, { level: nextLevel, label: "" }]);
+  }
+
+  function removeEscalationLevel(level: number) {
+    setEscalationLevels((levels) => levels.filter((l) => l.level !== level));
+  }
+
+  async function saveEscalationConfig() {
+    setEscalationBusy(true);
+    setEscalationMessage(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        escalationLevels: escalationLevels.filter((l) => l.label.trim()),
+        escalationSlaHours: escalationSlaHours.trim() ? Number(escalationSlaHours) : null,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalationBusy(false);
+    if (!res.ok) {
+      setEscalationMessage(data?.message ?? "Failed to save escalation config");
+      return;
+    }
+    setEscalationMessage("Saved.");
+  }
+
+  async function addEscalationAssignment() {
+    if (!assignLevel || !assignEmail.trim()) return;
+    setEscalationBusy(true);
+    setEscalationMessage(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}/escalation-assignments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ level: Number(assignLevel), email: assignEmail.trim() }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalationBusy(false);
+    if (!res.ok) {
+      setEscalationMessage(data?.message ?? "Failed to assign");
+      return;
+    }
+    setAssignEmail("");
+    loadEscalationAssignments();
+  }
+
+  async function removeEscalationAssignment(assignmentId: string) {
+    setEscalationBusy(true);
+    await fetch(`/api/admin/businesses/${params.id}/escalation-assignments/${assignmentId}`, { method: "DELETE" });
+    setEscalationBusy(false);
+    loadEscalationAssignments();
+  }
 
   async function startCheckout() {
     setBillingBusy(true);
@@ -554,6 +646,23 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       setTab("contact");
       setError("Contact email is required — it becomes this business's login.");
       return;
+    }
+
+    // Account activation completeness check: creating this account fires a
+    // real welcome email to a real inbox and starts collecting feedback —
+    // catching a half-configured account here is cheaper than finding out
+    // after the customer's already logged in to an empty dashboard.
+    if (isNew) {
+      const missing: string[] = [];
+      if (!form.questionTemplateId) missing.push("Question template (Settings tab) — feedback form will have no questions");
+      if (form.billingAssignment !== "group_pays" && !form.pricingAmount.trim()) missing.push("Pricing (Address & Billing tab)");
+      if (!form.contactPhone.trim()) missing.push("Contact phone (Contact tab)");
+      if (missing.length > 0) {
+        const proceed = confirm(
+          `This account looks incomplete:\n\n${missing.map((m) => `• ${m}`).join("\n")}\n\nCreate it anyway? The welcome email will still be sent.`
+        );
+        if (!proceed) return;
+      }
     }
 
     setSaving(true);
@@ -1348,6 +1457,141 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
           <button className="btn btn-danger" disabled={deleting} onClick={deleteBusiness}>
             {deleting ? "Deleting…" : "Delete this business"}
           </button>
+        </div>
+      )}
+
+      {tab === "escalation" && !isNew && form.parentOrgId && (
+        <div className="card" style={{ maxWidth: 640 }}>
+          <h3>Escalation</h3>
+          <p className="card-sub">
+            This business belongs to a group — its escalation chain is configured from the org&apos;s own page, the same
+            way its RAG thresholds are inherited.
+          </p>
+          <Link className="btn" href={`/admin/parent-orgs/${form.parentOrgId}`}>
+            View {parentOrgName ?? "organization"} →
+          </Link>
+        </div>
+      )}
+
+      {tab === "escalation" && !isNew && !form.parentOrgId && (
+        <div className="card" style={{ maxWidth: 720 }}>
+          <h3>Escalation chain</h3>
+          <p className="card-sub">
+            Who a case goes to if it isn&apos;t resolved. Level 1 is always this business&apos;s own owner — add levels
+            above it for anyone this business should escalate to (regional support, an account manager, etc.).
+          </p>
+          {escalationMessage && <p className="card-sub">{escalationMessage}</p>}
+          <table className="clean" style={{ marginBottom: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ width: 60 }}>Level</th>
+                <th>Label</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>Owner (fixed)</td>
+                <td></td>
+              </tr>
+              {escalationLevels
+                .filter((l) => l.level > 1)
+                .map((l) => (
+                  <tr key={l.level}>
+                    <td>{l.level}</td>
+                    <td>
+                      <input
+                        value={l.label}
+                        onChange={(e) =>
+                          setEscalationLevels((levels) =>
+                            levels.map((x) => (x.level === l.level ? { ...x, label: e.target.value } : x))
+                          )
+                        }
+                        placeholder="e.g. Regional Support"
+                      />
+                    </td>
+                    <td>
+                      <button className="btn btn-sm" onClick={() => removeEscalationLevel(l.level)}>
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+          <button className="btn btn-sm" onClick={addEscalationLevel} style={{ marginRight: 8 }}>
+            + Add level
+          </button>
+          <div className="field" style={{ maxWidth: 260, marginTop: 14 }}>
+            <label>Auto-escalate after (hours)</label>
+            <input
+              type="number"
+              value={escalationSlaHours}
+              onChange={(e) => setEscalationSlaHours(e.target.value)}
+              placeholder="Leave blank for manual only"
+            />
+          </div>
+          <button className="btn btn-dark btn-sm" disabled={escalationBusy} onClick={saveEscalationConfig} style={{ marginTop: 10 }}>
+            {escalationBusy ? "Saving…" : "Save escalation chain"}
+          </button>
+
+          {escalationLevels.filter((l) => l.level > 1).length > 0 && (
+            <>
+              <h3 style={{ marginTop: 24 }}>Who holds each level</h3>
+              <table className="clean" style={{ marginBottom: 12 }}>
+                <thead>
+                  <tr>
+                    <th>Level</th>
+                    <th>Person</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {escalationAssignments.map((a) => (
+                    <tr key={a._id}>
+                      <td>{a.level}</td>
+                      <td>{a.userId?.email ?? "(user removed)"}</td>
+                      <td>
+                        <button className="btn btn-sm" onClick={() => removeEscalationAssignment(a._id)}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {escalationAssignments.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="card-sub">
+                        No one assigned yet — cases can&apos;t escalate past level 1 until you add someone.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="field-row" style={{ alignItems: "flex-end" }}>
+                <div className="field">
+                  <label>Level</label>
+                  <select value={assignLevel} onChange={(e) => setAssignLevel(e.target.value)}>
+                    <option value="">Choose…</option>
+                    {escalationLevels
+                      .filter((l) => l.level > 1)
+                      .map((l) => (
+                        <option key={l.level} value={l.level}>
+                          {l.level} — {l.label || "(unlabeled)"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Person&apos;s email</label>
+                  <input value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)} placeholder="name@company.com" />
+                </div>
+                <button className="btn btn-dark btn-sm" disabled={escalationBusy} onClick={addEscalationAssignment}>
+                  Assign
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

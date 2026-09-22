@@ -107,6 +107,27 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [paymentGateEnabled, setPaymentGateEnabled] = useState(false);
+  const [togglingGate, setTogglingGate] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/platform-settings")
+      .then((res) => res.json())
+      .then((data) => setPaymentGateEnabled(data.settings?.paymentGateEnabled ?? false));
+  }, []);
+
+  async function togglePaymentGate() {
+    setTogglingGate(true);
+    const next = !paymentGateEnabled;
+    const res = await fetch("/api/admin/platform-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentGateEnabled: next }),
+    });
+    setTogglingGate(false);
+    if (res.ok) setPaymentGateEnabled(next);
+  }
+
   async function removeStaff(id: string) {
     if (!confirm("Remove this staff member's access?")) return;
     const res = await fetch(`/api/admin/staff/${id}`, { method: "DELETE" });
@@ -420,6 +441,26 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
           <p className="subtitle">Every business, parent organization, and staff member — and who's allowed to see what.</p>
         </div>
         {cta}
+      </div>
+
+      <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div>
+          <div style={{ fontWeight: 600 }}>Payment gate</div>
+          <p className="subtitle" style={{ margin: "2px 0 0" }}>
+            When on, a Business or Group portal locks to a &quot;Go to Billing&quot; screen unless the account has a
+            live subscription or unexpired comp status. Off by default — accounts created before billing existed have
+            no subscription row and would be locked out immediately. Confirm every real account is either subscribed
+            or marked Comp before turning this on.
+          </p>
+        </div>
+        <button
+          className={`pill ${paymentGateEnabled ? "pill-green" : "pill-gray"}`}
+          style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+          disabled={togglingGate}
+          onClick={togglePaymentGate}
+        >
+          {togglingGate ? "…" : paymentGateEnabled ? "On — click to disable" : "Off — click to enable"}
+        </button>
       </div>
 
       <div className="subtabs">

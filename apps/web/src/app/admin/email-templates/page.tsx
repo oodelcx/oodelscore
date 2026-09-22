@@ -35,6 +35,16 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A Group user escalates a branch's case",
     category: "alerts",
   },
+  case_escalated: {
+    label: "Case Escalated",
+    trigger: "A case advances to the next configured escalation level",
+    category: "alerts",
+  },
+  comp_expiry_reminder: {
+    label: "Comp Expiry Reminder",
+    trigger: "A comp/pilot account's expiry is 7 days away",
+    category: "billing",
+  },
   case_escalated_to_org: {
     label: "Case Escalated to Org",
     trigger: "A branch escalates one of its own cases to its parent org",

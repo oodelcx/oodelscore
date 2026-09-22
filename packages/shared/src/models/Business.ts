@@ -8,6 +8,9 @@ import {
   PricingTermsSchema,
   type IPricingTerms,
   DEFAULT_PRICING_TERMS,
+  EscalationLevelSchema,
+  type IEscalationLevel,
+  DEFAULT_ESCALATION_LEVELS,
 } from "./common";
 
 export const BILLING_ASSIGNMENTS = ["group_pays", "branch_pays", "unassigned"] as const;
@@ -39,6 +42,8 @@ export const BUSINESS_ADMIN_ONLY_FIELDS = [
   "ragThresholds",
   "pricingTerms",
   "checkoutEnabled",
+  "escalationLevels",
+  "escalationSlaHours",
 ] as const;
 
 export interface IBusiness {
@@ -69,6 +74,18 @@ export interface IBusiness {
   // Meaningless while billingAssignment is "group_pays" — that link lives on
   // the org's own billing page instead.
   checkoutEnabled: boolean;
+  // ADMIN-EDITABLE ONLY. This business's own escalation chain — meaningful
+  // whether or not it has a parent org (a standalone business still wants
+  // "Owner -> Regional Support" for its own case types). When this business
+  // belongs to a parent org, the org's own escalationLevels win instead
+  // (same inheritance rule as ragThresholds) — this field only applies to a
+  // standalone business, kept here rather than only on ParentOrganization so
+  // a standalone business isn't stuck with the single default level forever.
+  escalationLevels: IEscalationLevel[];
+  // ADMIN-EDITABLE ONLY. Hours an unresolved case may sit at its current
+  // escalation level before the cron auto-escalates it one level. null =
+  // no auto-escalation (Admin/branch must escalate manually).
+  escalationSlaHours: number | null;
   plan: BusinessPlan;
   maxFeedbackPoints: number;
   questionTemplateId: Types.ObjectId | null; // ADMIN-EDITABLE ONLY, ever
@@ -110,6 +127,8 @@ const BusinessSchema = new Schema<IBusiness>(
     pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
     groupPaysStripeSubscriptionItemId: { type: String, default: "" },
     checkoutEnabled: { type: Boolean, default: false },
+    escalationLevels: { type: [EscalationLevelSchema], default: () => DEFAULT_ESCALATION_LEVELS.map((l) => ({ ...l })) },
+    escalationSlaHours: { type: Number, default: null },
     plan: { type: String, enum: BUSINESS_PLANS, default: "business_monthly" },
     maxFeedbackPoints: { type: Number, default: 1 },
     questionTemplateId: { type: Schema.Types.ObjectId, ref: "QuestionTemplate", default: null },

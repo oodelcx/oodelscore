@@ -33,6 +33,8 @@ interface ItemRow {
   playbookRun?: PlaybookRunSummary | null;
   escalatedToOrg: boolean;
   escalatedToOrgNote: string;
+  currentEscalationLevel: number;
+  escalationHistory: { level: number; action: string; note: string; at: string }[];
 }
 interface TeamRow {
   userId: string;
@@ -246,6 +248,22 @@ export default function BusinessCasesClient() {
     setEscalating(null);
     setEscalatingId(null);
     setEscalationNoteDraft("");
+  }
+
+  async function escalateToNextLevel(id: string) {
+    setEscalating(id);
+    const res = await fetch(`/api/business/action-board/${id}/escalate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "" }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalating(null);
+    if (!res.ok) {
+      alert(data?.message ?? "Failed to escalate");
+      return;
+    }
+    load();
   }
 
   async function unEscalate(id: string) {
@@ -506,6 +524,9 @@ export default function BusinessCasesClient() {
                             Escalated to {orgName ?? "org"}
                           </span>
                         )}
+                        {item.currentEscalationLevel > 1 && (
+                          <span className="pill pill-amber">Escalation level {item.currentEscalationLevel}</span>
+                        )}
                       </div>
                       {item.status !== "resolved" && resolvingId !== item._id && (
                         <button
@@ -567,12 +588,33 @@ export default function BusinessCasesClient() {
                           {item.escalatedToOrg ? "↩ Un-escalate" : `↗ Escalate to ${orgName ?? "org"}`}
                         </button>
                       )}
+                      {!isLimited && item.status !== "resolved" && (
+                        <button
+                          type="button"
+                          className="case-action-btn"
+                          disabled={escalating === item._id}
+                          onClick={() => escalateToNextLevel(item._id)}
+                          title="Advance this case to the next configured escalation level"
+                        >
+                          ↑ Escalate to next level
+                        </button>
+                      )}
                     </div>
                     {!isLimited && <OwnerBadge label={team.find((t) => t.userId === item.ownerId)?.label ?? null} tip={tooltips["owner"]} />}
                   </div>
 
                   {expandedCommentsFor === item._id && (
                     <div className="ab-panel">
+                      {item.escalationHistory && item.escalationHistory.length > 0 && (
+                        <ul style={{ margin: "0 0 10px", paddingLeft: 0, listStyle: "none" }}>
+                          {item.escalationHistory.map((h, i) => (
+                            <li key={i} style={{ marginBottom: 6, fontSize: "12.5px", color: "var(--text-3)" }}>
+                              ↑ Level {h.level} → escalated{h.note ? `: ${h.note}` : ""} —{" "}
+                              {new Date(h.at).toLocaleString()}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {(commentsByItem[item._id] ?? []).length === 0 ? (
                         <p className="subtitle" style={{ margin: "0 0 8px" }}>
                           No comments yet — start the trail below.
