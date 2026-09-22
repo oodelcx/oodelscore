@@ -235,7 +235,18 @@ export default function GroupCommandCenterClient() {
                       </div>
                     </div>
                     <div className="cc-branch-foot">
-                      <span>{b.responseCount} resp / 30d</span>
+                      <span>
+                        {b.responseCount} resp / 30d
+                        {b.responseCount > 0 && b.responseCount < 10 && (
+                          <span
+                            className="pill pill-gray"
+                            style={{ marginLeft: 6, fontSize: 10 }}
+                            title="Fewer than 10 responses — treat this score as low-confidence"
+                          >
+                            low sample
+                          </span>
+                        )}
+                      </span>
                       {b.starDelta !== null && (
                         <span className={b.starDelta >= 0 ? "cc-band-green" : "cc-band-red"}>
                           {b.starDelta >= 0 ? "▲" : "▼"} {Math.abs(b.starDelta).toFixed(2)}

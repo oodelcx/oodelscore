@@ -46,6 +46,7 @@ interface CaseDetail {
   currentEscalationLevel: number;
   escalationHistory: EscalationHistoryRow[];
   playbookRun: PlaybookRunSummary | null;
+  customerNotifiedAt: string | null;
 }
 
 const CASE_TYPE_LABELS: Record<string, string> = {
@@ -69,6 +70,9 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
   const [posting, setPosting] = useState(false);
   const [escalating, setEscalating] = useState(false);
   const [escalationNote, setEscalationNote] = useState("");
+  const [customerMessage, setCustomerMessage] = useState("");
+  const [sendingToCustomer, setSendingToCustomer] = useState(false);
+  const [customerSendResult, setCustomerSendResult] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -120,8 +124,29 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
     load();
   }
 
+  async function sendToCustomer() {
+    if (!customerMessage.trim()) return;
+    setSendingToCustomer(true);
+    setCustomerSendResult(null);
+    const res = await fetch(`/api/group/action-board/${caseId}/respond-to-customer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: customerMessage.trim() }),
+    });
+    const data = await res.json().catch(() => null);
+    setSendingToCustomer(false);
+    if (!res.ok) {
+      setCustomerSendResult(data?.message ?? "Failed to send");
+      return;
+    }
+    setCustomerMessage("");
+    load();
+  }
+
   if (loading) return <p className="subtitle">Loading…</p>;
   if (error || !item) return <p className="error-text">{error ?? "Case not found."}</p>;
+
+  const respondentEmail = sourceResponses.find((r) => r.respondentEmail)?.respondentEmail ?? null;
 
   return (
     <div>
@@ -226,6 +251,36 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
             {posting ? "Posting…" : "Post"}
           </button>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3>Close the loop with the customer</h3>
+        {respondentEmail ? (
+          <>
+            <p className="card-sub">
+              Sends to {respondentEmail} from {businessName ?? "the branch"}&apos;s name — replies land in the branch&apos;s
+              own contact inbox, not here.
+              {item.customerNotifiedAt && (
+                <> Already messaged {new Date(item.customerNotifiedAt).toLocaleString()}.</>
+              )}
+            </p>
+            <div className="field">
+              <textarea
+                value={customerMessage}
+                onChange={(e) => setCustomerMessage(e.target.value)}
+                placeholder="e.g. Thanks for flagging the wait time — we've added a second till at peak hours."
+              />
+            </div>
+            {customerSendResult && <p className="error-text">{customerSendResult}</p>}
+            <button className="btn btn-dark btn-sm" disabled={sendingToCustomer || !customerMessage.trim()} onClick={sendToCustomer}>
+              {sendingToCustomer ? "Sending…" : "Send to customer"}
+            </button>
+          </>
+        ) : (
+          <p className="subtitle">
+            No email was captured for this feedback, so there&apos;s no way to reach this customer personally.
+          </p>
+        )}
       </div>
 
       <div className="card">

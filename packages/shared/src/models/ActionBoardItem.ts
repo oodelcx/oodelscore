@@ -97,6 +97,12 @@ export interface IActionBoardItem {
   currentEscalationLevel: number;
   levelEnteredAt: Date;
   escalationHistory: IEscalationHistoryEntry[];
+  // Set the moment a personal reply is sent to the customer who left the
+  // linked feedback (see the business/group respond-to-customer route) —
+  // closing the loop on their end, not just internally marking the case
+  // resolved. Null until that happens; stays null forever for a case with
+  // no respondent email captured.
+  customerNotifiedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,6 +133,7 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     currentEscalationLevel: { type: Number, default: 1 },
     levelEnteredAt: { type: Date, default: Date.now },
     escalationHistory: { type: [EscalationHistoryEntrySchema], default: [] },
+    customerNotifiedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

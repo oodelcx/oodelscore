@@ -95,6 +95,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["name", "account_name", "expires_on", "account_link"],
   },
   {
+    key: "customer_response",
+    subject: "A response from {{business_name}}",
+    body: "Hi {{respondent_name}}, thank you for your feedback. {{message_body}}\n\n— {{business_name}}",
+    availableVars: ["respondent_name", "business_name", "message_body"],
+  },
+  {
     key: "demo_request",
     subject: "New demo request: {{requester_name}}",
     body: "{{requester_name}} ({{requester_email}}) at {{requester_company}} asked for a demo.\n\nMessage: {{requester_message}}",

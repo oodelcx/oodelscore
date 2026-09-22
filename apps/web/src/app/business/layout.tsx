@@ -58,8 +58,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
 
   return (
     <div className="admin-app">
-      <MobileNavToggle label={business.name} />
-      <aside className="admin-sidebar">
+      <div data-no-print>
+        <MobileNavToggle label={business.name} />
+      </div>
+      <aside className="admin-sidebar" data-no-print>
         <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
@@ -91,6 +93,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 <a href="/business/insights">Insights</a>
                 <a href="/business/analytics">Analytics</a>
                 <a href="/business/alert-rules">Alert Rules</a>
+                <a href="/business/reports">Reports</a>
               </nav>
 
               <div className="nav-group-label">Act</div>

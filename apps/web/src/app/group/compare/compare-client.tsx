@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
 
+// A branch with a handful of responses shouldn't read as equivalent to one
+// with hundreds — flag anything below this as low-confidence rather than
+// showing a bare number next to a high-volume branch's.
+const LOW_SAMPLE_THRESHOLD = 10;
+
 interface BusinessOption {
   businessId: string;
   name: string;
@@ -181,7 +186,14 @@ export default function CompareClient({ tooltips }: { tooltips: Record<string, s
                 </div>
                 <div className="cs-row">
                   <span>Responses (30d)</span>
-                  <b>{b.responseCount}</b>
+                  <b>
+                    {b.responseCount}
+                    {b.responseCount > 0 && b.responseCount < LOW_SAMPLE_THRESHOLD && (
+                      <span className="pill pill-gray" style={{ marginLeft: 6, fontSize: 10 }} title="Fewer than 10 responses — treat this score as low-confidence">
+                        low sample
+                      </span>
+                    )}
+                  </b>
                 </div>
                 <div className="cs-row">
                   <span>
@@ -289,7 +301,14 @@ export default function CompareClient({ tooltips }: { tooltips: Record<string, s
                       const value = categoryAverage(b, name);
                       return <td key={name}>{value !== null ? value.toFixed(1) : "—"}</td>;
                     })}
-                    <td>{b.responseCount}</td>
+                    <td>
+                      {b.responseCount}
+                      {b.responseCount > 0 && b.responseCount < LOW_SAMPLE_THRESHOLD && (
+                        <span className="pill pill-gray" style={{ marginLeft: 6, fontSize: 10 }} title="Fewer than 10 responses — treat this score as low-confidence">
+                          low
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

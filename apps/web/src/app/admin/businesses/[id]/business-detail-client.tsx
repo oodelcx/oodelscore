@@ -1429,6 +1429,12 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               </div>
             ))}
           </div>
+          {form.demographicConfig.email === "off" && (
+            <p className="field-hint" style={{ color: "var(--amber, #b57a00)" }}>
+              Email is off — this business won&apos;t be able to personally follow up with customers who leave
+              feedback (no address to close the loop with).
+            </p>
+          )}
           <div className="field-row">
             {DEMOGRAPHIC_FIELDS.slice(3).map((field) => (
               <div className="field" key={field}>
