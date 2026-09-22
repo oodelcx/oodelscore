@@ -120,10 +120,18 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 storageKey="business-admin"
                 label="Admin"
                 defaultOpen={false}
-                hrefs={["/business/team-members", "/business/messages", "/business/billing", "/business/playbooks", "/business/security"]}
+                hrefs={[
+                  "/business/team-members",
+                  "/business/messages",
+                  "/business/support",
+                  "/business/billing",
+                  "/business/playbooks",
+                  "/business/security",
+                ]}
               >
                 {!isBusinessTeamMember && <a href="/business/team-members">Team Members</a>}
                 <a href="/business/messages">Messages</a>
+                <a href="/business/support">Support</a>
                 {!isBusinessTeamMember && <a href="/business/billing">Billing</a>}
                 <a href="/business/playbooks">Playbook Library</a>
                 <a href="/business/security">Security</a>

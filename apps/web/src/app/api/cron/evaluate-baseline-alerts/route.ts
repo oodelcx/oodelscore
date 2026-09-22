@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, evaluateBaselineAlerts } from "@oodelscore/shared";
+import { connectToDatabase, evaluateBaselineAlerts, logSystemHealthEvent } from "@oodelscore/shared";
 
 /**
  * Meant to be hit hourly by an external scheduler (a Render Cron Job
@@ -23,7 +23,14 @@ export async function POST(request: Request) {
   }
 
   await connectToDatabase();
-  const result = await evaluateBaselineAlerts();
-
-  return NextResponse.json({ status: "ok", ...result });
+  try {
+    const result = await evaluateBaselineAlerts();
+    return NextResponse.json({ status: "ok", ...result });
+  } catch (err) {
+    console.error("[cron/evaluate-baseline-alerts] failed", err);
+    await logSystemHealthEvent("cron_failure", (err as Error).message ?? "evaluate-baseline-alerts failed", {
+      route: "evaluate-baseline-alerts",
+    });
+    return NextResponse.json({ status: "error", message: "Job failed" }, { status: 500 });
+  }
 }

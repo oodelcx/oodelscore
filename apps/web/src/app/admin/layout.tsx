@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
 import { requireStaffSession } from "@/lib/adminAuth";
-import { connectToDatabase, AiInsightReport, Business, FeedbackPointRequest } from "@oodelscore/shared";
+import { connectToDatabase, AiInsightReport, Business, FeedbackPointRequest, SupportTicket } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import "./admin.css";
@@ -39,6 +39,16 @@ async function getPendingFeedbackRequestCount(): Promise<number> {
   return FeedbackPointRequest.countDocuments({ status: "pending", businessId: { $in: scopedBusinessIds } });
 }
 
+/** Unresolved support tickets — same staffAndRoles.view gate as the queue page itself. */
+async function getOpenSupportTicketCount(): Promise<number> {
+  const session = await requireStaffSession();
+  if (!session) return 0;
+  if (!session.role.permissions.staffAndRoles.view) return 0;
+
+  await connectToDatabase();
+  return SupportTicket.countDocuments({ status: { $ne: "resolved" } });
+}
+
 /**
  * Dev Data Tools (showcase seed / wipe) are dangerous by design — only ever
  * shown when a staff member with the "Admin" system role is logged in AND
@@ -58,6 +68,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   const pendingAiCount = await getPendingAiCount();
   const pendingFeedbackRequestCount = await getPendingFeedbackRequestCount();
+  const openSupportTicketCount = await getOpenSupportTicketCount();
   const devToolsVisible = await canSeeDevTools();
 
   return (
@@ -110,6 +121,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <a href="/admin/alert-rules">Alert Rules</a>
             <a href="/admin/billing">Billing Oversight</a>
             <a href="/admin/cx-pulse">CX Pulse</a>
+            <a href="/admin/platform-health">Platform Health</a>
+            <a href="/admin/support-queue" style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Support Queue</span>
+              {openSupportTicketCount > 0 && <span className="nav-badge">{openSupportTicketCount}</span>}
+            </a>
             <a href="/admin/audit-log">Audit Log</a>
           </nav>
 

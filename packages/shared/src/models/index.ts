@@ -36,3 +36,5 @@ export * from "./AuditLogEntry";
 export * from "./PlatformSettings";
 export * from "./EscalationAssignment";
 export * from "./ImprovementInitiative";
+export * from "./SystemHealthEvent";
+export * from "./SupportTicket";

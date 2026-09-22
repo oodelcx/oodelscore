@@ -20,6 +20,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "contact_form_submission",
   "feedback_point_request",
   "decision_outcome_measured",
+  "support_ticket_created",
 ] as const;
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
 

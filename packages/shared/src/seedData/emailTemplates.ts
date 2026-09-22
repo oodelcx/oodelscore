@@ -119,6 +119,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["business_name", "requester_email", "note"],
   },
   {
+    key: "support_ticket_created",
+    subject: "New support ticket ({{category}}): {{subject}}",
+    body: "{{account_name}} ({{submitter_email}}) opened a {{category}} ticket via the Support Queue.\n\nSubject: {{subject}}\n\n{{body}}\n\nView it here: {{ticket_link}}",
+    availableVars: ["account_name", "submitter_email", "category", "subject", "body", "ticket_link"],
+  },
+  {
     key: "decision_outcome_measured",
     subject: "Outcome measured: {{decision_title}} — {{verdict}}",
     body: "Hi {{name}}, the decision \"{{decision_title}}\" has a measured outcome: {{verdict}}. {{metric_label}} went from {{outcome_before}} to {{outcome_after}}. View it here: {{decision_link}}",

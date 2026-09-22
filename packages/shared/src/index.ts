@@ -37,6 +37,8 @@ export * from "./cxpulse/portfolio";
 export * from "./qr/generate";
 export * from "./feedback/dedup";
 export * from "./categories/usage";
+export * from "./observability/systemHealth";
+export * from "./observability/stuckOnboarding";
 export * from "./seedData/showcase";
 export * from "./escalation/engine";
 export * from "./billing/gate";
