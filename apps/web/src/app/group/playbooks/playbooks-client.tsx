@@ -43,6 +43,19 @@ function formatHours(hours: number | null | undefined): string {
   if (hours >= 24) return `${(hours / 24).toFixed(1)}d`;
   return `${hours.toFixed(1)}h`;
 }
+const CATEGORY_ICONS: Record<string, string> = {
+  "Staff Friendliness": "🙂",
+  Cleanliness: "✨",
+  "Service Speed": "⏱️",
+  "Value for Money": "💰",
+  Communication: "💬",
+  Facilities: "🏢",
+  "Product Quality": "⭐",
+  "Digital Experience": "📱",
+};
+function categoryIcon(name: string | undefined): string {
+  return (name && CATEGORY_ICONS[name]) || "📘";
+}
 interface CategoryRow {
   _id: string;
   name: string;
@@ -320,9 +333,13 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <div className="ab-list">
+        <div className="playbook-grid">
           {playbooks.map((p, index) => (
-            <div className="card ab-card" data-tour={index === 0 ? "pb-first-card" : undefined} key={p._id}>
+            <div
+              className={`card ab-card playbook-card${editingId === p._id ? " playbook-card--editing" : p.triggerStatus?.isTriggered ? " playbook-card--triggered" : p.activeRun ? " playbook-card--running" : ""}`}
+              data-tour={index === 0 ? "pb-first-card" : undefined}
+              key={p._id}
+            >
               {editingId === p._id ? (
                 <div className="ab-panel" style={{ margin: 0 }}>
                   <div className="field">
@@ -403,6 +420,9 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
               ) : (
                 <>
                   <div className="ab-card-head">
+                    <div className="playbook-icon" aria-hidden="true">
+                      {categoryIcon(categories.find((c) => c._id === p.categoryId)?.name)}
+                    </div>
                     <div className="ab-title-block">
                       <div className="ab-badges">
                         {categoryName(p.categoryId) && <span className="pill pill-gray">{categoryName(p.categoryId)}</span>}
