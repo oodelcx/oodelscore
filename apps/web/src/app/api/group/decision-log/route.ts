@@ -18,6 +18,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 
