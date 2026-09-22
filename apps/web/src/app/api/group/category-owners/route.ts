@@ -31,11 +31,24 @@ export async function PUT(request: Request) {
   if (!categoryId || !defaultOwnerId) {
     return NextResponse.json({ status: "error", message: "categoryId and defaultOwnerId are required" }, { status: 400 });
   }
+  // Repeat detection ("flag this category as a recurring issue after N
+  // cases in X days") is optional and off unless both are set — either can
+  // be sent as null to turn it back off.
+  const repeatThresholdCount =
+    body?.repeatThresholdCount === null || typeof body?.repeatThresholdCount === "number" ? body.repeatThresholdCount : undefined;
+  const repeatWindowDays =
+    body?.repeatWindowDays === null || typeof body?.repeatWindowDays === "number" ? body.repeatWindowDays : undefined;
 
   await connectToDatabase();
   const mapping = await CategoryOwnerMapping.findOneAndUpdate(
     { ownerScope: "parentOrg", ownerScopeId: session.org._id, categoryId },
-    { $set: { defaultOwnerId } },
+    {
+      $set: {
+        defaultOwnerId,
+        ...(repeatThresholdCount !== undefined ? { repeatThresholdCount } : {}),
+        ...(repeatWindowDays !== undefined ? { repeatWindowDays } : {}),
+      },
+    },
     { upsert: true, new: true }
   );
 

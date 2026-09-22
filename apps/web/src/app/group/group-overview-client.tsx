@@ -6,6 +6,45 @@ import { useRouter } from "next/navigation";
 import { PeriodComparisonCards, type Comparisons } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
 
+interface RecurringFlagRow {
+  _id: string;
+  categoryName: string;
+  count: number;
+  windowDays: number;
+  businessIds: string[];
+}
+
+/** Self-contained — fetches its own data so the main overview payload doesn't need to change. */
+function RecurringIssuesCard() {
+  const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
+
+  useEffect(() => {
+    fetch("/api/group/recurring-issues")
+      .then((r) => r.json())
+      .then((d) => setFlags(d.flags ?? []))
+      .catch(() => setFlags([]));
+  }, []);
+
+  if (flags.length === 0) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #E0A100)" }}>
+      <div className="metric-label">Recurring issues — cross-branch</div>
+      <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+        {flags.map((f) => (
+          <li key={f._id} style={{ marginBottom: 4 }}>
+            <b>{f.categoryName}</b> — {f.count} cases across {f.businessIds.length} branches in the last{" "}
+            {f.windowDays} days
+          </li>
+        ))}
+      </ul>
+      <a href="/group/improvement-initiatives" style={{ color: "var(--accent)" }}>
+        Review in Improvement Initiatives →
+      </a>
+    </div>
+  );
+}
+
 interface RegionRow {
   region: string;
   businessCount: number;
@@ -158,6 +197,8 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
           {data.headline}
         </div>
       )}
+
+      <RecurringIssuesCard />
 
       {data.needsYourDecision.length > 0 && (
         <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #b57a00)" }}>

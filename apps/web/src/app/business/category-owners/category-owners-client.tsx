@@ -10,6 +10,8 @@ interface CategoryRow {
 interface MappingRow {
   categoryId: string;
   defaultOwnerId: string;
+  repeatThresholdCount: number | null;
+  repeatWindowDays: number | null;
 }
 interface TeamRow {
   userId: string;
@@ -29,6 +31,11 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  // Draft repeat-detection values per category, only committed when "Save"
+  // is clicked — separate from `mappings` so typing a digit doesn't
+  // immediately fire a save.
+  const [repeatDrafts, setRepeatDrafts] = useState<Record<string, { count: string; days: string }>>({});
+  const [savingRepeatFor, setSavingRepeatFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -39,8 +46,16 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
     ]).then(([data, teamData, meData]) => {
       setCategories(data.categories ?? []);
       const byCategory: Record<string, MappingRow> = {};
-      for (const m of data.mappings ?? []) byCategory[m.categoryId] = m;
+      const drafts: Record<string, { count: string; days: string }> = {};
+      for (const m of data.mappings ?? []) {
+        byCategory[m.categoryId] = m;
+        drafts[m.categoryId] = {
+          count: m.repeatThresholdCount != null ? String(m.repeatThresholdCount) : "",
+          days: m.repeatWindowDays != null ? String(m.repeatWindowDays) : "",
+        };
+      }
       setMappings(byCategory);
+      setRepeatDrafts(drafts);
       setTeam(teamData.team ?? []);
       setIsBranch(!!meData.business?.parentOrgId);
       setLoading(false);
@@ -67,6 +82,25 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
       });
     }
     setSavingCategoryId(null);
+    load();
+  }
+
+  async function saveRepeatThreshold(categoryId: string) {
+    const ownerId = mappings[categoryId]?.defaultOwnerId;
+    if (!ownerId) return; // repeat detection needs an owner set first — same as the API requires
+    const draft = repeatDrafts[categoryId] ?? { count: "", days: "" };
+    setSavingRepeatFor(categoryId);
+    await fetch("/api/business/category-owners", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        categoryId,
+        defaultOwnerId: ownerId,
+        repeatThresholdCount: draft.count.trim() ? Number(draft.count) : null,
+        repeatWindowDays: draft.days.trim() ? Number(draft.days) : null,
+      }),
+    });
+    setSavingRepeatFor(null);
     load();
   }
 
@@ -118,6 +152,10 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
         Items in a mapped category are assigned directly to that category&rsquo;s default owner — no separate
         confirmation step.
       </div>
+      <div className="callout">
+        &quot;Flag as recurring after&quot; watches this business&rsquo;s own cases only — e.g. 5 times in 30 days.
+        Leave blank to turn detection off for that category.
+      </div>
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
@@ -129,6 +167,7 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
                 Default owner
                 <InfoTip text={tooltips["default-owner"]} />
               </th>
+              <th>Flag as recurring after</th>
             </tr>
           </thead>
           <tbody>
@@ -172,11 +211,50 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
                   )}
                   {inviteForCategory === c._id && inviteError && <p className="error-text">{inviteError}</p>}
                 </td>
+                <td>
+                  {mappings[c._id]?.defaultOwnerId ? (
+                    <div className="field-row" style={{ alignItems: "flex-end", gap: 6 }}>
+                      <div className="field" style={{ margin: 0, width: 70 }}>
+                        <label style={{ fontSize: 11 }}>Times</label>
+                        <input
+                          type="number"
+                          min="2"
+                          placeholder="off"
+                          value={repeatDrafts[c._id]?.count ?? ""}
+                          onChange={(e) =>
+                            setRepeatDrafts((d) => ({ ...d, [c._id]: { ...(d[c._id] ?? { count: "", days: "" }), count: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <div className="field" style={{ margin: 0, width: 70 }}>
+                        <label style={{ fontSize: 11 }}>Days</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="—"
+                          value={repeatDrafts[c._id]?.days ?? ""}
+                          onChange={(e) =>
+                            setRepeatDrafts((d) => ({ ...d, [c._id]: { ...(d[c._id] ?? { count: "", days: "" }), days: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <button
+                        className="btn btn-sm"
+                        disabled={savingRepeatFor === c._id}
+                        onClick={() => saveRepeatThreshold(c._id)}
+                      >
+                        {savingRepeatFor === c._id ? "…" : "Save"}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="subtitle">Set an owner first</span>
+                  )}
+                </td>
               </tr>
             ))}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={2} className="subtitle">
+                <td colSpan={3} className="subtitle">
                   No categories yet.
                 </td>
               </tr>

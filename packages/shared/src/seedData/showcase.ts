@@ -13,6 +13,8 @@ import { AlertActivity } from "../models/AlertActivity";
 import { ActionBoardItem, type ActionPriority } from "../models/ActionBoardItem";
 import { ActionItemComment } from "../models/ActionItemComment";
 import { DecisionLogEntry } from "../models/DecisionLogEntry";
+import { ImprovementInitiative } from "../models/ImprovementInitiative";
+import { RecurringIssueFlag } from "../models/RecurringIssueFlag";
 import { Playbook } from "../models/Playbook";
 import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
 import { autoAttachPlaybook } from "../scoring/caseAutoAttach";
@@ -448,6 +450,8 @@ export interface ShowcaseSeedResult {
   actionBoardItems: number;
   actionItemComments: number;
   decisionLogEntries: number;
+  improvementInitiatives: number;
+  recurringIssueFlags: number;
   playbooks: number;
   categoryOwnerMappings: number;
   billingSubscriptions: number;
@@ -480,6 +484,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     actionBoardItems: 0,
     actionItemComments: 0,
     decisionLogEntries: 0,
+    improvementInitiatives: 0,
+    recurringIssueFlags: 0,
     playbooks: 0,
     categoryOwnerMappings: 0,
     billingSubscriptions: 0,
@@ -686,18 +692,25 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     scope: "business" | "parentOrg",
     scopeId: Types.ObjectId,
     categoryName: CategoryName,
-    ownerId: Types.ObjectId
+    ownerId: Types.ObjectId,
+    repeat?: { thresholdCount: number; windowDays: number }
   ) {
     await CategoryOwnerMapping.findOneAndUpdate(
       { ownerScope: scope, ownerScopeId: scopeId, categoryId: categoryByName.get(categoryName) },
-      { $set: { defaultOwnerId: ownerId } },
+      {
+        $set: {
+          defaultOwnerId: ownerId,
+          repeatThresholdCount: repeat?.thresholdCount ?? null,
+          repeatWindowDays: repeat?.windowDays ?? null,
+        },
+      },
       { upsert: true }
     );
     result.categoryOwnerMappings++;
   }
 
   const meridian = groupInfoByKey.get("meridian")!;
-  await mapCategory("parentOrg", meridian.org._id, "Staff Friendliness", meridian.teamStaff[1]._id);
+  await mapCategory("parentOrg", meridian.org._id, "Staff Friendliness", meridian.teamStaff[1]._id, { thresholdCount: 4, windowDays: 30 });
   await mapCategory("parentOrg", meridian.org._id, "Communication", meridian.teamStaff[2]._id);
 
   const brightfuture = groupInfoByKey.get("brightfuture")!;
@@ -710,9 +723,9 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   await mapCategory("parentOrg", urbanmart.org._id, "Value for Money", urbanmart.teamStaff[1]._id);
 
   const dailygrind = standaloneInfoByKey.get("dailygrind")!;
-  await mapCategory("business", dailygrind.business._id, "Product Quality", dailygrind.teamFull!._id);
+  await mapCategory("business", dailygrind.business._id, "Product Quality", dailygrind.teamFull!._id, { thresholdCount: 3, windowDays: 14 });
   const zenith = standaloneInfoByKey.get("zenithfitness")!;
-  await mapCategory("business", zenith.business._id, "Cleanliness", zenith.teamFull!._id);
+  await mapCategory("business", zenith.business._id, "Cleanliness", zenith.teamFull!._id, { thresholdCount: 4, windowDays: 30 });
 
   // 6. Playbooks tied to the mapped categories.
   async function addPlaybook(params: {
@@ -1009,20 +1022,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     result.actionBoardItems++;
     await autoAttachPlaybook(item);
 
-    if (status === "resolved") {
-      await DecisionLogEntry.create({
-        parentOrgId: event.parentOrgId,
-        businessId: event.parentOrgId ? null : event.businessId,
-        title: item.title,
-        trigger: item.resolutionNote,
-        linkedActionIds: [item._id],
-        affectedBusinessIds: [event.businessId],
-        ownerId,
-        implementationDate: item.resolvedAt,
-        status: "implemented",
-      });
-      result.decisionLogEntries++;
-    } else if (event.ownerCandidates.length) {
+    if (status !== "resolved" && event.ownerCandidates.length) {
       const commenters = event.ownerCandidates;
       const firstAuthor = commenters[0];
       const secondAuthor = commenters[1] ?? commenters[0];
@@ -1043,6 +1043,286 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       result.actionItemComments += 2;
     }
   }
+
+  // 9b. Systemic patterns — Recurring Issue Flags, the Improvement
+  // Initiatives a human converts them into, and the Decision Log entries a
+  // completed initiative can produce. Demonstrates the full "repeat case ->
+  // flag -> initiative -> decision" pipeline end to end, across all three
+  // flag statuses (active/converted/dismissed) and both ownerScopes
+  // (single business vs. cross-branch parentOrg).
+  async function createPatternCase(params: {
+    parentOrgId: Types.ObjectId | null;
+    businessId: Types.ObjectId;
+    businessName: string;
+    categoryId: Types.ObjectId;
+    categoryLabel: string;
+    comment: string;
+    createdDaysAgo: number;
+    resolved: boolean;
+  }) {
+    const item = await ActionBoardItem.create({
+      parentOrgId: params.parentOrgId,
+      businessId: params.businessId,
+      title: `${params.categoryLabel} concern reported at ${params.businessName}`,
+      description: `Respondent comment: "${params.comment}"`,
+      categoryId: params.categoryId,
+      priority: "medium",
+      status: params.resolved ? "resolved" : "open",
+      ownerId: null,
+      dueDate: params.resolved ? null : daysAgo(-randomInt(2, 8)),
+      sourceResponseIds: [],
+      resolutionNote: params.resolved ? "Logged as part of a broader pattern — see the linked initiative." : "",
+      resolvedAt: params.resolved ? daysAgo(Math.max(0, params.createdDaysAgo - randomInt(1, 4))) : null,
+      source: "auto_suggested",
+      createdAt: daysAgo(params.createdDaysAgo),
+    });
+    result.actionBoardItems++;
+    return item;
+  }
+
+  // A. Cross-branch pattern (Meridian Bank Group) — active flag, initiative
+  // in progress, no Decision Log entry yet (still being worked).
+  const meridianDowntownForPattern = meridian.branches.find((b) => b.business.name === "Meridian Bank – Downtown")!;
+  const meridianUptownForPattern = meridian.branches.find((b) => b.business.name === "Meridian Bank – Uptown")!;
+  const staffFriendlinessId = categoryByName.get("Staff Friendliness")!;
+  const meridianPatternCases = [
+    await createPatternCase({
+      parentOrgId: meridian.org._id,
+      businessId: meridianDowntownForPattern.business._id,
+      businessName: meridianDowntownForPattern.business.name,
+      categoryId: staffFriendlinessId,
+      categoryLabel: "Staff Friendliness",
+      comment: "The teller was short with me and seemed rushed the whole time.",
+      createdDaysAgo: 18,
+      resolved: false,
+    }),
+    await createPatternCase({
+      parentOrgId: meridian.org._id,
+      businessId: meridianDowntownForPattern.business._id,
+      businessName: meridianDowntownForPattern.business.name,
+      categoryId: staffFriendlinessId,
+      categoryLabel: "Staff Friendliness",
+      comment: "Staff barely acknowledged me at the counter.",
+      createdDaysAgo: 12,
+      resolved: false,
+    }),
+    await createPatternCase({
+      parentOrgId: meridian.org._id,
+      businessId: meridianUptownForPattern.business._id,
+      businessName: meridianUptownForPattern.business.name,
+      categoryId: staffFriendlinessId,
+      categoryLabel: "Staff Friendliness",
+      comment: "Not the friendliest visit — felt like an inconvenience to the staff.",
+      createdDaysAgo: 9,
+      resolved: false,
+    }),
+    await createPatternCase({
+      parentOrgId: meridian.org._id,
+      businessId: meridianUptownForPattern.business._id,
+      businessName: meridianUptownForPattern.business.name,
+      categoryId: staffFriendlinessId,
+      categoryLabel: "Staff Friendliness",
+      comment: "Teller was curt and didn't explain the fee.",
+      createdDaysAgo: 4,
+      resolved: false,
+    }),
+  ];
+  await RecurringIssueFlag.create({
+    ownerScope: "parentOrg",
+    ownerScopeId: meridian.org._id,
+    categoryId: staffFriendlinessId,
+    caseIds: meridianPatternCases.map((c) => c._id),
+    businessIds: [meridianDowntownForPattern.business._id, meridianUptownForPattern.business._id],
+    count: meridianPatternCases.length,
+    windowDays: 30,
+    firstCaseAt: daysAgo(18),
+    lastCaseAt: daysAgo(4),
+    status: "active",
+  });
+  result.recurringIssueFlags++;
+  await ImprovementInitiative.create({
+    parentOrgId: meridian.org._id,
+    businessId: null,
+    title: "Retrain frontline staff on greeting & tone standards",
+    description:
+      "Staff Friendliness complaints have surfaced at both Downtown and Uptown within the same month — this initiative retrains tellers at both branches on the greeting standard and adds a mystery-shopper check.",
+    ownerId: meridian.teamStaff[1]._id,
+    affectedBusinessIds: [meridianDowntownForPattern.business._id, meridianUptownForPattern.business._id],
+    linkedActionIds: meridianPatternCases.map((c) => c._id),
+    status: "in_progress",
+    baselineMetricDescription: "Average Staff Friendliness rating (Downtown & Uptown)",
+    baselineValue: 2.6,
+    targetValue: 4.2,
+    startedAt: daysAgo(3),
+    completedAt: null,
+  });
+  result.improvementInitiatives++;
+
+  // B. Single-branch pattern that's already run its course (Zenith Fitness)
+  // — converted flag, completed initiative, implemented Decision Log entry
+  // with a measured before/after outcome.
+  const cleanlinessId = categoryByName.get("Cleanliness")!;
+  const zenithPatternCases = [
+    await createPatternCase({
+      parentOrgId: null,
+      businessId: zenith.business._id,
+      businessName: zenith.business.name,
+      categoryId: cleanlinessId,
+      categoryLabel: "Cleanliness",
+      comment: "Locker room floor was wet and towels were out.",
+      createdDaysAgo: 52,
+      resolved: true,
+    }),
+    await createPatternCase({
+      parentOrgId: null,
+      businessId: zenith.business._id,
+      businessName: zenith.business.name,
+      categoryId: cleanlinessId,
+      categoryLabel: "Cleanliness",
+      comment: "Equipment wasn't wiped down between uses, and neither were the benches.",
+      createdDaysAgo: 47,
+      resolved: true,
+    }),
+    await createPatternCase({
+      parentOrgId: null,
+      businessId: zenith.business._id,
+      businessName: zenith.business.name,
+      categoryId: cleanlinessId,
+      categoryLabel: "Cleanliness",
+      comment: "Locker rooms need a deep clean — smelled pretty bad today.",
+      createdDaysAgo: 43,
+      resolved: true,
+    }),
+    await createPatternCase({
+      parentOrgId: null,
+      businessId: zenith.business._id,
+      businessName: zenith.business.name,
+      categoryId: cleanlinessId,
+      categoryLabel: "Cleanliness",
+      comment: "Trash bins were overflowing in the changing area.",
+      createdDaysAgo: 40,
+      resolved: true,
+    }),
+  ];
+  const zenithInitiative = await ImprovementInitiative.create({
+    parentOrgId: null,
+    businessId: zenith.business._id,
+    title: "Deep-clean and re-audit locker rooms weekly",
+    description:
+      "Four Cleanliness complaints about the locker rooms within a month prompted a weekly deep-clean schedule and a staff re-audit checklist.",
+    ownerId: zenith.ownerUser._id,
+    affectedBusinessIds: [zenith.business._id],
+    linkedActionIds: zenithPatternCases.map((c) => c._id),
+    status: "completed",
+    baselineMetricDescription: "Average Cleanliness rating",
+    baselineValue: 2.9,
+    targetValue: 4.3,
+    startedAt: daysAgo(45),
+    completedAt: daysAgo(5),
+  });
+  result.improvementInitiatives++;
+  await RecurringIssueFlag.create({
+    ownerScope: "business",
+    ownerScopeId: zenith.business._id,
+    categoryId: cleanlinessId,
+    caseIds: zenithPatternCases.map((c) => c._id),
+    businessIds: [zenith.business._id],
+    count: zenithPatternCases.length,
+    windowDays: 30,
+    firstCaseAt: daysAgo(52),
+    lastCaseAt: daysAgo(40),
+    status: "converted",
+    convertedInitiativeId: zenithInitiative._id,
+  });
+  result.recurringIssueFlags++;
+  await DecisionLogEntry.create({
+    parentOrgId: null,
+    businessId: zenith.business._id,
+    title: zenithInitiative.title,
+    trigger: "Four Cleanliness complaints about the locker rooms within 30 days, surfaced via the Recurring Issues flag.",
+    linkedActionIds: zenithPatternCases.map((c) => c._id),
+    affectedBusinessIds: [zenith.business._id],
+    ownerId: zenith.ownerUser._id,
+    implementationDate: daysAgo(40),
+    status: "implemented",
+    outcomeMetricDescription: "Average Cleanliness rating",
+    outcomeMetric: "categoryAverage",
+    outcomeCategoryId: cleanlinessId,
+    outcomeBefore: 2.9,
+    outcomeAfter: 4.3,
+    outcomeMeasuredAt: daysAgo(3),
+  });
+  result.decisionLogEntries++;
+
+  // C. A pattern that was reviewed and dismissed (The Daily Grind Café) —
+  // shows the "not every flag becomes an initiative" path.
+  const productQualityId = categoryByName.get("Product Quality")!;
+  const dailygrindPatternCases = [
+    await createPatternCase({
+      parentOrgId: null,
+      businessId: dailygrind.business._id,
+      businessName: dailygrind.business.name,
+      categoryId: productQualityId,
+      categoryLabel: "Product Quality",
+      comment: "My latte was lukewarm today.",
+      createdDaysAgo: 12,
+      resolved: true,
+    }),
+    await createPatternCase({
+      parentOrgId: null,
+      businessId: dailygrind.business._id,
+      businessName: dailygrind.business.name,
+      categoryId: productQualityId,
+      categoryLabel: "Product Quality",
+      comment: "Pastry was a bit stale.",
+      createdDaysAgo: 9,
+      resolved: true,
+    }),
+    await createPatternCase({
+      parentOrgId: null,
+      businessId: dailygrind.business._id,
+      businessName: dailygrind.business.name,
+      categoryId: productQualityId,
+      categoryLabel: "Product Quality",
+      comment: "Coffee tasted weaker than usual.",
+      createdDaysAgo: 6,
+      resolved: true,
+    }),
+  ];
+  await RecurringIssueFlag.create({
+    ownerScope: "business",
+    ownerScopeId: dailygrind.business._id,
+    categoryId: productQualityId,
+    caseIds: dailygrindPatternCases.map((c) => c._id),
+    businessIds: [dailygrind.business._id],
+    count: dailygrindPatternCases.length,
+    windowDays: 14,
+    firstCaseAt: daysAgo(12),
+    lastCaseAt: daysAgo(6),
+    status: "dismissed",
+    dismissedAt: daysAgo(5),
+  });
+  result.recurringIssueFlags++;
+
+  // D. An initiative created independently, with no linked cases at all —
+  // Improvement Initiatives don't require a Recurring Issue flag to start.
+  await ImprovementInitiative.create({
+    parentOrgId: brightfuture.org._id,
+    businessId: null,
+    title: "Monthly parent newsletter for all campuses",
+    description:
+      "A proactive initiative to lift Communication scores by giving every campus a consistent monthly update to families, ahead of any specific complaint pattern.",
+    ownerId: brightfuture.teamStaff[2]._id,
+    affectedBusinessIds: brightfuture.branches.map((b) => b.business._id),
+    linkedActionIds: [],
+    status: "planned",
+    baselineMetricDescription: "Average Communication rating",
+    baselineValue: 3.2,
+    targetValue: 4.0,
+    startedAt: null,
+    completedAt: null,
+  });
+  result.improvementInitiatives++;
 
   // 10. Billing — a mix of active, overdue, comp, and no-subscription states.
   async function addSubscription(params: {
@@ -1723,6 +2003,8 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("actionItemComments", () => ActionItemComment.deleteMany({}));
   await del("actionBoardItems", () => ActionBoardItem.deleteMany({}));
   await del("decisionLogEntries", () => DecisionLogEntry.deleteMany({}));
+  await del("improvementInitiatives", () => ImprovementInitiative.deleteMany({}));
+  await del("recurringIssueFlags", () => RecurringIssueFlag.deleteMany({}));
   await del("cxGoals", () => CxGoal.deleteMany({}));
   await del("playbookRuns", () => PlaybookRun.deleteMany({}));
   await del("playbooks", () => Playbook.deleteMany({}));

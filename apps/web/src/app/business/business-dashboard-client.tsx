@@ -70,6 +70,45 @@ function CxPulseHoldingBack({ dimensions }: { dimensions: HoldingBackDimension[]
   );
 }
 
+interface RecurringFlagRow {
+  _id: string;
+  categoryName: string;
+  count: number;
+  windowDays: number;
+  actionable: boolean;
+}
+
+/** Self-contained — fetches its own data so the main dashboard payload doesn't need to change. */
+function RecurringIssuesCard() {
+  const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
+
+  useEffect(() => {
+    fetch("/api/business/recurring-issues")
+      .then((r) => r.json())
+      .then((d) => setFlags(d.flags ?? []))
+      .catch(() => setFlags([]));
+  }, []);
+
+  if (flags.length === 0) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #E0A100)" }}>
+      <div className="metric-label">Recurring issues</div>
+      <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+        {flags.map((f) => (
+          <li key={f._id} style={{ marginBottom: 4 }}>
+            <b>{f.categoryName}</b> — {f.count} cases in the last {f.windowDays} days
+            {!f.actionable && <span className="subtitle"> · handled by your parent organization</span>}
+          </li>
+        ))}
+      </ul>
+      <a href="/business/improvement-initiatives" style={{ color: "var(--accent)" }}>
+        Review in Improvement Initiatives →
+      </a>
+    </div>
+  );
+}
+
 function trendSvgPoints(trend: TrendPoint[]): string {
   const values = trend.map((t) => t.starAverage);
   const known = values.filter((v): v is number => v !== null);
@@ -174,6 +213,8 @@ export default function BusinessDashboardClient() {
     <div>
       <h1>Your Dashboard</h1>
       <p className="subtitle">Your feedback performance at a glance.</p>
+
+      <RecurringIssuesCard />
 
       <div className="grid grid-4" data-tour="dash-kpi-strip" style={{ marginBottom: 20 }}>
         <div className="card">
