@@ -4,6 +4,9 @@ import {
   ParentOrganization,
   Business,
   User,
+  BillingSubscription,
+  Invoice,
+  BillingCredit,
   BILLING_MODES,
   PRICING_INTERVALS,
   canAccessScopedResource,
@@ -181,6 +184,14 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   if (!parentOrg) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   await User.deleteOne({ accountType: "parent_org", parentId: id });
+
+  // Same orphaned-billing-records cleanup as the business delete route —
+  // DB-only, no Stripe cancel call. See that route for the full rationale.
+  await Promise.all([
+    BillingSubscription.deleteMany({ ownerType: "parentOrg", ownerId: id }),
+    Invoice.deleteMany({ ownerType: "parentOrg", ownerId: id }),
+    BillingCredit.deleteMany({ ownerType: "parentOrg", ownerId: id }),
+  ]);
 
   return NextResponse.json({ status: "ok" });
 }

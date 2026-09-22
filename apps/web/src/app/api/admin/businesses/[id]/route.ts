@@ -3,6 +3,9 @@ import {
   connectToDatabase,
   Business,
   User,
+  BillingSubscription,
+  Invoice,
+  BillingCredit,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
   PRICING_INTERVALS,
@@ -183,6 +186,18 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   // Never leave an orphaned login behind — spec Section 13's orphaned-record
   // bug class applies here just as much as it did to billing subscriptions.
   await User.deleteOne({ accountType: "business", parentId: id });
+
+  // Spec Section 13, orphaned-billing-records bug: a deleted business used
+  // to leave its BillingSubscription/Invoice/BillingCredit rows behind,
+  // showing up in Admin's ledgers as "Account: Unknown" forever. This is a
+  // DB-only cleanup — it never calls Stripe to cancel a live subscription,
+  // since that's a real-world charge-affecting action Admin must still do
+  // deliberately (per CLAUDE.md, no unconfirmed Stripe side effects here).
+  await Promise.all([
+    BillingSubscription.deleteMany({ ownerType: "business", ownerId: id }),
+    Invoice.deleteMany({ ownerType: "business", ownerId: id }),
+    BillingCredit.deleteMany({ ownerType: "business", ownerId: id }),
+  ]);
 
   return NextResponse.json({ status: "ok" });
 }

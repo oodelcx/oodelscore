@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, BillingSubscription, Invoice, FeedbackPoint, Response, ParentOrganization, Business } from "@oodelscore/shared";
+import { connectToDatabase, BillingSubscription, Invoice, BillingCredit, FeedbackPoint, Response, ParentOrganization, Business } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 export async function GET() {
@@ -8,9 +8,10 @@ export async function GET() {
   if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const [subscription, invoices, feedbackPointCount, responseCount, parentOrg] = await Promise.all([
+  const [subscription, invoices, credits, feedbackPointCount, responseCount, parentOrg] = await Promise.all([
     BillingSubscription.findOne({ ownerType: "business", ownerId: session.business._id }),
     Invoice.find({ ownerType: "business", ownerId: session.business._id }).sort({ issuedAt: -1 }).limit(12),
+    BillingCredit.find({ ownerType: "business", ownerId: session.business._id }).sort({ issuedAt: -1 }).limit(12),
     FeedbackPoint.countDocuments({ businessId: session.business._id }),
     Response.countDocuments({ businessId: session.business._id }),
     session.business.parentOrgId ? ParentOrganization.findById(session.business.parentOrgId) : null,
@@ -33,6 +34,7 @@ export async function GET() {
     status: "ok",
     subscription,
     invoices,
+    credits,
     usage: {
       feedbackPointsUsed: feedbackPointCount,
       feedbackPointsAllowed: session.business.maxFeedbackPoints,
