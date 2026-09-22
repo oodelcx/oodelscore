@@ -13,7 +13,7 @@ import { Business } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { User } from "../models/User";
 import { sendTemplatedEmail } from "../email/resend";
-import type { IPricingTerms } from "../models/common";
+import { PRICING_INTERVALS, type IPricingTerms } from "../models/common";
 
 /**
  * Legacy Price lookup_keys from before per-owner custom pricing (Admin sets
@@ -280,6 +280,90 @@ export async function syncGroupPaysBranchesForOrg(orgId: string): Promise<{ sync
     }
   }
   return { synced, failed };
+}
+
+/**
+ * The single action behind the Pricing card's "Save & push to Stripe"
+ * button: saves the new amount/currency/interval on the Business or
+ * ParentOrganization record, then immediately propagates it to whatever is
+ * already live in Stripe — instead of a price change silently sitting in
+ * Mongo until the next unrelated action happens to touch Stripe. Always
+ * returns a plain-language status rather than throwing on "nothing to push
+ * to yet," since that's a normal, expected state (a brand-new account).
+ *
+ * - Business with its own active subscription: updates that subscription's
+ *   price directly.
+ * - Parent org with an active subscription: propagates the new rate to
+ *   every branch currently covered under it (each group_pays branch's own
+ *   subscription item gets repriced) — the org's rate *is* the per-branch
+ *   rate, there's no separate "org fee."
+ * - Nothing active yet: just saves; the caller's own "Start checkout" /
+ *   "Sync branch coverage" actions are what create something to push to.
+ */
+export async function savePricingAndPushToStripe(
+  ownerType: BillingOwnerType,
+  ownerId: string,
+  terms: { amount: number | null; currency: string; interval: string | null }
+): Promise<string> {
+  const validInterval = terms.interval === null || (PRICING_INTERVALS as readonly string[]).includes(terms.interval);
+  const validAmount = terms.amount === null || (typeof terms.amount === "number" && terms.amount > 0);
+  if (!validInterval || !validAmount) throw new BillingError("Invalid price");
+
+  const ownerExists =
+    ownerType === "business"
+      ? await Business.findByIdAndUpdate(ownerId, { $set: { pricingTerms: terms } })
+      : await ParentOrganization.findByIdAndUpdate(ownerId, { $set: { pricingTerms: terms } });
+  if (!ownerExists) throw new BillingError(ownerType === "business" ? "Business not found" : "Parent organization not found");
+
+  const subscription = await BillingSubscription.findOne({ ownerType, ownerId });
+  if (!subscription?.stripeSubscriptionId) {
+    return "Price saved. No active subscription yet — start checkout below to begin billing at this rate.";
+  }
+  if (subscription.isComp) {
+    return "Price saved. This account is on comp — convert it to paying to start billing at this rate.";
+  }
+  if (terms.amount === null || !terms.interval) {
+    return "Price cleared.";
+  }
+  if (terms.interval === "annual_lump_sum") {
+    return "Price saved. An annual lump-sum rate only applies the next time this account is charged — it can't change an existing subscription's price.";
+  }
+
+  const stripe = getStripeClient();
+
+  if (ownerType === "business") {
+    const stripeSub = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
+    const firstItem = stripeSub.items.data[0];
+    if (!firstItem) return "Price saved, but the existing subscription has no line item to update — check it in Stripe.";
+    await stripe.subscriptionItems.update(firstItem.id, {
+      price_data: {
+        currency: terms.currency,
+        unit_amount: Math.round(terms.amount * 100),
+        recurring: { interval: "month" },
+        product: typeof firstItem.price.product === "string" ? firstItem.price.product : firstItem.price.product.id,
+      },
+    });
+    return "Price saved and pushed live to Stripe.";
+  }
+
+  // Parent org: reprice every branch already covered, not the org itself.
+  const coveredBranches = await Business.find({ parentOrgId: ownerId, groupPaysStripeSubscriptionItemId: { $ne: "" } });
+  let repriced = 0;
+  for (const branch of coveredBranches) {
+    const item = await stripe.subscriptionItems.retrieve(branch.groupPaysStripeSubscriptionItemId);
+    await stripe.subscriptionItems.update(branch.groupPaysStripeSubscriptionItemId, {
+      price_data: {
+        currency: terms.currency,
+        unit_amount: Math.round(terms.amount * 100),
+        recurring: { interval: "month" },
+        product: typeof item.price.product === "string" ? item.price.product : item.price.product.id,
+      },
+    });
+    repriced++;
+  }
+  return coveredBranches.length === 0
+    ? "Price saved. No branches are covered under this org's subscription yet."
+    : `Price saved and pushed live to Stripe for ${repriced} covered branch(es).`;
 }
 
 /**

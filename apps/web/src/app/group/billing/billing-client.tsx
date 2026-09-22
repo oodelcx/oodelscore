@@ -25,6 +25,7 @@ interface BillingData {
   branchPaysBranchCount: number;
   overdueSelfBilledCount: number;
   branches: BranchBillingRow[];
+  checkoutLinkAvailable: boolean;
 }
 
 function statusPill(status: string) {
@@ -56,6 +57,15 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
     else alert(responseData.message);
   }
 
+  async function continueToPayment() {
+    setBusy(true);
+    const res = await fetch("/api/group/billing/checkout", { method: "POST" });
+    const responseData = await res.json();
+    setBusy(false);
+    if (res.ok) window.location.href = responseData.url;
+    else alert(responseData.message);
+  }
+
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load billing.</p>;
 
@@ -71,6 +81,17 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
     <div>
       <h1>Billing</h1>
       <p className="subtitle">What you&apos;re billed for, how you pay it, and the record of every payment.</p>
+
+      {data.checkoutLinkAvailable && (
+        <div className="callout callout-amber" style={{ marginBottom: 20 }}>
+          <b>Ready to continue with OodelCX?</b> Click below to enter your card details and start your subscription.
+          <div style={{ marginTop: 10 }}>
+            <button className="btn btn-primary" disabled={busy} onClick={continueToPayment}>
+              Continue to payment →
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="callout callout-amber" style={{ marginBottom: 20 }}>
         <b>Which model each branch is on</b> (Group pays vs. branch pays) is set by your OodelCX account manager, not editable
@@ -126,10 +147,10 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
             <div className="metric-note">Next payment: {new Date(data.subscription.nextPaymentDate).toLocaleDateString()}</div>
           )}
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-            <button className="btn" disabled={busy} onClick={openPortal}>
+            <button className="btn" disabled={busy || data.checkoutLinkAvailable} onClick={openPortal}>
               Update payment method
             </button>
-            <button className="btn" disabled={busy} onClick={openPortal}>
+            <button className="btn" disabled={busy || data.checkoutLinkAvailable} onClick={openPortal}>
               Manage subscription
             </button>
           </div>

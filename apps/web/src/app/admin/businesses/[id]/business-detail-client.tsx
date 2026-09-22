@@ -9,13 +9,18 @@ import { InfoTip } from "@/components/info-tip";
 
 type TabId = "general" | "performance" | "address" | "contact" | "settings" | "feedback-points" | "group";
 
+// Order matters here — it's the literal left-to-right order Admin sees
+// while setting up a new business: identity, then how to reach them, then
+// how they pay, then what they'll actually collect feedback on, then the
+// rest. Performance comes last since there's nothing to show there until
+// the business exists and has real responses.
 const BASE_TABS: { id: TabId; label: string }[] = [
   { id: "general", label: "General" },
-  { id: "performance", label: "Performance" },
-  { id: "address", label: "Address & Billing" },
   { id: "contact", label: "Contact" },
-  { id: "settings", label: "Settings" },
+  { id: "address", label: "Address & Billing" },
   { id: "feedback-points", label: "Feedback Points" },
+  { id: "settings", label: "Settings" },
+  { id: "performance", label: "Performance" },
 ];
 
 const VALID_TAB_IDS: readonly TabId[] = ["general", "performance", "address", "contact", "settings", "feedback-points", "group"];
@@ -187,6 +192,8 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [groupPaysCovered, setGroupPaysCovered] = useState(false);
+  const [priceSaveMessage, setPriceSaveMessage] = useState<string | null>(null);
+  const [checkoutEnabled, setCheckoutEnabled] = useState(false);
   const [editingCompPeriod, setEditingCompPeriod] = useState(false);
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
   const [compCustomDraft, setCompCustomDraft] = useState("");
@@ -430,6 +437,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
           pricingInterval: b.pricingTerms?.interval ?? "",
         });
         setGroupPaysCovered(!!b.groupPaysStripeSubscriptionItemId);
+        setCheckoutEnabled(!!b.checkoutEnabled);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -453,6 +461,46 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       return;
     }
     window.location.href = data.url;
+  }
+
+  async function savePriceAndPush() {
+    setBillingBusy(true);
+    setBillingError(null);
+    setPriceSaveMessage(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}/billing/save-price`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: form.pricingAmount.trim() ? Number(form.pricingAmount) : null,
+        currency: form.pricingCurrency || "usd",
+        interval: form.pricingInterval || null,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to save price");
+      return;
+    }
+    setPriceSaveMessage(data.message);
+  }
+
+  async function toggleCheckoutEnabled() {
+    setBillingBusy(true);
+    setBillingError(null);
+    const next = !checkoutEnabled;
+    const res = await fetch(`/api/admin/businesses/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checkoutEnabled: next }),
+    });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to update checkout access");
+      return;
+    }
+    setCheckoutEnabled(next);
   }
 
   function startMarkComp() {
@@ -971,12 +1019,23 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
 
       {tab === "address" && form.billingAssignment !== "group_pays" && (
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
-          <h3>Pricing</h3>
-          <p className="card-sub">
-            What this business is actually charged — set here, never in the Stripe Dashboard. A Checkout link is
-            built from these terms the moment it's created.
-          </p>
-          <div className="field-row">
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Pricing</h3>
+              <p className="card-sub" style={{ margin: "4px 0 0" }}>
+                What this business is actually charged — set here, never in the Stripe Dashboard.
+              </p>
+            </div>
+            {!isNew &&
+              (subscription?.isComp ? (
+                <span className="pill pill-purple">Comp</span>
+              ) : subscription?.status === "active" ? (
+                <span className="pill pill-green">Live on Stripe — ${subscription.mrrValue.toFixed(2)}/mo</span>
+              ) : (
+                <span className="pill pill-gray">Not billing yet</span>
+              ))}
+          </div>
+          <div className="field-row" style={{ marginTop: 14 }}>
             <div className="field">
               <label>Amount</label>
               <input
@@ -1006,9 +1065,16 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               </select>
             </div>
           </div>
-          <p className="card-sub" style={{ margin: "0 0 12px" }}>
-            {isNew ? "Saved when you create the business." : "Save this page to store the price before starting checkout."}
-          </p>
+          {isNew ? (
+            <p className="card-sub" style={{ margin: "0 0 4px" }}>Saved when you create the business.</p>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={savePriceAndPush}>
+                {billingBusy ? "Saving…" : "Save & push to Stripe"}
+              </button>
+              {priceSaveMessage && <span className="card-sub" style={{ margin: 0 }}>{priceSaveMessage}</span>}
+            </div>
+          )}
         </div>
       )}
 
@@ -1016,6 +1082,19 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
           <h3>Subscription</h3>
           {billingError && <p className="error-text">{billingError}</p>}
+          <div className="row-flex" style={{ marginBottom: 10, alignItems: "center", gap: 10 }}>
+            <span className={`pill ${checkoutEnabled ? "pill-green" : "pill-gray"}`}>
+              {checkoutEnabled ? "Self-service checkout: open" : "Self-service checkout: closed"}
+            </span>
+            <button className="btn btn-sm" disabled={billingBusy} onClick={toggleCheckoutEnabled}>
+              {checkoutEnabled ? "Turn off" : "Enable checkout"}
+            </button>
+            {checkoutEnabled && (
+              <span className="card-sub" style={{ margin: 0 }}>
+                A &quot;Continue to payment&quot; link is now live on this business&apos;s own billing page.
+              </span>
+            )}
+          </div>
           {subscription ? (
             <>
               <p className="card-sub">

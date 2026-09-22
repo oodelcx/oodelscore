@@ -118,6 +118,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "billingAddressSameAsAddress",
     "billingAssignment",
     "pricingTerms",
+    "checkoutEnabled",
     "plan",
     "maxFeedbackPoints",
     "questionTemplateId",

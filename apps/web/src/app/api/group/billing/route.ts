@@ -40,6 +40,9 @@ export async function GET() {
 
   const overdueSelfBilledCount = branchRows.filter((b) => b.billingAssignment === "branch_pays" && b.status === "overdue").length;
 
+  const hasLiveSubscription = Boolean(subscription && !subscription.isComp && (subscription.stripeSubscriptionId || subscription.paidThroughDate));
+  const checkoutLinkAvailable = session.org.checkoutEnabled && !hasLiveSubscription;
+
   return NextResponse.json({
     status: "ok",
     subscription,
@@ -49,5 +52,6 @@ export async function GET() {
     branchPaysBranchCount: branchPaysBranches.length,
     overdueSelfBilledCount,
     branches: branchRows,
+    checkoutLinkAvailable,
   });
 }

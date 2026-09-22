@@ -76,7 +76,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   // Command Center visibility, RAG banding, and pricing are Admin-only
   // decisions — same rule as billingAssignment on a Business (spec Section 4).
-  const adminOnlyFields = (["ragThresholds", "commandCenterEnabled", "pricingTerms"] as const).filter((f) => f in body);
+  const adminOnlyFields = (["ragThresholds", "commandCenterEnabled", "pricingTerms", "checkoutEnabled"] as const).filter(
+    (f) => f in body
+  );
   if (adminOnlyFields.length > 0 && !(role.isSystemRole && role.name === "Admin")) {
     return NextResponse.json(
       { status: "error", message: `Not permitted to write field(s): ${adminOnlyFields.join(", ")}` },
@@ -119,6 +121,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "billingAddressSameAsAddress",
     "defaultBillingMode",
     "pricingTerms",
+    "checkoutEnabled",
     "accountManagerId",
     "branchSeatLimit",
     "teamMemberSeatLimit",
