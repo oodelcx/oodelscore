@@ -80,7 +80,7 @@ export async function GET(request: Request) {
   const [responses, categories, feedbackPoints, events] = await Promise.all([
     Response.find(filter),
     Category.find(),
-    FeedbackPoint.find({ businessId }).select("name eventId").sort({ createdAt: 1 }),
+    FeedbackPoint.find({ businessId }).select("name eventId scans").sort({ createdAt: 1 }),
     Event.find({ businessId }).sort({ createdAt: -1 }),
   ]);
   const trend = trendFromResponses(responses, from, to);
@@ -138,6 +138,8 @@ export async function GET(request: Request) {
     responseCount: number;
     starAverage: number | null;
     responseRate: number | null;
+    scanCount: number;
+    conversionRate: number | null;
   }[] = [];
   if (events.length > 0) {
     const eventResponses = await Response.find({
@@ -160,9 +162,20 @@ export async function GET(request: Request) {
       statsByEvent.set(key, entry);
     }
 
+    // scans is a lifetime counter on each FeedbackPoint (see feedback-points/route.ts),
+    // not bucketed by date, so this total — unlike responseCount above — isn't
+    // restricted to the from/to range.
+    const scanCountByEvent = new Map<string, number>();
+    for (const point of feedbackPoints) {
+      if (!point.eventId) continue;
+      const key = point.eventId.toString();
+      scanCountByEvent.set(key, (scanCountByEvent.get(key) ?? 0) + point.scans);
+    }
+
     eventBreakdown = events.map((e) => {
       const stats = statsByEvent.get(e._id.toString());
       const responseCount = stats?.count ?? 0;
+      const scanCount = scanCountByEvent.get(e._id.toString()) ?? 0;
       return {
         _id: e._id.toString(),
         name: e.name,
@@ -172,6 +185,8 @@ export async function GET(request: Request) {
         responseCount,
         starAverage: stats && stats.starCount > 0 ? Math.round((stats.starSum / stats.starCount) * 100) / 100 : null,
         responseRate: e.expectedAttendees ? Math.round((responseCount / e.expectedAttendees) * 1000) / 10 : null,
+        scanCount,
+        conversionRate: scanCount > 0 ? Math.round((responseCount / scanCount) * 1000) / 10 : null,
       };
     });
   }
