@@ -1357,30 +1357,43 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     );
     result.billingSubscriptions++;
 
+    // Upserted on (subscriptionId, issuedAt) — each i produces a distinct,
+    // deterministic issuedAt, so re-running this seed must not duplicate
+    // invoices (a plain .create() here previously did, exactly the bug
+    // the alert-rule helper above already got fixed for).
     for (let i = 0; i < params.paidInvoices; i++) {
-      await Invoice.create({
-        subscriptionId: sub._id,
-        ownerType: params.ownerType,
-        ownerId: params.ownerId,
-        amount: params.mrrValue,
-        currency: "usd",
-        status: "paid",
-        paymentMethodLast4: "4242",
-        issuedAt: daysAgo(30 * (i + 1)),
-      });
+      const issuedAt = daysAgo(30 * (i + 1));
+      await Invoice.findOneAndUpdate(
+        { subscriptionId: sub._id, issuedAt },
+        {
+          $set: {
+            ownerType: params.ownerType,
+            ownerId: params.ownerId,
+            amount: params.mrrValue,
+            currency: "usd",
+            status: "paid",
+            paymentMethodLast4: "4242",
+          },
+        },
+        { upsert: true }
+      );
       result.invoices++;
     }
     if (params.failedInvoice) {
-      await Invoice.create({
-        subscriptionId: sub._id,
-        ownerType: params.ownerType,
-        ownerId: params.ownerId,
-        amount: params.mrrValue,
-        currency: "usd",
-        status: "failed",
-        paymentMethodLast4: "4242",
-        issuedAt: daysAgo(3),
-      });
+      await Invoice.findOneAndUpdate(
+        { subscriptionId: sub._id, status: "failed" },
+        {
+          $set: {
+            ownerType: params.ownerType,
+            ownerId: params.ownerId,
+            amount: params.mrrValue,
+            currency: "usd",
+            paymentMethodLast4: "4242",
+            issuedAt: daysAgo(3),
+          },
+        },
+        { upsert: true }
+      );
       result.invoices++;
     }
   }

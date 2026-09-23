@@ -27,7 +27,14 @@ interface BillingData {
   overdueSelfBilledCount: number;
   branches: BranchBillingRow[];
   checkoutLinkAvailable: boolean;
+  pricingTerms: { amount: number | null; currency: string; interval: "monthly" | "annual_monthly_rate" | "annual_lump_sum" | null };
 }
+
+const INTERVAL_LABELS: Record<string, string> = {
+  monthly: "/month",
+  annual_monthly_rate: "/month, billed annually",
+  annual_lump_sum: "/year",
+};
 
 function statusPill(status: string) {
   const cls = status === "active" || status === "paid" ? "pill-green" : status === "overdue" ? "pill-red" : "pill-gray";
@@ -85,7 +92,19 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
 
       {data.checkoutLinkAvailable && (
         <div className="callout callout-amber" style={{ marginBottom: 20 }}>
-          <b>Ready to continue with OodelCX?</b> Click below to enter your card details and start your subscription.
+          <b>Ready to continue with OodelCX?</b>{" "}
+          {data.pricingTerms.amount !== null && data.pricingTerms.interval ? (
+            <>
+              Your plan is{" "}
+              <b>
+                {data.pricingTerms.currency.toUpperCase()} {data.pricingTerms.amount.toFixed(2)}
+                {INTERVAL_LABELS[data.pricingTerms.interval] ?? ""}
+              </b>
+              . Click below to enter your card details and start your subscription.
+            </>
+          ) : (
+            "Click below to enter your card details and start your subscription."
+          )}
           <div style={{ marginTop: 10 }}>
             <button className="btn btn-primary" disabled={busy} onClick={continueToPayment}>
               Continue to payment →

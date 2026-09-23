@@ -14,6 +14,15 @@ name: Scheduled jobs
 # this whole project is nowhere near that idle). Scheduled runs can also
 # land a few minutes late during platform-wide high load; none of these 4
 # jobs are time-critical enough for that to matter.
+#
+# Scheduled runs always hit production (below) — that's intentional, it's
+# the only environment these actually need to run against automatically.
+# A manual run (workflow_dispatch) can instead target a different
+# deployment (e.g. staging) via the optional "target_url" input, to test
+# a cron route somewhere other than production. This only works if that
+# environment's own CRON_SECRET happens to match the CRON_SECRET repo
+# secret used below — if staging has a different value, add it as a
+# separate repo secret and reference it here instead.
 
 on:
   schedule:
@@ -35,6 +44,10 @@ on:
           - recompute-cx-pulse
           - auto-escalate-cases
           - comp-expiry-reminders
+      target_url:
+        description: "Manual run only: override which deployment to hit (e.g. https://oodelscore-staging.onrender.com). Leave blank for production."
+        type: string
+        required: false
 
 env:
   APP_URL: https://oodelcx.com
@@ -58,9 +71,11 @@ jobs:
       - name: Call the cron route
         run: |
           endpoint="${{ steps.which.outputs.endpoint }}"
-          echo "Calling POST $APP_URL/api/cron/$endpoint"
+          target="${{ github.event.inputs.target_url }}"
+          target="${target:-$APP_URL}"
+          echo "Calling POST $target/api/cron/$endpoint"
           http_status=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
-            -X POST "$APP_URL/api/cron/$endpoint" \
+            -X POST "$target/api/cron/$endpoint" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}")
           echo "--- response ($http_status) ---"
           cat /tmp/response.txt
