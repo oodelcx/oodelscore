@@ -229,6 +229,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
       setHistoryFor(null);
       return;
     }
+    setExpandedFor(null);
     setHistoryFor(id);
     if (!historyById[id]) {
       setHistoryLoading(true);
@@ -503,7 +504,10 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                     <button
                       type="button"
                       className={`btn btn-sm action-btn${expandedFor === p._id ? " active" : ""}`}
-                      onClick={() => setExpandedFor(expandedFor === p._id ? null : p._id)}
+                      onClick={() => {
+                        setHistoryFor(null);
+                        setExpandedFor(expandedFor === p._id ? null : p._id);
+                      }}
                     >
                       📘 {readOnly ? "View steps" : p.activeRun ? "Continue run" : "Steps & run"}
                     </button>
