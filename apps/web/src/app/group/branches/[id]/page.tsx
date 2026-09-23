@@ -78,7 +78,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
               )}
             </tbody>
           </table>
-          <Link className="btn btn-sm" style={{ marginTop: 10, display: "inline-block" }} href="/group/action-board">
+          <Link className="btn btn-sm" style={{ marginTop: 10, display: "inline-block" }} href="/group/cases">
             View in Case Management →
           </Link>
         </div>
