@@ -44,5 +44,6 @@ export async function GET() {
     groupName: parentOrg?.name ?? null,
     groupBranchCount,
     checkoutLinkAvailable,
+    pricingTerms: session.business.pricingTerms,
   });
 }

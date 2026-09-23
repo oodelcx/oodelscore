@@ -55,5 +55,6 @@ export async function GET() {
     overdueSelfBilledCount,
     branches: branchRows,
     checkoutLinkAvailable,
+    pricingTerms: session.org.pricingTerms,
   });
 }
