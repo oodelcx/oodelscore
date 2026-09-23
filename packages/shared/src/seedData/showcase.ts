@@ -1357,14 +1357,18 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     );
     result.billingSubscriptions++;
 
-    // Upserted on (subscriptionId, issuedAt) — each i produces a distinct,
-    // deterministic issuedAt, so re-running this seed must not duplicate
-    // invoices (a plain .create() here previously did, exactly the bug
-    // the alert-rule helper above already got fixed for).
+    // Upserted on stripeInvoiceId, not issuedAt — issuedAt comes from
+    // daysAgo(), which reads Date.now() at call time, so it drifts by
+    // however much wall-clock time has passed between two runs and can
+    // never be part of a stable identity key (the previous "fix" here
+    // filtered on it anyway, which is why it silently kept duplicating).
+    // stripeInvoiceId is otherwise unused by seeded data, so a synthetic,
+    // per-subscription-and-index value here is a real, stable key —
+    // re-running this seed now updates the same row instead of inserting
+    // a new one.
     for (let i = 0; i < params.paidInvoices; i++) {
-      const issuedAt = daysAgo(30 * (i + 1));
       await Invoice.findOneAndUpdate(
-        { subscriptionId: sub._id, issuedAt },
+        { subscriptionId: sub._id, stripeInvoiceId: `seed-${sub._id}-paid-${i}` },
         {
           $set: {
             ownerType: params.ownerType,
@@ -1373,6 +1377,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
             currency: "usd",
             status: "paid",
             paymentMethodLast4: "4242",
+            issuedAt: daysAgo(30 * (i + 1)),
           },
         },
         { upsert: true }
@@ -1381,13 +1386,14 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     }
     if (params.failedInvoice) {
       await Invoice.findOneAndUpdate(
-        { subscriptionId: sub._id, status: "failed" },
+        { subscriptionId: sub._id, stripeInvoiceId: `seed-${sub._id}-failed` },
         {
           $set: {
             ownerType: params.ownerType,
             ownerId: params.ownerId,
             amount: params.mrrValue,
             currency: "usd",
+            status: "failed",
             paymentMethodLast4: "4242",
             issuedAt: daysAgo(3),
           },
