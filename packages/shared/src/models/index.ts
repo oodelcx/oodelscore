@@ -4,6 +4,7 @@ export * from "./Role";
 export * from "./ParentOrganization";
 export * from "./Business";
 export * from "./FeedbackPoint";
+export * from "./Event";
 export * from "./QuestionTemplate";
 export * from "./Category";
 export * from "./Industry";

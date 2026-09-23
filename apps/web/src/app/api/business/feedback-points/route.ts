@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, FeedbackPoint, QuestionTemplate, type IDemographicConfig } from "@oodelscore/shared";
+import { connectToDatabase, FeedbackPoint, QuestionTemplate, Event, type IDemographicConfig } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
@@ -20,6 +20,10 @@ export async function GET() {
   await connectToDatabase();
   const points = await FeedbackPoint.find({ businessId: session.business._id }).sort({ createdAt: 1 });
 
+  const eventIds = Array.from(new Set(points.map((p) => p.eventId?.toString()).filter((id): id is string => Boolean(id))));
+  const events = eventIds.length ? await Event.find({ _id: { $in: eventIds } }).select("name") : [];
+  const eventNameById = new Map(events.map((e) => [e._id.toString(), e.name]));
+
   const templateIds = Array.from(
     new Set(
       points
@@ -38,6 +42,7 @@ export async function GET() {
 
     return {
       ...p.toObject(),
+      eventName: p.eventId ? eventNameById.get(p.eventId.toString()) ?? null : null,
       hasNps: types.has("nps_0_10"),
       hasComments: types.has("open_text"),
       demographics,

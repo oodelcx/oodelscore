@@ -378,12 +378,77 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     formLayoutOverride: string | null;
     questionTemplateOverride: string | null;
     demographicOverride: Record<string, string> | null;
+    eventId: string | null;
   }
   const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPointRow[]>([]);
   const [fpName, setFpName] = useState("");
   const [fpDescription, setFpDescription] = useState("");
+  const [fpEventId, setFpEventId] = useState("");
   const [fpCreating, setFpCreating] = useState(false);
   const [fpError, setFpError] = useState<string | null>(null);
+
+  // Events — instances of a recurring offering (a training session, a
+  // flight, a class), each grouping the FeedbackPoints created under it.
+  // Optional: a place-based business (hotel, bank branch) never creates one.
+  interface EventRow {
+    _id: string;
+    name: string;
+    seriesKey: string;
+    facilitator: string;
+    location: string;
+    startsAt: string | null;
+    endsAt: string | null;
+    expectedAttendees: number | null;
+  }
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [evName, setEvName] = useState("");
+  const [evFacilitator, setEvFacilitator] = useState("");
+  const [evLocation, setEvLocation] = useState("");
+  const [evCreating, setEvCreating] = useState(false);
+  const [evError, setEvError] = useState<string | null>(null);
+
+  function loadEvents() {
+    if (isNew) return;
+    fetch(`/api/admin/businesses/${params.id}/events`)
+      .then((r) => r.json())
+      .then((d) => setEvents(d.events ?? []));
+  }
+
+  useEffect(() => {
+    loadEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, params.id]);
+
+  async function createEvent() {
+    if (!evName.trim()) return;
+    setEvCreating(true);
+    setEvError(null);
+    const res = await fetch(`/api/admin/businesses/${params.id}/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: evName, facilitator: evFacilitator, location: evLocation }),
+    });
+    const data = await res.json().catch(() => null);
+    setEvCreating(false);
+    if (!res.ok) {
+      setEvError(data?.message ?? "Failed to create event");
+      return;
+    }
+    setEvName("");
+    setEvFacilitator("");
+    setEvLocation("");
+    loadEvents();
+  }
+
+  async function removeEvent(eventId: string) {
+    const res = await fetch(`/api/admin/businesses/${params.id}/events/${eventId}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setEvError(data?.message ?? "Failed to delete event");
+      return;
+    }
+    loadEvents();
+  }
   const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [expandedFieldsId, setExpandedFieldsId] = useState<string | null>(null);
@@ -448,7 +513,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     const res = await fetch(`/api/admin/businesses/${params.id}/feedback-points`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: fpName, description: fpDescription }),
+      body: JSON.stringify({ name: fpName, description: fpDescription, eventId: fpEventId || null }),
     });
     const data = await res.json().catch(() => null);
     setFpCreating(false);
@@ -458,6 +523,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     }
     setFpName("");
     setFpDescription("");
+    setFpEventId("");
     loadFeedbackPoints();
     if (data?.feedbackPoint) setQrPoint(data.feedbackPoint);
   }
@@ -495,6 +561,15 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ demographicOverride: { ...base, [field]: value } }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function updateFeedbackPointEvent(fpId: string, eventId: string) {
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: eventId || null }),
     });
     loadFeedbackPoints();
   }
@@ -2069,6 +2144,63 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       {tab === "feedback-points" && (
         <div>
           <div className="card" style={{ marginBottom: 20 }}>
+            <h3>Events</h3>
+            <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: -4, marginBottom: 14 }}>
+              Optional. Only for a business running the same offering more than once — a training course, a flight,
+              a class — at different dates, cities or facilitators. Create the Event once, then point every
+              instance&apos;s feedback point at it below so Analytics can compare sessions instead of only comparing
+              branches. A place-based business (a fixed till or branch) never needs one.
+            </p>
+            <div className="field-row">
+              <div className="field">
+                <label>Name</label>
+                <input value={evName} onChange={(e) => setEvName(e.target.value)} placeholder="e.g. Excel Fundamentals" />
+              </div>
+              <div className="field">
+                <label>Facilitator</label>
+                <input value={evFacilitator} onChange={(e) => setEvFacilitator(e.target.value)} placeholder="Optional" />
+              </div>
+              <div className="field">
+                <label>Location</label>
+                <input value={evLocation} onChange={(e) => setEvLocation(e.target.value)} placeholder="Optional" />
+              </div>
+            </div>
+            {evError && <p className="error-text">{evError}</p>}
+            <button className="btn btn-dark" disabled={evCreating} onClick={createEvent}>
+              {evCreating ? "Creating…" : "+ Create event"}
+            </button>
+
+            {events.length > 0 && (
+              <table className="clean" style={{ marginTop: 16 }}>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Facilitator</th>
+                    <th>Location</th>
+                    <th>Linked feedback points</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((ev) => (
+                    <tr key={ev._id}>
+                      <td>{ev.name}</td>
+                      <td>{ev.facilitator || "—"}</td>
+                      <td>{ev.location || "—"}</td>
+                      <td>{feedbackPoints.filter((fp) => fp.eventId === ev._id).length}</td>
+                      <td style={{ textAlign: "right" }}>
+                        <button className="icon-btn btn-danger" onClick={() => removeEvent(ev._id)}>
+                          🗑
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="card" style={{ marginBottom: 20 }}>
             <h3>New feedback point</h3>
             <div className="field-row">
               <div className="field">
@@ -2079,6 +2211,20 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                 <label>Description</label>
                 <input value={fpDescription} onChange={(e) => setFpDescription(e.target.value)} />
               </div>
+              {events.length > 0 && (
+                <div className="field">
+                  <label>Event (optional)</label>
+                  <select value={fpEventId} onChange={(e) => setFpEventId(e.target.value)}>
+                    <option value="">Not part of an event</option>
+                    {events.map((ev) => (
+                      <option key={ev._id} value={ev._id}>
+                        {ev.name}
+                        {ev.location ? ` — ${ev.location}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             {fpError && <p className="error-text">{fpError}</p>}
             <button className="btn btn-dark" disabled={fpCreating} onClick={createFeedbackPoint}>
@@ -2091,6 +2237,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               <tr>
                 <th>Name</th>
                 <th>Scans</th>
+                {events.length > 0 && <th>Event</th>}
                 <th>Question template</th>
                 <th>Layout</th>
                 <th>Status</th>
@@ -2103,6 +2250,18 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                   <tr>
                     <td>{fp.name}</td>
                     <td>{fp.scans}</td>
+                    {events.length > 0 && (
+                      <td>
+                        <select value={fp.eventId ?? ""} onChange={(e) => updateFeedbackPointEvent(fp._id, e.target.value)}>
+                          <option value="">—</option>
+                          {events.map((ev) => (
+                            <option key={ev._id} value={ev._id}>
+                              {ev.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
                     <td>
                       <select
                         value={fp.questionTemplateOverride ?? ""}
@@ -2150,7 +2309,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                     </td>
                   </tr>
                   <tr>
-                    <td colSpan={6} style={{ borderBottom: expandedFieldsId === fp._id ? undefined : "none", paddingTop: 0 }}>
+                    <td colSpan={events.length > 0 ? 7 : 6} style={{ borderBottom: expandedFieldsId === fp._id ? undefined : "none", paddingTop: 0 }}>
                       <span
                         style={{ fontSize: 12.5, color: "var(--accent)", cursor: "pointer" }}
                         onClick={() => setExpandedFieldsId(expandedFieldsId === fp._id ? null : fp._id)}

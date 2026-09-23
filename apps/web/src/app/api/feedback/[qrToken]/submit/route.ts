@@ -14,6 +14,7 @@ import {
   checkRateLimit,
   getRequestIp,
   logApiRouteError,
+  isFeedbackPointOpen,
   type QuestionType,
   type DemographicMode,
 } from "@oodelscore/shared";
@@ -47,8 +48,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 async function handlePost(request: NextRequest, qrToken: string) {
   await connectToDatabase();
 
-  const feedbackPoint = await FeedbackPoint.findOne({ qrToken, active: true });
-  if (!feedbackPoint) {
+  const feedbackPoint = await FeedbackPoint.findOne({ qrToken });
+  if (!feedbackPoint || !isFeedbackPointOpen(feedbackPoint)) {
     return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
   }
 
@@ -165,6 +166,7 @@ async function handlePost(request: NextRequest, qrToken: string) {
   const createdResponse = await Response.create({
     feedbackPointId: feedbackPoint._id,
     businessId: business._id,
+    eventId: feedbackPoint.eventId,
     answers: responseAnswers,
     respondentName,
     respondentEmail,

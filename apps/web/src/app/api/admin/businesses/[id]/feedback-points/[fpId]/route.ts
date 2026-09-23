@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { connectToDatabase, FeedbackPoint, FORM_LAYOUTS, DEMOGRAPHIC_MODES } from "@oodelscore/shared";
+import { connectToDatabase, FeedbackPoint, Event, FORM_LAYOUTS, DEMOGRAPHIC_MODES } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const DEMOGRAPHIC_MODE_SET: readonly string[] = DEMOGRAPHIC_MODES;
@@ -24,6 +24,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (typeof body?.name === "string") feedbackPoint.name = body.name;
   if (typeof body?.description === "string") feedbackPoint.description = body.description;
   if (typeof body?.active === "boolean") feedbackPoint.active = body.active;
+  if (typeof body?.eventId === "string" || body?.eventId === null) {
+    if (body.eventId) {
+      const event = await Event.findOne({ _id: body.eventId, businessId: id });
+      if (!event) return NextResponse.json({ status: "error", message: "Event not found for this business" }, { status: 400 });
+    }
+    feedbackPoint.eventId = body.eventId || null;
+  }
+  if (body?.startsAt === null || typeof body?.startsAt === "string") feedbackPoint.startsAt = body.startsAt ? new Date(body.startsAt) : null;
+  if (body?.endsAt === null || typeof body?.endsAt === "string") feedbackPoint.endsAt = body.endsAt ? new Date(body.endsAt) : null;
   if (typeof body?.questionTemplateOverride === "string" || body?.questionTemplateOverride === null) {
     feedbackPoint.questionTemplateOverride = body.questionTemplateOverride || null;
   }

@@ -27,6 +27,7 @@ interface FeedbackPointRow {
   isTemplateOverridden: boolean;
   effectiveFormLayout: "single_page" | "one_per_screen";
   isLayoutOverridden: boolean;
+  eventName: string | null;
 }
 
 const LAYOUT_LABELS: Record<string, string> = {
@@ -202,6 +203,7 @@ export default function FeedbackPointsClient() {
                 <div className="badge-row">
                   <span className={`pill ${p.active ? "pill-accent" : "pill-gray"}`}>{p.active ? "Active" : "Inactive"}</span>
                   <InfoTip text={tooltips["active-status"]} />
+                  {p.eventName && <span className="pill pill-amber">Session: {p.eventName}</span>}
                   {configBadges(p).map((b, i) => (
                     <span className={`pill ${b.className}`} key={i}>
                       {b.label}
