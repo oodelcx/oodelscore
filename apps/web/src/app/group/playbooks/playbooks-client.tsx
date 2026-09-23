@@ -226,6 +226,7 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
       setHistoryFor(null);
       return;
     }
+    setExpandedFor(null);
     setHistoryFor(id);
     if (!historyById[id]) {
       setHistoryLoading(true);
@@ -492,7 +493,10 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
                     <button
                       type="button"
                       className={`btn btn-sm action-btn${expandedFor === p._id ? " active" : ""}`}
-                      onClick={() => setExpandedFor(expandedFor === p._id ? null : p._id)}
+                      onClick={() => {
+                        setHistoryFor(null);
+                        setExpandedFor(expandedFor === p._id ? null : p._id);
+                      }}
                     >
                       📘 {p.activeRun ? "Continue run" : "Steps & run"}
                     </button>
