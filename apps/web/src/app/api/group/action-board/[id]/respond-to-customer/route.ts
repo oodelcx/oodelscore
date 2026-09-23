@@ -6,7 +6,7 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 /** Org-scoped twin of the business respond-to-customer route — sends from the branch's own name/contact, not the org's. */
 export async function POST(request: Request, { params }: RouteParams) {
-  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true });
+  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

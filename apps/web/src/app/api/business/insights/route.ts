@@ -4,7 +4,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /** Only ever "approved" — pending reports are never visible on a dashboard (spec Section 10). */
 export async function GET(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "insights" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "insights")) {
     return NextResponse.json({ status: "error", message: "Insights is not enabled for this account" }, { status: 403 });

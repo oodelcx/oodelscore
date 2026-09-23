@@ -17,6 +17,11 @@ export interface IUser {
   roleId: Types.ObjectId | null; // -> roles._id (admin_staff only)
   teamRole: string; // team_member only — free text (e.g. "Shift Lead"), cosmetic, no permission effect
   tier: TeamMemberTier | null; // team_member only
+  // "full" tier only — page keys (see features/teamPermissions.ts) this
+  // person is explicitly denied, on top of the tier's baseline access.
+  // Empty/[] = sees everything "full" tier normally sees. Meaningless for
+  // "limited" tier, which is already locked to only its own cases.
+  restrictedPages: string[];
   teamOfType: "business" | "parentOrg" | null; // team_member only — which collection parentId points at
   inviteStatus: InviteStatus;
   inviteTokenHash: string | null;
@@ -57,6 +62,7 @@ const UserSchema = new Schema<IUser>(
     roleId: { type: Schema.Types.ObjectId, ref: "Role", default: null },
     teamRole: { type: String, default: "" },
     tier: { type: String, enum: TEAM_MEMBER_TIERS, default: null },
+    restrictedPages: { type: [String], default: [] },
     teamOfType: { type: String, enum: ["business", "parentOrg"], default: null },
     inviteStatus: { type: String, enum: INVITE_STATUSES, default: "invite_pending" },
     inviteTokenHash: { type: String, default: null },
@@ -72,5 +78,10 @@ const UserSchema = new Schema<IUser>(
   },
   { timestamps: true }
 );
+
+// email already gets a unique index from `unique: true` above (the login
+// lookup) — parentId+accountType is the other hot filter: every team-member
+// listing and every "find the owner login for this business/org" call.
+UserSchema.index({ parentId: 1, accountType: 1 });
 
 export const User: Model<IUser> = mongoose.models.User ?? model<IUser>("User", UserSchema);

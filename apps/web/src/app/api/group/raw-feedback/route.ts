@@ -7,7 +7,7 @@ const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
 
 export async function GET(request: Request) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "rawFeedback" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);

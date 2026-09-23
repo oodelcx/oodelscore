@@ -8,7 +8,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
  * override — for the Analytics page's per-question trend selector.
  */
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "analytics" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "analytics")) {
     return NextResponse.json({ status: "error", message: "Analytics is not enabled for this account" }, { status: 403 });

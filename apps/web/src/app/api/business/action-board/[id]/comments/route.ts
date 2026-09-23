@@ -14,7 +14,7 @@ function authorLabel(user: { email: string; teamRole: string }): string {
  * access, or the limited-tier assignee on their own item).
  */
 export async function GET(_request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

@@ -29,6 +29,7 @@ export * from "./DemoRequest";
 export * from "./ContactMessage";
 export * from "./CategoryOwnerMapping";
 export * from "./ScanToken";
+export * from "./RateLimitHit";
 export * from "./FeedbackPointRequest";
 export * from "./CxGoal";
 export * from "./PlaybookRun";

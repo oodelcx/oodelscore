@@ -26,7 +26,7 @@ function buildMatch(businessId: unknown, filter: string | null): Record<string, 
 }
 
 export async function GET(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "rawFeedback" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);

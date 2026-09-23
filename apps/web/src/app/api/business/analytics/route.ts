@@ -55,7 +55,7 @@ function trendFromResponses(responses: IResponse[], from: Date, to: Date) {
 }
 
 export async function GET(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "analytics" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "analytics")) {
     return NextResponse.json({ status: "error", message: "Analytics is not enabled for this account" }, { status: 403 });

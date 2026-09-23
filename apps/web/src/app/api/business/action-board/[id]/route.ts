@@ -28,7 +28,7 @@ type RouteParams = { params: Promise<{ id: string }> };
  * the org-scoped twin).
  */
 export async function GET(_request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -94,7 +94,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
  * A "limited" tier Team Member may only update status/resolutionNote on an item already
  * assigned to them — everything else on this route requires full access (spec Section 16). */
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -186,7 +186,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

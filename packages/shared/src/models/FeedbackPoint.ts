@@ -52,5 +52,10 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
   { timestamps: true }
 );
 
+// qrToken already gets a unique index from `unique: true` above (the
+// hot path on every public QR scan/submit) — businessId is the other
+// heavily-filtered field, queried on nearly every Feedback Points listing.
+FeedbackPointSchema.index({ businessId: 1 });
+
 export const FeedbackPoint: Model<IFeedbackPoint> =
   mongoose.models.FeedbackPoint ?? model<IFeedbackPoint>("FeedbackPoint", FeedbackPointSchema);

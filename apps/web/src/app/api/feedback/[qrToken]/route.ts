@@ -8,6 +8,9 @@ import {
   QuestionTemplate,
   ScanToken,
   dedupCookieName,
+  checkRateLimit,
+  getRequestIp,
+  logApiRouteError,
 } from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
@@ -15,11 +18,30 @@ type RouteParams = { params: Promise<{ qrToken: string }> };
 /** Public: fetches what the respondent-facing form needs to render. */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { qrToken } = await params;
+  try {
+    return await handleGet(request, qrToken);
+  } catch (err) {
+    await logApiRouteError("feedback/[qrToken] GET", err, { qrToken });
+    return NextResponse.json({ status: "error", message: "Something went wrong loading this form. Please try again." }, { status: 500 });
+  }
+}
+
+async function handleGet(request: NextRequest, qrToken: string) {
   await connectToDatabase();
 
   const feedbackPoint = await FeedbackPoint.findOne({ qrToken, active: true });
   if (!feedbackPoint) {
     return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+  }
+
+  // Loading this page mints a fresh single-use scan token every time —
+  // without a limit here, a bot could mint (and later spend) unlimited
+  // tokens to flood a business with fake responses. 40 loads per IP per
+  // feedback point per 10 minutes comfortably covers a real person
+  // reloading or a few people sharing one Wi-Fi connection.
+  const rateLimit = await checkRateLimit(`feedback-scan:${getRequestIp(request)}:${feedbackPoint._id}`, 40, 600);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ status: "error", message: "Too many requests — please try again in a few minutes." }, { status: 429 });
   }
 
   const business = await Business.findById(feedbackPoint.businessId);

@@ -65,7 +65,7 @@ function FeatureVisual({ tag }: { tag: string }) {
       </div>
     );
   }
-  if (tag === "Root Cause Analysis") {
+  if (tag === "Root Cause Investigation") {
     return (
       <div className="mock-card">
         <div className="mock-action-title" style={{ marginBottom: 6 }}>

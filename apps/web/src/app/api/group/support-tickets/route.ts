@@ -6,7 +6,7 @@ const CATEGORY_SET: readonly string[] = SUPPORT_TICKET_CATEGORIES;
 
 /** The org-scoped twin of the Business support-tickets route — see that route for the full rationale. */
 export async function GET() {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "support" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -15,7 +15,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "support" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const body = await request.json().catch(() => null);

@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ThemeIntelligenceCard } from "@/components/theme-intelligence-card";
-import { DriverAnalysisCard } from "@/components/driver-analysis-card";
 import { InfoTip } from "@/components/info-tip";
 import { QuestionTrendCard } from "@/components/question-trend-card";
+import { ScoreDriversCard } from "@/components/score-drivers-card";
 
 interface AnalyticsData {
   feedbackPoints: { _id: string; name: string }[];
@@ -191,21 +190,17 @@ export default function AnalyticsClient({ tooltips }: { tooltips: Record<string,
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <DriverAnalysisCard
-          apiPath="/api/business/driver-analysis"
+        <ScoreDriversCard
+          driverApiPath="/api/business/driver-analysis"
           rootCauseApiPath="/api/business/root-cause-analysis"
           canCreateAction
           createActionApiPath="/api/business/action-board"
+          themeApiPath="/api/business/theme-intelligence"
+          analyzeApiPath="/api/business/theme-intelligence/analyze"
+          insightsApiPath="/api/business/insights"
           driverTooltip={tooltips["driver-analysis"]}
           rootCauseTooltip={tooltips["root-cause"]}
-        />
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <ThemeIntelligenceCard
-          apiPath="/api/business/theme-intelligence"
-          analyzeApiPath="/api/business/theme-intelligence/analyze"
-          tooltip={tooltips["theme-intelligence"]}
+          themeTooltip={tooltips["theme-intelligence"]}
         />
       </div>
 

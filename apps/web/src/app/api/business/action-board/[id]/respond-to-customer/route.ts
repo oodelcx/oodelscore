@@ -13,7 +13,7 @@ type RouteParams = { params: Promise<{ id: string }> };
  * Requires a captured respondent email — nothing to send to otherwise.
  */
 export async function POST(request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

@@ -18,7 +18,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 // would silently miss every one of them, since the auto-logged entries are
 // never given a businessId when the resolving business is a branch.
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "decisionLog" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "decisionLog")) {
     return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
@@ -37,7 +37,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "decisionLog" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "decisionLog")) {
     return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });

@@ -10,7 +10,7 @@ const CATEGORY_SET: readonly string[] = SUPPORT_TICKET_CATEGORIES;
  * card) and unrelated to this business's own customer feedback.
  */
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "support" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -19,7 +19,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "support" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const body = await request.json().catch(() => null);

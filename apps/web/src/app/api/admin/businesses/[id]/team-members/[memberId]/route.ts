@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, User, logAuditEvent, canAccessScopedResource } from "@oodelscore/shared";
+import { connectToDatabase, Business, User, logAuditEvent, canAccessScopedResource, isValidTeamPageKey } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 type RouteParams = { params: Promise<{ id: string; memberId: string }> };
@@ -29,6 +29,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const previousTier = member.tier;
   if (typeof body?.teamRole === "string") member.teamRole = body.teamRole.trim();
   if (body?.tier === "full" || body?.tier === "limited") member.tier = body.tier;
+  if (Array.isArray(body?.restrictedPages)) member.restrictedPages = body.restrictedPages.filter(isValidTeamPageKey);
   await member.save();
 
   if (member.tier !== previousTier) {
@@ -45,7 +46,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   return NextResponse.json({
     status: "ok",
-    member: { _id: member._id, email: member.email, teamRole: member.teamRole, tier: member.tier, inviteStatus: member.inviteStatus },
+    member: {
+      _id: member._id,
+      email: member.email,
+      teamRole: member.teamRole,
+      tier: member.tier,
+      restrictedPages: member.restrictedPages,
+      inviteStatus: member.inviteStatus,
+    },
   });
 }
 

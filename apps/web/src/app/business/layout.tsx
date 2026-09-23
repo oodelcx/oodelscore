@@ -10,6 +10,7 @@ import {
   PLATFORM_SETTINGS_SINGLETON_KEY,
   getBillingAccessStatus,
   hasFeature,
+  teamMemberCanAccess,
 } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import { BillingLockedScreen } from "@/components/billing-locked-screen";
@@ -85,12 +86,12 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 label="Setup"
                 hrefs={["/business/feedback-points", "/business/category-owners"]}
               >
-                <a href="/business/feedback-points">Feedback Points</a>
+                {teamMemberCanAccess(user, "feedbackPoints") && <a href="/business/feedback-points">Feedback Points</a>}
                 {!isBusinessTeamMember && <a href="/business/category-owners">Category Owners</a>}
               </NavSection>
 
               <NavSection storageKey="business-listen" label="Listen" hrefs={["/business/responses"]}>
-                <a href="/business/responses">Raw Feedback</a>
+                {teamMemberCanAccess(user, "rawFeedback") && <a href="/business/responses">Raw Feedback</a>}
               </NavSection>
 
               <NavSection
@@ -98,10 +99,18 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 label="Understand"
                 hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports"]}
               >
-                {hasFeature(business.enabledFeatures, "insights") && <a href="/business/insights">Insights</a>}
-                {hasFeature(business.enabledFeatures, "analytics") && <a href="/business/analytics">Analytics</a>}
-                {hasFeature(business.enabledFeatures, "alertRules") && <a href="/business/alert-rules">Alert Rules</a>}
-                {hasFeature(business.enabledFeatures, "reports") && <a href="/business/reports">Reports</a>}
+                {hasFeature(business.enabledFeatures, "insights") && teamMemberCanAccess(user, "insights") && (
+                  <a href="/business/insights">Insights</a>
+                )}
+                {hasFeature(business.enabledFeatures, "analytics") && teamMemberCanAccess(user, "analytics") && (
+                  <a href="/business/analytics">Analytics</a>
+                )}
+                {hasFeature(business.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
+                  <a href="/business/alert-rules">Alert Rules</a>
+                )}
+                {hasFeature(business.enabledFeatures, "reports") && teamMemberCanAccess(user, "reports") && (
+                  <a href="/business/reports">Reports</a>
+                )}
               </NavSection>
 
               <NavSection
@@ -109,14 +118,17 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 label="Act"
                 hrefs={["/business/cases", "/business/improvement-initiatives", "/business/decision-log"]}
               >
-                <a href="/business/cases">Case Management</a>
-                {hasFeature(business.enabledFeatures, "improvementInitiatives") && (
-                  <a href="/business/improvement-initiatives">Improvement Initiatives</a>
+                {teamMemberCanAccess(user, "caseManagement") && <a href="/business/cases">Case Management</a>}
+                {hasFeature(business.enabledFeatures, "improvementInitiatives") &&
+                  teamMemberCanAccess(user, "improvementInitiatives") && (
+                    <a href="/business/improvement-initiatives">Improvement Initiatives</a>
+                  )}
+                {hasFeature(business.enabledFeatures, "decisionLog") && teamMemberCanAccess(user, "decisionLog") && (
+                  <a href="/business/decision-log">Decision Log</a>
                 )}
-                {hasFeature(business.enabledFeatures, "decisionLog") && <a href="/business/decision-log">Decision Log</a>}
               </NavSection>
 
-              {hasFeature(business.enabledFeatures, "cxPulse") && (
+              {hasFeature(business.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse") && (
                 <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
                   <a href="/business/cx-pulse">CX Pulse</a>
                 </NavSection>
@@ -135,9 +147,11 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 ]}
               >
                 {!isBusinessTeamMember && <a href="/business/team-members">Team Members</a>}
-                <a href="/business/support">Support</a>
+                {teamMemberCanAccess(user, "support") && <a href="/business/support">Support</a>}
                 {!isBusinessTeamMember && <a href="/business/billing">Billing</a>}
-                {hasFeature(business.enabledFeatures, "playbooks") && <a href="/business/playbooks">Playbook Library</a>}
+                {hasFeature(business.enabledFeatures, "playbooks") && teamMemberCanAccess(user, "playbooks") && (
+                  <a href="/business/playbooks">Playbook Library</a>
+                )}
                 <a href="/business/security">Security</a>
               </NavSection>
             </>

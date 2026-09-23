@@ -1,4 +1,12 @@
-import { Business, ParentOrganization, type IBusiness, type IParentOrganization, type TeamMemberTier } from "@oodelscore/shared";
+import {
+  Business,
+  ParentOrganization,
+  teamMemberCanAccess,
+  type IBusiness,
+  type IParentOrganization,
+  type TeamMemberTier,
+  type TeamPageKey,
+} from "@oodelscore/shared";
 import { getCurrentUser } from "./session";
 import type { HydratedDocument } from "mongoose";
 
@@ -25,6 +33,11 @@ interface OwnerAuthOptions {
   // opting out, keeping the safe behavior automatic for routes nobody
   // remembers to update.
   allowLimitedTeamMember?: boolean;
+  // Which page this route serves — checked against the team member's own
+  // restrictedPages (see features/teamPermissions.ts) so Admin's per-person
+  // access grid is actually enforced server-side, not just in the nav.
+  // Irrelevant for the primary owner, who always passes.
+  requirePage?: TeamPageKey;
 }
 
 /**
@@ -46,6 +59,7 @@ export async function requireBusinessOwner(options: OwnerAuthOptions = {}): Prom
 
   if (user.accountType === "team_member" && user.teamOfType === "business") {
     if (user.tier === "limited" && !options.allowLimitedTeamMember) return null;
+    if (options.requirePage && !teamMemberCanAccess(user, options.requirePage)) return null;
     const business = await Business.findById(user.parentId);
     if (!business) return null;
     return { user, business, isTeamMember: true, tier: user.tier };
@@ -73,6 +87,7 @@ export async function requireParentOrgOwner(options: OwnerAuthOptions = {}): Pro
 
   if (user.accountType === "team_member" && user.teamOfType === "parentOrg") {
     if (user.tier === "limited" && !options.allowLimitedTeamMember) return null;
+    if (options.requirePage && !teamMemberCanAccess(user, options.requirePage)) return null;
     const org = await ParentOrganization.findById(user.parentId);
     if (!org) return null;
     return { user, org, isTeamMember: true, tier: user.tier };

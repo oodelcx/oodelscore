@@ -12,7 +12,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
  * fallback inbox if none is assigned yet.
  */
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "feedbackPoints" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const body = await request.json().catch(() => null);

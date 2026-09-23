@@ -8,7 +8,7 @@ import { requireParentOrgOwner } from "@/lib/ownerAuth";
  * business-scope rules for oversight, without editing them directly.
  */
 export async function GET() {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "alertRules" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "alertRules")) {
     return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
@@ -59,7 +59,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "alertRules" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "alertRules")) {
     return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });

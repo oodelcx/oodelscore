@@ -3,7 +3,7 @@ import { connectToDatabase, DecisionLogEntry, Business , hasFeature } from "@ood
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 export async function GET() {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "decisionLog" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "decisionLog")) {
     return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
@@ -16,7 +16,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "decisionLog" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "decisionLog")) {
     return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });

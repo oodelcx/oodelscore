@@ -60,6 +60,23 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
 ];
+
+// Keep in sync with packages/shared/src/features/teamPermissions.ts — same
+// reason as FEATURE_TOGGLES above.
+const TEAM_RESTRICTABLE_PAGES: { key: string; label: string }[] = [
+  { key: "caseManagement", label: "Case Management" },
+  { key: "rawFeedback", label: "Raw Feedback" },
+  { key: "feedbackPoints", label: "Feedback Points" },
+  { key: "insights", label: "Insights" },
+  { key: "analytics", label: "Analytics" },
+  { key: "alertRules", label: "Alert Rules" },
+  { key: "reports", label: "Reports" },
+  { key: "improvementInitiatives", label: "Improvement Initiatives" },
+  { key: "decisionLog", label: "Decision Log" },
+  { key: "cxPulse", label: "CX Pulse" },
+  { key: "playbooks", label: "Playbook Library" },
+  { key: "support", label: "Support" },
+];
 const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);
 
 function formatSigned(value: number): string {
@@ -262,6 +279,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     email: string;
     teamRole: string;
     tier: "full" | "limited";
+    restrictedPages: string[];
     inviteStatus: string;
   }
   const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
@@ -270,11 +288,17 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   const [teamAddEmail, setTeamAddEmail] = useState("");
   const [teamAddRole, setTeamAddRole] = useState("");
   const [teamAddTier, setTeamAddTier] = useState<"full" | "limited">("full");
+  const [teamAddRestrictedPages, setTeamAddRestrictedPages] = useState<string[]>([]);
   const [teamAdding, setTeamAdding] = useState(false);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamEditingId, setTeamEditingId] = useState<string | null>(null);
   const [teamEditRole, setTeamEditRole] = useState("");
   const [teamEditTier, setTeamEditTier] = useState<"full" | "limited">("full");
+  const [teamEditRestrictedPages, setTeamEditRestrictedPages] = useState<string[]>([]);
+
+  function toggleRestrictedPage(list: string[], key: string): string[] {
+    return list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+  }
 
   function loadTeamMembers() {
     fetch(`/api/admin/businesses/${params.id}/team-members`)
@@ -299,7 +323,12 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     const res = await fetch(`/api/admin/businesses/${params.id}/team-members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: teamAddEmail.trim(), teamRole: teamAddRole.trim(), tier: teamAddTier }),
+      body: JSON.stringify({
+        email: teamAddEmail.trim(),
+        teamRole: teamAddRole.trim(),
+        tier: teamAddTier,
+        restrictedPages: teamAddRestrictedPages,
+      }),
     });
     const data = await res.json().catch(() => null);
     setTeamAdding(false);
@@ -310,6 +339,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     setTeamAddEmail("");
     setTeamAddRole("");
     setTeamAddTier("full");
+    setTeamAddRestrictedPages([]);
     loadTeamMembers();
   }
 
@@ -317,13 +347,14 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     setTeamEditingId(m._id);
     setTeamEditRole(m.teamRole);
     setTeamEditTier(m.tier);
+    setTeamEditRestrictedPages(m.restrictedPages ?? []);
   }
 
   async function saveTeamEdit(memberId: string) {
     const res = await fetch(`/api/admin/businesses/${params.id}/team-members/${memberId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamRole: teamEditRole, tier: teamEditTier }),
+      body: JSON.stringify({ teamRole: teamEditRole, tier: teamEditTier, restrictedPages: teamEditRestrictedPages }),
     });
     if (res.ok) {
       setTeamEditingId(null);
@@ -1757,29 +1788,53 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
             <tbody>
               {teamMembers.map((m) =>
                 teamEditingId === m._id ? (
-                  <tr key={m._id}>
-                    <td>{m.email}</td>
-                    <td>
-                      <input value={teamEditRole} onChange={(e) => setTeamEditRole(e.target.value)} placeholder="e.g. Shift Lead" />
-                    </td>
-                    <td>
-                      <select value={teamEditTier} onChange={(e) => setTeamEditTier(e.target.value as "full" | "limited")}>
-                        <option value="full">Full</option>
-                        <option value="limited">Limited</option>
-                      </select>
-                    </td>
-                    <td>
-                      <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => saveTeamEdit(m._id)}>
-                        Save
-                      </button>
-                      <button className="btn btn-sm" onClick={() => setTeamEditingId(null)}>
-                        Cancel
-                      </button>
-                    </td>
-                  </tr>
+                  <Fragment key={m._id}>
+                    <tr>
+                      <td>{m.email}</td>
+                      <td>
+                        <input value={teamEditRole} onChange={(e) => setTeamEditRole(e.target.value)} placeholder="e.g. Shift Lead" />
+                      </td>
+                      <td>
+                        <select value={teamEditTier} onChange={(e) => setTeamEditTier(e.target.value as "full" | "limited")}>
+                          <option value="full">Full</option>
+                          <option value="limited">Limited</option>
+                        </select>
+                      </td>
+                      <td>
+                        <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => saveTeamEdit(m._id)}>
+                          Save
+                        </button>
+                        <button className="btn btn-sm" onClick={() => setTeamEditingId(null)}>
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                    {teamEditTier === "full" && (
+                      <tr>
+                        <td colSpan={5} style={{ background: "var(--gray-50, #FAFAFA)" }}>
+                          <p className="card-sub" style={{ marginBottom: 6 }}>
+                            Page access — leave all unchecked to give full access to everything a Full member normally sees.
+                            Check a page to hide it from this person.
+                          </p>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "4px 12px" }}>
+                            {TEAM_RESTRICTABLE_PAGES.map((page) => (
+                              <label key={page.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={teamEditRestrictedPages.includes(page.key)}
+                                  onChange={() => setTeamEditRestrictedPages(toggleRestrictedPage(teamEditRestrictedPages, page.key))}
+                                />
+                                {page.label}
+                              </label>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ) : (
                   <tr key={m._id}>
                     <td>{m.email}</td>
@@ -1832,6 +1887,26 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               </select>
             </div>
           </div>
+          {teamAddTier === "full" && (
+            <div style={{ marginTop: 8, marginBottom: 8 }}>
+              <p className="card-sub" style={{ marginBottom: 6 }}>
+                Page access — leave all unchecked to give full access to everything a Full member normally sees. Check a
+                page to hide it from this person.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "4px 12px" }}>
+                {TEAM_RESTRICTABLE_PAGES.map((page) => (
+                  <label key={page.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={teamAddRestrictedPages.includes(page.key)}
+                      onChange={() => setTeamAddRestrictedPages(toggleRestrictedPage(teamAddRestrictedPages, page.key))}
+                    />
+                    {page.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           {teamError && <p className="error-text">{teamError}</p>}
           <button
             className="btn btn-dark btn-sm"
