@@ -811,18 +811,24 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     dropPercent?: number | null;
     recipients: string[];
   }) {
-    const rule = await AlertRule.create({
-      scope: params.scope,
-      ownerId: params.ownerId,
-      ruleType: params.ruleType,
-      metric: params.metric ?? "",
-      threshold: params.threshold ?? null,
-      sensitivity: params.sensitivity ?? null,
-      baselineWindowDays: params.baselineWindowDays ?? null,
-      dropPercent: params.dropPercent ?? null,
-      recipients: params.recipients,
-      active: true,
-    });
+    // Upserted on (scope, ownerId, ruleType, metric) — re-running this seed
+    // script must not duplicate rules (a business ending up with 2-3x the
+    // same rule fires 2-3x the alert emails and auto-triaged cases per
+    // real response, which is exactly the bug a plain .create() caused).
+    const rule = await AlertRule.findOneAndUpdate(
+      { scope: params.scope, ownerId: params.ownerId, ruleType: params.ruleType, metric: params.metric ?? "" },
+      {
+        $set: {
+          threshold: params.threshold ?? null,
+          sensitivity: params.sensitivity ?? null,
+          baselineWindowDays: params.baselineWindowDays ?? null,
+          dropPercent: params.dropPercent ?? null,
+          recipients: params.recipients,
+          active: true,
+        },
+      },
+      { upsert: true, new: true }
+    );
     result.alertRules++;
     return rule;
   }
