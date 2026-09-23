@@ -87,5 +87,9 @@ const ResponseSchema = new Schema<IResponse>(
 );
 
 ResponseSchema.index({ businessId: 1, submittedAt: -1 });
+// The device-independent dedup recheck on every public submit that
+// includes contact info filters by feedbackPointId + submittedAt, not
+// businessId — not covered by the index above.
+ResponseSchema.index({ feedbackPointId: 1, submittedAt: -1 });
 
 export const Response: Model<IResponse> = mongoose.models.Response ?? model<IResponse>("Response", ResponseSchema);

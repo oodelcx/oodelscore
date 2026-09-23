@@ -79,4 +79,9 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
+// email already gets a unique index from `unique: true` above (the login
+// lookup) — parentId+accountType is the other hot filter: every team-member
+// listing and every "find the owner login for this business/org" call.
+UserSchema.index({ parentId: 1, accountType: 1 });
+
 export const User: Model<IUser> = mongoose.models.User ?? model<IUser>("User", UserSchema);

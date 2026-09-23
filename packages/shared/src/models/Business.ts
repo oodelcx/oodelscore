@@ -157,4 +157,11 @@ const BusinessSchema = new Schema<IBusiness>(
   { timestamps: true }
 );
 
+// parentOrgId is the single hottest filter on this collection — nearly
+// every Group-portal page (branches, compare, analytics, raw feedback,
+// billing, ...) queries by it. accountManagerId backs the Admin scoped
+// (account-manager-only) view of "my businesses".
+BusinessSchema.index({ parentOrgId: 1 });
+BusinessSchema.index({ accountManagerId: 1 });
+
 export const Business: Model<IBusiness> = mongoose.models.Business ?? model<IBusiness>("Business", BusinessSchema);

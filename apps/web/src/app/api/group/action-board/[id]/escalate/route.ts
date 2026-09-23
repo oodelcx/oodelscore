@@ -11,7 +11,7 @@ type RouteParams = { params: Promise<{ id: string }> };
  * branch item for attention without moving it through the chain.
  */
 export async function POST(request: Request, { params }: RouteParams) {
-  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true });
+  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

@@ -47,4 +47,11 @@ const AlertRuleSchema = new Schema<IAlertRule>(
   { timestamps: true }
 );
 
+// Every rules listing (business, group, and the real-time/baseline alert
+// evaluators) filters by scope+ownerId first.
+AlertRuleSchema.index({ scope: 1, ownerId: 1 });
+// The baseline-alerts cron scans every active regional_outlier/sudden_drop
+// rule on the whole platform regardless of owner.
+AlertRuleSchema.index({ active: 1, ruleType: 1 });
+
 export const AlertRule: Model<IAlertRule> = mongoose.models.AlertRule ?? model<IAlertRule>("AlertRule", AlertRuleSchema);

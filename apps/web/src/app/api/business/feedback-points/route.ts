@@ -14,7 +14,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
  * "Email optional", "Age mandatory" badges — not just Active/Inactive.
  */
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "feedbackPoints" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

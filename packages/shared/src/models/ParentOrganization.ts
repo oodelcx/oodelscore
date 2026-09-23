@@ -83,5 +83,8 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
   { timestamps: true }
 );
 
+// Backs the Admin scoped (account-manager-only) view of "my parent orgs".
+ParentOrganizationSchema.index({ accountManagerId: 1 });
+
 export const ParentOrganization: Model<IParentOrganization> =
   mongoose.models.ParentOrganization ?? model<IParentOrganization>("ParentOrganization", ParentOrganizationSchema);
