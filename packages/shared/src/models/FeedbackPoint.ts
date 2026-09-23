@@ -14,6 +14,7 @@ export interface IDemographicOverride {
 
 export interface IFeedbackPoint {
   businessId: Types.ObjectId;
+  eventId: Types.ObjectId | null; // null = place-based (a fixed branch/till); set = one instance of an Event (a session/flight/class)
   name: string;
   description: string;
   qrToken: string; // random, unguessable — generated server-side on insert
@@ -22,6 +23,12 @@ export interface IFeedbackPoint {
   demographicOverride: IDemographicOverride | null; // null = use business default demographicConfig
   scans: number; // incremented each time the public feedback page loads — powers conversion rate (responses / scans)
   active: boolean;
+  // Optional date-bound auto-close (e.g. "this survey runs Nov 1-30"):
+  // once endsAt has passed the link is treated as closed even if `active`
+  // is still true, so a business doesn't have to remember to toggle it off.
+  // Independent of eventId — a plain year-round QR code just leaves both null.
+  startsAt: Date | null;
+  endsAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +47,7 @@ const DemographicOverrideSchema = new Schema<IDemographicOverride>(
 const FeedbackPointSchema = new Schema<IFeedbackPoint>(
   {
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
+    eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     qrToken: { type: String, required: true, unique: true },
@@ -48,6 +56,8 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     demographicOverride: { type: DemographicOverrideSchema, default: null },
     scans: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
+    startsAt: { type: Date, default: null },
+    endsAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -56,6 +66,15 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
 // hot path on every public QR scan/submit) — businessId is the other
 // heavily-filtered field, queried on nearly every Feedback Points listing.
 FeedbackPointSchema.index({ businessId: 1 });
+FeedbackPointSchema.index({ eventId: 1 });
+
+/** True once `active` is on AND, if a date window is set, `now` falls inside it. */
+export function isFeedbackPointOpen(point: Pick<IFeedbackPoint, "active" | "startsAt" | "endsAt">, now: Date = new Date()): boolean {
+  if (!point.active) return false;
+  if (point.startsAt && now < point.startsAt) return false;
+  if (point.endsAt && now > point.endsAt) return false;
+  return true;
+}
 
 export const FeedbackPoint: Model<IFeedbackPoint> =
   mongoose.models.FeedbackPoint ?? model<IFeedbackPoint>("FeedbackPoint", FeedbackPointSchema);

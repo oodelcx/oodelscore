@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { connectToDatabase, FeedbackPoint, Business } from "@oodelscore/shared";
+import { connectToDatabase, FeedbackPoint, Business, Event } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -44,12 +44,22 @@ export async function POST(request: Request, { params }: RouteParams) {
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   if (!name) return NextResponse.json({ status: "error", message: "Name is required" }, { status: 400 });
 
+  let eventId: string | null = null;
+  if (typeof body?.eventId === "string" && body.eventId) {
+    const event = await Event.findOne({ _id: body.eventId, businessId: id });
+    if (!event) return NextResponse.json({ status: "error", message: "Event not found for this business" }, { status: 400 });
+    eventId = body.eventId;
+  }
+
   const feedbackPoint = await FeedbackPoint.create({
     businessId: id,
+    eventId,
     name,
     description: typeof body?.description === "string" ? body.description : "",
     qrToken: randomBytes(16).toString("hex"),
     questionTemplateOverride: typeof body?.questionTemplateOverride === "string" ? body.questionTemplateOverride : null,
+    startsAt: body?.startsAt ? new Date(body.startsAt) : null,
+    endsAt: body?.endsAt ? new Date(body.endsAt) : null,
   });
 
   return NextResponse.json({ status: "ok", feedbackPoint }, { status: 201 });

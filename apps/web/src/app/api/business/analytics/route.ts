@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Response, Category, FeedbackPoint , hasFeature } from "@oodelscore/shared";
+import { connectToDatabase, Response, Category, FeedbackPoint, Event, hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import type { FilterQuery } from "mongoose";
 import type { IResponse } from "@oodelscore/shared";
@@ -63,6 +63,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const feedbackPointId = searchParams.get("feedbackPointId");
+  const eventId = searchParams.get("eventId");
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
 
@@ -74,11 +75,13 @@ export async function GET(request: Request) {
 
   const filter: FilterQuery<IResponse> = { businessId, submittedAt: { $gte: from, $lte: to } };
   if (feedbackPointId) filter.feedbackPointId = feedbackPointId;
+  if (eventId) filter.eventId = eventId;
 
-  const [responses, categories, feedbackPoints] = await Promise.all([
+  const [responses, categories, feedbackPoints, events] = await Promise.all([
     Response.find(filter),
     Category.find(),
-    FeedbackPoint.find({ businessId }).select("name").sort({ createdAt: 1 }),
+    FeedbackPoint.find({ businessId }).select("name eventId").sort({ createdAt: 1 }),
+    Event.find({ businessId }).sort({ createdAt: -1 }),
   ]);
   const trend = trendFromResponses(responses, from, to);
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));
@@ -122,10 +125,68 @@ export async function GET(request: Request) {
     .map(([id, { sum, count }]) => ({ name: categoryNameById.get(id) ?? "Uncategorized", average: Math.round((sum / count) * 100) / 100 }))
     .sort((a, b) => b.average - a.average);
 
+  // "Compare by event": always computed across ALL of the business's
+  // events in range, independent of the feedbackPointId/eventId filters
+  // above — those filters narrow the detail charts, this table is the
+  // side-by-side comparison the filters would otherwise hide one row of.
+  let eventBreakdown: {
+    _id: string;
+    name: string;
+    seriesKey: string;
+    facilitator: string;
+    location: string;
+    responseCount: number;
+    starAverage: number | null;
+    responseRate: number | null;
+  }[] = [];
+  if (events.length > 0) {
+    const eventResponses = await Response.find({
+      businessId,
+      submittedAt: { $gte: from, $lte: to },
+      eventId: { $ne: null },
+    }).select("eventId answers");
+
+    const statsByEvent = new Map<string, { count: number; starSum: number; starCount: number }>();
+    for (const response of eventResponses) {
+      const key = response.eventId!.toString();
+      const entry = statsByEvent.get(key) ?? { count: 0, starSum: 0, starCount: 0 };
+      entry.count += 1;
+      for (const answer of response.answers) {
+        if (answer.type === "star_1_5" && typeof answer.value === "number") {
+          entry.starSum += answer.value;
+          entry.starCount += 1;
+        }
+      }
+      statsByEvent.set(key, entry);
+    }
+
+    eventBreakdown = events.map((e) => {
+      const stats = statsByEvent.get(e._id.toString());
+      const responseCount = stats?.count ?? 0;
+      return {
+        _id: e._id.toString(),
+        name: e.name,
+        seriesKey: e.seriesKey,
+        facilitator: e.facilitator,
+        location: e.location,
+        responseCount,
+        starAverage: stats && stats.starCount > 0 ? Math.round((stats.starSum / stats.starCount) * 100) / 100 : null,
+        responseRate: e.expectedAttendees ? Math.round((responseCount / e.expectedAttendees) * 1000) / 10 : null,
+      };
+    });
+  }
+
   return NextResponse.json({
     status: "ok",
-    feedbackPoints: feedbackPoints.map((p) => ({ _id: p._id.toString(), name: p.name })),
-    filters: { feedbackPointId: feedbackPointId ?? null, from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
+    feedbackPoints: feedbackPoints.map((p) => ({ _id: p._id.toString(), name: p.name, eventId: p.eventId ? p.eventId.toString() : null })),
+    events: events.map((e) => ({ _id: e._id.toString(), name: e.name, seriesKey: e.seriesKey })),
+    eventBreakdown,
+    filters: {
+      feedbackPointId: feedbackPointId ?? null,
+      eventId: eventId ?? null,
+      from: from.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10),
+    },
     trend,
     npsBreakdown: { promoters, passives, detractors },
     categoryBreakdown,

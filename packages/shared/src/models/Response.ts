@@ -30,6 +30,7 @@ export type Sentiment = (typeof SENTIMENTS)[number];
 export interface IResponse {
   feedbackPointId: Types.ObjectId;
   businessId: Types.ObjectId;
+  eventId: Types.ObjectId | null; // denormalized from FeedbackPoint.eventId at submit time, so Analytics can group by event with no join
   answers: IAnswer[];
   respondentName: string | null; // null if not collected
   respondentEmail: string | null; // null if not collected
@@ -71,6 +72,7 @@ const ResponseSchema = new Schema<IResponse>(
   {
     feedbackPointId: { type: Schema.Types.ObjectId, ref: "FeedbackPoint", required: true },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
+    eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
     answers: { type: [AnswerSchema], default: [] },
     respondentName: { type: String, default: null },
     respondentEmail: { type: String, default: null },

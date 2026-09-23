@@ -6,8 +6,19 @@ import { QuestionTrendCard } from "@/components/question-trend-card";
 import { ScoreDriversCard } from "@/components/score-drivers-card";
 
 interface AnalyticsData {
-  feedbackPoints: { _id: string; name: string }[];
-  filters: { feedbackPointId: string | null; from: string; to: string };
+  feedbackPoints: { _id: string; name: string; eventId: string | null }[];
+  events: { _id: string; name: string; seriesKey: string }[];
+  eventBreakdown: {
+    _id: string;
+    name: string;
+    seriesKey: string;
+    facilitator: string;
+    location: string;
+    responseCount: number;
+    starAverage: number | null;
+    responseRate: number | null;
+  }[];
+  filters: { feedbackPointId: string | null; eventId: string | null; from: string; to: string };
   trend: { date: string; starAverage: number | null }[];
   npsBreakdown: { promoters: number; passives: number; detractors: number };
   categoryBreakdown: { name: string; average: number }[];
@@ -36,9 +47,10 @@ function trendSvgPoints(trend: { starAverage: number | null }[]): string {
     .join(" ");
 }
 
-function buildQuery(feedbackPointId: string, from: string, to: string): string {
+function buildQuery(feedbackPointId: string, eventId: string, from: string, to: string): string {
   const params = new URLSearchParams();
   if (feedbackPointId) params.set("feedbackPointId", feedbackPointId);
+  if (eventId) params.set("eventId", eventId);
   if (from) params.set("from", from);
   if (to) params.set("to", to);
   const qs = params.toString();
@@ -49,12 +61,14 @@ export default function AnalyticsClient({ tooltips }: { tooltips: Record<string,
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedbackPointId, setFeedbackPointId] = useState("");
+  const [eventId, setEventId] = useState("");
+  const [compareBy, setCompareBy] = useState<"branch" | "event">("branch");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/business/analytics${buildQuery(feedbackPointId, from, to)}`)
+    fetch(`/api/business/analytics${buildQuery(feedbackPointId, eventId, from, to)}`)
       .then((res) => res.json())
       .then((d) => {
         setData(d);
@@ -65,7 +79,7 @@ export default function AnalyticsClient({ tooltips }: { tooltips: Record<string,
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedbackPointId, from, to]);
+  }, [feedbackPointId, eventId, from, to]);
 
   if (loading && !data) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load analytics.</p>;
@@ -82,23 +96,97 @@ export default function AnalyticsClient({ tooltips }: { tooltips: Record<string,
             Deep dive into your feedback data.
           </p>
         </div>
-        <a className="btn" href={`/api/business/analytics/export${buildQuery(feedbackPointId, from, to)}`}>
+        <a className="btn" href={`/api/business/analytics/export${buildQuery(feedbackPointId, eventId, from, to)}`}>
           ⬇ Export CSV
         </a>
       </div>
 
+      {data.events.length > 0 && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <button
+            className="btn"
+            style={compareBy === "branch" ? { background: "var(--accent)", color: "#fff", borderColor: "var(--accent)" } : undefined}
+            onClick={() => {
+              setCompareBy("branch");
+              setEventId("");
+            }}
+          >
+            Compare by branch
+          </button>
+          <button
+            className="btn"
+            style={compareBy === "event" ? { background: "var(--accent)", color: "#fff", borderColor: "var(--accent)" } : undefined}
+            onClick={() => {
+              setCompareBy("event");
+              setFeedbackPointId("");
+            }}
+          >
+            Compare by session
+          </button>
+        </div>
+      )}
+
       <div className="filters">
-        <select value={feedbackPointId} onChange={(e) => setFeedbackPointId(e.target.value)}>
-          <option value="">All feedback points</option>
-          {data.feedbackPoints.map((p) => (
-            <option key={p._id} value={p._id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+        {compareBy === "branch" ? (
+          <select value={feedbackPointId} onChange={(e) => setFeedbackPointId(e.target.value)}>
+            <option value="">All feedback points</option>
+            {data.feedbackPoints.map((p) => (
+              <option key={p._id} value={p._id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <select value={eventId} onChange={(e) => setEventId(e.target.value)}>
+            <option value="">All sessions</option>
+            {data.events.map((e) => (
+              <option key={e._id} value={e._id}>
+                {e.name}
+              </option>
+            ))}
+          </select>
+        )}
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
+
+      {compareBy === "event" && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3>Sessions compared</h3>
+          <p className="card-sub">Every session in range, side by side — pick one above to filter the charts below to just that session.</p>
+          <table className="clean">
+            <thead>
+              <tr>
+                <th>Session</th>
+                <th>Facilitator</th>
+                <th>Location</th>
+                <th>Responses</th>
+                <th>Response rate</th>
+                <th>Satisfaction</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.eventBreakdown.map((ev) => (
+                <tr key={ev._id}>
+                  <td>{ev.name}</td>
+                  <td>{ev.facilitator || "—"}</td>
+                  <td>{ev.location || "—"}</td>
+                  <td>{ev.responseCount}</td>
+                  <td>{ev.responseRate !== null ? `${ev.responseRate}%` : "—"}</td>
+                  <td>{ev.starAverage !== null ? `${ev.starAverage} / 5` : "—"}</td>
+                </tr>
+              ))}
+              {data.eventBreakdown.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="subtitle">
+                    No sessions in range yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <QuestionTrendCard questionsApi="/api/business/analytics/questions" trendApi="/api/business/analytics/question-trend" />
 
