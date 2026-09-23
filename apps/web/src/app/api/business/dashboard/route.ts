@@ -32,7 +32,7 @@ export async function GET() {
     computeRatingDistribution(businessIds, from30d, now),
     FeedbackPoint.find({ businessId: session.business._id }),
     Response.find({ businessId: session.business._id }).sort({ submittedAt: -1 }).limit(20),
-    CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id }).sort({ period: -1 }).lean(),
   ]);
 
   // CX Pulse as an Overview widget, not a full section: the score plus the

@@ -25,7 +25,7 @@ export async function GET() {
   const [summaries, businesses, orgScore] = await Promise.all([
     computeNetworkSummaries(session.org._id, from, now),
     Business.find({ parentOrgId: session.org._id, active: true }).select("_id"),
-    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ period: -1 }).lean(),
   ]);
   const comparisons = await computePeriodComparisons(
     businesses.map((b) => b._id),
