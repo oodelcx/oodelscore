@@ -17,6 +17,8 @@ interface AnalyticsData {
     responseCount: number;
     starAverage: number | null;
     responseRate: number | null;
+    scanCount: number;
+    conversionRate: number | null;
   }[];
   filters: { feedbackPointId: string | null; eventId: string | null; from: string; to: string };
   trend: { date: string; starAverage: number | null }[];
@@ -160,7 +162,9 @@ export default function AnalyticsClient({ tooltips }: { tooltips: Record<string,
                 <th>Session</th>
                 <th>Facilitator</th>
                 <th>Location</th>
+                <th>Scans</th>
                 <th>Responses</th>
+                <th>Conversion</th>
                 <th>Response rate</th>
                 <th>Satisfaction</th>
               </tr>
@@ -171,14 +175,16 @@ export default function AnalyticsClient({ tooltips }: { tooltips: Record<string,
                   <td>{ev.name}</td>
                   <td>{ev.facilitator || "—"}</td>
                   <td>{ev.location || "—"}</td>
+                  <td>{ev.scanCount}</td>
                   <td>{ev.responseCount}</td>
+                  <td>{ev.conversionRate !== null ? `${ev.conversionRate}%` : "—"}</td>
                   <td>{ev.responseRate !== null ? `${ev.responseRate}%` : "—"}</td>
                   <td>{ev.starAverage !== null ? `${ev.starAverage} / 5` : "—"}</td>
                 </tr>
               ))}
               {data.eventBreakdown.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="subtitle">
+                  <td colSpan={8} className="subtitle">
                     No sessions in range yet.
                   </td>
                 </tr>
