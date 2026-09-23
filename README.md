@@ -4,8 +4,7 @@ Monorepo for the Oodel Score rebuild. See `CLAUDE.md` and `oodel-score-engineeri
 
 ## Structure
 
-- `apps/web` — Next.js app: marketing site, all four dashboards, feedback form, and the API routes backing them
-- `apps/worker` — scheduled-jobs entry point (AI Insights, CX Pulse scoring, alert sweeps), run via Render Cron Jobs
+- `apps/web` — Next.js app: marketing site, all four dashboards, feedback form, and the API routes backing them, including every scheduled job (see "Scheduled jobs" below — there is no separate worker process)
 - `packages/shared` — Mongoose schemas/types for every collection in the spec, DB connection helper, seed data
 
 ## Setup
@@ -24,7 +23,7 @@ npm run seed          # seed system roles, email templates, CX Pulse framework d
 npm run typecheck     # typecheck every workspace
 ```
 
-`npm run seed` and `apps/worker` read `MONGODB_URI` from the environment — export it from `.env` or run with `node --env-file=.env`.
+`npm run seed` reads `MONGODB_URI` from the environment — export it from `.env` or run with `node --env-file=.env`.
 
 ## Scheduled jobs
 
@@ -36,6 +35,10 @@ Every timed job (spec Section 10a) is an HTTP route in `apps/web`, called on a s
 | Daily | `POST /api/cron/measure-decisions` | — |
 | Hourly | `POST /api/cron/evaluate-baseline-alerts` | `npm run evaluate:baseline-alerts` |
 | Nightly | `POST /api/cron/recompute-cx-pulse` | `npm run recompute:cx-pulse` |
+| Hourly | `POST /api/cron/auto-escalate-cases` | — |
+| Daily | `POST /api/cron/comp-expiry-reminders` | — |
+
+All six are real, wired routes — set up a Render Cron Job for each one, not just the four listed above in earlier docs. Missing either of the last two silently means overdue cases never auto-escalate and comp/pilot accounts never get their expiry reminder, not a crash — check Admin → Platform Health if either looks like it's stopped firing.
 
 ```
 curl -X POST -H "x-cron-secret: $CRON_SECRET" https://oodelcx.com/api/cron/recompute-cx-pulse

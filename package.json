@@ -15,7 +15,7 @@
     "backfill:subscription-mrr": "npm run backfill:subscription-mrr -w @oodelscore/shared --",
     "evaluate:baseline-alerts": "npm run evaluate:baseline-alerts -w @oodelscore/shared",
     "recompute:cx-pulse": "npm run recompute:cx-pulse -w @oodelscore/shared",
-    "typecheck": "npm run typecheck -w @oodelscore/shared && npm run typecheck -w apps/web && npm run typecheck -w apps/worker"
+    "typecheck": "npm run typecheck -w @oodelscore/shared && npm run typecheck -w apps/web"
   },
   "engines": {
     "node": ">=20"
