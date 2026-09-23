@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Playbook, PlaybookRun, ActionBoardItem } from "@oodelscore/shared";
+import { connectToDatabase, Playbook, PlaybookRun, ActionBoardItem, User } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -20,14 +20,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const cases = caseIds.length > 0 ? await ActionBoardItem.find({ _id: { $in: caseIds } }).select("title businessId") : [];
   const caseById = new Map(cases.map((c) => [c._id.toString(), c]));
 
+  const completedByIds = runs.map((r) => r.completedByUserId).filter((v): v is NonNullable<typeof v> => v !== null);
+  const completedByUsers = completedByIds.length > 0 ? await User.find({ _id: { $in: completedByIds } }).select("email") : [];
+  const completedByEmailById = new Map(completedByUsers.map((u) => [u._id.toString(), u.email]));
+
   const enriched = runs.map((run) => ({
     ...run.toObject(),
-    case: run.actionBoardItemId
-      ? (() => {
-          const c = caseById.get(run.actionBoardItemId!.toString());
-          return c ? { id: c._id.toString(), title: c.title } : null;
-        })()
-      : null,
+    caseTitle: run.actionBoardItemId ? (caseById.get(run.actionBoardItemId.toString())?.title ?? null) : null,
+    completedBy: run.completedByUserId ? (completedByEmailById.get(run.completedByUserId.toString()) ?? null) : null,
   }));
 
   return NextResponse.json({ status: "ok", runs: enriched });
