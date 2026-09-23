@@ -17,8 +17,9 @@ export interface RootCauseAnalysis {
   generatedByAi: boolean; // false when this came from the non-AI fallback
   // Only set when generatedByAi is false — lets a caller (or QA, without
   // server-log access) tell "no key configured" apart from "the API call
-  // itself failed" instead of both looking identical from the outside.
-  fallbackReason: "no_api_key" | "api_error" | null;
+  // itself failed" apart from "the call succeeded but the response wasn't
+  // parseable JSON" instead of all three looking identical from the outside.
+  fallbackReason: "no_api_key" | "api_error" | "parse_error" | null;
 }
 
 /**
@@ -58,7 +59,23 @@ export async function analyzeRootCause(evidence: RootCauseEvidence): Promise<Roo
     });
 
     const text = message.content.find((block) => block.type === "text")?.text ?? "";
-    const parsed = JSON.parse(text);
+
+    // Claude sometimes wraps JSON output in a markdown code fence even when
+    // told not to — strip it before parsing rather than letting a
+    // successful, billed API call get mislabeled as an "api_error".
+    const stripped = text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(stripped);
+    } catch (parseErr) {
+      console.error("[ai-root-cause] Claude response was not parseable JSON, using fallback", parseErr, text);
+      return fallbackAnalysis(evidence, "parse_error");
+    }
 
     const confidenceLabel: RootCauseAnalysis["confidenceLabel"] = (["likely", "inferred", "uncertain"] as const).includes(
       parsed.confidenceLabel
@@ -97,7 +114,10 @@ export async function analyzeRootCause(evidence: RootCauseEvidence): Promise<Roo
  * instead of narrating, and is honest that it's an unweighted list, not a
  * reasoned explanation.
  */
-function fallbackAnalysis(evidence: RootCauseEvidence, reason: "no_api_key" | "api_error" = "api_error"): RootCauseAnalysis {
+function fallbackAnalysis(
+  evidence: RootCauseEvidence,
+  reason: "no_api_key" | "api_error" | "parse_error" = "api_error"
+): RootCauseAnalysis {
   const factors: string[] = [];
   if (evidence.previousPeriodAverage !== null && evidence.currentPeriodAverage !== null) {
     const delta = Math.round((evidence.currentPeriodAverage - evidence.previousPeriodAverage) * 100) / 100;
