@@ -15,6 +15,10 @@ export interface RootCauseAnalysis {
   confidenceLabel: "likely" | "inferred" | "uncertain";
   recommendation: RootCauseRecommendation;
   generatedByAi: boolean; // false when this came from the non-AI fallback
+  // Only set when generatedByAi is false — lets a caller (or QA, without
+  // server-log access) tell "no key configured" apart from "the API call
+  // itself failed" instead of both looking identical from the outside.
+  fallbackReason: "no_api_key" | "api_error" | null;
 }
 
 /**
@@ -34,7 +38,7 @@ export interface RootCauseAnalysis {
  */
 export async function analyzeRootCause(evidence: RootCauseEvidence): Promise<RootCauseAnalysis> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return fallbackAnalysis(evidence);
+  if (!apiKey) return fallbackAnalysis(evidence, "no_api_key");
 
   try {
     const client = new Anthropic({ apiKey });
@@ -79,10 +83,11 @@ export async function analyzeRootCause(evidence: RootCauseEvidence): Promise<Roo
         priority,
       },
       generatedByAi: true,
+      fallbackReason: null,
     };
   } catch (err) {
     console.error("[ai-root-cause] Claude call failed, using fallback", err);
-    return fallbackAnalysis(evidence);
+    return fallbackAnalysis(evidence, "api_error");
   }
 }
 
@@ -92,7 +97,7 @@ export async function analyzeRootCause(evidence: RootCauseEvidence): Promise<Roo
  * instead of narrating, and is honest that it's an unweighted list, not a
  * reasoned explanation.
  */
-function fallbackAnalysis(evidence: RootCauseEvidence): RootCauseAnalysis {
+function fallbackAnalysis(evidence: RootCauseEvidence, reason: "no_api_key" | "api_error" = "api_error"): RootCauseAnalysis {
   const factors: string[] = [];
   if (evidence.previousPeriodAverage !== null && evidence.currentPeriodAverage !== null) {
     const delta = Math.round((evidence.currentPeriodAverage - evidence.previousPeriodAverage) * 100) / 100;
@@ -124,5 +129,6 @@ function fallbackAnalysis(evidence: RootCauseEvidence): RootCauseAnalysis {
       priority: "medium",
     },
     generatedByAi: false,
+    fallbackReason: reason,
   };
 }
