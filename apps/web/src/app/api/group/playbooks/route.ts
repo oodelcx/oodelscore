@@ -13,7 +13,7 @@ import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
 
 export async function GET() {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "playbooks" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "playbooks")) {
     return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });
@@ -54,7 +54,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "playbooks" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "playbooks")) {
     return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });

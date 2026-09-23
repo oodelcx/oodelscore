@@ -19,7 +19,7 @@ import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/li
  * Team Member only ever sees items assigned to them.
  */
 export async function GET() {
-  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -61,7 +61,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

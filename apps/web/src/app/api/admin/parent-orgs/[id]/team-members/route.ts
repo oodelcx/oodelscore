@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ParentOrganization, User, createInviteUser, canAccessScopedResource } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  ParentOrganization,
+  User,
+  createInviteUser,
+  canAccessScopedResource,
+  isValidTeamPageKey,
+} from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -58,6 +65,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   const teamRole = typeof body?.teamRole === "string" ? body.teamRole.trim() : "";
   const tier = body?.tier === "limited" ? "limited" : "full";
+  const restrictedPages = Array.isArray(body?.restrictedPages) ? body.restrictedPages.filter(isValidTeamPageKey) : [];
   if (!email) return NextResponse.json({ status: "error", message: "Email is required" }, { status: 400 });
 
   const limit = org.teamMemberSeatLimit;
@@ -88,6 +96,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       businessOrOrgName: org.name,
       appUrl: process.env.APP_URL ?? "",
     });
+    if (tier === "full" && restrictedPages.length > 0) {
+      member.restrictedPages = restrictedPages;
+      await member.save();
+    }
     return NextResponse.json({ status: "ok", member }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ status: "error", message: err instanceof Error ? err.message : "Failed to invite" }, { status: 400 });

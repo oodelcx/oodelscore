@@ -7,7 +7,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 // doesn't get its own independent initiatives, it sees its org's (filtered
 // to ones that affect it) via the org's own route, read-only.
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "improvementInitiatives" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "improvementInitiatives")) {
     return NextResponse.json({ status: "error", message: "Improvement Initiatives is not enabled for this account" }, { status: 403 });
@@ -26,7 +26,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "improvementInitiatives" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "improvementInitiatives")) {
     return NextResponse.json({ status: "error", message: "Improvement Initiatives is not enabled for this account" }, { status: 403 });

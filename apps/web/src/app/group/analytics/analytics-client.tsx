@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ThemeIntelligenceCard } from "@/components/theme-intelligence-card";
-import { DriverAnalysisCard } from "@/components/driver-analysis-card";
 import { InfoTip } from "@/components/info-tip";
 import { QuestionTrendCard } from "@/components/question-trend-card";
+import { ScoreDriversCard } from "@/components/score-drivers-card";
 
 interface AnalyticsData {
   trend: { date: string; starAverage: number | null }[];
@@ -149,20 +148,16 @@ export default function GroupAnalyticsClient({ tooltips }: { tooltips: Record<st
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <DriverAnalysisCard
-          apiPath="/api/group/driver-analysis"
+        <ScoreDriversCard
+          driverApiPath="/api/group/driver-analysis"
           rootCauseApiPath="/api/group/root-cause-analysis"
           canCreateAction={false}
+          themeApiPath="/api/group/theme-intelligence"
+          analyzeApiPath="/api/group/theme-intelligence/analyze"
+          insightsApiPath="/api/group/insights"
           driverTooltip={tooltips["driver-analysis"]}
           rootCauseTooltip={tooltips["root-cause"]}
-        />
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <ThemeIntelligenceCard
-          apiPath="/api/group/theme-intelligence"
-          analyzeApiPath="/api/group/theme-intelligence/analyze"
-          tooltip={tooltips["theme-intelligence"]}
+          themeTooltip={tooltips["theme-intelligence"]}
         />
       </div>
     </div>

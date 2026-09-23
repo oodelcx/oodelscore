@@ -11,6 +11,9 @@ import {
   classifyDevice,
   dedupCookieName,
   DEDUP_WINDOW_SECONDS,
+  checkRateLimit,
+  getRequestIp,
+  logApiRouteError,
   type QuestionType,
   type DemographicMode,
 } from "@oodelscore/shared";
@@ -30,6 +33,18 @@ interface SubmittedAnswer {
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { qrToken } = await params;
+  try {
+    return await handlePost(request, qrToken);
+  } catch (err) {
+    await logApiRouteError("feedback/[qrToken]/submit POST", err, { qrToken });
+    return NextResponse.json(
+      { status: "error", message: "Something went wrong submitting your feedback. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+async function handlePost(request: NextRequest, qrToken: string) {
   await connectToDatabase();
 
   const feedbackPoint = await FeedbackPoint.findOne({ qrToken, active: true });
@@ -40,6 +55,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const business = await Business.findById(feedbackPoint.businessId);
   if (!business || !business.active) {
     return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+  }
+
+  // Defense in depth alongside the scan-token single-use lock below: even
+  // someone holding several valid scan tokens can't submit unboundedly
+  // fast from one IP. A real person submits once per visit; 10 covers a
+  // shared device across a small group without being a real ceiling for
+  // an actual respondent.
+  const submitRateLimit = await checkRateLimit(`feedback-submit:${getRequestIp(request)}:${feedbackPoint._id}`, 10, 600);
+  if (!submitRateLimit.allowed) {
+    return NextResponse.json({ status: "error", message: "Too many requests — please try again in a few minutes." }, { status: 429 });
   }
 
   // Same-device recheck (defense in depth against a client that skipped

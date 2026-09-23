@@ -10,7 +10,7 @@ import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/li
  * escalated (see [id]/route.ts), but never create or edit one directly.
  */
 export async function GET() {
-  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true });
+  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

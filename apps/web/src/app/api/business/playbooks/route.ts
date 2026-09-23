@@ -27,7 +27,7 @@ import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
 // by checking off steps on its own cases in Case Management, same as
 // before — Group already sees that live via GET /api/group/playbook-runs.
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "playbooks" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "playbooks")) {
     return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });
@@ -71,7 +71,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "playbooks" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "playbooks")) {
     return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });

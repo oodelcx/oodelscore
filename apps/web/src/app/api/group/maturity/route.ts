@@ -9,7 +9,7 @@ const DIMENSION_KEYS = ["awareness", "response", "ownership", "culture", "outcom
 const HEALTHY_DIMENSION_FLOOR = 70;
 
 export async function GET() {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "cxPulse" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "cxPulse")) {
     return NextResponse.json({ status: "error", message: "CX Pulse is not enabled for this account" }, { status: 403 });

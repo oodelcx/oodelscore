@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 interface HealthEvent {
   _id: string;
-  type: "stripe_webhook_failure" | "billing_sync_failure" | "cron_failure";
+  type: "stripe_webhook_failure" | "billing_sync_failure" | "cron_failure" | "api_route_error";
   message: string;
   context: Record<string, unknown>;
   occurredAt: string;
@@ -21,6 +21,7 @@ const TYPE_LABELS: Record<HealthEvent["type"], string> = {
   stripe_webhook_failure: "Stripe webhook",
   billing_sync_failure: "Billing sync",
   cron_failure: "Cron job",
+  api_route_error: "API route error",
 };
 
 /**
@@ -52,7 +53,10 @@ export default function PlatformHealthPage() {
       <div className="page-head">
         <div>
           <h1>Platform Health</h1>
-          <p className="subtitle">Failed webhooks, failed billing syncs, failed cron runs, and accounts stuck mid-onboarding.</p>
+          <p className="subtitle">
+            Failed webhooks, failed billing syncs, failed cron runs, unhandled errors on exposed API routes, and accounts
+            stuck mid-onboarding.
+          </p>
         </div>
       </div>
 

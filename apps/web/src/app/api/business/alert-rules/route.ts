@@ -7,7 +7,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
  * and views (but never edits) rules cascaded down from their Parent Org.
  */
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "alertRules" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
     return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
@@ -38,7 +38,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "alertRules" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
     return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });

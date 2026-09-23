@@ -17,7 +17,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
  * report always matches what the dashboard shows for the same window.
  */
 export async function GET(req: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "reports" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "reports")) {
     return NextResponse.json({ status: "error", message: "Reports is not enabled for this account" }, { status: 403 });

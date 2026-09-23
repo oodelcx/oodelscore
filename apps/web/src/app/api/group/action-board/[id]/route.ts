@@ -19,7 +19,7 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 /** The unified case trail, org-scoped — see the business twin for the full shape. */
 export async function GET(_request: Request, { params }: RouteParams) {
-  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true });
+  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -98,7 +98,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
  * flagging this for the branch's attention now," not routing it upward.
  */
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true });
+  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();

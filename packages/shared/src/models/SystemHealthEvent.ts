@@ -1,6 +1,11 @@
 import mongoose, { Schema, model, type Model } from "mongoose";
 
-export const SYSTEM_HEALTH_EVENT_TYPES = ["stripe_webhook_failure", "billing_sync_failure", "cron_failure"] as const;
+export const SYSTEM_HEALTH_EVENT_TYPES = [
+  "stripe_webhook_failure",
+  "billing_sync_failure",
+  "cron_failure",
+  "api_route_error",
+] as const;
 export type SystemHealthEventType = (typeof SYSTEM_HEALTH_EVENT_TYPES)[number];
 
 /**
@@ -8,8 +13,9 @@ export type SystemHealthEventType = (typeof SYSTEM_HEALTH_EVENT_TYPES)[number];
  * a failed billing sync, or a cron job that threw were only ever
  * console.error'd — visible in Render logs if someone happened to be
  * looking, never in the product. This is a lightweight, append-only record
- * of exactly those three failure classes, shown on Admin -> Platform Health.
- * Never blocks the operation that failed to log it — see
+ * of those failure classes plus unhandled errors on the most exposed API
+ * routes (Phase 8 item P8.6 — "api_route_error"), shown on Admin -> Platform
+ * Health. Never blocks the operation that failed to log it — see
  * observability/systemHealth.ts.
  */
 export interface ISystemHealthEvent {

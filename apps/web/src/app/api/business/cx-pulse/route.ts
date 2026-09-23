@@ -3,7 +3,7 @@ import { connectToDatabase, CxPulseScore , hasFeature } from "@oodelscore/shared
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "cxPulse" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "cxPulse")) {
     return NextResponse.json({ status: "error", message: "CX Pulse is not enabled for this account" }, { status: 403 });

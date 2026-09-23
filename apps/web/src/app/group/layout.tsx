@@ -9,6 +9,7 @@ import {
   PLATFORM_SETTINGS_SINGLETON_KEY,
   getBillingAccessStatus,
   hasFeature,
+  teamMemberCanAccess,
 } from "@oodelscore/shared";
 import "../admin/admin.css";
 import "../business/business.css";
@@ -75,7 +76,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 <a href="/group/compare">Compare branches</a>
               </NavSection>
               <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback"]}>
-                <a href="/group/raw-feedback">Raw feedback</a>
+                {teamMemberCanAccess(user, "rawFeedback") && <a href="/group/raw-feedback">Raw feedback</a>}
               </NavSection>
 
               <NavSection
@@ -83,23 +84,34 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 label="Understand"
                 hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
               >
-                {hasFeature(org.enabledFeatures, "insights") && <a href="/group/insights">Insights</a>}
-                {hasFeature(org.enabledFeatures, "analytics") && <a href="/group/analytics">Analytics</a>}
-                {hasFeature(org.enabledFeatures, "alertRules") && <a href="/group/alert-rules">Alert rules</a>}
-                {hasFeature(org.enabledFeatures, "reports") && <a href="/group/reports">Reports</a>}
+                {hasFeature(org.enabledFeatures, "insights") && teamMemberCanAccess(user, "insights") && (
+                  <a href="/group/insights">Insights</a>
+                )}
+                {hasFeature(org.enabledFeatures, "analytics") && teamMemberCanAccess(user, "analytics") && (
+                  <a href="/group/analytics">Analytics</a>
+                )}
+                {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
+                  <a href="/group/alert-rules">Alert rules</a>
+                )}
+                {hasFeature(org.enabledFeatures, "reports") && teamMemberCanAccess(user, "reports") && (
+                  <a href="/group/reports">Reports</a>
+                )}
               </NavSection>
               <NavSection
                 storageKey="group-act"
                 label="Act"
                 hrefs={["/group/cases", "/group/improvement-initiatives", "/group/decision-log"]}
               >
-                <a href="/group/cases">Case Management</a>
-                {hasFeature(org.enabledFeatures, "improvementInitiatives") && (
-                  <a href="/group/improvement-initiatives">Improvement Initiatives</a>
+                {teamMemberCanAccess(user, "caseManagement") && <a href="/group/cases">Case Management</a>}
+                {hasFeature(org.enabledFeatures, "improvementInitiatives") &&
+                  teamMemberCanAccess(user, "improvementInitiatives") && (
+                    <a href="/group/improvement-initiatives">Improvement Initiatives</a>
+                  )}
+                {hasFeature(org.enabledFeatures, "decisionLog") && teamMemberCanAccess(user, "decisionLog") && (
+                  <a href="/group/decision-log">Decision log</a>
                 )}
-                {hasFeature(org.enabledFeatures, "decisionLog") && <a href="/group/decision-log">Decision log</a>}
               </NavSection>
-              {hasFeature(org.enabledFeatures, "cxPulse") && (
+              {hasFeature(org.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse") && (
                 <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
                   <a href="/group/maturity">CX Pulse</a>
                 </NavSection>
@@ -121,9 +133,11 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 <a href="/group/team">Team &amp; access</a>
                 {!isOrgTeamMember && <a href="/group/team-members">Team Members</a>}
                 {!isOrgTeamMember && <a href="/group/category-owners">Category Owners</a>}
-                <a href="/group/support">Support</a>
+                {teamMemberCanAccess(user, "support") && <a href="/group/support">Support</a>}
                 {!isOrgTeamMember && <a href="/group/billing">Billing</a>}
-                {hasFeature(org.enabledFeatures, "playbooks") && <a href="/group/playbooks">Playbook Library</a>}
+                {hasFeature(org.enabledFeatures, "playbooks") && teamMemberCanAccess(user, "playbooks") && (
+                  <a href="/group/playbooks">Playbook Library</a>
+                )}
                 <a href="/group/security">Security</a>
               </NavSection>
             </>

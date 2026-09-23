@@ -182,7 +182,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "Open-text responses are grouped into recurring themes automatically, so a spike in \"wait time\" complaints surfaces the moment it starts, instead of three weeks and forty comments later.",
         },
         {
-          tag: "Root Cause Analysis",
+          tag: "Root Cause Investigation",
           headline: "Not just what's wrong — why",
           body: "Related flagged responses are traced back to a shared cause across shifts, branches, or time periods, so the fix targets the actual problem instead of the loudest symptom.",
         },

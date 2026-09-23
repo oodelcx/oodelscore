@@ -8,7 +8,7 @@ import { requireParentOrgOwner } from "@/lib/ownerAuth";
  * trend selector.
  */
 export async function GET() {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "analytics" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "analytics")) {
     return NextResponse.json({ status: "error", message: "Analytics is not enabled for this account" }, { status: 403 });

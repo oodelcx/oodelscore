@@ -17,7 +17,7 @@ import { requireParentOrgOwner } from "@/lib/ownerAuth";
  * a caller-chosen window instead of the fixed 30-day one.
  */
 export async function GET(req: Request) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "reports" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.org.enabledFeatures, "reports")) {
     return NextResponse.json({ status: "error", message: "Reports is not enabled for this account" }, { status: 403 });
