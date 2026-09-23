@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { connectToDatabase, FeedbackPoint, Business, Event } from "@oodelscore/shared";
+import { connectToDatabase, FeedbackPoint, Business, Event, FORM_LAYOUTS, DEMOGRAPHIC_MODES } from "@oodelscore/shared";
+
+const DEMOGRAPHIC_MODE_SET: readonly string[] = DEMOGRAPHIC_MODES;
+const DEMOGRAPHIC_FIELDS = ["name", "email", "phone", "ageGroup", "gender"] as const;
 import { requireStaffSession } from "@/lib/adminAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -51,6 +54,21 @@ export async function POST(request: Request, { params }: RouteParams) {
     eventId = body.eventId;
   }
 
+  const formLayoutOverride = (FORM_LAYOUTS as readonly string[]).includes(body?.formLayoutOverride) ? body.formLayoutOverride : null;
+
+  let demographicOverride = null;
+  if (body?.demographicOverride && typeof body.demographicOverride === "object") {
+    const base = { name: "off", email: "optional", phone: "off", ageGroup: "optional", gender: "optional" };
+    const override = { ...base };
+    for (const field of DEMOGRAPHIC_FIELDS) {
+      const value = body.demographicOverride[field];
+      if (typeof value === "string" && DEMOGRAPHIC_MODE_SET.includes(value)) {
+        override[field] = value as (typeof override)[typeof field];
+      }
+    }
+    demographicOverride = override;
+  }
+
   const feedbackPoint = await FeedbackPoint.create({
     businessId: id,
     eventId,
@@ -58,6 +76,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     description: typeof body?.description === "string" ? body.description : "",
     qrToken: randomBytes(16).toString("hex"),
     questionTemplateOverride: typeof body?.questionTemplateOverride === "string" ? body.questionTemplateOverride : null,
+    formLayoutOverride,
+    demographicOverride,
     startsAt: body?.startsAt ? new Date(body.startsAt) : null,
     endsAt: body?.endsAt ? new Date(body.endsAt) : null,
   });

@@ -22,8 +22,7 @@ export async function getBillingAccessStatus(ownerType: BillingOwnerType, ownerI
     return subscription.compExpiresAt.getTime() > Date.now() ? "active" : "lapsed";
   }
 
-  if (subscription.status === "canceled") return "lapsed";
-  return subscription.stripeSubscriptionId || subscription.paidThroughDate ? "active" : "lapsed";
+  return subscription.status === "active" ? "active" : "lapsed";
 }
 
 /** Convenience wrapper for call sites that only need the yes/no. */
