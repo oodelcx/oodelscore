@@ -600,13 +600,16 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     setCheckoutEnabled(next);
   }
 
-  async function toggleColleagueExperience() {
+  async function toggleProduct(product: "customer_experience" | "colleague_experience") {
     setProductsBusy(true);
     setProductsError(null);
-    const hasCE = enabledProducts.includes("colleague_experience");
-    const next = hasCE
-      ? enabledProducts.filter((p) => p !== "colleague_experience")
-      : [...enabledProducts, "colleague_experience"];
+    const has = enabledProducts.includes(product);
+    if (has && enabledProducts.length === 1) {
+      setProductsBusy(false);
+      setProductsError("An organization needs at least one product enabled.");
+      return;
+    }
+    const next = has ? enabledProducts.filter((p) => p !== product) : [...enabledProducts, product];
     const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -615,7 +618,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     const data = await res.json().catch(() => null);
     setProductsBusy(false);
     if (!res.ok) {
-      setProductsError(data?.message ?? "Failed to update Colleague Experience access");
+      setProductsError(data?.message ?? "Failed to update product access");
       return;
     }
     setEnabledProducts(next);
@@ -1828,21 +1831,26 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         <div className="card" style={{ maxWidth: 640, marginTop: 20 }}>
           <h3>Products (Admin-only)</h3>
           <p className="card-sub">
-            Which product(s) this org has bought. Customer Experience is always on. Turning on Colleague Experience
-            does not by itself grant any team member access to it — that&apos;s set per person on the Team tab.
+            Which product(s) this org has bought — independently toggleable, an org can run Customer Experience
+            only, Colleague Experience only, or both. Turning one on does not by itself grant any team member
+            access to it — that&apos;s set per person on the Team tab. An org must keep at least one product
+            enabled.
           </p>
           {productsError && <p className="error-text">{productsError}</p>}
+          <div className="row-flex" style={{ alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span className={`pill ${enabledProducts.includes("customer_experience") ? "pill-green" : "pill-gray"}`}>
+              Customer Experience: {enabledProducts.includes("customer_experience") ? "on" : "off"}
+            </span>
+            <button className="btn btn-sm" disabled={productsBusy} onClick={() => toggleProduct("customer_experience")}>
+              {productsBusy ? "Saving…" : enabledProducts.includes("customer_experience") ? "Turn off" : "Turn on"}
+            </button>
+          </div>
           <div className="row-flex" style={{ alignItems: "center", gap: 10 }}>
-            <span className="pill pill-green">Customer Experience: on</span>
             <span className={`pill ${enabledProducts.includes("colleague_experience") ? "pill-green" : "pill-gray"}`}>
               Colleague Experience: {enabledProducts.includes("colleague_experience") ? "on" : "off"}
             </span>
-            <button className="btn btn-sm" disabled={productsBusy} onClick={toggleColleagueExperience}>
-              {productsBusy
-                ? "Saving…"
-                : enabledProducts.includes("colleague_experience")
-                  ? "Turn off"
-                  : "Enable Colleague Experience"}
+            <button className="btn btn-sm" disabled={productsBusy} onClick={() => toggleProduct("colleague_experience")}>
+              {productsBusy ? "Saving…" : enabledProducts.includes("colleague_experience") ? "Turn off" : "Turn on"}
             </button>
           </div>
         </div>

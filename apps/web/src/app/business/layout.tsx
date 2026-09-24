@@ -91,27 +91,29 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 {!isBusinessTeamMember && <a href="/business/category-owners">Category Owners</a>}
               </NavSection>
 
-              <NavSection storageKey="business-listen" label="Listen" hrefs={["/business/responses"]}>
-                {teamMemberCanAccess(user, "rawFeedback") && <a href="/business/responses">Raw Feedback</a>}
-              </NavSection>
+              {hasProduct(business, "customer_experience") && (
+                <NavSection storageKey="business-listen" label="Listen" hrefs={["/business/responses"]}>
+                  {teamMemberCanAccess(user, "rawFeedback") && <a href="/business/responses">Raw Feedback</a>}
+                </NavSection>
+              )}
 
               <NavSection
                 storageKey="business-understand"
                 label="Understand"
                 hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports"]}
               >
-                {hasFeature(business.enabledFeatures, "insights") && teamMemberCanAccess(user, "insights") && (
-                  <a href="/business/insights">Insights</a>
-                )}
-                {hasFeature(business.enabledFeatures, "analytics") && teamMemberCanAccess(user, "analytics") && (
-                  <a href="/business/analytics">Analytics</a>
-                )}
+                {hasProduct(business, "customer_experience") &&
+                  hasFeature(business.enabledFeatures, "insights") &&
+                  teamMemberCanAccess(user, "insights") && <a href="/business/insights">Insights</a>}
+                {hasProduct(business, "customer_experience") &&
+                  hasFeature(business.enabledFeatures, "analytics") &&
+                  teamMemberCanAccess(user, "analytics") && <a href="/business/analytics">Analytics</a>}
                 {hasFeature(business.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
                   <a href="/business/alert-rules">Alert Rules</a>
                 )}
-                {hasFeature(business.enabledFeatures, "reports") && teamMemberCanAccess(user, "reports") && (
-                  <a href="/business/reports">Reports</a>
-                )}
+                {hasProduct(business, "customer_experience") &&
+                  hasFeature(business.enabledFeatures, "reports") &&
+                  teamMemberCanAccess(user, "reports") && <a href="/business/reports">Reports</a>}
               </NavSection>
 
               <NavSection
@@ -129,11 +131,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 )}
               </NavSection>
 
-              {hasFeature(business.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse") && (
-                <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
-                  <a href="/business/cx-pulse">CX Pulse</a>
-                </NavSection>
-              )}
+              {hasProduct(business, "customer_experience") &&
+                hasFeature(business.enabledFeatures, "cxPulse") &&
+                teamMemberCanAccess(user, "cxPulse") && (
+                  <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
+                    <a href="/business/cx-pulse">CX Pulse</a>
+                  </NavSection>
+                )}
 
               {hasProduct(business, "colleague_experience") &&
                 (teamMemberCanAccess(user, "colleagueRoster") || teamMemberCanAccess(user, "exPulse")) && (

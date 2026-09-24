@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, Response } from "@oodelscore/shared";
+import { connectToDatabase, Business, Response, PRODUCTS, type Product } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { computeResponseStats } from "@/lib/responseStats";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 export async function GET(request: Request) {
   const session = await requireParentOrgOwner({ requirePage: "rawFeedback" });
@@ -14,13 +15,15 @@ export async function GET(request: Request) {
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number(searchParams.get("limit")) || DEFAULT_LIMIT));
   const filter = searchParams.get("filter") === "negative" ? "negative" : "all";
+  const productParam = searchParams.get("product");
+  const product: Product = productParam && PRODUCT_SET.includes(productParam) ? (productParam as Product) : "customer_experience";
   const skip = (page - 1) * limit;
 
   await connectToDatabase();
   const businesses = await Business.find({ parentOrgId: session.org._id }).select("_id name");
   const businessNameById = new Map(businesses.map((b) => [b._id.toString(), b.name]));
 
-  const match: Record<string, unknown> = { businessId: { $in: businesses.map((b) => b._id) } };
+  const match: Record<string, unknown> = { businessId: { $in: businesses.map((b) => b._id) }, product };
   if (filter === "negative") {
     match.answers = { $elemMatch: { type: "star_1_5", value: { $lte: 2 } } };
   }

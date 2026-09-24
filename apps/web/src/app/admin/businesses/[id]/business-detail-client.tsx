@@ -882,18 +882,22 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     setCheckoutEnabled(next);
   }
 
-  // Colleague Experience is a second product line, not a feature flag —
-  // it gets its own gate (Business.enabledProducts) rather than living in
-  // enabledFeatures, since turning it on/off has billing implications
-  // enabledFeatures never does. customer_experience always stays on; this
-  // only ever adds/removes colleague_experience.
-  async function toggleColleagueExperience() {
+  // Each product line gets its own gate (Business.enabledProducts) rather
+  // than living in enabledFeatures, since turning one on/off has billing
+  // implications enabledFeatures never does. Independently toggleable —
+  // a business can be Customer Experience only, Colleague Experience only,
+  // or both, but never neither (see the guard below): a business with no
+  // product enabled has nothing to log into either portal for.
+  async function toggleProduct(product: "customer_experience" | "colleague_experience") {
     setProductsBusy(true);
     setProductsError(null);
-    const hasCE = enabledProducts.includes("colleague_experience");
-    const next = hasCE
-      ? enabledProducts.filter((p) => p !== "colleague_experience")
-      : [...enabledProducts, "colleague_experience"];
+    const has = enabledProducts.includes(product);
+    if (has && enabledProducts.length === 1) {
+      setProductsBusy(false);
+      setProductsError("A business needs at least one product enabled.");
+      return;
+    }
+    const next = has ? enabledProducts.filter((p) => p !== product) : [...enabledProducts, product];
     const res = await fetch(`/api/admin/businesses/${params.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -902,7 +906,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     const data = await res.json().catch(() => null);
     setProductsBusy(false);
     if (!res.ok) {
-      setProductsError(data?.message ?? "Failed to update Colleague Experience access");
+      setProductsError(data?.message ?? "Failed to update product access");
       return;
     }
     setEnabledProducts(next);
@@ -1845,22 +1849,26 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         <div className="card" style={{ maxWidth: 720, marginTop: 20 }}>
           <h3>Products (Admin-only)</h3>
           <p className="card-sub">
-            Which product(s) this business has bought. Customer Experience is always on. Turning on Colleague
-            Experience does not by itself grant any team member access to it — that&apos;s set per person on the
-            Team tab.
+            Which product(s) this business has bought — independently toggleable, a business can run Customer
+            Experience only, Colleague Experience only, or both. Turning one on does not by itself grant any team
+            member access to it — that&apos;s set per person on the Team tab. A business must keep at least one
+            product enabled.
           </p>
           {productsError && <p className="error-text">{productsError}</p>}
+          <div className="row-flex" style={{ alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span className={`pill ${enabledProducts.includes("customer_experience") ? "pill-green" : "pill-gray"}`}>
+              Customer Experience: {enabledProducts.includes("customer_experience") ? "on" : "off"}
+            </span>
+            <button className="btn btn-sm" disabled={productsBusy} onClick={() => toggleProduct("customer_experience")}>
+              {productsBusy ? "Saving…" : enabledProducts.includes("customer_experience") ? "Turn off" : "Turn on"}
+            </button>
+          </div>
           <div className="row-flex" style={{ alignItems: "center", gap: 10 }}>
-            <span className="pill pill-green">Customer Experience: on</span>
             <span className={`pill ${enabledProducts.includes("colleague_experience") ? "pill-green" : "pill-gray"}`}>
               Colleague Experience: {enabledProducts.includes("colleague_experience") ? "on" : "off"}
             </span>
-            <button className="btn btn-sm" disabled={productsBusy} onClick={toggleColleagueExperience}>
-              {productsBusy
-                ? "Saving…"
-                : enabledProducts.includes("colleague_experience")
-                  ? "Turn off"
-                  : "Enable Colleague Experience"}
+            <button className="btn btn-sm" disabled={productsBusy} onClick={() => toggleProduct("colleague_experience")}>
+              {productsBusy ? "Saving…" : enabledProducts.includes("colleague_experience") ? "Turn off" : "Turn on"}
             </button>
           </div>
         </div>
