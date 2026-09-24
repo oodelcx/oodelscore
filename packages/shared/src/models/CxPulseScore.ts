@@ -31,6 +31,11 @@ export interface ICxPulseScore {
   dimensions: ICxPulseDimensions;
   compositeScore: number;
   level: CxPulseLevel;
+  // Colleague Experience only — eNPS ((%promoters - %detractors) from
+  // nps_0_10 answers) is CE's standing headline metric, reported alongside
+  // the same awareness/response/ownership/culture/outcome maturity ladder
+  // used for CX. Always null for a customer_experience row.
+  enps: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +60,7 @@ const CxPulseScoreSchema = new Schema<ICxPulseScore>(
     dimensions: { type: CxPulseDimensionsSchema, required: true },
     compositeScore: { type: Number, required: true },
     level: { type: Number, enum: [1, 2, 3, 4, 5], required: true },
+    enps: { type: Number, default: null },
   },
   { timestamps: true }
 );

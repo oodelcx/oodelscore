@@ -67,7 +67,7 @@ export interface GoalMetricRef {
 /** The same metric a goal targets, computed fresh — used both for a goal's live "current value" and to snapshot `startValue` at creation. */
 export async function computeCurrentMetricValue(goal: GoalMetricRef, now: Date = new Date()): Promise<number | null> {
   if (goal.metric === "cxPulseLevel") {
-    const score = await CxPulseScore.findOne({ ownerType: goal.ownerType, ownerId: goal.ownerId }).sort({ period: -1 });
+    const score = await CxPulseScore.findOne({ ownerType: goal.ownerType, ownerId: goal.ownerId, product: "customer_experience" }).sort({ period: -1 });
     return score?.level ?? null;
   }
   if (goal.metric === "overdueActionsCount") {

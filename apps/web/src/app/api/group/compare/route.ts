@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     businesses.map(async (b) => {
       const [metrics, score, trend, categoryBreakdown] = await Promise.all([
         computeBusinessMetrics(b._id, from30d, now),
-        CxPulseScore.findOne({ ownerType: "business", ownerId: b._id }).sort({ period: -1 }),
+        CxPulseScore.findOne({ ownerType: "business", ownerId: b._id, product: "customer_experience" }).sort({ period: -1 }),
         computeDailyTrend([b._id], TREND_DAYS, now),
         computeBusinessCategoryBreakdown(b._id, from30d, now),
       ]);
