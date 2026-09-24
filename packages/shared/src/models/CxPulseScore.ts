@@ -1,5 +1,6 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { BILLING_OWNER_TYPES, type BillingOwnerType } from "./BillingSubscription";
+import { PRODUCTS, type Product } from "./products";
 
 export type CxPulseLevel = 1 | 2 | 3 | 4 | 5;
 
@@ -18,6 +19,14 @@ export interface ICxPulseDimensions {
 export interface ICxPulseScore {
   ownerType: BillingOwnerType;
   ownerId: Types.ObjectId;
+  // Which product this score covers — defaults to customer_experience so
+  // every score computed before Colleague Experience existed is unaffected.
+  // Kept as a discriminator on this same collection/model for now rather
+  // than a full CxPulseScore -> PulseScore rename; that generalization is
+  // deferred to the phase that actually builds Colleague Experience's own
+  // pulse-score computation, which is when a second real dimension set
+  // exists to justify it.
+  product: Product;
   period: Date; // month this score covers
   dimensions: ICxPulseDimensions;
   compositeScore: number;
@@ -41,6 +50,7 @@ const CxPulseScoreSchema = new Schema<ICxPulseScore>(
   {
     ownerType: { type: String, enum: BILLING_OWNER_TYPES, required: true },
     ownerId: { type: Schema.Types.ObjectId, required: true },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     period: { type: Date, required: true },
     dimensions: { type: CxPulseDimensionsSchema, required: true },
     compositeScore: { type: Number, required: true },
@@ -49,7 +59,11 @@ const CxPulseScoreSchema = new Schema<ICxPulseScore>(
   { timestamps: true }
 );
 
-CxPulseScoreSchema.index({ ownerType: 1, ownerId: 1, period: 1 }, { unique: true });
+CxPulseScoreSchema.index({ ownerType: 1, ownerId: 1, period: 1, product: 1 }, { unique: true });
+// NOTE: same caveat as Category's index change — the collection's old
+// 3-field unique index still needs dropping in each real database when
+// this ships (CxPulseScore.syncIndexes() or a manual drop); until then it
+// keeps enforcing the narrower uniqueness, which is safe, just redundant.
 
 export const CxPulseScore: Model<ICxPulseScore> =
   mongoose.models.CxPulseScore ?? model<ICxPulseScore>("CxPulseScore", CxPulseScoreSchema);

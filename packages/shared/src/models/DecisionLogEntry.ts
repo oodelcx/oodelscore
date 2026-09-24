@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const DECISION_STATUSES = ["planned", "in_progress", "implemented"] as const;
 export type DecisionStatus = (typeof DECISION_STATUSES)[number];
@@ -14,6 +15,9 @@ export interface IDecisionLogEntry {
   // Decision Log too.
   parentOrgId: Types.ObjectId | null;
   businessId: Types.ObjectId | null;
+  // Which product this decision belongs to — defaults to customer_experience
+  // so every entry that predates Colleague Experience is unaffected.
+  product: Product;
   title: string;
   trigger: string;
   linkedActionIds: Types.ObjectId[];
@@ -40,6 +44,7 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
   {
     parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", default: null },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", default: null },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     title: { type: String, required: true },
     trigger: { type: String, default: "" },
     linkedActionIds: { type: [Schema.Types.ObjectId], ref: "ActionBoardItem", default: [] },

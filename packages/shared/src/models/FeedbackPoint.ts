@@ -1,5 +1,6 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { DEMOGRAPHIC_MODES, type DemographicMode } from "./Business";
+import { PRODUCTS, type Product } from "./products";
 
 export const FORM_LAYOUTS = ["single_page", "one_per_screen"] as const;
 export type FormLayout = (typeof FORM_LAYOUTS)[number];
@@ -14,6 +15,11 @@ export interface IDemographicOverride {
 
 export interface IFeedbackPoint {
   businessId: Types.ObjectId;
+  // Which product this collection point belongs to — a Customer Experience
+  // QR/link (a till, a branch) or a Colleague Experience one (a staff
+  // pulse survey entry point). Defaults to customer_experience so every
+  // feedback point that predates Colleague Experience is unaffected.
+  product: Product;
   eventId: Types.ObjectId | null; // null = place-based (a fixed branch/till); set = one instance of an Event (a session/flight/class)
   name: string;
   description: string;
@@ -47,6 +53,7 @@ const DemographicOverrideSchema = new Schema<IDemographicOverride>(
 const FeedbackPointSchema = new Schema<IFeedbackPoint>(
   {
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },

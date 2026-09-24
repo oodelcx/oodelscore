@@ -12,6 +12,7 @@ import {
   type IEscalationLevel,
   DEFAULT_ESCALATION_LEVELS,
 } from "./common";
+import { PRODUCTS, type Product } from "./products";
 
 export const BILLING_ASSIGNMENTS = ["group_pays", "branch_pays", "unassigned"] as const;
 export type BillingAssignment = (typeof BILLING_ASSIGNMENTS)[number];
@@ -46,6 +47,7 @@ export const BUSINESS_ADMIN_ONLY_FIELDS = [
   "escalationSlaHours",
   "enabledFeatures",
   "paymentGateEnabled",
+  "enabledProducts",
 ] as const;
 
 export interface IBusiness {
@@ -104,6 +106,12 @@ export interface IBusiness {
   // (any record saved before this field existed) means "all on" — see
   // hasFeature() — so this never silently locks an existing account out.
   enabledFeatures: string[] | null;
+  // ADMIN-EDITABLE ONLY. Which product line(s) this business has bought —
+  // Customer Experience, Colleague Experience, or both. null/empty means
+  // Customer Experience only (see getEnabledProducts()) — every record
+  // saved before Colleague Experience existed defaults there, never to
+  // "all products". Gates both nav visibility and billing line items.
+  enabledProducts: Product[] | null;
   // ADMIN-EDITABLE ONLY. Per-account override of PlatformSettings'
   // paymentGateEnabled kill switch: null = follow the platform default,
   // true/false = force the gate on/off for this account regardless of the
@@ -151,6 +159,7 @@ const BusinessSchema = new Schema<IBusiness>(
     teamMemberSeatLimit: { type: Number, default: null },
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     enabledFeatures: { type: [String], default: null },
+    enabledProducts: { type: [String], enum: PRODUCTS, default: null },
     paymentGateEnabled: { type: Boolean, default: null },
     active: { type: Boolean, default: true },
   },
