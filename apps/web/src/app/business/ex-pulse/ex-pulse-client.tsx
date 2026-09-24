@@ -16,6 +16,22 @@ interface ExPulseScore {
   };
 }
 
+interface DriverResult {
+  categoryId: string;
+  name: string;
+  categoryAverage: number;
+  correlation: number | null;
+  sampleSize: number;
+  confidence: "reliable" | "low" | "insufficient";
+  classification: "priority" | "strength" | "moderate";
+}
+
+const CLASSIFICATION_LABELS: Record<DriverResult["classification"], string> = {
+  priority: "Priority — pulling the score down",
+  strength: "Strength — worth protecting",
+  moderate: "Moderate influence",
+};
+
 const LEVEL_LABELS: Record<number, string> = {
   1: "Level 1 — Starting out",
   2: "Level 2 — Building the basics",
@@ -27,19 +43,23 @@ const LEVEL_LABELS: Record<number, string> = {
 export default function BusinessExPulseClient() {
   const [score, setScore] = useState<ExPulseScore | null>(null);
   const [history, setHistory] = useState<ExPulseScore[]>([]);
+  const [drivers, setDrivers] = useState<DriverResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
 
   useEffect(() => {
-    fetch("/api/business/ex-pulse")
-      .then(async (r) => {
-        const data = await r.json();
-        if (!r.ok) {
+    Promise.all([
+      fetch("/api/business/ex-pulse").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+      fetch("/api/business/ex-driver-analysis").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+    ])
+      .then(([pulseRes, driverRes]) => {
+        if (!pulseRes.ok) {
           setForbidden(true);
           return;
         }
-        setScore(data.score);
-        setHistory(data.history ?? []);
+        setScore(pulseRes.data.score);
+        setHistory(pulseRes.data.history ?? []);
+        if (driverRes.ok) setDrivers(driverRes.data.drivers ?? []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -104,6 +124,51 @@ export default function BusinessExPulseClient() {
               ))}
             </div>
           </div>
+
+          {drivers.length > 0 && (
+            <div className="callout" style={{ marginBottom: 20 }}>
+              <h3 style={{ marginTop: 0 }}>What's driving this</h3>
+              <p className="subtitle" style={{ marginTop: 0 }}>
+                Which categories correlate most strongly with the rest of a colleague's ratings — not just their raw
+                average. Last 90 days.
+              </p>
+              <table className="clean">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Average</th>
+                    <th>Correlation</th>
+                    <th>Responses</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {drivers.map((d) => (
+                    <tr key={d.categoryId}>
+                      <td>{d.name}</td>
+                      <td>{d.categoryAverage}</td>
+                      <td>{d.correlation !== null ? d.correlation.toFixed(2) : "—"}</td>
+                      <td>
+                        {d.sampleSize}
+                        {d.confidence !== "reliable" && (
+                          <span className="subtitle"> ({d.confidence === "low" ? "low confidence" : "not enough data"})</span>
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={`pill ${
+                            d.classification === "priority" ? "pill-red" : d.classification === "strength" ? "pill-green" : "pill-gray"
+                          }`}
+                        >
+                          {CLASSIFICATION_LABELS[d.classification]}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {history.length > 1 && (
             <div className="callout">
