@@ -14,9 +14,19 @@ interface RosterSurveyPoint {
   _id: string;
   name: string;
   active: boolean;
+  pulseCadence: string | null;
+  lastSentAt: string | null;
   tokensIssued: number;
   tokensUsed: number;
   participationRate: number | null;
+}
+
+function formatCadence(sp: RosterSurveyPoint): string {
+  const cadenceLabel = sp.pulseCadence === "weekly" ? "Weekly" : sp.pulseCadence === "monthly" ? "Monthly" : "Manual";
+  if (!sp.lastSentAt) return `${cadenceLabel} — never sent`;
+  const days = Math.floor((Date.now() - new Date(sp.lastSentAt).getTime()) / (24 * 60 * 60 * 1000));
+  const ago = days === 0 ? "today" : days === 1 ? "1 day ago" : `${days} days ago`;
+  return `${cadenceLabel} — last sent ${ago}`;
 }
 
 export default function BusinessRosterClient() {
@@ -208,6 +218,7 @@ export default function BusinessRosterClient() {
             <thead>
               <tr>
                 <th>Survey</th>
+                <th>Cadence</th>
                 <th>Links issued</th>
                 <th>Responded</th>
                 <th>Participation</th>
@@ -218,6 +229,7 @@ export default function BusinessRosterClient() {
               {surveyPoints.map((sp) => (
                 <tr key={sp._id}>
                   <td>{sp.name}</td>
+                  <td className="subtitle">{formatCadence(sp)}</td>
                   <td>{sp.tokensIssued}</td>
                   <td>{sp.tokensUsed}</td>
                   <td>{sp.participationRate !== null ? `${sp.participationRate}%` : "—"}</td>

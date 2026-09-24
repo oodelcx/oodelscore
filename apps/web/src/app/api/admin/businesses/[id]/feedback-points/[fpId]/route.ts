@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { connectToDatabase, FeedbackPoint, Event, FORM_LAYOUTS, DEMOGRAPHIC_MODES, LIFECYCLE_STAGES, DISTRIBUTION_MODES } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  FeedbackPoint,
+  Event,
+  FORM_LAYOUTS,
+  DEMOGRAPHIC_MODES,
+  LIFECYCLE_STAGES,
+  DISTRIBUTION_MODES,
+  PULSE_CADENCES,
+} from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const DEMOGRAPHIC_MODE_SET: readonly string[] = DEMOGRAPHIC_MODES;
@@ -31,6 +40,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
     if (body?.distributionMode === null || (DISTRIBUTION_MODES as readonly string[]).includes(body?.distributionMode)) {
       feedbackPoint.distributionMode = body.distributionMode;
+    }
+    if (body?.pulseCadence === null || (PULSE_CADENCES as readonly string[]).includes(body?.pulseCadence)) {
+      feedbackPoint.pulseCadence = body.pulseCadence;
     }
   }
 
