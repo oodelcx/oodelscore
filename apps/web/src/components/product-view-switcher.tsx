@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Product = "customer_experience" | "colleague_experience";
 
@@ -11,9 +10,15 @@ type Product = "customer_experience" | "colleague_experience";
  * Compare, Regions, Reports) they're currently looking at. Persists via a
  * cookie (see /api/view-product + resolveViewProduct) so the choice holds
  * across pages and reloads.
+ *
+ * Forces a full page reload rather than router.refresh(): almost every page
+ * under /business and /group fetches its own data client-side in a "use
+ * client" component's useEffect (fetch-once-on-mount), not via the Server
+ * Component tree — router.refresh() only re-renders Server Components, so
+ * an already-mounted page's data never re-fetches and the switch silently
+ * does nothing. A reload remounts everything against the now-updated cookie.
  */
 export function ProductViewSwitcher({ current }: { current: Product }) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function switchTo(product: Product) {
@@ -24,8 +29,7 @@ export function ProductViewSwitcher({ current }: { current: Product }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ product }),
     }).catch(() => null);
-    router.refresh();
-    setPending(false);
+    window.location.reload();
   }
 
   return (
