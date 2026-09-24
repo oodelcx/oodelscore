@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { Response, type Sentiment } from "../models/Response";
+import type { Product } from "../models/products";
 
 export interface ThemeIntelligenceEntry {
   theme: string;
@@ -30,16 +31,23 @@ export async function computeThemeIntelligence(
   from: Date,
   to: Date,
   previousFrom: Date,
-  previousTo: Date
+  previousTo: Date,
+  product: Product = "customer_experience"
 ): Promise<ThemeIntelligenceEntry[]> {
   if (businessIds.length === 0) return [];
 
   const [current, previous] = await Promise.all([
-    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to }, "themes.0": { $exists: true } })
+    Response.find({
+      businessId: { $in: businessIds },
+      product,
+      submittedAt: { $gte: from, $lte: to },
+      "themes.0": { $exists: true },
+    })
       .select("themes sentiment answers submittedAt")
       .lean(),
     Response.find({
       businessId: { $in: businessIds },
+      product,
       submittedAt: { $gte: previousFrom, $lte: previousTo },
       "themes.0": { $exists: true },
     })

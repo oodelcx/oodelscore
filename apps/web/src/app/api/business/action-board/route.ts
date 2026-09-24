@@ -13,6 +13,7 @@ import {
   type Product,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/lib/caseStats";
 
 const PRODUCT_SET: readonly string[] = PRODUCTS;
@@ -27,8 +28,9 @@ export async function GET() {
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
 
-  const filter: Record<string, unknown> = { businessId: session.business._id };
+  const filter: Record<string, unknown> = { businessId: session.business._id, product };
   if (session.tier === "limited") filter.ownerId = session.user._id;
 
   const scope = session.business.parentOrgId
@@ -55,6 +57,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    product,
     items: itemsWithRatings,
     playbooks,
     tier: session.tier,
