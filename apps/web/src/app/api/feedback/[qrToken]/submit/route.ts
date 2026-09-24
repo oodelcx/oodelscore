@@ -6,6 +6,7 @@ import {
   QuestionTemplate,
   Response,
   ScanToken,
+  RosterSurveyToken,
   evaluateRealTimeAlertsForBusiness,
   analyzeThemeSentiment,
   classifyDevice,
@@ -174,6 +175,23 @@ async function handlePost(request: NextRequest, qrToken: string) {
       categoryId: question.categoryId,
     };
   });
+
+  // Roster-personalized link (Colleague Experience's participation-tracking
+  // distribution mode): if this submission came in via a personalized
+  // token, mark it used so the token can't be reused and the account's
+  // participation rate reflects a real count. Deliberately fails open — an
+  // invalid or already-used token never blocks a genuine response; it just
+  // means this particular submission won't be reflected in the
+  // participation count, which is far better than losing real feedback
+  // over a stale link. Nothing about the token is ever attached to the
+  // Response itself; see RosterSurveyToken's own comment for why.
+  const rosterToken = typeof body?.rosterToken === "string" ? body.rosterToken : "";
+  if (rosterToken) {
+    await RosterSurveyToken.updateOne(
+      { token: rosterToken, feedbackPointId: feedbackPoint._id, usedAt: null },
+      { $set: { usedAt: new Date() } }
+    ).catch((err) => console.error("[feedback] failed to consume roster survey token", err));
+  }
 
   const createdResponse = await Response.create({
     feedbackPointId: feedbackPoint._id,

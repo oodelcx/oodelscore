@@ -1,8 +1,38 @@
 import { randomBytes } from "crypto";
 import { Types } from "mongoose";
 import { FeedbackPoint } from "../models/FeedbackPoint";
-import { RosterEntry } from "../models/RosterEntry";
+import { RosterEntry, type IRosterEntry } from "../models/RosterEntry";
 import { RosterSurveyToken } from "../models/RosterSurveyToken";
+
+/**
+ * Returns the roster entry's existing unused token for this feedback point
+ * if one exists, otherwise mints and returns a new one. The single
+ * building block both the bulk pulse mint below and the lifecycle-trigger
+ * cron use — same idempotency guarantee (never double-issue a live token)
+ * whether minting for a whole roster at once or for one person on their
+ * lifecycle date.
+ */
+export async function ensureRosterSurveyToken(
+  feedbackPointId: Types.ObjectId,
+  rosterEntry: Pick<IRosterEntry, "businessId"> & { _id: Types.ObjectId }
+): Promise<string> {
+  const existing = await RosterSurveyToken.findOne({
+    feedbackPointId,
+    rosterEntryId: rosterEntry._id,
+    usedAt: null,
+  });
+  if (existing) return existing.token;
+
+  const token = randomBytes(24).toString("hex");
+  await RosterSurveyToken.create({
+    token,
+    feedbackPointId,
+    rosterEntryId: rosterEntry._id,
+    businessId: rosterEntry.businessId,
+    usedAt: null,
+  });
+  return token;
+}
 
 export interface MintRosterSurveyTokensResult {
   minted: number; // new tokens created this run
