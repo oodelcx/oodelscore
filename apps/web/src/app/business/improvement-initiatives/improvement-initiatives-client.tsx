@@ -7,6 +7,7 @@ interface InitiativeRow {
   _id: string;
   title: string;
   description: string;
+  product?: "customer_experience" | "colleague_experience";
   status: string;
   ownerId: string | null;
   baselineMetricDescription: string;
@@ -73,6 +74,8 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
 
   const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
   const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
+  const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   function loadFlags() {
     fetch("/api/business/recurring-issues")
@@ -113,6 +116,9 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
     fetch("/api/business/team")
       .then((res) => res.json())
       .then((d) => setTeam(d.team ?? []));
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.business?.enabledProducts?.includes("colleague_experience")));
   }, []);
 
   async function createInitiative() {
@@ -129,6 +135,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
         baselineMetricDescription,
         baselineValue: baselineValue.trim() ? Number(baselineValue) : null,
         targetValue: targetValue.trim() ? Number(targetValue) : null,
+        product,
       }),
     });
     const data = await res.json();
@@ -265,6 +272,15 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                 ))}
               </select>
             </div>
+            {ceEnabled && (
+              <div className="field">
+                <label>Product</label>
+                <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
+                  <option value="customer_experience">Customer Experience</option>
+                  <option value="colleague_experience">Colleague Experience</option>
+                </select>
+              </div>
+            )}
           </div>
           <div className="field">
             <label>What's the pattern?</label>
@@ -356,6 +372,11 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                   <div className="ab-card-head">
                     <div className="ab-title-block">
                       <div className="ab-badges">
+                        {ceEnabled && (
+                          <span className={`pill ${row.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                            {row.product === "colleague_experience" ? "Colleague" : "Customer"}
+                          </span>
+                        )}
                         <span
                           className={`pill ${row.status === "completed" ? "pill-green" : row.status === "in_progress" ? "pill-amber" : "pill-gray"}`}
                         >

@@ -13,6 +13,7 @@ interface CategoryRow {
   average: number;
 }
 interface ReportData {
+  product: "customer_experience" | "colleague_experience";
   businessName: string;
   period: { from: string; to: string };
   metrics: { responseCount: number; starAverage: number | null; npsScore: number | null };
@@ -89,7 +90,10 @@ export default function ReportsClient() {
       {data && (
         <>
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: "0 0 4px" }}>{data.businessName}</h2>
+            <h2 style={{ margin: "0 0 4px" }}>
+              {data.businessName}
+              {data.product === "colleague_experience" && <span className="pill pill-blue" style={{ marginLeft: 10 }}>Colleague Experience</span>}
+            </h2>
             <p className="subtitle" style={{ margin: 0 }}>
               {new Date(data.period.from).toLocaleDateString()} – {new Date(data.period.to).toLocaleDateString()}
             </p>
@@ -105,7 +109,7 @@ export default function ReportsClient() {
               <div className="metric-val">{data.metrics.starAverage !== null ? `${data.metrics.starAverage}/5` : "—"}</div>
             </div>
             <div className="card">
-              <div className="metric-label">NPS</div>
+              <div className="metric-label">{data.product === "colleague_experience" ? "eNPS" : "NPS"}</div>
               <div className="metric-val">{data.metrics.npsScore !== null ? data.metrics.npsScore : "—"}</div>
             </div>
           </div>
