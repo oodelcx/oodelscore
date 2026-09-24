@@ -75,6 +75,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
   const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
   const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
 
   function loadFlags() {
@@ -118,7 +119,14 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
       .then((d) => setTeam(d.team ?? []));
     fetch("/api/business/me")
       .then((r) => r.json())
-      .then((d) => setCeEnabled(!!d.business?.enabledProducts?.includes("colleague_experience")));
+      .then((d) => {
+        const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
+        const hasCx = products.includes("customer_experience");
+        const hasCe = products.includes("colleague_experience");
+        setCxEnabled(hasCx);
+        setCeEnabled(hasCe);
+        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+      });
   }, []);
 
   async function createInitiative() {
@@ -272,7 +280,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                 ))}
               </select>
             </div>
-            {ceEnabled && (
+            {cxEnabled && ceEnabled && (
               <div className="field">
                 <label>Product</label>
                 <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
@@ -372,7 +380,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                   <div className="ab-card-head">
                     <div className="ab-title-block">
                       <div className="ab-badges">
-                        {ceEnabled && (
+                        {cxEnabled && ceEnabled && (
                           <span className={`pill ${row.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
                             {row.product === "colleague_experience" ? "Colleague" : "Customer"}
                           </span>

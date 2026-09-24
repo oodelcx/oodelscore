@@ -1686,6 +1686,29 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     flagStatus: "active",
     measured: null,
   });
+  await addPlaybookWithRun({
+    parentOrgId: skyline.org._id,
+    businessId: null,
+    title: "Manager Support Check-in",
+    categoryId: ceCategoryByName.get("Management Support")!,
+    trigger: "2+ low Management Support ratings in a month at one store",
+    steps: [
+      "People Ops reviews the flagged pulse responses",
+      "Manager has a private 1:1 with the team to understand specifics",
+      "Agree concrete follow-ups and a re-check date",
+      "Re-check the store's Management Support score after 4 weeks",
+    ],
+    escalationContactId: skyline.opsLead._id,
+    run: {
+      ownerType: "parentOrg",
+      ownerId: skyline.org._id,
+      actionBoardItem: skylineCases[skylineCases.length - 1],
+      status: "active",
+      startedAt: daysAgo(6),
+      completedAt: null,
+      completedStepIndexes: [0],
+    },
+  });
 
   const horizonSTEM = horizon.branches.find((b) => b.business.name === "Horizon STEM Academy")!;
   const horizonArts = horizon.branches.find((b) => b.business.name === "Horizon Arts Academy")!;
@@ -1711,6 +1734,29 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     flagStatus: "converted",
     measured: { before: 3.1, after: 4.2 },
   });
+  await addPlaybookWithRun({
+    parentOrgId: horizon.org._id,
+    businessId: null,
+    title: "Facilities Escalation",
+    categoryId: facilitiesId,
+    trigger: "Repeated facilities complaints at a specialty campus within a term",
+    steps: [
+      "Campus operations manager inspects and photographs the reported area",
+      "Submit a maintenance/refresh request with priority level",
+      "Notify families if the fix affects a shared space",
+      "Re-check the campus's Facilities score after the next survey cycle",
+    ],
+    escalationContactId: horizon.opsLead._id,
+    run: {
+      ownerType: "parentOrg",
+      ownerId: horizon.org._id,
+      actionBoardItem: horizonCases[horizonCases.length - 1],
+      status: "completed",
+      startedAt: daysAgo(30),
+      completedAt: daysAgo(3),
+      completedStepIndexes: [0, 1, 2, 3],
+    },
+  });
 
   const auroraJfk = aurora.branches.find((b) => b.business.name === "Aurora Airlines – JFK Hub")!;
   const workLifeId = ceCategoryByName.get("Work-Life Balance")!;
@@ -1733,6 +1779,29 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     initiativeOwnerId: aurora.opsLead._id,
     flagStatus: "converted",
     measured: { before: 2.9, after: 4.1 },
+  });
+  await addPlaybookWithRun({
+    parentOrgId: aurora.org._id,
+    businessId: null,
+    title: "Work-Life Balance Recovery",
+    categoryId: workLifeId,
+    trigger: "Work-Life Balance ratings drop below target at a hub",
+    steps: [
+      "Hub operations manager reviews recent roster publication timing",
+      "Confirm minimum-rest buffers were honored for the flagged period",
+      "Publish next roster at least 14 days in advance",
+      "Re-check the hub's Work-Life Balance score after 4 weeks",
+    ],
+    escalationContactId: aurora.opsLead._id,
+    run: {
+      ownerType: "parentOrg",
+      ownerId: aurora.org._id,
+      actionBoardItem: auroraCases[auroraCases.length - 1],
+      status: "completed",
+      startedAt: daysAgo(30),
+      completedAt: daysAgo(2),
+      completedStepIndexes: [0, 1, 2, 3],
+    },
   });
 
   const stAugustineDowntown = stAugustine.branches.find((b) => b.business.name === "St. Augustine Downtown Medical Center")!;
@@ -1757,6 +1826,29 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     initiativeOwnerId: stAugustine.opsLead._id,
     flagStatus: "converted",
     measured: { before: 3.0, after: 4.3 },
+  });
+  await addPlaybookWithRun({
+    parentOrgId: stAugustine.org._id,
+    businessId: null,
+    title: "Wait Time Recovery",
+    categoryId: serviceSpeedId,
+    trigger: "Service Speed average dips below target at a facility",
+    steps: [
+      "Clinical operations manager reviews staffing for the flagged time slot",
+      "Confirm the real-time wait tracker is active and visible at check-in",
+      "Adjust scheduling or add float staff for peak hours",
+      "Re-check the facility's Service Speed score after 2 weeks",
+    ],
+    escalationContactId: stAugustine.opsLead._id,
+    run: {
+      ownerType: "parentOrg",
+      ownerId: stAugustine.org._id,
+      actionBoardItem: stAugustineCases[stAugustineCases.length - 1],
+      status: "completed",
+      startedAt: daysAgo(30),
+      completedAt: daysAgo(1),
+      completedStepIndexes: [0, 1, 2, 3],
+    },
   });
 
   const oliveProductQualityId = categoryByName.get("Product Quality")!;
@@ -1823,6 +1915,29 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     initiativeOwnerId: amaniOps._id,
     flagStatus: "converted",
     measured: { before: 3.6, after: 4.4 },
+  });
+  await addPlaybookWithRun({
+    parentOrgId: null,
+    businessId: amaniBusiness._id,
+    title: "Workshop Content Refresh",
+    categoryId: amaniProductQualityId,
+    trigger: "Repeated content-quality feedback across two runs of the same program",
+    steps: [
+      "Program coordinator reviews the flagged session's materials and agenda",
+      "Add or update practical exercises for the affected module",
+      "Brief the facilitator ahead of the next run",
+      "Re-check the program's Product Quality rating after the next session",
+    ],
+    escalationContactId: amaniOps._id,
+    run: {
+      ownerType: "business",
+      ownerId: amaniBusiness._id,
+      actionBoardItem: amaniCases[amaniCases.length - 1],
+      status: "completed",
+      startedAt: daysAgo(20),
+      completedAt: daysAgo(2),
+      completedStepIndexes: [0, 1, 2, 3],
+    },
   });
 
   // ---------------------------------------------------------------------

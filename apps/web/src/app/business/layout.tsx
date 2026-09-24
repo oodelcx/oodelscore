@@ -11,6 +11,7 @@ import {
   getBillingAccessStatus,
   hasFeature,
   hasProduct,
+  primaryProductFor,
   teamMemberCanAccess,
 } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
@@ -64,6 +65,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const isGated = billingStatus !== "active" && !isBillingRoute;
   const bothProductsEnabled = hasProduct(business, "customer_experience") && hasProduct(business, "colleague_experience");
   const viewProduct = bothProductsEnabled ? await resolveViewProduct(business) : null;
+  // See group/layout.tsx for the same reasoning: "CX Pulse" is one nav
+  // entry that points at whichever product's maturity page you're viewing,
+  // never two identically-labeled entries at once.
+  const cxPulseNavProduct = viewProduct ?? primaryProductFor(business);
 
   return (
     <div className="admin-app">
@@ -106,7 +111,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-understand"
                 label="Understand"
-                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports", "/business/ex-pulse"]}
+                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports"]}
               >
                 {hasProduct(business, "customer_experience") &&
                   hasFeature(business.enabledFeatures, "insights") &&
@@ -120,9 +125,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 {hasProduct(business, "customer_experience") &&
                   hasFeature(business.enabledFeatures, "reports") &&
                   teamMemberCanAccess(user, "reports") && <a href="/business/reports">Reports</a>}
-                {hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "exPulse") && (
-                  <a href="/business/ex-pulse">EX Pulse</a>
-                )}
               </NavSection>
 
               <NavSection
@@ -140,13 +142,20 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 )}
               </NavSection>
 
-              {hasProduct(business, "customer_experience") &&
-                hasFeature(business.enabledFeatures, "cxPulse") &&
-                teamMemberCanAccess(user, "cxPulse") && (
-                  <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
-                    <a href="/business/cx-pulse">CX Pulse</a>
-                  </NavSection>
-                )}
+              {cxPulseNavProduct === "customer_experience"
+                ? hasProduct(business, "customer_experience") &&
+                  hasFeature(business.enabledFeatures, "cxPulse") &&
+                  teamMemberCanAccess(user, "cxPulse") && (
+                    <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
+                      <a href="/business/cx-pulse">CX Pulse</a>
+                    </NavSection>
+                  )
+                : hasProduct(business, "colleague_experience") &&
+                  teamMemberCanAccess(user, "exPulse") && (
+                    <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/ex-pulse"]}>
+                      <a href="/business/ex-pulse">CX Pulse</a>
+                    </NavSection>
+                  )}
 
               <NavSection
                 storageKey="business-admin"

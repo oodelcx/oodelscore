@@ -31,7 +31,7 @@ function metricLabels(product: "customer_experience" | "colleague_experience"): 
     starAverage: "Overall score (stars)",
     nps: isCe ? "eNPS" : "NPS",
     categoryAverage: "Category score",
-    cxPulseLevel: isCe ? "EX Pulse level" : "CX Pulse level",
+    cxPulseLevel: isCe ? "CX Pulse level" : "CX Pulse level",
     overdueActionsCount: "Overdue action items",
   };
 }
@@ -168,7 +168,7 @@ export function CxGoalsCard({
     <div className="card">
       <div className="page-head" style={{ marginBottom: 10 }}>
         <div>
-          <h3 style={{ margin: 0 }}>{title ?? (product === "colleague_experience" ? "EX Goals" : "CX Goals")}</h3>
+          <h3 style={{ margin: 0 }}>{title ?? (product === "colleague_experience" ? "CX Goals" : "CX Goals")}</h3>
           <p className="card-sub" style={{ margin: 0 }}>
             Targets for management to work toward, tracked automatically.
           </p>

@@ -459,6 +459,122 @@ h1 {
   color: var(--text-2);
   margin: -10px 0 14px;
 }
+
+/* Top themes row — ThemeCard, apps/web/src/components/theme-card.tsx */
+.theme-card-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.theme-card {
+  display: flex;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.theme-card:hover {
+  border-color: #d5d4cf;
+  box-shadow: 0 2px 10px rgba(23, 23, 26, 0.05);
+}
+.theme-card-rank {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+.theme-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.theme-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.theme-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.theme-trend {
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.theme-trend-up {
+  color: var(--green);
+}
+.theme-trend-down {
+  color: var(--red);
+}
+.theme-trend-flat {
+  color: var(--text-3);
+}
+.theme-card-count {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 2px 0 12px;
+}
+.theme-sentiment-bar {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #efefec;
+  margin-bottom: 9px;
+}
+.theme-seg {
+  height: 100%;
+}
+.theme-seg-pos {
+  background: var(--green);
+}
+.theme-seg-neu {
+  background: var(--amber);
+}
+.theme-seg-neg {
+  background: var(--red);
+}
+.theme-sentiment-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.theme-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.theme-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  font-style: normal;
+}
+.theme-dot-pos {
+  background: var(--green);
+}
+.theme-dot-neu {
+  background: var(--amber);
+}
+.theme-dot-neg {
+  background: var(--red);
+}
 .callout {
   background: var(--accent-bg);
   border: 1px solid #c7e8dc;

@@ -102,6 +102,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
   const [historyById, setHistoryById] = useState<Record<string, RunHistoryRow[]>>({});
   const [historyLoading, setHistoryLoading] = useState(false);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
 
   function load() {
@@ -123,7 +124,14 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
     load();
     fetch("/api/business/me")
       .then((r) => r.json())
-      .then((d) => setCeEnabled(!!d.business?.enabledProducts?.includes("colleague_experience")));
+      .then((d) => {
+        const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
+        const hasCx = products.includes("customer_experience");
+        const hasCe = products.includes("colleague_experience");
+        setCxEnabled(hasCx);
+        setCeEnabled(hasCe);
+        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+      });
   }, []);
 
   function categoryName(id: string | null): string {
@@ -286,7 +294,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                 ))}
             </select>
           </div>
-          {ceEnabled && (
+          {cxEnabled && ceEnabled && (
             <div className="field">
               <label>Product</label>
               <select value={product} onChange={(e) => setProduct(e.target.value as typeof product)}>
@@ -454,7 +462,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                     </div>
                     <div className="ab-title-block">
                       <div className="ab-badges">
-                        {ceEnabled && (
+                        {cxEnabled && ceEnabled && (
                           <span className={`pill ${p.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
                             {p.product === "colleague_experience" ? "Colleague" : "Customer"}
                           </span>
