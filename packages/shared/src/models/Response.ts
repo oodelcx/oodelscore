@@ -1,5 +1,6 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { QUESTION_TYPES, type QuestionType } from "./QuestionTemplate";
+import { PRODUCTS, type Product } from "./products";
 
 export interface IAnswer {
   questionId: Types.ObjectId;
@@ -30,6 +31,12 @@ export type Sentiment = (typeof SENTIMENTS)[number];
 export interface IResponse {
   feedbackPointId: Types.ObjectId;
   businessId: Types.ObjectId;
+  // Denormalized from FeedbackPoint.product at submit time, same reason as
+  // eventId below — lets every future Colleague Experience aggregation
+  // filter by product with no join. Defaults to customer_experience so
+  // every response recorded before Colleague Experience existed is
+  // unaffected.
+  product: Product;
   eventId: Types.ObjectId | null; // denormalized from FeedbackPoint.eventId at submit time, so Analytics can group by event with no join
   answers: IAnswer[];
   respondentName: string | null; // null if not collected
@@ -72,6 +79,7 @@ const ResponseSchema = new Schema<IResponse>(
   {
     feedbackPointId: { type: Schema.Types.ObjectId, ref: "FeedbackPoint", required: true },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
     answers: { type: [AnswerSchema], default: [] },
     respondentName: { type: String, default: null },
