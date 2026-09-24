@@ -6,6 +6,16 @@ import { LIFECYCLE_STAGES, type LifecycleStage } from "./RosterEntry";
 export const FORM_LAYOUTS = ["single_page", "one_per_screen"] as const;
 export type FormLayout = (typeof FORM_LAYOUTS)[number];
 
+// Colleague Experience's three distribution modes (see the CE roadmap).
+// "qr_open" is the default/CX-equivalent behavior: one shared QR/link, no
+// per-person tracking. "roster_personalized" ties this feedback point to
+// the business's roster — mintRosterSurveyTokens()/sendRosterSurveyLinks()
+// issue one token per active roster entry so participation can be counted.
+// Meaningless for customer_experience points, which always behave as
+// qr_open regardless of this field.
+export const DISTRIBUTION_MODES = ["qr_open", "roster_personalized"] as const;
+export type DistributionMode = (typeof DISTRIBUTION_MODES)[number];
+
 export interface IDemographicOverride {
   name: DemographicMode;
   email: DemographicMode;
@@ -30,6 +40,11 @@ export interface IFeedbackPoint {
   // <stage>) to know which survey to send someone — a business that hasn't
   // set one up for a given stage is simply skipped, not an error.
   lifecycleTrigger: LifecycleStage | null;
+  // Colleague Experience only (see DISTRIBUTION_MODES above). null behaves
+  // as "qr_open" — kept nullable rather than defaulted in the schema so a
+  // pre-existing point (all customer_experience) is unambiguously "never
+  // set", not "explicitly qr_open".
+  distributionMode: DistributionMode | null;
   name: string;
   description: string;
   qrToken: string; // random, unguessable — generated server-side on insert
@@ -65,6 +80,7 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
     lifecycleTrigger: { type: String, enum: LIFECYCLE_STAGES, default: null },
+    distributionMode: { type: String, enum: DISTRIBUTION_MODES, default: null },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     qrToken: { type: String, required: true, unique: true },

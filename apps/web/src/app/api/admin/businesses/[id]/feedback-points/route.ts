@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { connectToDatabase, FeedbackPoint, Business, Event, FORM_LAYOUTS, DEMOGRAPHIC_MODES } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  FeedbackPoint,
+  Business,
+  Event,
+  FORM_LAYOUTS,
+  DEMOGRAPHIC_MODES,
+  LIFECYCLE_STAGES,
+  DISTRIBUTION_MODES,
+  hasProduct,
+} from "@oodelscore/shared";
 
 const DEMOGRAPHIC_MODE_SET: readonly string[] = DEMOGRAPHIC_MODES;
 const DEMOGRAPHIC_FIELDS = ["name", "email", "phone", "ageGroup", "gender"] as const;
@@ -56,6 +66,22 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const formLayoutOverride = (FORM_LAYOUTS as readonly string[]).includes(body?.formLayoutOverride) ? body.formLayoutOverride : null;
 
+  // Colleague Experience fields — only meaningful (and only settable) when
+  // this business actually has the product enabled, and only for a point
+  // explicitly created as colleague_experience; a customer_experience point
+  // always ignores these regardless of what's in the request body.
+  const product = body?.product === "colleague_experience" && hasProduct(business, "colleague_experience")
+    ? "colleague_experience"
+    : "customer_experience";
+  const lifecycleTrigger =
+    product === "colleague_experience" && (LIFECYCLE_STAGES as readonly string[]).includes(body?.lifecycleTrigger)
+      ? body.lifecycleTrigger
+      : null;
+  const distributionMode =
+    product === "colleague_experience" && (DISTRIBUTION_MODES as readonly string[]).includes(body?.distributionMode)
+      ? body.distributionMode
+      : null;
+
   let demographicOverride = null;
   if (body?.demographicOverride && typeof body.demographicOverride === "object") {
     const base = { name: "off", email: "optional", phone: "off", ageGroup: "optional", gender: "optional" };
@@ -72,6 +98,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   const feedbackPoint = await FeedbackPoint.create({
     businessId: id,
     eventId,
+    product,
+    lifecycleTrigger,
+    distributionMode,
     name,
     description: typeof body?.description === "string" ? body.description : "",
     qrToken: randomBytes(16).toString("hex"),

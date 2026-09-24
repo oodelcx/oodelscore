@@ -10,9 +10,22 @@ interface RosterStats {
   dueExit: number;
 }
 
+interface RosterSurveyPoint {
+  _id: string;
+  name: string;
+  active: boolean;
+  tokensIssued: number;
+  tokensUsed: number;
+  participationRate: number | null;
+}
+
 export default function BusinessRosterClient() {
   const [stats, setStats] = useState<RosterStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [surveyPoints, setSurveyPoints] = useState<RosterSurveyPoint[]>([]);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sendStatus, setSendStatus] = useState<string | null>(null);
 
   const [singleEmail, setSingleEmail] = useState("");
   const [singleStartDate, setSingleStartDate] = useState("");
@@ -34,15 +47,35 @@ export default function BusinessRosterClient() {
 
   function load() {
     setLoading(true);
-    fetch("/api/business/roster")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.status === "ok") setStats(data.stats);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch("/api/business/roster").then((r) => r.json()),
+      fetch("/api/business/roster/send-links").then((r) => r.json()),
+    ]).then(([rosterData, linksData]) => {
+      if (rosterData.status === "ok") setStats(rosterData.stats);
+      if (linksData.status === "ok") setSurveyPoints(linksData.feedbackPoints ?? []);
+      setLoading(false);
+    });
   }
 
   useEffect(load, []);
+
+  async function sendLinks(feedbackPointId: string) {
+    setSendingId(feedbackPointId);
+    setSendStatus(null);
+    const res = await fetch("/api/business/roster/send-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ feedbackPointId }),
+    });
+    const data = await res.json();
+    setSendingId(null);
+    if (data.status === "ok") {
+      setSendStatus(`Sent to ${data.sent}${data.failed ? ` (${data.failed} failed)` : ""}.`);
+      load();
+    } else {
+      setSendStatus(data.message ?? "Something went wrong.");
+    }
+  }
 
   async function addSingle(e: React.FormEvent) {
     e.preventDefault();
@@ -163,6 +196,43 @@ export default function BusinessRosterClient() {
         <strong>Note:</strong> a due count only clears once a lifecycle-trigger survey is configured for that stage
         (Admin sets this per Feedback Point) and the daily sweep has run.
       </div>
+
+      {surveyPoints.length > 0 && (
+        <div className="callout" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Roster-personalized surveys</h3>
+          <p className="subtitle" style={{ marginTop: 0 }}>
+            One link per active roster entry. Sending resends to anyone who hasn&apos;t responded yet — it never
+            re-sends to someone who already did.
+          </p>
+          <table className="clean">
+            <thead>
+              <tr>
+                <th>Survey</th>
+                <th>Links issued</th>
+                <th>Responded</th>
+                <th>Participation</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {surveyPoints.map((sp) => (
+                <tr key={sp._id}>
+                  <td>{sp.name}</td>
+                  <td>{sp.tokensIssued}</td>
+                  <td>{sp.tokensUsed}</td>
+                  <td>{sp.participationRate !== null ? `${sp.participationRate}%` : "—"}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-sm" disabled={sendingId === sp._id} onClick={() => sendLinks(sp._id)}>
+                      {sendingId === sp._id ? "Sending…" : "Send / resend links"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {sendStatus && <p className="subtitle" style={{ marginTop: 8 }}>{sendStatus}</p>}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <form className="callout" onSubmit={addSingle}>

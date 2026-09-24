@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { FeedbackPoint } from "../models/FeedbackPoint";
 import { RosterEntry, type IRosterEntry } from "../models/RosterEntry";
 import { RosterSurveyToken } from "../models/RosterSurveyToken";
+import { sendTemplatedEmail } from "../email/resend";
 
 /**
  * Returns the roster entry's existing unused token for this feedback point
@@ -82,4 +83,49 @@ export async function mintRosterSurveyTokens(feedbackPointId: Types.ObjectId | s
   }
 
   return { minted: toMint.length, alreadyIssued: alreadyIssuedIds.size, totalActive: activeEntries.length };
+}
+
+export interface SendRosterSurveyLinksResult {
+  sent: number;
+  failed: number;
+  totalLive: number; // live (unused) tokens this run considered, minted or reused
+}
+
+/**
+ * The manual "send now" action for a roster_personalized feedback point
+ * (Business portal, Colleague Roster): ensures every active roster entry
+ * has a live token (reusing mintRosterSurveyTokens' idempotency), then
+ * emails everyone with a currently-live token their personalized link —
+ * including anyone whose token was minted on an earlier call and never
+ * used, so this doubles as a "resend" action. Never touches an already-used
+ * token; nothing here can re-send to someone who already responded.
+ */
+export async function sendRosterSurveyLinks(feedbackPointId: Types.ObjectId | string): Promise<SendRosterSurveyLinksResult> {
+  const feedbackPoint = await FeedbackPoint.findById(feedbackPointId);
+  if (!feedbackPoint) throw new Error("Feedback point not found");
+
+  await mintRosterSurveyTokens(feedbackPointId);
+
+  const liveTokens = await RosterSurveyToken.find({ feedbackPointId: feedbackPoint._id, usedAt: null });
+  if (liveTokens.length === 0) return { sent: 0, failed: 0, totalLive: 0 };
+
+  const rosterEntries = await RosterEntry.find({ _id: { $in: liveTokens.map((t) => t.rosterEntryId) } }).select("email");
+  const emailByEntryId = new Map(rosterEntries.map((e) => [e._id.toString(), e.email]));
+
+  const appUrl = process.env.APP_URL ?? "";
+  const result: SendRosterSurveyLinksResult = { sent: 0, failed: 0, totalLive: liveTokens.length };
+  for (const token of liveTokens) {
+    const email = emailByEntryId.get(token.rosterEntryId.toString());
+    if (!email) continue;
+    try {
+      await sendTemplatedEmail("colleague_pulse_survey", email, {
+        survey_link: `${appUrl}/feedback/${feedbackPoint.qrToken}?rt=${token.token}`,
+      });
+      result.sent++;
+    } catch (err) {
+      console.error("[ce] failed to send pulse survey link", err);
+      result.failed++;
+    }
+  }
+  return result;
 }
