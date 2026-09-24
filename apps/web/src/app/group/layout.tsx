@@ -76,11 +76,9 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 <a href="/group/branches">Branches</a>
                 <a href="/group/compare">Compare branches</a>
               </NavSection>
-              {hasProduct(org, "customer_experience") && (
-                <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback"]}>
-                  {teamMemberCanAccess(user, "rawFeedback") && <a href="/group/raw-feedback">Raw feedback</a>}
-                </NavSection>
-              )}
+              <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback"]}>
+                {teamMemberCanAccess(user, "rawFeedback") && <a href="/group/raw-feedback">Raw feedback</a>}
+              </NavSection>
 
               <NavSection
                 storageKey="group-understand"

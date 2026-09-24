@@ -89,6 +89,7 @@ interface HoldingBackDimension {
   value: number;
 }
 interface OverviewData {
+  product: "customer_experience" | "colleague_experience";
   branchCount: number;
   networkAverage: number | null;
   networkNps: number | null;
@@ -157,6 +158,12 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
 
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load overview.</p>;
+
+  const isCe = data.product === "colleague_experience";
+  const npsLabel = isCe ? "eNPS" : "NPS";
+  const pulseLabel = isCe ? "EX Pulse" : "CX Pulse";
+  const averageLabel = isCe ? "Network average rating" : "Network average";
+  const pulseHref = isCe ? "/group/ex-pulse" : "/group/maturity";
 
   return (
     <div>
@@ -271,21 +278,21 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         </div>
         <div className="card">
           <div className="metric-label">
-            Network average
+            {averageLabel}
             <InfoTip text={tooltips["network-average"]} />
           </div>
           <div className="metric-val">{data.networkAverage !== null ? `${data.networkAverage}/5` : "—"}</div>
         </div>
         <div className="card">
           <div className="metric-label">
-            Network NPS
+            Network {npsLabel}
             <InfoTip text={tooltips["network-nps"]} />
           </div>
           <div className="metric-val">{data.networkNps !== null ? formatSigned(data.networkNps) : "—"}</div>
         </div>
         <div className="card">
           <div className="metric-label">
-            CX Pulse
+            {pulseLabel}
             <InfoTip text={tooltips["cx-pulse-level"]} />
           </div>
           <div className="metric-val" style={{ fontSize: 18 }}>
@@ -293,7 +300,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
           </div>
           <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} />
           <div className="metric-note">
-            <Link href="/group/maturity" style={{ color: "var(--accent)" }}>
+            <Link href={pulseHref} style={{ color: "var(--accent)" }}>
               See what&apos;s behind this →
             </Link>
           </div>

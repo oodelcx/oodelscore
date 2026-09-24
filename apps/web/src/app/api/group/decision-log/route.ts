@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, DecisionLogEntry, Business , hasFeature } from "@oodelscore/shared";
+import { connectToDatabase, DecisionLogEntry, Business, hasFeature, PRODUCTS, type Product } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 export async function GET() {
   const session = await requireParentOrgOwner({ requirePage: "decisionLog" });
@@ -36,8 +38,11 @@ export async function POST(request: Request) {
     }
   }
 
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
+
   const entry = await DecisionLogEntry.create({
     parentOrgId: session.org._id,
+    product,
     title,
     trigger: typeof body?.trigger === "string" ? body.trigger : "",
     linkedActionIds: Array.isArray(body?.linkedActionIds) ? body.linkedActionIds : [],

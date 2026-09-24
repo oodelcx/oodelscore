@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const INITIATIVE_STATUSES = ["planned", "in_progress", "completed"] as const;
 export type InitiativeStatus = (typeof INITIATIVE_STATUSES)[number];
@@ -17,6 +18,9 @@ export type InitiativeStatus = (typeof INITIATIVE_STATUSES)[number];
 export interface IImprovementInitiative {
   parentOrgId: Types.ObjectId | null; // null when owned by a standalone business
   businessId: Types.ObjectId | null; // set only for a standalone business's own initiative
+  // Which product this initiative belongs to — defaults to customer_experience
+  // so pre-CE records keep their existing meaning.
+  product: Product;
   title: string;
   description: string;
   ownerId: Types.ObjectId | null;
@@ -36,6 +40,7 @@ const ImprovementInitiativeSchema = new Schema<IImprovementInitiative>(
   {
     parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", default: null },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", default: null },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     title: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     ownerId: { type: Schema.Types.ObjectId, ref: "User", default: null },

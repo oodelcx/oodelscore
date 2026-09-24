@@ -35,6 +35,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
   const initiative = await ImprovementInitiative.create({
     businessId: session.business._id,
+    product: category?.product ?? "customer_experience",
     title: `Reduce ${categoryName} — ${session.business.name}`,
     description: `Auto-suggested from a recurring pattern: ${flag.count} "${categoryName}" cases in the last ${flag.windowDays} days.`,
     affectedBusinessIds: [session.business._id],

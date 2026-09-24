@@ -30,6 +30,7 @@ interface ResponseStats {
 
 type FilterId = "all" | "negative" | "comment" | string;
 type SortId = "newest" | "lowest";
+type ProductId = "customer_experience" | "colleague_experience";
 
 const LIMIT = 25;
 
@@ -63,10 +64,12 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<ResponseStats | null>(null);
+  const [product, setProduct] = useState<ProductId>("customer_experience");
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   function load() {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), filter, sort });
+    const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), filter, sort, product });
     fetch(`/api/business/responses?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
@@ -82,7 +85,19 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filter, sort]);
+  }, [page, filter, sort, product]);
+
+  useEffect(() => {
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.business?.enabledProducts?.includes("colleague_experience")));
+  }, []);
+
+  function changeProduct(p: ProductId) {
+    setProduct(p);
+    setPage(1);
+    setFilter("all");
+  }
 
   function changeFilter(f: FilterId) {
     setFilter(f);
@@ -119,6 +134,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
         description: comment(r) ?? "",
         priority: (starValue(r) ?? 5) <= 2 ? "high" : "medium",
         sourceResponseIds: [r._id],
+        product,
       }),
     });
     setActionSubmitting(false);
@@ -152,6 +168,17 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
           <div className="card">
             <div className="metric-label">Flagged</div>
             <div className="metric-val">{stats.flagged}</div>
+          </div>
+        </div>
+      )}
+
+      {ceEnabled && (
+        <div className="filters" style={{ marginBottom: 8 }}>
+          <div className={`chip ${product === "customer_experience" ? "active" : ""}`} onClick={() => changeProduct("customer_experience")}>
+            Customer Experience
+          </div>
+          <div className={`chip ${product === "colleague_experience" ? "active" : ""}`} onClick={() => changeProduct("colleague_experience")}>
+            Colleague Experience
           </div>
         </div>
       )}
