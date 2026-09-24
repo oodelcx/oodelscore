@@ -23,3 +23,25 @@ export function getEnabledProducts(entity: { enabledProducts?: Product[] | null 
 export function hasProduct(entity: { enabledProducts?: Product[] | null }, product: Product): boolean {
   return getEnabledProducts(entity).includes(product);
 }
+
+/**
+ * The per-person analogue of getEnabledProducts() above, for a team member's
+ * own `products` field. Same reasoning, same default: null/empty always
+ * means Customer Experience only, never "whatever the business has."
+ */
+export function getTeamMemberProducts(teamMember: { products?: Product[] | null }): Product[] {
+  return teamMember.products && teamMember.products.length > 0 ? teamMember.products : DEFAULT_ENABLED_PRODUCTS;
+}
+
+/**
+ * A person can actually use a product only if both gates say yes: the
+ * business/org bought it, AND this specific person was granted it. Either
+ * gate alone is meaningless — see the CE Phase 3 admin screen this backs.
+ */
+export function personHasProduct(
+  business: { enabledProducts?: Product[] | null },
+  teamMember: { products?: Product[] | null },
+  product: Product
+): boolean {
+  return hasProduct(business, product) && getTeamMemberProducts(teamMember).includes(product);
+}

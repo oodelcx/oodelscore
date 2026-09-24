@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const ACCOUNT_TYPES = ["admin_staff", "parent_org", "business", "team_member"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
@@ -16,6 +17,14 @@ export interface IUser {
   parentId: Types.ObjectId | null; // -> parentOrganizations._id or businesses._id, null for admin_staff
   roleId: Types.ObjectId | null; // -> roles._id (admin_staff only)
   teamRole: string; // team_member only — free text (e.g. "Shift Lead"), cosmetic, no permission effect
+  // team_member only — which product(s) this person can see, independent of
+  // which product(s) the business/org itself has bought (that's the outer
+  // gate; this is the inner one — see getEnabledProducts()). null/empty
+  // means customer_experience only, the same conservative default used
+  // everywhere else in this build — a pre-existing team member never
+  // silently gains Colleague Experience access just because their account
+  // later turns it on; someone has to explicitly grant it.
+  products: Product[] | null;
   tier: TeamMemberTier | null; // team_member only
   // "full" tier only — page keys (see features/teamPermissions.ts) this
   // person is explicitly denied, on top of the tier's baseline access.
@@ -61,6 +70,7 @@ const UserSchema = new Schema<IUser>(
     parentId: { type: Schema.Types.ObjectId, default: null },
     roleId: { type: Schema.Types.ObjectId, ref: "Role", default: null },
     teamRole: { type: String, default: "" },
+    products: { type: [String], enum: PRODUCTS, default: null },
     tier: { type: String, enum: TEAM_MEMBER_TIERS, default: null },
     restrictedPages: { type: [String], default: [] },
     teamOfType: { type: String, enum: ["business", "parentOrg"], default: null },

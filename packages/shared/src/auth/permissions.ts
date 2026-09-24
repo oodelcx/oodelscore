@@ -94,6 +94,9 @@ export function assertStaffCanEditBusinessAdminFields(role: IRole, body: Record<
   if ("paymentGateEnabled" in body && !(role.isSystemRole && role.name === "Admin")) {
     throw new ForbiddenFieldWriteError(["paymentGateEnabled"]);
   }
+  if ("enabledProducts" in body && !(role.isSystemRole && role.name === "Admin")) {
+    throw new ForbiddenFieldWriteError(["enabledProducts"]);
+  }
   const questionTemplateFields = (["demographicConfig", "questionTemplateId"] as const).filter((f) => f in body);
   if (questionTemplateFields.length > 0 && !hasStaffPermission(role, "questionTemplates", "edit")) {
     throw new ForbiddenFieldWriteError(questionTemplateFields);
