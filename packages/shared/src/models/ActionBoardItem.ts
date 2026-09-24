@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const ACTION_PRIORITIES = ["low", "medium", "high", "critical"] as const;
 export type ActionPriority = (typeof ACTION_PRIORITIES)[number];
@@ -48,6 +49,9 @@ export interface IActionBoardItem {
   // AI-assisted triage fires on any business's Alert Rule, including one with
   // no parent org, so the Act layer can no longer require a group).
   parentOrgId: Types.ObjectId | null;
+  // Which product this case belongs to — defaults to customer_experience so
+  // every case that predates Colleague Experience is unaffected.
+  product: Product;
   title: string;
   description: string;
   businessId: Types.ObjectId;
@@ -110,6 +114,7 @@ export interface IActionBoardItem {
 const ActionBoardItemSchema = new Schema<IActionBoardItem>(
   {
     parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", default: null },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     title: { type: String, required: true },
     description: { type: String, default: "" },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },

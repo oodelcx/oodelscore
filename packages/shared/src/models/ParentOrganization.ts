@@ -12,6 +12,7 @@ import {
   type IEscalationLevel,
   DEFAULT_ESCALATION_LEVELS,
 } from "./common";
+import { PRODUCTS, type Product } from "./products";
 
 export const BILLING_MODES = ["group_pays", "branch_pays"] as const;
 export type BillingMode = (typeof BILLING_MODES)[number];
@@ -52,6 +53,10 @@ export interface IParentOrganization {
   // undefined/null means "all on" so existing orgs are unaffected until
   // Admin explicitly edits one.
   enabledFeatures: string[] | null;
+  // ADMIN-EDITABLE ONLY. Which product line(s) this org has bought —
+  // see Business.enabledProducts for the full explanation; same meaning
+  // and same null-means-Customer-Experience-only default here.
+  enabledProducts: Product[] | null;
   // ADMIN-EDITABLE ONLY. Same per-account override as Business.paymentGateEnabled
   // — null follows the platform default, true/false forces the gate for this org.
   paymentGateEnabled: boolean | null;
@@ -78,6 +83,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     commandCenterEnabled: { type: Boolean, default: true },
     enabledFeatures: { type: [String], default: null },
+    enabledProducts: { type: [String], enum: PRODUCTS, default: null },
     paymentGateEnabled: { type: Boolean, default: null },
   },
   { timestamps: true }
