@@ -12,6 +12,7 @@ interface ClientTile {
   businessId: string;
   name: string;
   kind: string;
+  product: "customer_experience" | "colleague_experience";
   starAverage: number | null;
   npsScore: number | null;
   responseCount: number;
@@ -61,6 +62,10 @@ const LEVEL_LABELS: Record<string, string> = {
   "4": "Improving",
   "5": "Embedded",
 };
+
+function npsLabelFor(product: ClientTile["product"]): string {
+  return product === "colleague_experience" ? "eNPS" : "NPS";
+}
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -165,7 +170,7 @@ export default function AdminCommandCenterClient() {
               <span className="cc-ticker-item" key={`${t.clientId}-${i}`}>
                 <b className={`cc-band-${t.band ?? "amber"}`}>{t.name}</b>
                 <span>★ {t.starAverage?.toFixed(1) ?? "—"}</span>
-                <span>NPS {t.npsScore ?? "—"}</span>
+                <span>{npsLabelFor(t.product)} {t.npsScore ?? "—"}</span>
                 {t.starDelta !== null && (
                   <span className={t.starDelta >= 0 ? "cc-band-green" : "cc-band-red"}>
                     {t.starDelta >= 0 ? "▲" : "▼"} {Math.abs(t.starDelta).toFixed(2)}
@@ -255,7 +260,7 @@ export default function AdminCommandCenterClient() {
                           <span className={`cc-bm cc-band-${t.band ?? "amber"}`}>{t.starAverage?.toFixed(1) ?? "—"}</span>
                         </div>
                         <div>
-                          <span className="cc-bm-label">NPS</span>
+                          <span className="cc-bm-label">{npsLabelFor(t.product)}</span>
                           <span className={`cc-bm cc-band-${t.band ?? "amber"}`}>{t.npsScore ?? "—"}</span>
                         </div>
                       </div>

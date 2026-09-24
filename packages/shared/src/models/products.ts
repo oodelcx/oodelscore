@@ -25,6 +25,21 @@ export function hasProduct(entity: { enabledProducts?: Product[] | null }, produ
 }
 
 /**
+ * Which product a page that can only show one metric set at a time (e.g.
+ * Command Center's client tiles, built long before Colleague Experience
+ * existed and never re-scoped) should compute against. Customer Experience
+ * wins when both are enabled — same "CX is the default until a page
+ * explicitly supports both" rule the rest of this migration follows — but
+ * an account with Colleague Experience only must never fall through to
+ * Customer Experience just because that's the hardcoded default everywhere
+ * else; it would silently show blank/stale numbers for a product the
+ * account doesn't even have.
+ */
+export function primaryProductFor(entity: { enabledProducts?: Product[] | null }): Product {
+  return hasProduct(entity, "customer_experience") ? "customer_experience" : "colleague_experience";
+}
+
+/**
  * The per-person analogue of getEnabledProducts() above, for a team member's
  * own `products` field. Same reasoning, same default: null/empty always
  * means Customer Experience only, never "whatever the business has."

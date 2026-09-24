@@ -17,6 +17,7 @@ import {
   getCategoriesInUseForParentOrg,
   ragBandForStar,
   ragBandForNps,
+  primaryProductFor,
   type IRagThresholds,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
@@ -49,14 +50,21 @@ export async function GET() {
   const prev7End = from7;
 
   const thresholds: IRagThresholds = org.ragThresholds;
+  // Command Center predates Colleague Experience and only ever shows one
+  // product's numbers — Customer Experience when enabled (even alongside
+  // Colleague Experience), otherwise Colleague Experience. Without this, an
+  // org that turned Customer Experience off kept computing (and showing)
+  // its empty Customer Experience metrics forever, never falling back to
+  // the Colleague Experience data it actually has.
+  const product = primaryProductFor(org);
 
   const [businesses, summaries30d, summariesLast7d, summariesPrev7d, categoryIds, orgScore, subscription] = await Promise.all([
     Business.find({ parentOrgId: org._id }).select("_id name region"),
-    computeNetworkSummaries(org._id, from30, now),
-    computeNetworkSummaries(org._id, from7, now),
-    computeNetworkSummaries(org._id, prev7Start, prev7End),
+    computeNetworkSummaries(org._id, from30, now, product),
+    computeNetworkSummaries(org._id, from7, now, product),
+    computeNetworkSummaries(org._id, prev7Start, prev7End, product),
     getCategoriesInUseForParentOrg(org._id),
-    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: org._id, product: "customer_experience" }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: org._id, product }).sort({ period: -1 }),
     BillingSubscription.findOne({ ownerType: "parentOrg", ownerId: org._id }),
   ]);
 
@@ -73,7 +81,7 @@ export async function GET() {
         ActionBoardItem.countDocuments({ businessId: id, status: { $ne: "resolved" }, dueDate: { $lt: now } })
       )
     ),
-    Promise.all(businessIds.map((id) => computeBusinessCategoryBreakdown(id, from30, now))),
+    Promise.all(businessIds.map((id) => computeBusinessCategoryBreakdown(id, from30, now, product))),
   ]);
 
   const branchTiles = summaries30d.map((s, i) => {
@@ -193,7 +201,7 @@ export async function GET() {
     const dayStart = new Date(now.getTime() - d * DAY_MS);
     const dayEnd = new Date(dayStart.getTime() + DAY_MS);
     const dayCounts = await Promise.all(
-      businessIds.map((id) => FeedbackResponse.countDocuments({ businessId: id, submittedAt: { $gte: dayStart, $lt: dayEnd } }))
+      businessIds.map((id) => FeedbackResponse.countDocuments({ businessId: id, product, submittedAt: { $gte: dayStart, $lt: dayEnd } }))
     );
     businesses.forEach((b, i) => {
       sparkByBusiness.get(b._id.toString())?.days.push(dayCounts[i]);
@@ -207,6 +215,7 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     orgName: org.name,
+    product,
     ragThresholds: thresholds,
     branchTiles,
     categoryMatrix,
