@@ -8,6 +8,12 @@ export interface ICategory {
   // Uniqueness is scoped per product (see compound index below), not global,
   // so "Communication" can exist once for each product without colliding.
   product: Product;
+  // Colleague Experience only. A sensitive category (HR complaints,
+  // leadership/management concerns) bypasses the normal
+  // CategoryOwnerMapping routing — see evaluate.ts's autoTriageAndCreate
+  // ActionItem — and goes instead to the business/org's designated
+  // sensitiveRoutingContactId, so a complaint about HR never lands with HR.
+  sensitive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,6 +22,7 @@ const CategorySchema = new Schema<ICategory>(
   {
     name: { type: String, required: true, trim: true },
     product: { type: String, enum: PRODUCTS, default: "customer_experience" },
+    sensitive: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
