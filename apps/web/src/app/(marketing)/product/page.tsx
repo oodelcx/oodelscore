@@ -9,6 +9,14 @@ interface Feature {
   tag: string;
   headline: string;
   body: string;
+  group?: "understand" | "act";
+}
+
+function featureSlug(tag: string): string {
+  return tag
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 // Otherwise Next statically prerenders this at build time and a Site
@@ -104,15 +112,93 @@ function FeatureVisual({ tag }: { tag: string }) {
       </div>
     );
   }
+  if (tag === "Decision Log") {
+    return (
+      <div className="mock-card">
+        <div className="mock-action-title" style={{ marginBottom: 8 }}>
+          Self-checkout wait time — logged decision
+        </div>
+        <div className="loop-frag-chip">
+          <span className="before">3.9</span>
+          <span>→</span>
+          <span className="after">4.6</span>
+        </div>
+      </div>
+    );
+  }
+  if (tag === "Feedback Collection") {
+    return (
+      <div className="mock-card">
+        <div className="mock-action-title" style={{ marginBottom: 10 }}>
+          Front Desk — QR feedback point
+        </div>
+        <div className="mock-qtype-row">
+          <span>Scans this week</span>
+          <span className="tag">312</span>
+        </div>
+        <div className="mock-qtype-row">
+          <span>Responses</span>
+          <span className="tag">204</span>
+        </div>
+        <div className="mock-qtype-row">
+          <span>Median time to answer</span>
+          <span className="tag">48s</span>
+        </div>
+      </div>
+    );
+  }
+  if (tag === "Automatic Alerts") {
+    return (
+      <div className="mock-card mock-action-card">
+        <span className="pill" style={{ background: "var(--paper-alt)" }}>
+          Alert triggered
+        </span>
+        <div className="mock-action-title">Star average dropped below 3.5 — Downtown branch</div>
+        <div className="mock-action-meta">Sent to branch manager · 4 minutes ago</div>
+      </div>
+    );
+  }
+  if (tag === "Guided Playbooks") {
+    return (
+      <div className="mock-card">
+        <div className="mock-action-title" style={{ marginBottom: 10 }}>
+          Staff Friendliness Recovery
+        </div>
+        <div className="loop-frag-tags">
+          <span className="loop-frag-tag">✓ Review flagged responses</span>
+          <span className="loop-frag-tag">✓ Coach the team member</span>
+          <span className="loop-frag-tag">Re-check score in 2 weeks</span>
+        </div>
+      </div>
+    );
+  }
+  if (tag === "Escalation Workflows") {
+    return (
+      <div className="mock-card">
+        <div className="mock-qtype-row">
+          <span>Level 1 — Branch owner</span>
+          <span className="tag">2 days</span>
+        </div>
+        <div className="mock-qtype-row">
+          <span>Level 2 — Regional lead</span>
+          <span className="tag">Escalated</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mock-card">
-      <div className="mock-action-title" style={{ marginBottom: 8 }}>
-        Self-checkout wait time — logged decision
+      <div className="mock-qtype-row">
+        <span>This month</span>
+        <span className="tag">On track</span>
       </div>
-      <div className="loop-frag-chip">
-        <span className="before">3.9</span>
-        <span>→</span>
-        <span className="after">4.6</span>
+      <div className="mock-qtype-row">
+        <span>Last month</span>
+        <span className="tag">Behind</span>
+      </div>
+      <div className="mock-qtype-row">
+        <span>Same period last quarter</span>
+        <span className="tag">Improving</span>
       </div>
     </div>
   );
@@ -136,7 +222,12 @@ export default async function ProductPage() {
       </section>
 
       {features.map((feature, i) => (
-        <section className={`feature-row${i % 2 === 1 ? " reverse" : ""}`} key={feature.tag} style={i % 2 === 1 ? { background: "var(--paper-alt)" } : undefined}>
+        <section
+          id={featureSlug(feature.tag)}
+          className={`feature-row${i % 2 === 1 ? " reverse" : ""}`}
+          key={feature.tag}
+          style={i % 2 === 1 ? { background: "var(--paper-alt)" } : undefined}
+        >
           <div className="wrap">
             <Reveal>
               <div className="feature-tag">{feature.tag}</div>

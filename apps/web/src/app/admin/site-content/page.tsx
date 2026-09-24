@@ -780,6 +780,7 @@ interface Feature {
   tag: string;
   headline: string;
   body: string;
+  group?: "understand" | "act";
 }
 
 function ProductPanel({
@@ -823,8 +824,10 @@ function ProductPanel({
       <div className="card">
         <h3>Feature sections</h3>
         <p className="card-sub">
-          Each renders as an alternating text/visual row, in this order. Tag should match a real product capability (CX Pulse, Theme
-          Intelligence, Root Cause Investigation, Driver Analysis, Case Management, Decision Log) so the right illustrative visual shows.
+          Each renders as an alternating text/visual row on this page, in this order, and also appears as a link in the
+          &quot;Platform&quot; mega-menu, grouped under Understand or Act. Only real, shipped capabilities belong here —
+          this list is what prospects use to self-qualify before a sales call, so it should never claim more than the
+          product actually does.
         </p>
         {features.map((feature, i) => (
           <div className="qrow" key={i}>
@@ -836,6 +839,14 @@ function ProductPanel({
                 value={feature.tag}
                 onChange={(e) => updateFeature(i, { tag: e.target.value })}
               />
+              <select
+                value={feature.group ?? "understand"}
+                onChange={(e) => updateFeature(i, { group: e.target.value as Feature["group"] })}
+                style={{ width: 130 }}
+              >
+                <option value="understand">Understand</option>
+                <option value="act">Act</option>
+              </select>
               <input
                 type="text"
                 style={{ flex: 1 }}
@@ -855,10 +866,9 @@ function ProductPanel({
         ))}
         <button
           className="btn"
-          disabled={features.length >= 6}
-          onClick={() => onFieldChange("product", "features", JSON.stringify([...features, { tag: "", headline: "", body: "" }]))}
+          onClick={() => onFieldChange("product", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))}
         >
-          + Add feature (max 6)
+          + Add feature
         </button>
       </div>
     </>
@@ -905,12 +915,30 @@ function SolutionsPanel({
           onChange={(items) => onFieldChange("solutions", "groupPoints", JSON.stringify(items))}
         />
       </div>
-      <div className="card">
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3>Enterprise panel</h3>
         <Field label="Title" value={content.fields.entTitle} onChange={(v) => onFieldChange("solutions", "entTitle", v)} />
         <StringListEditor
           items={parseJsonArray<string>(content.fields.entPoints)}
           onChange={(items) => onFieldChange("solutions", "entPoints", JSON.stringify(items))}
+        />
+      </div>
+      <div className="card">
+        <h3>Industries</h3>
+        <p className="card-sub">
+          Shown as a chip grid on this page and as the &quot;By Industry&quot; column in the Solutions mega-menu. Names
+          only — no per-industry claims, since there&apos;s no dedicated content behind each one yet.
+        </p>
+        <Field label="Title" value={content.fields.industriesTitle} onChange={(v) => onFieldChange("solutions", "industriesTitle", v)} />
+        <Field
+          label="Subtitle"
+          textarea
+          value={content.fields.industriesBody}
+          onChange={(v) => onFieldChange("solutions", "industriesBody", v)}
+        />
+        <StringListEditor
+          items={parseJsonArray<string>(content.fields.industries)}
+          onChange={(items) => onFieldChange("solutions", "industries", JSON.stringify(items))}
         />
       </div>
     </>
