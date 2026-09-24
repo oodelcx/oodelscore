@@ -225,6 +225,9 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [priceSaveMessage, setPriceSaveMessage] = useState<string | null>(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
+  const [enabledProducts, setEnabledProducts] = useState<string[]>(["customer_experience"]);
+  const [productsBusy, setProductsBusy] = useState(false);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [editingCompPeriod, setEditingCompPeriod] = useState(false);
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
@@ -261,6 +264,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     teamRole: string;
     tier: "full" | "limited";
     restrictedPages: string[];
+    products: string[] | null;
     inviteStatus: string;
   }
   const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
@@ -276,6 +280,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   const [teamEditRole, setTeamEditRole] = useState("");
   const [teamEditTier, setTeamEditTier] = useState<"full" | "limited">("full");
   const [teamEditRestrictedPages, setTeamEditRestrictedPages] = useState<string[]>([]);
+  const [teamEditHasCE, setTeamEditHasCE] = useState(false);
 
   function toggleRestrictedPage(list: string[], key: string): string[] {
     return list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
@@ -329,13 +334,15 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     setTeamEditRole(m.teamRole);
     setTeamEditTier(m.tier);
     setTeamEditRestrictedPages(m.restrictedPages ?? []);
+    setTeamEditHasCE(!!m.products?.includes("colleague_experience"));
   }
 
   async function saveTeamEdit(memberId: string) {
+    const products = teamEditHasCE ? ["customer_experience", "colleague_experience"] : ["customer_experience"];
     const res = await fetch(`/api/admin/parent-orgs/${params.id}/team-members/${memberId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamRole: teamEditRole, tier: teamEditTier, restrictedPages: teamEditRestrictedPages }),
+      body: JSON.stringify({ teamRole: teamEditRole, tier: teamEditTier, restrictedPages: teamEditRestrictedPages, products }),
     });
     if (res.ok) {
       setTeamEditingId(null);
@@ -434,6 +441,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         });
         setBusinesses(d.businesses ?? []);
         setCheckoutEnabled(!!o.checkoutEnabled);
+        setEnabledProducts(o.enabledProducts?.length ? o.enabledProducts : ["customer_experience"]);
         setEscalationLevels(o.escalationLevels?.length ? o.escalationLevels : [{ level: 1, label: "Owner" }]);
         setEscalationSlaHours(o.escalationSlaHours != null ? String(o.escalationSlaHours) : "");
         setEnabledFeatures(o.enabledFeatures ?? ALL_FEATURE_KEYS);
@@ -590,6 +598,27 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       return;
     }
     setCheckoutEnabled(next);
+  }
+
+  async function toggleColleagueExperience() {
+    setProductsBusy(true);
+    setProductsError(null);
+    const hasCE = enabledProducts.includes("colleague_experience");
+    const next = hasCE
+      ? enabledProducts.filter((p) => p !== "colleague_experience")
+      : [...enabledProducts, "colleague_experience"];
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabledProducts: next }),
+    });
+    const data = await res.json().catch(() => null);
+    setProductsBusy(false);
+    if (!res.ok) {
+      setProductsError(data?.message ?? "Failed to update Colleague Experience access");
+      return;
+    }
+    setEnabledProducts(next);
   }
 
   function startMarkComp() {
@@ -1445,6 +1474,16 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                         </button>
                       </td>
                     </tr>
+                    {enabledProducts.includes("colleague_experience") && (
+                      <tr>
+                        <td colSpan={5} style={{ background: "var(--gray-50, #FAFAFA)" }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                            <input type="checkbox" checked={teamEditHasCE} onChange={() => setTeamEditHasCE((v) => !v)} />
+                            Colleague Experience access
+                          </label>
+                        </td>
+                      </tr>
+                    )}
                     {teamEditTier === "full" && (
                       <tr>
                         <td colSpan={5} style={{ background: "var(--gray-50, #FAFAFA)" }}>
@@ -1782,6 +1821,30 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : "Save"}
           </button>
+        </div>
+      )}
+
+      {tab === "command-center" && !isNew && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 20 }}>
+          <h3>Products (Admin-only)</h3>
+          <p className="card-sub">
+            Which product(s) this org has bought. Customer Experience is always on. Turning on Colleague Experience
+            does not by itself grant any team member access to it — that&apos;s set per person on the Team tab.
+          </p>
+          {productsError && <p className="error-text">{productsError}</p>}
+          <div className="row-flex" style={{ alignItems: "center", gap: 10 }}>
+            <span className="pill pill-green">Customer Experience: on</span>
+            <span className={`pill ${enabledProducts.includes("colleague_experience") ? "pill-green" : "pill-gray"}`}>
+              Colleague Experience: {enabledProducts.includes("colleague_experience") ? "on" : "off"}
+            </span>
+            <button className="btn btn-sm" disabled={productsBusy} onClick={toggleColleagueExperience}>
+              {productsBusy
+                ? "Saving…"
+                : enabledProducts.includes("colleague_experience")
+                  ? "Turn off"
+                  : "Enable Colleague Experience"}
+            </button>
+          </div>
         </div>
       )}
 
