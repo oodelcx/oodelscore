@@ -6,9 +6,9 @@ import {
   ImprovementInitiative,
   computeNetworkSummaries,
   hasProduct,
-  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 function csvEscape(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   const from = fromParam ? new Date(fromParam) : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   await connectToDatabase();
-  const product = primaryProductFor(session.org);
+  const product = await resolveViewProduct(session.org);
 
   const [summaries, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
     computeNetworkSummaries(session.org._id, from, to, product),

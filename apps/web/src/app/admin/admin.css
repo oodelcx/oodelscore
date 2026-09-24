@@ -103,6 +103,37 @@
   /* oodel-score-admin-rebuild.html .brand-sub{margin-top:8px} */
   margin-top: 8px;
 }
+/* ProductViewSwitcher — only rendered for an account with both Customer
+   and Colleague Experience enabled, so it can stay compact: two pill
+   toggles under the sidebar brand, right where the account already
+   orients itself. */
+.product-switcher {
+  display: flex;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 3px;
+  background: var(--sidebar-hover);
+  border-radius: 8px;
+}
+.product-switcher-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--sidebar-text);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.product-switcher-btn.active {
+  background: #3fbe8b;
+  color: #0b1210;
+}
+.product-switcher-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 /* Sidebar section headers (Platform / Accounts / Setup / Listen / …) —
    oodel-score-admin-rebuild.html .nav-group-label{}. Previously the layouts
    reused .section-label (built for modal form dividers) with an inline

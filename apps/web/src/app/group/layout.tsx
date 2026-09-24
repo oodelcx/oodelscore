@@ -20,6 +20,8 @@ import { TourProvider } from "@/components/tour/tour-provider";
 import { TourLauncher } from "@/components/tour/tour-launcher";
 import { BillingLockedScreen } from "@/components/billing-locked-screen";
 import { NavSection } from "@/components/nav-section";
+import { ProductViewSwitcher } from "@/components/product-view-switcher";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -48,6 +50,8 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   const pathname = (await headers()).get("x-pathname") ?? "";
   const isBillingRoute = pathname.startsWith("/group/billing");
   const isGated = billingStatus !== "active" && !isBillingRoute;
+  const bothProductsEnabled = hasProduct(org, "customer_experience") && hasProduct(org, "colleague_experience");
+  const viewProduct = bothProductsEnabled ? await resolveViewProduct(org) : null;
 
   return (
     <div className="admin-app">
@@ -59,6 +63,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
+            {viewProduct && <ProductViewSwitcher current={viewProduct} />}
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">

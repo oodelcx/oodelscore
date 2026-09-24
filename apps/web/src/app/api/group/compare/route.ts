@@ -6,9 +6,9 @@ import {
   computeBusinessMetrics,
   computeDailyTrend,
   computeBusinessCategoryBreakdown,
-  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 const MAX_COMPARE = 6;
 const TREND_DAYS = 56; // ~8 weeks, matches the mockup's default window
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
   const branches = await Promise.all(
     businesses.map(async (b) => {
-      const product = primaryProductFor(b);
+      const product = await resolveViewProduct(b);
       const [metrics, score, trend, categoryBreakdown] = await Promise.all([
         computeBusinessMetrics(b._id, from30d, now, product),
         CxPulseScore.findOne({ ownerType: "business", ownerId: b._id, product }).sort({ period: -1 }),

@@ -9,9 +9,9 @@ import {
   computeThemeIntelligence,
   hasFeature,
   hasProduct,
-  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 /**
  * The org-wide twin of the business report — per-region rollups plus the
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   }
 
   await connectToDatabase();
-  const product = primaryProductFor(session.org);
+  const product = await resolveViewProduct(session.org);
 
   const businesses = await Business.find({ parentOrgId: session.org._id, active: true }).select("_id");
   const businessIds = businesses.map((b) => b._id);

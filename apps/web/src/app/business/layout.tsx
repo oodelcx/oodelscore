@@ -19,6 +19,8 @@ import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { TourLauncher } from "@/components/tour/tour-launcher";
 import { NavSection } from "@/components/nav-section";
+import { ProductViewSwitcher } from "@/components/product-view-switcher";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import "../admin/admin.css";
 import "./business.css";
 
@@ -60,6 +62,8 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const pathname = (await headers()).get("x-pathname") ?? "";
   const isBillingRoute = pathname.startsWith("/business/billing");
   const isGated = billingStatus !== "active" && !isBillingRoute;
+  const bothProductsEnabled = hasProduct(business, "customer_experience") && hasProduct(business, "colleague_experience");
+  const viewProduct = bothProductsEnabled ? await resolveViewProduct(business) : null;
 
   return (
     <div className="admin-app">
@@ -71,6 +75,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">BUSINESS PORTAL</div>
+            {viewProduct && <ProductViewSwitcher current={viewProduct} />}
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
