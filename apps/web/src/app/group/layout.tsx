@@ -9,6 +9,7 @@ import {
   PLATFORM_SETTINGS_SINGLETON_KEY,
   getBillingAccessStatus,
   hasFeature,
+  hasProduct,
   teamMemberCanAccess,
 } from "@oodelscore/shared";
 import "../admin/admin.css";
@@ -32,7 +33,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
 
   await connectToDatabase();
   const org = await ParentOrganization.findById(user.parentId).select(
-    "commandCenterEnabled enabledFeatures paymentGateEnabled"
+    "commandCenterEnabled enabledFeatures enabledProducts paymentGateEnabled"
   );
   if (!org) redirect("/login");
   const commandCenterEnabled = org.commandCenterEnabled ?? true;
@@ -75,27 +76,29 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 <a href="/group/branches">Branches</a>
                 <a href="/group/compare">Compare branches</a>
               </NavSection>
-              <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback"]}>
-                {teamMemberCanAccess(user, "rawFeedback") && <a href="/group/raw-feedback">Raw feedback</a>}
-              </NavSection>
+              {hasProduct(org, "customer_experience") && (
+                <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback"]}>
+                  {teamMemberCanAccess(user, "rawFeedback") && <a href="/group/raw-feedback">Raw feedback</a>}
+                </NavSection>
+              )}
 
               <NavSection
                 storageKey="group-understand"
                 label="Understand"
                 hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
               >
-                {hasFeature(org.enabledFeatures, "insights") && teamMemberCanAccess(user, "insights") && (
-                  <a href="/group/insights">Insights</a>
-                )}
-                {hasFeature(org.enabledFeatures, "analytics") && teamMemberCanAccess(user, "analytics") && (
-                  <a href="/group/analytics">Analytics</a>
-                )}
+                {hasProduct(org, "customer_experience") &&
+                  hasFeature(org.enabledFeatures, "insights") &&
+                  teamMemberCanAccess(user, "insights") && <a href="/group/insights">Insights</a>}
+                {hasProduct(org, "customer_experience") &&
+                  hasFeature(org.enabledFeatures, "analytics") &&
+                  teamMemberCanAccess(user, "analytics") && <a href="/group/analytics">Analytics</a>}
                 {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
                   <a href="/group/alert-rules">Alert rules</a>
                 )}
-                {hasFeature(org.enabledFeatures, "reports") && teamMemberCanAccess(user, "reports") && (
-                  <a href="/group/reports">Reports</a>
-                )}
+                {hasProduct(org, "customer_experience") &&
+                  hasFeature(org.enabledFeatures, "reports") &&
+                  teamMemberCanAccess(user, "reports") && <a href="/group/reports">Reports</a>}
               </NavSection>
               <NavSection
                 storageKey="group-act"
@@ -111,11 +114,13 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   <a href="/group/decision-log">Decision log</a>
                 )}
               </NavSection>
-              {hasFeature(org.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse") && (
-                <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
-                  <a href="/group/maturity">CX Pulse</a>
-                </NavSection>
-              )}
+              {hasProduct(org, "customer_experience") &&
+                hasFeature(org.enabledFeatures, "cxPulse") &&
+                teamMemberCanAccess(user, "cxPulse") && (
+                  <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
+                    <a href="/group/maturity">CX Pulse</a>
+                  </NavSection>
+                )}
               <NavSection
                 storageKey="group-admin"
                 label="Admin"

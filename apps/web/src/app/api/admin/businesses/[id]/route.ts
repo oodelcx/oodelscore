@@ -121,6 +121,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (!Array.isArray(products) || !products.every((p: unknown) => typeof p === "string" && PRODUCT_SET.includes(p))) {
       return NextResponse.json({ status: "error", message: "Invalid enabledProducts" }, { status: 400 });
     }
+    if (products.length === 0) {
+      return NextResponse.json({ status: "error", message: "A business needs at least one product enabled" }, { status: 400 });
+    }
   }
 
   // Spec Section 16: never let teamMemberSeatLimit drop below the

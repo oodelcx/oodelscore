@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { connectToDatabase, Response, FeedbackPoint } from "@oodelscore/shared";
+import { connectToDatabase, Response, FeedbackPoint, PRODUCTS, type Product } from "@oodelscore/shared";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { computeResponseStats } from "@/lib/responseStats";
 
@@ -13,8 +15,8 @@ const MAX_LIMIT = 100;
  * current page in the client would desync the page count and hide matches
  * that happen to fall outside the fetched slice.
  */
-function buildMatch(businessId: unknown, filter: string | null): Record<string, unknown> {
-  const match: Record<string, unknown> = { businessId };
+function buildMatch(businessId: unknown, filter: string | null, product: string): Record<string, unknown> {
+  const match: Record<string, unknown> = { businessId, product };
   if (filter === "negative") {
     match.answers = { $elemMatch: { type: "star_1_5", value: { $lte: 2 } } };
   } else if (filter === "comment") {
@@ -34,10 +36,12 @@ export async function GET(request: Request) {
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number(searchParams.get("limit")) || DEFAULT_LIMIT));
   const filter = searchParams.get("filter");
   const sort = searchParams.get("sort") === "lowest" ? "lowest" : "newest";
+  const productParam = searchParams.get("product");
+  const product: Product = productParam && PRODUCT_SET.includes(productParam) ? (productParam as Product) : "customer_experience";
   const skip = (page - 1) * limit;
 
   await connectToDatabase();
-  const match = buildMatch(session.business._id, filter);
+  const match = buildMatch(session.business._id, filter, product);
 
   const [total, rows, feedbackPoints, stats] = await Promise.all([
     Response.countDocuments(match),
@@ -67,7 +71,7 @@ export async function GET(request: Request) {
           { $limit: limit },
         ])
       : Response.find(match).sort({ submittedAt: -1 }).skip(skip).limit(limit).lean(),
-    FeedbackPoint.find({ businessId: session.business._id }).select("_id name"),
+    FeedbackPoint.find({ businessId: session.business._id, product }).select("_id name"),
     computeResponseStats(match),
   ]);
 
