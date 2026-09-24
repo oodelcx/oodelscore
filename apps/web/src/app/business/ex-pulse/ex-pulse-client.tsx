@@ -32,6 +32,25 @@ const CLASSIFICATION_LABELS: Record<DriverResult["classification"], string> = {
   moderate: "Moderate influence",
 };
 
+interface PeriodComparison {
+  npsScore: number | null;
+  responseCount: number;
+  enpsPointChange: number | null;
+}
+
+interface PeriodComparisons {
+  week: PeriodComparison;
+  month: PeriodComparison;
+  quarter: PeriodComparison;
+  year: PeriodComparison;
+}
+
+function formatPointChange(change: number | null): string {
+  if (change === null) return "—";
+  if (change > 0) return `+${change}`;
+  return String(change);
+}
+
 const LEVEL_LABELS: Record<number, string> = {
   1: "Level 1 — Starting out",
   2: "Level 2 — Building the basics",
@@ -44,6 +63,7 @@ export default function BusinessExPulseClient() {
   const [score, setScore] = useState<ExPulseScore | null>(null);
   const [history, setHistory] = useState<ExPulseScore[]>([]);
   const [drivers, setDrivers] = useState<DriverResult[]>([]);
+  const [periodComparisons, setPeriodComparisons] = useState<PeriodComparisons | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
 
@@ -59,6 +79,7 @@ export default function BusinessExPulseClient() {
         }
         setScore(pulseRes.data.score);
         setHistory(pulseRes.data.history ?? []);
+        setPeriodComparisons(pulseRes.data.periodComparisons ?? null);
         if (driverRes.ok) setDrivers(driverRes.data.drivers ?? []);
       })
       .finally(() => setLoading(false));
@@ -112,6 +133,44 @@ export default function BusinessExPulseClient() {
               <div className="subtitle" style={{ margin: 0 }}>eNPS</div>
             </div>
           </div>
+
+          {periodComparisons && (
+            <div className="callout" style={{ marginBottom: 20 }}>
+              <h3 style={{ marginTop: 0 }}>Own-history benchmark</h3>
+              <p className="subtitle" style={{ marginTop: 0 }}>
+                eNPS this period vs. the same-length period before it — your own history, not another company's.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12 }}>
+                {(
+                  [
+                    ["week", "This week"],
+                    ["month", "This month"],
+                    ["quarter", "This quarter"],
+                    ["year", "This year"],
+                  ] as const
+                ).map(([key, label]) => {
+                  const p = periodComparisons[key];
+                  return (
+                    <div key={key}>
+                      <div style={{ fontSize: 20, fontWeight: 600 }}>
+                        {p.npsScore !== null ? p.npsScore : "—"}
+                        {p.enpsPointChange !== null && (
+                          <span
+                            style={{ fontSize: 13, fontWeight: 500, marginLeft: 6, color: p.enpsPointChange >= 0 ? "#1a7f37" : "#c62828" }}
+                          >
+                            {formatPointChange(p.enpsPointChange)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="subtitle" style={{ margin: 0 }}>
+                        {label} ({p.responseCount} response{p.responseCount === 1 ? "" : "s"})
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="callout" style={{ marginBottom: 20 }}>
             <h3 style={{ marginTop: 0 }}>Dimensions</h3>
