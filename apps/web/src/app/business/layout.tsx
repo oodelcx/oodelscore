@@ -10,6 +10,7 @@ import {
   PLATFORM_SETTINGS_SINGLETON_KEY,
   getBillingAccessStatus,
   hasFeature,
+  hasProduct,
   teamMemberCanAccess,
 } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
@@ -131,6 +132,17 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               {hasFeature(business.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse") && (
                 <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
                   <a href="/business/cx-pulse">CX Pulse</a>
+                </NavSection>
+              )}
+
+              {hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "colleagueRoster") && (
+                <NavSection
+                  storageKey="business-colleague-experience"
+                  label="Colleague Experience"
+                  defaultOpen={false}
+                  hrefs={["/business/roster"]}
+                >
+                  <a href="/business/roster">Roster</a>
                 </NavSection>
               )}
 

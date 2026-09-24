@@ -19,6 +19,7 @@ export const TEAM_RESTRICTABLE_PAGES = [
   { key: "cxPulse", label: "CX Pulse" },
   { key: "playbooks", label: "Playbook Library" },
   { key: "support", label: "Support" },
+  { key: "colleagueRoster", label: "Colleague Roster" },
 ] as const;
 
 export type TeamPageKey = (typeof TEAM_RESTRICTABLE_PAGES)[number]["key"];
