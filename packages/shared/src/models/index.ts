@@ -43,3 +43,4 @@ export * from "./SystemHealthEvent";
 export * from "./SupportTicket";
 export * from "./RecurringIssueFlag";
 export * from "./RosterEntry";
+export * from "./RosterSurveyToken";
