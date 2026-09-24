@@ -57,6 +57,10 @@ export interface IParentOrganization {
   // see Business.enabledProducts for the full explanation; same meaning
   // and same null-means-Customer-Experience-only default here.
   enabledProducts: Product[] | null;
+  // Colleague Experience only, org-owner-editable — see
+  // Business.sensitiveRoutingContactId for the full explanation. A branch
+  // with no contact of its own falls back to its parent org's.
+  sensitiveRoutingContactId: Types.ObjectId | null;
   // ADMIN-EDITABLE ONLY. Same per-account override as Business.paymentGateEnabled
   // — null follows the platform default, true/false forces the gate for this org.
   paymentGateEnabled: boolean | null;
@@ -84,6 +88,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     commandCenterEnabled: { type: Boolean, default: true },
     enabledFeatures: { type: [String], default: null },
     enabledProducts: { type: [String], enum: PRODUCTS, default: null },
+    sensitiveRoutingContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     paymentGateEnabled: { type: Boolean, default: null },
   },
   { timestamps: true }

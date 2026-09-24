@@ -43,6 +43,7 @@ interface ItemRow {
   escalatedToOrgNote: string;
   currentEscalationLevel: number;
   escalationHistory: { level: number; action: string; note: string; at: string }[];
+  sensitive?: boolean;
 }
 interface TeamRow {
   userId: string;
@@ -496,6 +497,11 @@ export default function BusinessCasesClient() {
                           <Stars rating={item.rating} />
                           {item.categoryId && (
                             <span className="pill pill-gray">{categoryName(item.categoryId)}</span>
+                          )}
+                          {item.sensitive && (
+                            <span className="pill pill-red" title="Routed via sensitive-category handling">
+                              Sensitive
+                            </span>
                           )}
                           <span>
                             Due: <b>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</b>

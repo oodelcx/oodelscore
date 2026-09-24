@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForBusiness } from "@oodelscore/shared";
+import { Types } from "mongoose";
+import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForBusiness, hasProduct } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /** Feeds AI-assisted Action Board triage (spec Section 16): the AI picks
@@ -20,7 +21,36 @@ export async function GET() {
     ? await Category.find({ _id: { $in: [...inUseIds] } }).sort({ name: 1 })
     : [];
 
-  return NextResponse.json({ status: "ok", categories, mappings });
+  return NextResponse.json({
+    status: "ok",
+    categories,
+    mappings,
+    ceEnabled: hasProduct(session.business, "colleague_experience"),
+    sensitiveRoutingContactId: session.business.sensitiveRoutingContactId,
+  });
+}
+
+/**
+ * Sets the business's sensitive-category routing contact (see
+ * Category.sensitive / Business.sensitiveRoutingContactId) — separate
+ * from the per-category PUT below since this is one account-wide setting,
+ * not a per-category mapping.
+ */
+export async function PATCH(request: Request) {
+  const session = await requireBusinessOwner();
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+
+  const body = await request.json().catch(() => null);
+  if (!("sensitiveRoutingContactId" in (body ?? {}))) {
+    return NextResponse.json({ status: "error", message: "sensitiveRoutingContactId is required" }, { status: 400 });
+  }
+  const contactId = typeof body.sensitiveRoutingContactId === "string" ? new Types.ObjectId(body.sensitiveRoutingContactId) : null;
+
+  await connectToDatabase();
+  session.business.sensitiveRoutingContactId = contactId;
+  await session.business.save();
+
+  return NextResponse.json({ status: "ok" });
 }
 
 export async function PUT(request: Request) {

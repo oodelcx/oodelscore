@@ -112,6 +112,15 @@ export interface IBusiness {
   // saved before Colleague Experience existed defaults there, never to
   // "all products". Gates both nav visibility and billing line items.
   enabledProducts: Product[] | null;
+  // Colleague Experience only, business-owner-editable (not admin-only —
+  // this is the business's own org chart, not a billing/config decision).
+  // Any case auto-triaged into a sensitive category (Category.sensitive)
+  // routes here instead of the normal CategoryOwnerMapping owner, so a
+  // complaint about HR/leadership never lands with the person it's about.
+  // null = no alternate contact configured yet; such a case still gets
+  // created, just with no owner, rather than silently falling through to
+  // the normal (possibly wrong) mapping.
+  sensitiveRoutingContactId: Types.ObjectId | null;
   // ADMIN-EDITABLE ONLY. Per-account override of PlatformSettings'
   // paymentGateEnabled kill switch: null = follow the platform default,
   // true/false = force the gate on/off for this account regardless of the
@@ -160,6 +169,7 @@ const BusinessSchema = new Schema<IBusiness>(
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     enabledFeatures: { type: [String], default: null },
     enabledProducts: { type: [String], enum: PRODUCTS, default: null },
+    sensitiveRoutingContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     paymentGateEnabled: { type: Boolean, default: null },
     active: { type: Boolean, default: true },
   },

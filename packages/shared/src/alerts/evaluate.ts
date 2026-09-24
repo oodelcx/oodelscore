@@ -3,6 +3,7 @@ import { AlertRule, type IAlertRule } from "../models/AlertRule";
 import type { Product } from "../models/products";
 import { AlertActivity } from "../models/AlertActivity";
 import { Business, type IBusiness } from "../models/Business";
+import { ParentOrganization } from "../models/ParentOrganization";
 import { Category } from "../models/Category";
 import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
 import { ActionBoardItem } from "../models/ActionBoardItem";
@@ -52,31 +53,48 @@ async function autoTriageAndCreateActionItem(
     categories: categories.map((c) => ({ id: c._id.toString(), name: c.name })),
   });
 
+  // A sensitive category (HR/leadership complaints) never goes through the
+  // normal CategoryOwnerMapping — that mapping is exactly what a complaint
+  // about HR needs to bypass. Instead it routes straight to the business's
+  // (or its org's, for a branch with none of its own) designated
+  // sensitiveRoutingContactId, so it can never land with the person it's
+  // about.
+  const matchedCategory = suggestion.categoryId
+    ? categories.find((c) => c._id.toString() === suggestion.categoryId)
+    : null;
+  const isSensitive = matchedCategory?.sensitive ?? false;
+
   // A branch can set its own owner for a category from its own Category
   // Owners page — that's always checked first. Only when the branch hasn't
   // set one does the org-wide default (set on the Group's Category Owners
   // page) apply. A standalone business only ever has the business-scope
   // mapping, since it has no org to fall back to.
-  const mapping = suggestion.categoryId
-    ? (await CategoryOwnerMapping.findOne({
-        ownerScope: "business",
-        ownerScopeId: business._id,
-        categoryId: suggestion.categoryId,
-      })) ??
-      (business.parentOrgId
-        ? await CategoryOwnerMapping.findOne({
-            ownerScope: "parentOrg",
-            ownerScopeId: business.parentOrgId,
-            categoryId: suggestion.categoryId,
-          })
-        : null)
-    : null;
+  const mapping =
+    !isSensitive && suggestion.categoryId
+      ? (await CategoryOwnerMapping.findOne({
+          ownerScope: "business",
+          ownerScopeId: business._id,
+          categoryId: suggestion.categoryId,
+        })) ??
+        (business.parentOrgId
+          ? await CategoryOwnerMapping.findOne({
+              ownerScope: "parentOrg",
+              ownerScopeId: business.parentOrgId,
+              categoryId: suggestion.categoryId,
+            })
+          : null)
+      : null;
 
   // A category owner mapping means items in that category always go
   // straight to that owner — no unassigned "suggested" state, no separate
   // accept/reassign step. Manual reassignment afterward (the owner dropdown
   // on each Action Board item) is unrelated and still works as before.
-  const ownerId = mapping?.defaultOwnerId ?? null;
+  const ownerId = isSensitive
+    ? business.sensitiveRoutingContactId ??
+      (business.parentOrgId
+        ? (await ParentOrganization.findById(business.parentOrgId).select("sensitiveRoutingContactId"))?.sensitiveRoutingContactId ?? null
+        : null)
+    : (mapping?.defaultOwnerId ?? null);
 
   // Same evidence-gated approach Root Cause Analysis already uses (see
   // ai/rootCause.ts): only ever hand Haiku a real computed evidence bundle,
@@ -106,16 +124,19 @@ async function autoTriageAndCreateActionItem(
     categoryId: suggestion.categoryId,
     priority: suggestion.priority,
     ownerId,
-    source: mapping ? "auto_assigned" : "auto_suggested",
+    source: ownerId ? "auto_assigned" : "auto_suggested",
     suggestedAction,
+    sensitive: isSensitive,
   });
 
   await autoAttachPlaybook(item).catch((err) => console.error("[alerts] auto-attach playbook failed", err));
 
   // Notify the owner that they've been assigned this item — no confirmation
-  // language, since the assignment already happened.
-  if (mapping) {
-    const owner = await User.findById(mapping.defaultOwnerId);
+  // language, since the assignment already happened. Covers both the normal
+  // mapping path and the sensitive-routing path, since either can resolve
+  // an ownerId.
+  if (ownerId) {
+    const owner = await User.findById(ownerId);
     if (owner) {
       await sendTemplatedEmail("action_assigned", owner.email, {
         name: owner.email,
