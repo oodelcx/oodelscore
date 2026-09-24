@@ -121,6 +121,18 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     <a href="/group/maturity">CX Pulse</a>
                   </NavSection>
                 )}
+
+              {hasProduct(org, "colleague_experience") && teamMemberCanAccess(user, "exPulse") && (
+                <NavSection
+                  storageKey="group-colleague-experience"
+                  label="Colleague Experience"
+                  defaultOpen={false}
+                  hrefs={["/group/ex-pulse"]}
+                >
+                  <a href="/group/ex-pulse">EX Pulse</a>
+                </NavSection>
+              )}
+
               <NavSection
                 storageKey="group-admin"
                 label="Admin"

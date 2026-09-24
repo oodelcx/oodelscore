@@ -8,6 +8,7 @@ import {
   groupByRegion,
   computeThemeIntelligence,
   hasFeature,
+  hasProduct,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
@@ -40,12 +41,37 @@ export async function GET(req: Request) {
   const [summaries, themes, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
     computeNetworkSummaries(session.org._id, from, to),
     computeThemeIntelligence(businessIds, from, to, from, from),
-    ActionBoardItem.countDocuments({ parentOrgId: session.org._id, status: "resolved", resolvedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({
+      parentOrgId: session.org._id,
+      product: "customer_experience",
+      status: "resolved",
+      resolvedAt: { $gte: from, $lte: to },
+    }),
     ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, status: "completed", completedAt: { $gte: from, $lte: to } }),
     ActionBoardItem.countDocuments({ parentOrgId: session.org._id, customerNotifiedAt: { $gte: from, $lte: to } }),
   ]);
 
   const regions = groupByRegion(summaries, new Set()).sort((a, b) => b.businessCount - a.businessCount);
+
+  // Colleague Experience has no theme-intelligence equivalent yet (CX-only
+  // AI feature) — its section is per-branch score summaries + resolved
+  // cases only, and only appears when the org has bought it.
+  let colleagueExperience: {
+    branches: Awaited<ReturnType<typeof computeNetworkSummaries>>;
+    casesResolved: number;
+  } | null = null;
+  if (hasProduct(session.org, "colleague_experience")) {
+    const [ceSummaries, ceCasesResolved] = await Promise.all([
+      computeNetworkSummaries(session.org._id, from, to, "colleague_experience"),
+      ActionBoardItem.countDocuments({
+        parentOrgId: session.org._id,
+        product: "colleague_experience",
+        status: "resolved",
+        resolvedAt: { $gte: from, $lte: to },
+      }),
+    ]);
+    colleagueExperience = { branches: ceSummaries, casesResolved: ceCasesResolved };
+  }
 
   return NextResponse.json({
     status: "ok",
@@ -55,5 +81,6 @@ export async function GET(req: Request) {
     regions,
     themes: themes.slice(0, 10),
     activity: { casesResolved, initiativesCompleted, customersRespondedTo },
+    colleagueExperience,
   });
 }

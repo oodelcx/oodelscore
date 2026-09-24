@@ -29,6 +29,7 @@ interface ReportData {
   regions: RegionRow[];
   themes: ThemeRow[];
   activity: { casesResolved: number; initiativesCompleted: number; customersRespondedTo: number };
+  colleagueExperience: { branches: BranchRow[]; casesResolved: number } | null;
 }
 
 function isoDate(d: Date): string {
@@ -193,6 +194,49 @@ export default function ReportsClient() {
               )}
             </tbody>
           </table>
+
+          {data.colleagueExperience && (
+            <>
+              <div className="section-title" style={{ marginTop: 24 }}>Colleague Experience</div>
+              <div className="card" style={{ marginBottom: 20, maxWidth: 240 }}>
+                <div className="metric-label">Cases resolved</div>
+                <div className="metric-val">{data.colleagueExperience.casesResolved}</div>
+              </div>
+              <div className="section-title">By branch</div>
+              <table className="clean">
+                <thead>
+                  <tr>
+                    <th>Branch</th>
+                    <th>Region</th>
+                    <th>Responses</th>
+                    <th>Average</th>
+                    <th>eNPS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.colleagueExperience.branches.map((b) => (
+                    <tr key={b.businessId}>
+                      <td>{b.name}</td>
+                      <td>{b.region}</td>
+                      <td>
+                        {b.responseCount}
+                        {b.confidence === "insufficient" && <span className="subtitle"> (low sample)</span>}
+                      </td>
+                      <td>{b.starAverage !== null ? `${b.starAverage}/5` : "—"}</td>
+                      <td>{b.npsScore !== null ? b.npsScore : "—"}</td>
+                    </tr>
+                  ))}
+                  {data.colleagueExperience.branches.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="subtitle">
+                        No Colleague-Experience-enabled branches yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
         </>
       )}
     </div>
