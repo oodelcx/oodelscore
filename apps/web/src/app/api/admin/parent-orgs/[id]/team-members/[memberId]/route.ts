@@ -6,8 +6,12 @@ import {
   logAuditEvent,
   canAccessScopedResource,
   isValidTeamPageKey,
+  getEnabledProducts,
+  PRODUCTS,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 type RouteParams = { params: Promise<{ id: string; memberId: string }> };
 
@@ -37,6 +41,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (typeof body?.teamRole === "string") member.teamRole = body.teamRole.trim();
   if (body?.tier === "full" || body?.tier === "limited") member.tier = body.tier;
   if (Array.isArray(body?.restrictedPages)) member.restrictedPages = body.restrictedPages.filter(isValidTeamPageKey);
+  if (Array.isArray(body?.products)) {
+    const orgProducts = new Set<string>(getEnabledProducts(org));
+    member.products = body.products.filter((p: unknown) => typeof p === "string" && PRODUCT_SET.includes(p) && orgProducts.has(p));
+  }
   await member.save();
 
   if (member.tier !== previousTier) {
@@ -58,6 +66,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       email: member.email,
       teamRole: member.teamRole,
       tier: member.tier,
+      products: member.products,
       restrictedPages: member.restrictedPages,
       inviteStatus: member.inviteStatus,
     },

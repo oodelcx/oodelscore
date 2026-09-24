@@ -15,12 +15,14 @@ import {
   ForbiddenFieldWriteError,
   logSystemHealthEvent,
   isValidFeatureKey,
+  PRODUCTS,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const BILLING_ASSIGNMENT_SET: readonly string[] = BILLING_ASSIGNMENTS;
 const BUSINESS_PLAN_SET: readonly string[] = BUSINESS_PLANS;
 const PRICING_INTERVAL_SET: readonly string[] = PRICING_INTERVALS;
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -114,6 +116,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.paymentGateEnabled !== undefined && body.paymentGateEnabled !== null && typeof body.paymentGateEnabled !== "boolean") {
     return NextResponse.json({ status: "error", message: "Invalid paymentGateEnabled" }, { status: 400 });
   }
+  if (body.enabledProducts !== undefined && body.enabledProducts !== null) {
+    const products = body.enabledProducts;
+    if (!Array.isArray(products) || !products.every((p: unknown) => typeof p === "string" && PRODUCT_SET.includes(p))) {
+      return NextResponse.json({ status: "error", message: "Invalid enabledProducts" }, { status: 400 });
+    }
+  }
 
   // Spec Section 16: never let teamMemberSeatLimit drop below the
   // currently-active team-member count.
@@ -155,6 +163,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "teamMemberSeatLimit",
     "ragThresholds",
     "enabledFeatures",
+    "enabledProducts",
     "paymentGateEnabled",
     "active",
   ] as const;
