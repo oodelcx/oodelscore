@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AlertRule, AlertActivity, computeNetworkSummaries, findNeedsAttention, primaryProductFor } from "@oodelscore/shared";
+import { connectToDatabase, AlertRule, AlertActivity, computeNetworkSummaries, findNeedsAttention } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 type RouteParams = { params: Promise<{ region: string }> };
 
@@ -12,7 +13,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const regionName = decodeURIComponent(region);
 
   await connectToDatabase();
-  const product = primaryProductFor(session.org);
+  const product = await resolveViewProduct(session.org);
   const now = new Date();
   const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const allSummaries = await computeNetworkSummaries(session.org._id, from, now, product);

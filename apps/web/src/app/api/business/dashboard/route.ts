@@ -11,9 +11,9 @@ import {
   computePeriodComparisons,
   computeDailyTrend,
   computeRatingDistribution,
-  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 const TREND_DAYS = 14;
 
@@ -22,7 +22,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const product = primaryProductFor(session.business);
+  const product = await resolveViewProduct(session.business);
   const businessIds = [session.business._id];
   const now = new Date();
   const from30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);

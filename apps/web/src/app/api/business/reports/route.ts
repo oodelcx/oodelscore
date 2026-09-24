@@ -8,9 +8,9 @@ import {
   computeThemeIntelligence,
   hasFeature,
   hasProduct,
-  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 /**
  * One period's worth of report data for a single business — the numbers a
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   }
 
   await connectToDatabase();
-  const product = primaryProductFor(session.business);
+  const product = await resolveViewProduct(session.business);
 
   const [metrics, categoryBreakdown, themes, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
     computeBusinessMetrics(session.business._id, from, to, product),

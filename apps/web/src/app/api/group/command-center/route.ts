@@ -17,10 +17,10 @@ import {
   getCategoriesInUseForParentOrg,
   ragBandForStar,
   ragBandForNps,
-  primaryProductFor,
   type IRagThresholds,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -56,7 +56,7 @@ export async function GET() {
   // org that turned Customer Experience off kept computing (and showing)
   // its empty Customer Experience metrics forever, never falling back to
   // the Colleague Experience data it actually has.
-  const product = primaryProductFor(org);
+  const product = await resolveViewProduct(org);
 
   const [businesses, summaries30d, summariesLast7d, summariesPrev7d, categoryIds, orgScore, subscription] = await Promise.all([
     Business.find({ parentOrgId: org._id }).select("_id name region"),

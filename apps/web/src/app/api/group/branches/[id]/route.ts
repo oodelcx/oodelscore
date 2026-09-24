@@ -5,9 +5,9 @@ import {
   ActionBoardItem,
   CxPulseScore,
   computeBusinessMetrics,
-  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const business = await Business.findOne({ _id: id, parentOrgId: session.org._id });
   if (!business) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
-  const product = primaryProductFor(business);
+  const product = await resolveViewProduct(business);
   const now = new Date();
   const from30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 

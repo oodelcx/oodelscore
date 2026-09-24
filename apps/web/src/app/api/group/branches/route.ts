@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, computeNetworkSummaries, primaryProductFor } from "@oodelscore/shared";
+import { connectToDatabase, computeNetworkSummaries } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 export async function GET(request: Request) {
   const session = await requireParentOrgOwner();
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   const region = searchParams.get("region") ?? "";
 
   await connectToDatabase();
-  const product = primaryProductFor(session.org);
+  const product = await resolveViewProduct(session.org);
   const now = new Date();
   const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   let summaries = await computeNetworkSummaries(session.org._id, from, now, product);
