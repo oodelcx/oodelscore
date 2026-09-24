@@ -386,10 +386,14 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     questionTemplateOverride: string | null;
     demographicOverride: Record<string, string> | null;
     eventId: string | null;
+    product: string;
+    lifecycleTrigger: string | null;
+    distributionMode: string | null;
   }
   const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPointRow[]>([]);
   const [fpName, setFpName] = useState("");
   const [fpDescription, setFpDescription] = useState("");
+  const [fpProduct, setFpProduct] = useState("customer_experience");
   const [fpEventId, setFpEventId] = useState("");
   const [fpCreating, setFpCreating] = useState(false);
   const [fpError, setFpError] = useState<string | null>(null);
@@ -520,7 +524,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     const res = await fetch(`/api/admin/businesses/${params.id}/feedback-points`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: fpName, description: fpDescription, eventId: fpEventId || null }),
+      body: JSON.stringify({ name: fpName, description: fpDescription, eventId: fpEventId || null, product: fpProduct }),
     });
     const data = await res.json().catch(() => null);
     setFpCreating(false);
@@ -531,6 +535,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     setFpName("");
     setFpDescription("");
     setFpEventId("");
+    setFpProduct("customer_experience");
     loadFeedbackPoints();
     if (data?.feedbackPoint) setQrPoint(data.feedbackPoint);
   }
@@ -568,6 +573,24 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ demographicOverride: { ...base, [field]: value } }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function updateFeedbackPointLifecycleTrigger(fpId: string, lifecycleTrigger: string) {
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lifecycleTrigger: lifecycleTrigger || null }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function updateFeedbackPointDistributionMode(fpId: string, distributionMode: string) {
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ distributionMode: distributionMode || null }),
     });
     loadFeedbackPoints();
   }
@@ -2294,6 +2317,15 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                   </select>
                 </div>
               )}
+              {enabledProducts.includes("colleague_experience") && (
+                <div className="field">
+                  <label>Product</label>
+                  <select value={fpProduct} onChange={(e) => setFpProduct(e.target.value)}>
+                    <option value="customer_experience">Customer Experience</option>
+                    <option value="colleague_experience">Colleague Experience</option>
+                  </select>
+                </div>
+              )}
             </div>
             {fpError && <p className="error-text">{fpError}</p>}
             <button className="btn btn-dark" disabled={fpCreating} onClick={createFeedbackPoint}>
@@ -2305,6 +2337,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
             <thead>
               <tr>
                 <th>Name</th>
+                {enabledProducts.includes("colleague_experience") && <th>Product</th>}
                 <th>Scans</th>
                 {events.length > 0 && <th>Event</th>}
                 <th>Question template</th>
@@ -2318,6 +2351,13 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                 <Fragment key={fp._id}>
                   <tr>
                     <td>{fp.name}</td>
+                    {enabledProducts.includes("colleague_experience") && (
+                      <td>
+                        <span className={`pill ${fp.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                          {fp.product === "colleague_experience" ? "Colleague" : "Customer"}
+                        </span>
+                      </td>
+                    )}
                     <td>{fp.scans}</td>
                     {events.length > 0 && (
                       <td>
@@ -2378,16 +2418,48 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                     </td>
                   </tr>
                   <tr>
-                    <td colSpan={events.length > 0 ? 7 : 6} style={{ borderBottom: expandedFieldsId === fp._id ? undefined : "none", paddingTop: 0 }}>
+                    <td
+                      colSpan={
+                        (events.length > 0 ? 7 : 6) + (enabledProducts.includes("colleague_experience") ? 1 : 0)
+                      }
+                      style={{ borderBottom: expandedFieldsId === fp._id ? undefined : "none", paddingTop: 0 }}
+                    >
                       <span
                         style={{ fontSize: 12.5, color: "var(--accent)", cursor: "pointer" }}
                         onClick={() => setExpandedFieldsId(expandedFieldsId === fp._id ? null : fp._id)}
                       >
                         {expandedFieldsId === fp._id ? "▾" : "▸"} Respondent fields for this QR{" "}
                         {fp.demographicOverride ? "(overridden)" : "(using business default)"}
+                        {fp.product === "colleague_experience" ? " · Colleague Experience settings" : ""}
                       </span>
                       {expandedFieldsId === fp._id && (
                         <div style={{ background: "#FAFAF8", borderRadius: 8, padding: "12px 14px", marginTop: 8 }}>
+                          {fp.product === "colleague_experience" && (
+                            <div className="field-row" style={{ marginBottom: 12 }}>
+                              <div className="field">
+                                <label>Lifecycle trigger</label>
+                                <select
+                                  value={fp.lifecycleTrigger ?? ""}
+                                  onChange={(e) => updateFeedbackPointLifecycleTrigger(fp._id, e.target.value)}
+                                >
+                                  <option value="">Recurring pulse / campaign (not lifecycle-triggered)</option>
+                                  <option value="onboarding_30">Onboarding — day 30</option>
+                                  <option value="onboarding_90">Onboarding — day 90</option>
+                                  <option value="exit">Exit survey</option>
+                                </select>
+                              </div>
+                              <div className="field">
+                                <label>Distribution</label>
+                                <select
+                                  value={fp.distributionMode ?? "qr_open"}
+                                  onChange={(e) => updateFeedbackPointDistributionMode(fp._id, e.target.value)}
+                                >
+                                  <option value="qr_open">Open QR/link (no per-person tracking)</option>
+                                  <option value="roster_personalized">Roster-personalized links</option>
+                                </select>
+                              </div>
+                            </div>
+                          )}
                           <div className="field-row">
                             {DEMOGRAPHIC_FIELDS.map((field) => (
                               <div className="field" key={field}>
@@ -2416,7 +2488,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               ))}
               {feedbackPoints.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="subtitle">
+                  <td colSpan={enabledProducts.includes("colleague_experience") ? 7 : 6} className="subtitle">
                     No feedback points yet.
                   </td>
                 </tr>

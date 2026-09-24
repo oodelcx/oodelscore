@@ -136,4 +136,10 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     body: "Hi, we'd like your honest, anonymous feedback — this takes about a minute and nothing you say is linked back to you. {{survey_link}}",
     availableVars: ["survey_link"],
   },
+  {
+    key: "colleague_pulse_survey",
+    subject: "Your anonymous pulse survey",
+    body: "Hi, it's time for the regular team pulse survey — your honest, anonymous feedback helps shape what changes next. It takes about a minute and nothing you say is linked back to you. {{survey_link}}",
+    availableVars: ["survey_link"],
+  },
 ];

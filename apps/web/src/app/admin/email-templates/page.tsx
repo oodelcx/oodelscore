@@ -87,6 +87,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "The daily sweep finds someone newly due for an onboarding (day-30/90) or exit survey",
     category: "alerts",
   },
+  colleague_pulse_survey: {
+    label: "Colleague Pulse Survey",
+    trigger: "A business sends its roster-personalized pulse survey links (Business portal, Colleague Roster)",
+    category: "alerts",
+  },
 };
 
 const CATEGORY_CHIPS: { id: "all" | CategoryId; label: string }[] = [
