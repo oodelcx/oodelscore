@@ -11,6 +11,7 @@ interface RuleRow {
   recipients: string[];
   active: boolean;
   isInherited?: boolean;
+  product?: string;
   activity: { count: number; lastFiredAt: string } | null;
 }
 
@@ -28,6 +29,8 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
   const [metric, setMetric] = useState("star_average");
   const [threshold, setThreshold] = useState("");
   const [recipients, setRecipients] = useState("");
+  const [product, setProduct] = useState("customer_experience");
+  const [ceEnabled, setCeEnabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -44,6 +47,9 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
 
   useEffect(() => {
     load();
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.business?.enabledProducts?.includes("colleague_experience")));
   }, []);
 
   async function createRule() {
@@ -57,6 +63,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
         metric,
         threshold: threshold ? Number(threshold) : null,
         recipients: recipients.split(",").map((r) => r.trim()).filter(Boolean),
+        product,
       }),
     });
     const data = await res.json();
@@ -67,6 +74,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
     }
     setThreshold("");
     setRecipients("");
+    setProduct("customer_experience");
     load();
   }
 
@@ -110,6 +118,15 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
             </label>
             <input type="number" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
           </div>
+          {ceEnabled && (
+            <div className="field">
+              <label>Product</label>
+              <select value={product} onChange={(e) => setProduct(e.target.value)}>
+                <option value="customer_experience">Customer Experience</option>
+                <option value="colleague_experience">Colleague Experience</option>
+              </select>
+            </div>
+          )}
         </div>
         {inheritedRules.some((r) => r.metric === metric) && (
           <p className="subtitle" style={{ margin: "0 0 12px" }}>
@@ -138,6 +155,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
             <thead>
               <tr>
                 <th>Condition</th>
+                {ceEnabled && <th>Product</th>}
                 <th>Channel</th>
                 <th>Activity</th>
                 <th>Active</th>
@@ -150,6 +168,13 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
                   <td>
                     {METRIC_LABELS[r.metric] ?? r.metric} below {r.threshold ?? "—"}
                   </td>
+                  {ceEnabled && (
+                    <td>
+                      <span className={`pill ${r.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                        {r.product === "colleague_experience" ? "Colleague" : "Customer"}
+                      </span>
+                    </td>
+                  )}
                   <td>Email · {r.recipients.join(", ") || "—"}</td>
                   <td>
                     {r.activity
@@ -171,7 +196,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
               ))}
               {ownRules.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="subtitle">
+                  <td colSpan={ceEnabled ? 6 : 5} className="subtitle">
                     No rules yet.
                   </td>
                 </tr>

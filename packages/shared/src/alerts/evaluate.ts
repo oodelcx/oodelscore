@@ -1,5 +1,6 @@
 import { Types, type HydratedDocument } from "mongoose";
 import { AlertRule, type IAlertRule } from "../models/AlertRule";
+import type { Product } from "../models/products";
 import { AlertActivity } from "../models/AlertActivity";
 import { Business, type IBusiness } from "../models/Business";
 import { Category } from "../models/Category";
@@ -41,9 +42,10 @@ function metricValue(metric: string, metrics: { starAverage: number | null; npsS
 async function autoTriageAndCreateActionItem(
   business: HydratedDocument<IBusiness>,
   ruleDescription: string,
-  triggeringComment: string | null
+  triggeringComment: string | null,
+  product: Product
 ) {
-  const categories = await Category.find();
+  const categories = await Category.find({ product });
   const suggestion = await generateTriageSuggestion({
     comment: triggeringComment,
     ruleDescription,
@@ -98,6 +100,7 @@ async function autoTriageAndCreateActionItem(
   const item = await ActionBoardItem.create({
     parentOrgId: business.parentOrgId ?? null,
     businessId: business._id,
+    product,
     title: suggestion.title,
     description: triggeringComment ? `Respondent comment: "${triggeringComment}"` : "",
     categoryId: suggestion.categoryId,
@@ -150,7 +153,7 @@ async function recordFiringAndNotify(
   }
 
   if (business) {
-    await autoTriageAndCreateActionItem(business, ruleDescription, triggeringComment).catch((err) =>
+    await autoTriageAndCreateActionItem(business, ruleDescription, triggeringComment, rule.product).catch((err) =>
       console.error("[alerts] AI-assisted triage failed", err)
     );
   }
@@ -166,7 +169,8 @@ async function recordFiringAndNotify(
  */
 export async function evaluateRealTimeAlertsForBusiness(
   businessId: Types.ObjectId | string,
-  triggeringComment: string | null = null
+  triggeringComment: string | null = null,
+  product: Product = "customer_experience"
 ): Promise<void> {
   const business = await Business.findById(businessId);
   if (!business) return;
@@ -182,13 +186,14 @@ export async function evaluateRealTimeAlertsForBusiness(
   const rules = await AlertRule.find({
     active: true,
     ruleType: "fixed_threshold",
+    product,
     $or: ownerFilters,
   });
   if (rules.length === 0) return;
 
   const to = new Date();
   const from = new Date(to.getTime() - METRIC_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const metrics = await computeBusinessMetrics(business._id, from, to);
+  const metrics = await computeBusinessMetrics(business._id, from, to, product);
 
   for (const rule of rules) {
     const value = metricValue(rule.metric, metrics);
@@ -231,8 +236,8 @@ export async function evaluateBaselineAlerts(): Promise<BaselineAlertSweepResult
       const baselineFrom = new Date(baselineTo.getTime() - rule.baselineWindowDays * 24 * 60 * 60 * 1000);
 
       for (const business of businesses) {
-        const current = await computeBusinessMetrics(business._id, currentFrom, to);
-        const baseline = await computeBusinessMetrics(business._id, baselineFrom, baselineTo);
+        const current = await computeBusinessMetrics(business._id, currentFrom, to, rule.product);
+        const baseline = await computeBusinessMetrics(business._id, baselineFrom, baselineTo, rule.product);
         const currentValue = metricValue(rule.metric, current);
         const baselineValue = metricValue(rule.metric, baseline);
         if (currentValue === null || baselineValue === null || baselineValue === 0) continue;
@@ -249,7 +254,7 @@ export async function evaluateBaselineAlerts(): Promise<BaselineAlertSweepResult
       const perBusiness = await Promise.all(
         businesses.map(async (business) => ({
           business,
-          value: metricValue(rule.metric, await computeBusinessMetrics(business._id, from, to)),
+          value: metricValue(rule.metric, await computeBusinessMetrics(business._id, from, to, rule.product)),
         }))
       );
       const values = perBusiness.map((b) => b.value).filter((v): v is number => v !== null);
