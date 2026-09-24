@@ -7,6 +7,7 @@ import {
   computeBusinessCategoryBreakdown,
   computeThemeIntelligence,
   hasFeature,
+  hasProduct,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
@@ -38,7 +39,12 @@ export async function GET(req: Request) {
     computeBusinessMetrics(session.business._id, from, to),
     computeBusinessCategoryBreakdown(session.business._id, from, to),
     computeThemeIntelligence([session.business._id], from, to, from, from),
-    ActionBoardItem.countDocuments({ businessId: session.business._id, status: "resolved", resolvedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({
+      businessId: session.business._id,
+      product: "customer_experience",
+      status: "resolved",
+      resolvedAt: { $gte: from, $lte: to },
+    }),
     ImprovementInitiative.countDocuments({
       $or: [{ businessId: session.business._id }, { affectedBusinessIds: session.business._id }],
       status: "completed",
@@ -46,6 +52,28 @@ export async function GET(req: Request) {
     }),
     ActionBoardItem.countDocuments({ businessId: session.business._id, customerNotifiedAt: { $gte: from, $lte: to } }),
   ]);
+
+  // Colleague Experience has no theme-intelligence equivalent yet (that's a
+  // CX-only AI feature) — its report section is scores + categories +
+  // resolved cases only, and only appears when the business has bought it.
+  let colleagueExperience: {
+    metrics: Awaited<ReturnType<typeof computeBusinessMetrics>>;
+    categoryBreakdown: Awaited<ReturnType<typeof computeBusinessCategoryBreakdown>>;
+    casesResolved: number;
+  } | null = null;
+  if (hasProduct(session.business, "colleague_experience")) {
+    const [ceMetrics, ceCategoryBreakdown, ceCasesResolved] = await Promise.all([
+      computeBusinessMetrics(session.business._id, from, to, "colleague_experience"),
+      computeBusinessCategoryBreakdown(session.business._id, from, to, "colleague_experience"),
+      ActionBoardItem.countDocuments({
+        businessId: session.business._id,
+        product: "colleague_experience",
+        status: "resolved",
+        resolvedAt: { $gte: from, $lte: to },
+      }),
+    ]);
+    colleagueExperience = { metrics: ceMetrics, categoryBreakdown: ceCategoryBreakdown, casesResolved: ceCasesResolved };
+  }
 
   return NextResponse.json({
     status: "ok",
@@ -55,5 +83,6 @@ export async function GET(req: Request) {
     categoryBreakdown,
     themes: themes.slice(0, 10),
     activity: { casesResolved, initiativesCompleted, customersRespondedTo },
+    colleagueExperience,
   });
 }

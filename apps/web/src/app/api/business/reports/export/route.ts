@@ -5,6 +5,7 @@ import {
   ImprovementInitiative,
   computeBusinessMetrics,
   computeBusinessCategoryBreakdown,
+  hasProduct,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
@@ -30,7 +31,12 @@ export async function GET(request: Request) {
   const [metrics, categoryBreakdown, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
     computeBusinessMetrics(session.business._id, from, to),
     computeBusinessCategoryBreakdown(session.business._id, from, to),
-    ActionBoardItem.countDocuments({ businessId: session.business._id, status: "resolved", resolvedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({
+      businessId: session.business._id,
+      product: "customer_experience",
+      status: "resolved",
+      resolvedAt: { $gte: from, $lte: to },
+    }),
     ImprovementInitiative.countDocuments({
       $or: [{ businessId: session.business._id }, { affectedBusinessIds: session.business._id }],
       status: "completed",
@@ -54,6 +60,30 @@ export async function GET(request: Request) {
     ["Category", "Average"],
     ...categoryBreakdown.map((c) => [c.name, String(c.average)]),
   ];
+
+  if (hasProduct(session.business, "colleague_experience")) {
+    const [ceMetrics, ceCategoryBreakdown, ceCasesResolved] = await Promise.all([
+      computeBusinessMetrics(session.business._id, from, to, "colleague_experience"),
+      computeBusinessCategoryBreakdown(session.business._id, from, to, "colleague_experience"),
+      ActionBoardItem.countDocuments({
+        businessId: session.business._id,
+        product: "colleague_experience",
+        status: "resolved",
+        resolvedAt: { $gte: from, $lte: to },
+      }),
+    ]);
+    rows.push(
+      [],
+      ["Colleague Experience — Metric", "Value"],
+      ["Responses", String(ceMetrics.responseCount)],
+      ["Star average", ceMetrics.starAverage !== null ? String(ceMetrics.starAverage) : ""],
+      ["eNPS", ceMetrics.npsScore !== null ? String(ceMetrics.npsScore) : ""],
+      ["Cases resolved", String(ceCasesResolved)],
+      [],
+      ["Colleague Experience — Category", "Average"],
+      ...ceCategoryBreakdown.map((c) => [c.name, String(c.average)])
+    );
+  }
 
   const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
   return new NextResponse(csv, {

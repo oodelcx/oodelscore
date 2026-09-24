@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, ActionBoardItem, ImprovementInitiative, computeNetworkSummaries } from "@oodelscore/shared";
+import { connectToDatabase, Business, ActionBoardItem, ImprovementInitiative, computeNetworkSummaries, hasProduct } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 function csvEscape(value: string): string {
@@ -23,7 +23,12 @@ export async function GET(request: Request) {
 
   const [summaries, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
     computeNetworkSummaries(session.org._id, from, to),
-    ActionBoardItem.countDocuments({ parentOrgId: session.org._id, status: "resolved", resolvedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({
+      parentOrgId: session.org._id,
+      product: "customer_experience",
+      status: "resolved",
+      resolvedAt: { $gte: from, $lte: to },
+    }),
     ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, status: "completed", completedAt: { $gte: from, $lte: to } }),
     ActionBoardItem.countDocuments({ parentOrgId: session.org._id, customerNotifiedAt: { $gte: from, $lte: to } }),
   ]);
@@ -40,6 +45,32 @@ export async function GET(request: Request) {
     ["Branch", "Region", "Responses", "Star average", "NPS"],
     ...summaries.map((s) => [s.name, s.region, String(s.responseCount), s.starAverage !== null ? String(s.starAverage) : "", s.npsScore !== null ? String(s.npsScore) : ""]),
   ];
+
+  if (hasProduct(session.org, "colleague_experience")) {
+    const [ceSummaries, ceCasesResolved] = await Promise.all([
+      computeNetworkSummaries(session.org._id, from, to, "colleague_experience"),
+      ActionBoardItem.countDocuments({
+        parentOrgId: session.org._id,
+        product: "colleague_experience",
+        status: "resolved",
+        resolvedAt: { $gte: from, $lte: to },
+      }),
+    ]);
+    rows.push(
+      [],
+      ["Colleague Experience — Metric", "Value"],
+      ["Cases resolved", String(ceCasesResolved)],
+      [],
+      ["Colleague Experience — Branch", "Region", "Responses", "Star average", "eNPS"],
+      ...ceSummaries.map((s) => [
+        s.name,
+        s.region,
+        String(s.responseCount),
+        s.starAverage !== null ? String(s.starAverage) : "",
+        s.npsScore !== null ? String(s.npsScore) : "",
+      ])
+    );
+  }
 
   const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
   return new NextResponse(csv, {

@@ -19,6 +19,11 @@ interface ReportData {
   categoryBreakdown: CategoryRow[];
   themes: ThemeRow[];
   activity: { casesResolved: number; initiativesCompleted: number; customersRespondedTo: number };
+  colleagueExperience: {
+    metrics: { responseCount: number; starAverage: number | null; npsScore: number | null };
+    categoryBreakdown: CategoryRow[];
+    casesResolved: number;
+  } | null;
 }
 
 function isoDate(d: Date): string {
@@ -175,6 +180,58 @@ export default function ReportsClient() {
               )}
             </tbody>
           </table>
+
+          {data.colleagueExperience && (
+            <>
+              <div className="section-title" style={{ marginTop: 24 }}>Colleague Experience</div>
+              <div className="grid grid-3" style={{ marginBottom: 20 }}>
+                <div className="card">
+                  <div className="metric-label">Responses</div>
+                  <div className="metric-val">{data.colleagueExperience.metrics.responseCount}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">Star average</div>
+                  <div className="metric-val">
+                    {data.colleagueExperience.metrics.starAverage !== null ? `${data.colleagueExperience.metrics.starAverage}/5` : "—"}
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">eNPS</div>
+                  <div className="metric-val">
+                    {data.colleagueExperience.metrics.npsScore !== null ? data.colleagueExperience.metrics.npsScore : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="card" style={{ marginBottom: 20, maxWidth: 240 }}>
+                <div className="metric-label">Cases resolved</div>
+                <div className="metric-val">{data.colleagueExperience.casesResolved}</div>
+              </div>
+              <div className="section-title">By category</div>
+              <table className="clean">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Average</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.colleagueExperience.categoryBreakdown.map((c) => (
+                    <tr key={c.categoryId}>
+                      <td>{c.name}</td>
+                      <td>{c.average}/5</td>
+                    </tr>
+                  ))}
+                  {data.colleagueExperience.categoryBreakdown.length === 0 && (
+                    <tr>
+                      <td colSpan={2} className="subtitle">
+                        No category data for this period.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
         </>
       )}
     </div>
