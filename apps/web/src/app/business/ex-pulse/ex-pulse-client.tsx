@@ -51,6 +51,22 @@ function formatPointChange(change: number | null): string {
   return String(change);
 }
 
+interface DemographicCut {
+  value: string;
+  responseCount: number;
+  enps: number | null;
+}
+
+interface DemographicBreakdown {
+  ageGroup: DemographicCut[];
+  gender: DemographicCut[];
+}
+
+const DEMOGRAPHIC_FIELD_LABELS: Record<keyof DemographicBreakdown, string> = {
+  ageGroup: "Age group",
+  gender: "Gender",
+};
+
 const LEVEL_LABELS: Record<number, string> = {
   1: "Level 1 — Starting out",
   2: "Level 2 — Building the basics",
@@ -64,6 +80,7 @@ export default function BusinessExPulseClient() {
   const [history, setHistory] = useState<ExPulseScore[]>([]);
   const [drivers, setDrivers] = useState<DriverResult[]>([]);
   const [periodComparisons, setPeriodComparisons] = useState<PeriodComparisons | null>(null);
+  const [demographics, setDemographics] = useState<DemographicBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
 
@@ -80,6 +97,7 @@ export default function BusinessExPulseClient() {
         setScore(pulseRes.data.score);
         setHistory(pulseRes.data.history ?? []);
         setPeriodComparisons(pulseRes.data.periodComparisons ?? null);
+        setDemographics(pulseRes.data.demographics ?? null);
         if (driverRes.ok) setDrivers(driverRes.data.drivers ?? []);
       })
       .finally(() => setLoading(false));
@@ -226,6 +244,38 @@ export default function BusinessExPulseClient() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {demographics && (demographics.ageGroup.length > 0 || demographics.gender.length > 0) && (
+            <div className="callout" style={{ marginBottom: 20 }}>
+              <h3 style={{ marginTop: 0 }}>eNPS by demographic</h3>
+              <p className="subtitle" style={{ marginTop: 0 }}>
+                Self-reported, never tied to identity. Last 90 days. A group with fewer than 5 responses shows no
+                score at all — not a blurred number — until enough exist to protect anonymity.
+              </p>
+              {(Object.keys(demographics) as (keyof DemographicBreakdown)[]).map((field) =>
+                demographics[field].length === 0 ? null : (
+                  <div key={field} style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{DEMOGRAPHIC_FIELD_LABELS[field]}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      {demographics[field].map((cut) => (
+                        <div key={cut.value} className="callout" style={{ padding: "8px 14px", minWidth: 100 }}>
+                          <div style={{ fontSize: 18, fontWeight: 600 }}>{cut.enps !== null ? cut.enps : "—"}</div>
+                          <div className="subtitle" style={{ margin: 0 }}>
+                            {cut.value} ({cut.responseCount})
+                          </div>
+                          {cut.enps === null && (
+                            <div className="subtitle" style={{ margin: 0, fontSize: 11 }}>
+                              Not enough responses yet
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              )}
             </div>
           )}
 
