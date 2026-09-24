@@ -29,6 +29,8 @@ import { DemoRequest } from "../models/DemoRequest";
 import { CxGoal, type CxGoalMetric, type CxGoalStatus } from "../models/CxGoal";
 import { PlaybookRun } from "../models/PlaybookRun";
 import { AuditLogEntry } from "../models/AuditLogEntry";
+import { SupportTicket, type SupportTicketCategory, type SupportTicketStatus } from "../models/SupportTicket";
+import { Event as TrainingEvent } from "../models/Event";
 import { hashPassword } from "../auth/password";
 import { markOwnerComp } from "../stripe/billing";
 import { recomputeAllCxPulseScores } from "../cxpulse/compute";
@@ -462,6 +464,8 @@ export interface ShowcaseSeedResult {
   cxGoals: number;
   playbookRuns: number;
   auditLogEntries: number;
+  supportTickets: number;
+  events: number;
 }
 
 /**
@@ -496,6 +500,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     cxGoals: 0,
     playbookRuns: 0,
     auditLogEntries: 0,
+    supportTickets: 0,
+    events: 0,
   };
 
   // 1. Categories + industries (global reference data, upserted by name).
@@ -684,6 +690,751 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     });
     standaloneInfoByKey.set(standalone.key, info);
   }
+
+  // 4b. Colleague Experience & multi-product showcase businesses — covers
+  // the product combinations the rest of the showcase (all customer_
+  // experience) never exercises: a business running CE only, a business
+  // running both products side by side, and an events-based (not
+  // place-based) business, so every "which product/what shape of business"
+  // path through the app has real data behind it.
+  const CE_CATEGORY_NAMES = [
+    "Management Support",
+    "Growth Opportunities",
+    "Work-Life Balance",
+    "Team Culture",
+    "Compensation Fairness",
+  ] as const;
+  type CeCategoryName = (typeof CE_CATEGORY_NAMES)[number];
+  const CE_THEMES_BY_CATEGORY: Record<CeCategoryName, string[]> = {
+    "Management Support": ["manager support", "leadership"],
+    "Growth Opportunities": ["career growth", "training"],
+    "Work-Life Balance": ["work-life balance", "scheduling"],
+    "Team Culture": ["team culture", "morale"],
+    "Compensation Fairness": ["pay", "compensation"],
+  };
+  const CE_POSITIVE_COMMENTS = [
+    "My manager has been really supportive this quarter.",
+    "I feel like I'm actually growing in this role.",
+    "Great team, genuinely enjoy coming to work.",
+    "Appreciate the flexibility around scheduling.",
+  ];
+  const CE_NEUTRAL_COMMENTS = ["It's fine, nothing's changed much.", "Some weeks are better than others."];
+  const CE_NEGATIVE_COMMENTS = [
+    "I've asked for feedback from my manager multiple times and never get it.",
+    "There's no clear path for growth here, I feel stuck.",
+    "Burnt out — the schedule keeps changing at the last minute.",
+    "Pay hasn't kept up with what the role actually requires now.",
+  ];
+
+  const ceCategoryByName = new Map<CeCategoryName, Types.ObjectId>();
+  for (const name of CE_CATEGORY_NAMES) {
+    const cat = await Category.findOneAndUpdate(
+      { name, product: "colleague_experience" },
+      { $setOnInsert: { name, product: "colleague_experience" } },
+      { upsert: true, new: true }
+    );
+    ceCategoryByName.set(name, cat._id);
+  }
+  const ceCategoryNameById = new Map<string, CeCategoryName>();
+  for (const [name, id] of ceCategoryByName) ceCategoryNameById.set(id.toString(), name);
+
+  function ceAnswerValueFor(question: IQuestion, mood: "bad" | "neutral" | "good"): unknown {
+    switch (question.type) {
+      case "star_1_5":
+        return mood === "bad" ? pick([1, 2]) : mood === "neutral" ? 3 : pick([4, 5]);
+      case "nps_0_10":
+        return mood === "bad" ? randomInt(0, 4) : mood === "neutral" ? randomInt(5, 6) : randomInt(7, 10);
+      case "yes_no":
+        return mood === "bad" ? pick(["no", "no", "yes"]) : "yes";
+      case "dropdown":
+        return question.options.length ? pick(question.options) : "";
+      case "open_text":
+        if (mood === "bad") return pick(CE_NEGATIVE_COMMENTS);
+        if (mood === "neutral") return Math.random() < 0.5 ? pick(CE_NEUTRAL_COMMENTS) : "";
+        return Math.random() < 0.5 ? pick(CE_POSITIVE_COMMENTS) : "";
+      default:
+        return null;
+    }
+  }
+
+  function deriveCeSentimentAndThemes(
+    mood: "bad" | "neutral" | "good",
+    categoryName: CeCategoryName | null,
+    hasComment: boolean
+  ): { sentiment: "positive" | "neutral" | "negative" | null; themes: string[] } {
+    if (!hasComment) return { sentiment: null, themes: [] };
+    const sentiment = mood === "bad" ? "negative" : mood === "good" ? "positive" : "neutral";
+    const pool = categoryName ? CE_THEMES_BY_CATEGORY[categoryName] : null;
+    const themes = pool && Math.random() < 0.85 ? pickSome(pool, randomInt(1, pool.length)) : [];
+    return { sentiment, themes };
+  }
+
+  const CE_QUESTIONS: QuestionDef[] = [
+    { text: "How supported do you feel by your manager?", type: "star_1_5", category: "Management Support" as unknown as CategoryName, required: true },
+    { text: "How would you rate your work-life balance right now?", type: "star_1_5", category: "Work-Life Balance" as unknown as CategoryName },
+    { text: "How satisfied are you with growth opportunities here?", type: "star_1_5", category: "Growth Opportunities" as unknown as CategoryName },
+    { text: "How likely are you to recommend this as a great place to work?", type: "nps_0_10", category: null, required: true },
+    { text: "Do you feel fairly compensated for your role?", type: "yes_no", category: "Compensation Fairness" as unknown as CategoryName },
+    { text: "Which best describes your team?", type: "dropdown", category: null, options: ["Frontline", "Support", "Management", "Remote"] },
+    { text: "Anything else you'd like to share?", type: "open_text", category: null },
+  ];
+  const ceTemplate = await QuestionTemplate.findOneAndUpdate(
+    { name: "Colleague Pulse Survey" },
+    {
+      $set: {
+        name: "Colleague Pulse Survey",
+        product: "colleague_experience",
+        suggestedIndustries: [],
+        questions: CE_QUESTIONS.map((q) => ({
+          text: q.text,
+          type: q.type,
+          categoryId: q.category ? ceCategoryByName.get(q.category as unknown as CeCategoryName)! : null,
+          required: q.required ?? false,
+          options: q.options ?? [],
+        })),
+      },
+    },
+    { upsert: true, new: true }
+  );
+
+  // Generates responses at one feedback point using a fixed set of
+  // questions/product/category-name-lookup, sharing the exact mood
+  // distribution and low-score/AlertActivity wiring the main CX loop uses,
+  // so CE data isn't a thinner simulation of the real thing.
+  async function generateResponsesForPoint(params: {
+    feedbackPoint: InstanceType<typeof FeedbackPoint>;
+    businessId: Types.ObjectId;
+    questions: IQuestion[];
+    product: "customer_experience" | "colleague_experience";
+    count: number;
+    dayWindow: number;
+    answerFn: (q: IQuestion, mood: "bad" | "neutral" | "good") => unknown;
+    sentimentFn: (mood: "bad" | "neutral" | "good", categoryName: string | null, hasComment: boolean) => { sentiment: "positive" | "neutral" | "negative" | null; themes: string[] };
+    categoryNameById: Map<string, string>;
+  }): Promise<{ responses: InstanceType<typeof FeedbackResponse>[]; lowScoreEvents: LowScoreEvent[] }> {
+    const responses: InstanceType<typeof FeedbackResponse>[] = [];
+    const lowScoreEvents: LowScoreEvent[] = [];
+    for (let i = 0; i < params.count; i++) {
+      const roll = Math.random();
+      const mood: "bad" | "neutral" | "good" = roll < 0.16 ? "bad" : roll < 0.32 ? "neutral" : "good";
+      const submittedAt = daysAgo(randomInt(0, params.dayWindow));
+
+      let lowestStarCategoryId: Types.ObjectId | null = null;
+      let lowestStarValue = 5;
+      let openTextComment: string | null = null;
+
+      const answers = params.questions.map((question) => {
+        const value = params.answerFn(question, mood);
+        if (question.type === "star_1_5" && typeof value === "number" && value < lowestStarValue) {
+          lowestStarValue = value;
+          lowestStarCategoryId = question.categoryId;
+        }
+        if (question.type === "open_text" && typeof value === "string" && value) {
+          openTextComment = value;
+        }
+        return { questionId: question._id!, type: question.type, value, categoryId: question.categoryId };
+      });
+
+      const themeCategoryName = lowestStarCategoryId === null ? null : params.categoryNameById.get(String(lowestStarCategoryId)) ?? null;
+      const { sentiment, themes } = params.sentimentFn(mood, themeCategoryName, !!openTextComment);
+
+      const response = await FeedbackResponse.create({
+        feedbackPointId: params.feedbackPoint._id,
+        businessId: params.businessId,
+        product: params.product,
+        answers,
+        respondentName: Math.random() < 0.35 ? pick(["Alex", "Jordan", "Sam", "Taylor", "Morgan", "Casey"]) : null,
+        respondentEmail: Math.random() < 0.2 ? `respondent${randomInt(1000, 9999)}@example.test` : null,
+        respondentPhone: null,
+        demographics: Math.random() < 0.5 ? { ageGroup: pick(AGE_GROUPS), gender: pick(GENDERS) } : { ageGroup: "", gender: "" },
+        submittedAt,
+        deviceType: pick(["mobile", "mobile", "desktop", "tablet"] as const),
+        flagged: false,
+        sentiment,
+        themes,
+        sentimentAnalyzedAt: sentiment ? submittedAt : null,
+      });
+      responses.push(response);
+      result.responses++;
+
+      if (mood === "bad" && lowestStarValue <= 2) {
+        lowScoreEvents.push({
+          businessId: params.businessId,
+          parentOrgId: null,
+          responseId: response._id,
+          submittedAt,
+          categoryId: lowestStarCategoryId,
+          starValue: lowestStarValue,
+          comment: openTextComment,
+          ownerCandidates: [],
+        });
+      }
+    }
+    return { responses, lowScoreEvents };
+  }
+
+  async function addSupportTickets(params: {
+    ownerType: "business" | "parentOrg";
+    ownerId: Types.ObjectId;
+    ownerName: string;
+    submitter: InstanceType<typeof User>;
+  }) {
+    const tickets: { category: SupportTicketCategory; subject: string; body: string; status: SupportTicketStatus; daysAgoCreated: number }[] = [
+      {
+        category: "billing",
+        subject: "Question about our next invoice",
+        body: "Can someone confirm whether our current plan includes the extra feedback points we added last month?",
+        status: "resolved",
+        daysAgoCreated: 21,
+      },
+      {
+        category: "bug",
+        subject: "QR code not loading on one feedback point",
+        body: "One of our feedback point QR codes is showing a blank page on mobile Safari — works fine on desktop.",
+        status: "in_progress",
+        daysAgoCreated: 4,
+      },
+      {
+        category: "access",
+        subject: "New team member needs access",
+        body: "We hired a new ops lead and need them added as a full-access team member — can you point me to where to do this?",
+        status: "open",
+        daysAgoCreated: 1,
+      },
+    ];
+    for (const t of tickets) {
+      const exists = await SupportTicket.findOne({ ownerType: params.ownerType, ownerId: params.ownerId, subject: t.subject });
+      if (exists) continue;
+      const createdAt = daysAgo(t.daysAgoCreated);
+      await SupportTicket.create({
+        ownerType: params.ownerType,
+        ownerId: params.ownerId,
+        ownerName: params.ownerName,
+        submittedByUserId: params.submitter._id,
+        submittedByEmail: params.submitter.email,
+        category: t.category,
+        subject: t.subject,
+        body: t.body,
+        status: t.status,
+        adminNote: t.status === "resolved" ? "Confirmed and closed out." : "",
+        resolvedAt: t.status === "resolved" ? daysAgo(Math.max(0, t.daysAgoCreated - 2)) : null,
+        createdAt,
+      });
+      result.supportTickets++;
+    }
+  }
+
+  // Support tickets for every business/org already seeded above, so the
+  // Admin Support Queue never shows an empty state and every owner's own
+  // Support page has real history instead of one lonely row.
+  for (const [, groupInfo] of groupInfoByKey) {
+    await addSupportTickets({ ownerType: "parentOrg", ownerId: groupInfo.org._id, ownerName: groupInfo.org.name, submitter: groupInfo.teamStaff[0] });
+  }
+  for (const info of businesses) {
+    await addSupportTickets({ ownerType: "business", ownerId: info.business._id, ownerName: info.business.name, submitter: info.ownerUser });
+  }
+
+  // --- Business 1: Colleague-Experience-only ("Lumen Analytics") ---
+  const lumenEmail = `lumen@${EMAIL_DOMAIN}`;
+  const lumen = await Business.findOneAndUpdate(
+    { name: "Lumen Analytics" },
+    {
+      $set: {
+        name: "Lumen Analytics",
+        industry: "Data & Analytics",
+        parentOrgId: null,
+        region: "",
+        contactName: "Lumen Analytics People Team",
+        contactEmail: lumenEmail,
+        contactPhone: "",
+        billingAssignment: "branch_pays",
+        plan: "business_monthly",
+        maxFeedbackPoints: 3,
+        questionTemplateId: ceTemplate._id,
+        enabledProducts: ["colleague_experience"],
+        demographicConfig: { name: "optional", email: "optional", phone: "off", ageGroup: "optional", gender: "optional" },
+        accountManagerId: adminUserId ?? null,
+        active: true,
+      },
+    },
+    { upsert: true, new: true }
+  );
+  const lumenOwner = await upsertActiveUser({ email: lumenEmail, accountType: "business", parentId: lumen._id, lastLoginDaysAgo: 1 });
+  result.users++;
+  const lumenOps = await upsertActiveUser({
+    email: `lumen.people@${EMAIL_DOMAIN}`,
+    accountType: "team_member",
+    parentId: lumen._id,
+    teamRole: "People Ops Lead",
+    tier: "full",
+    teamOfType: "business",
+    lastLoginDaysAgo: 2,
+  });
+  result.users++;
+  await FeedbackPoint.deleteMany({ businessId: lumen._id });
+  const lumenPoint = await FeedbackPoint.create({
+    businessId: lumen._id,
+    product: "colleague_experience",
+    name: "Employee Pulse Check",
+    description: "Recurring colleague pulse survey",
+    qrToken: randomBytes(16).toString("hex"),
+    distributionMode: "qr_open",
+    scans: randomInt(60, 150),
+    active: true,
+  });
+  result.feedbackPoints++;
+  const lumenResult = await generateResponsesForPoint({
+    feedbackPoint: lumenPoint,
+    businessId: lumen._id,
+    questions: ceTemplate.questions,
+    product: "colleague_experience",
+    count: 34,
+    dayWindow: 59,
+    answerFn: ceAnswerValueFor,
+    sentimentFn: deriveCeSentimentAndThemes as (mood: "bad" | "neutral" | "good", c: string | null, h: boolean) => { sentiment: "positive" | "neutral" | "negative" | null; themes: string[] },
+    categoryNameById: new Map(Array.from(ceCategoryNameById.entries())),
+  });
+  const lumenAlertRule = await AlertRule.findOneAndUpdate(
+    { scope: "business", ownerId: lumen._id, ruleType: "fixed_threshold", metric: "nps" },
+    { $set: { threshold: 20, product: "colleague_experience", recipients: [lumenOwner.email], active: true } },
+    { upsert: true, new: true }
+  );
+  result.alertRules++;
+  const lumenCases: InstanceType<typeof ActionBoardItem>[] = [];
+  for (const event of pickSome(lumenResult.lowScoreEvents, Math.min(3, lumenResult.lowScoreEvents.length))) {
+    const categoryLabel = event.categoryId ? ceCategoryNameById.get(event.categoryId.toString()) ?? "Team" : "Team";
+    const status = pick(["open", "in_progress", "resolved"] as const);
+    const item = await ActionBoardItem.create({
+      parentOrgId: null,
+      businessId: lumen._id,
+      product: "colleague_experience",
+      title: `${categoryLabel} concern raised at ${lumen.name}`,
+      description: event.comment ? `Respondent comment: "${event.comment}"` : `A ${event.starValue}-star rating was logged for ${categoryLabel.toLowerCase()}.`,
+      categoryId: event.categoryId,
+      priority: event.starValue <= 1 ? "high" : "medium",
+      status,
+      ownerId: lumenOps._id,
+      dueDate: status === "resolved" ? null : daysAgo(-randomInt(2, 10)),
+      sourceResponseIds: [event.responseId],
+      resolutionNote: status === "resolved" ? "Discussed with the team lead and agreed a follow-up check-in in two weeks." : "",
+      resolvedAt: status === "resolved" ? daysAgo(randomInt(0, 5)) : null,
+      source: "auto_suggested",
+      createdAt: event.submittedAt,
+    });
+    lumenCases.push(item);
+    result.actionBoardItems++;
+    await AlertActivity.create({ alertRuleId: lumenAlertRule._id, businessId: lumen._id, triggeredAt: event.submittedAt, snapshotValue: event.starValue });
+    result.alertActivity++;
+  }
+  await Playbook.findOneAndUpdate(
+    { title: "Manager Support Check-in" },
+    {
+      $set: {
+        parentOrgId: null,
+        businessId: lumen._id,
+        product: "colleague_experience",
+        title: "Manager Support Check-in",
+        categoryId: ceCategoryByName.get("Management Support"),
+        triggerCondition: "2+ low Management Support ratings in a month",
+        steps: [
+          "People Ops reviews the flagged pulse responses",
+          "Manager has a private 1:1 with the team to understand specifics",
+          "Agree concrete follow-ups and a re-check date",
+          "Re-check the team's Management Support score after 4 weeks",
+        ],
+        escalationContactId: lumenOps._id,
+      },
+    },
+    { upsert: true }
+  );
+  result.playbooks++;
+  if (lumenCases.length) {
+    await ImprovementInitiative.create({
+      parentOrgId: null,
+      businessId: lumen._id,
+      product: "colleague_experience",
+      title: "Roll out structured 1:1 cadence for managers",
+      description: "Management Support scores dipped below target — this initiative introduces a required biweekly 1:1 cadence with a shared agenda template.",
+      ownerId: lumenOps._id,
+      affectedBusinessIds: [lumen._id],
+      linkedActionIds: lumenCases.map((c) => c._id),
+      status: "in_progress",
+      baselineMetricDescription: "Average Management Support rating",
+      baselineValue: 3.1,
+      targetValue: 4.2,
+      startedAt: daysAgo(10),
+      completedAt: null,
+    });
+    result.improvementInitiatives++;
+    await DecisionLogEntry.create({
+      parentOrgId: null,
+      businessId: lumen._id,
+      product: "colleague_experience",
+      title: "Adopt biweekly 1:1 cadence for all managers",
+      trigger: "Management Support ratings trending down over the last pulse cycle.",
+      linkedActionIds: lumenCases.map((c) => c._id),
+      affectedBusinessIds: [lumen._id],
+      ownerId: lumenOps._id,
+      implementationDate: daysAgo(10),
+      status: "implemented",
+      outcomeMetricDescription: "Average Management Support rating",
+      outcomeMetric: "categoryAverage",
+      outcomeCategoryId: ceCategoryByName.get("Management Support"),
+      outcomeBefore: null,
+      outcomeAfter: null,
+      outcomeMeasuredAt: null,
+    });
+    result.decisionLogEntries++;
+  }
+  await CxGoal.findOneAndUpdate(
+    { ownerType: "business", ownerId: lumen._id, label: "Lift eNPS to +30 this quarter" },
+    {
+      $set: {
+        ownerType: "business",
+        ownerId: lumen._id,
+        product: "colleague_experience",
+        label: "Lift eNPS to +30 this quarter",
+        metric: "nps",
+        categoryId: null,
+        startValue: 12,
+        targetValue: 30,
+        targetDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        status: "active",
+        createdBy: lumenOwner._id,
+      },
+    },
+    { upsert: true }
+  );
+  result.cxGoals++;
+  await addSupportTickets({ ownerType: "business", ownerId: lumen._id, ownerName: lumen.name, submitter: lumenOwner });
+
+  // --- Business 2: both products ("Riverside Wellness Group") ---
+  const riversideEmail = `riverside@${EMAIL_DOMAIN}`;
+  const fitnessTemplate = templateBySector.get("fitness")!;
+  const riverside = await Business.findOneAndUpdate(
+    { name: "Riverside Wellness Group" },
+    {
+      $set: {
+        name: "Riverside Wellness Group",
+        industry: "Fitness",
+        parentOrgId: null,
+        region: "",
+        contactName: "Riverside Wellness Group Manager",
+        contactEmail: riversideEmail,
+        contactPhone: "",
+        billingAssignment: "branch_pays",
+        plan: "business_monthly",
+        maxFeedbackPoints: 3,
+        questionTemplateId: fitnessTemplate._id,
+        enabledProducts: ["customer_experience", "colleague_experience"],
+        demographicConfig: { name: "optional", email: "optional", phone: "off", ageGroup: "optional", gender: "optional" },
+        accountManagerId: adminUserId ?? null,
+        active: true,
+      },
+    },
+    { upsert: true, new: true }
+  );
+  const riversideOwner = await upsertActiveUser({ email: riversideEmail, accountType: "business", parentId: riverside._id, lastLoginDaysAgo: 0 });
+  result.users++;
+  const riversideOps = await upsertActiveUser({
+    email: `riverside.ops@${EMAIL_DOMAIN}`,
+    accountType: "team_member",
+    parentId: riverside._id,
+    teamRole: "Operations Manager",
+    tier: "full",
+    teamOfType: "business",
+    lastLoginDaysAgo: 1,
+  });
+  result.users++;
+  await FeedbackPoint.deleteMany({ businessId: riverside._id });
+  const riversideCxPoint = await FeedbackPoint.create({
+    businessId: riverside._id,
+    product: "customer_experience",
+    name: "Front Desk",
+    description: "Member check-in feedback",
+    qrToken: randomBytes(16).toString("hex"),
+    scans: randomInt(80, 300),
+    active: true,
+  });
+  result.feedbackPoints++;
+  const riversideCePoint = await FeedbackPoint.create({
+    businessId: riverside._id,
+    product: "colleague_experience",
+    questionTemplateOverride: ceTemplate._id,
+    name: "Team Pulse",
+    description: "Colleague pulse survey",
+    qrToken: randomBytes(16).toString("hex"),
+    distributionMode: "qr_open",
+    scans: randomInt(40, 100),
+    active: true,
+  });
+  result.feedbackPoints++;
+
+  const riversideCxCategoryNameById = new Map<string, string>();
+  for (const [name, id] of categoryByName) riversideCxCategoryNameById.set(id.toString(), name);
+  const riversideCxResult = await generateResponsesForPoint({
+    feedbackPoint: riversideCxPoint,
+    businessId: riverside._id,
+    questions: fitnessTemplate.questions,
+    product: "customer_experience",
+    count: 28,
+    dayWindow: 59,
+    answerFn: answerValueFor,
+    sentimentFn: (mood, catName, hasComment) => deriveSentimentAndThemes(mood, catName as CategoryName | null, hasComment),
+    categoryNameById: riversideCxCategoryNameById,
+  });
+  const riversideCeResult = await generateResponsesForPoint({
+    feedbackPoint: riversideCePoint,
+    businessId: riverside._id,
+    questions: ceTemplate.questions,
+    product: "colleague_experience",
+    count: 26,
+    dayWindow: 59,
+    answerFn: ceAnswerValueFor,
+    sentimentFn: deriveCeSentimentAndThemes as (mood: "bad" | "neutral" | "good", c: string | null, h: boolean) => { sentiment: "positive" | "neutral" | "negative" | null; themes: string[] },
+    categoryNameById: new Map(Array.from(ceCategoryNameById.entries())),
+  });
+
+  const riversideCxAlertRule = await AlertRule.findOneAndUpdate(
+    { scope: "business", ownerId: riverside._id, ruleType: "fixed_threshold", metric: "star_average" },
+    { $set: { threshold: 3, product: "customer_experience", recipients: [riversideOwner.email], active: true } },
+    { upsert: true, new: true }
+  );
+  result.alertRules++;
+  const riversideCeAlertRule = await AlertRule.findOneAndUpdate(
+    { scope: "business", ownerId: riverside._id, ruleType: "fixed_threshold", metric: "nps" },
+    { $set: { threshold: 20, product: "colleague_experience", recipients: [riversideOwner.email], active: true } },
+    { upsert: true, new: true }
+  );
+  result.alertRules++;
+
+  const riversideCases: InstanceType<typeof ActionBoardItem>[] = [];
+  for (const event of pickSome(riversideCxResult.lowScoreEvents, Math.min(2, riversideCxResult.lowScoreEvents.length))) {
+    const categoryLabel = event.categoryId ? riversideCxCategoryNameById.get(event.categoryId.toString()) ?? "Service" : "Service";
+    const status = pick(["open", "in_progress", "resolved"] as const);
+    const item = await ActionBoardItem.create({
+      parentOrgId: null,
+      businessId: riverside._id,
+      product: "customer_experience",
+      title: `${categoryLabel} concern reported at ${riverside.name}`,
+      description: event.comment ? `Respondent comment: "${event.comment}"` : `A ${event.starValue}-star rating was logged for ${categoryLabel.toLowerCase()}.`,
+      categoryId: event.categoryId,
+      priority: event.starValue <= 1 ? "high" : "medium",
+      status,
+      ownerId: riversideOps._id,
+      dueDate: status === "resolved" ? null : daysAgo(-randomInt(2, 10)),
+      sourceResponseIds: [event.responseId],
+      resolutionNote: status === "resolved" ? "Spoke with the front desk team and reinforced check-in standards." : "",
+      resolvedAt: status === "resolved" ? daysAgo(randomInt(0, 5)) : null,
+      source: "auto_suggested",
+      createdAt: event.submittedAt,
+    });
+    riversideCases.push(item);
+    result.actionBoardItems++;
+    await AlertActivity.create({ alertRuleId: riversideCxAlertRule._id, businessId: riverside._id, triggeredAt: event.submittedAt, snapshotValue: event.starValue });
+    result.alertActivity++;
+  }
+  for (const event of pickSome(riversideCeResult.lowScoreEvents, Math.min(2, riversideCeResult.lowScoreEvents.length))) {
+    const categoryLabel = event.categoryId ? ceCategoryNameById.get(event.categoryId.toString()) ?? "Team" : "Team";
+    const status = pick(["open", "in_progress", "resolved"] as const);
+    const item = await ActionBoardItem.create({
+      parentOrgId: null,
+      businessId: riverside._id,
+      product: "colleague_experience",
+      title: `${categoryLabel} concern raised at ${riverside.name}`,
+      description: event.comment ? `Respondent comment: "${event.comment}"` : `A ${event.starValue}-star rating was logged for ${categoryLabel.toLowerCase()}.`,
+      categoryId: event.categoryId,
+      priority: event.starValue <= 1 ? "high" : "medium",
+      status,
+      ownerId: riversideOps._id,
+      dueDate: status === "resolved" ? null : daysAgo(-randomInt(2, 10)),
+      sourceResponseIds: [event.responseId],
+      resolutionNote: status === "resolved" ? "Followed up with the team and agreed next steps." : "",
+      resolvedAt: status === "resolved" ? daysAgo(randomInt(0, 5)) : null,
+      source: "auto_suggested",
+      createdAt: event.submittedAt,
+    });
+    riversideCases.push(item);
+    result.actionBoardItems++;
+    await AlertActivity.create({ alertRuleId: riversideCeAlertRule._id, businessId: riverside._id, triggeredAt: event.submittedAt, snapshotValue: event.starValue });
+    result.alertActivity++;
+  }
+  await DecisionLogEntry.create({
+    parentOrgId: null,
+    businessId: riverside._id,
+    product: "colleague_experience",
+    title: "Add a dedicated staff break room",
+    trigger: "Work-Life Balance feedback repeatedly mentioned having nowhere to properly take a break during shifts.",
+    linkedActionIds: [],
+    affectedBusinessIds: [riverside._id],
+    ownerId: riversideOps._id,
+    implementationDate: daysAgo(15),
+    status: "implemented",
+    outcomeMetricDescription: "Average Work-Life Balance rating",
+    outcomeMetric: "categoryAverage",
+    outcomeCategoryId: ceCategoryByName.get("Work-Life Balance"),
+    outcomeBefore: null,
+    outcomeAfter: null,
+    outcomeMeasuredAt: null,
+  });
+  result.decisionLogEntries++;
+  await CxGoal.findOneAndUpdate(
+    { ownerType: "business", ownerId: riverside._id, label: "Reach 4.3 average member rating" },
+    {
+      $set: {
+        ownerType: "business",
+        ownerId: riverside._id,
+        product: "customer_experience",
+        label: "Reach 4.3 average member rating",
+        metric: "starAverage",
+        categoryId: null,
+        startValue: 3.9,
+        targetValue: 4.3,
+        targetDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
+        status: "active",
+        createdBy: riversideOwner._id,
+      },
+    },
+    { upsert: true }
+  );
+  result.cxGoals++;
+  await addSupportTickets({ ownerType: "business", ownerId: riverside._id, ownerName: riverside.name, submitter: riversideOwner });
+
+  // --- Business 3: events-only ("Elevate Training Co.") — a training
+  // company whose feedback points are all tied to Event instances rather
+  // than a fixed physical location, exercising the Event/eventId path
+  // nothing else in the showcase touches.
+  const elevateEmail = `elevate@${EMAIL_DOMAIN}`;
+  const elevate = await Business.findOneAndUpdate(
+    { name: "Elevate Training Co." },
+    {
+      $set: {
+        name: "Elevate Training Co.",
+        industry: "Professional Training",
+        parentOrgId: null,
+        region: "",
+        contactName: "Elevate Training Co. Program Lead",
+        contactEmail: elevateEmail,
+        contactPhone: "",
+        billingAssignment: "branch_pays",
+        plan: "business_monthly",
+        maxFeedbackPoints: 10,
+        questionTemplateId: templateBySector.get("education")!._id,
+        enabledProducts: ["customer_experience"],
+        demographicConfig: { name: "optional", email: "off", phone: "off", ageGroup: "off", gender: "off" },
+        accountManagerId: adminUserId ?? null,
+        active: true,
+      },
+    },
+    { upsert: true, new: true }
+  );
+  const elevateOwner = await upsertActiveUser({ email: elevateEmail, accountType: "business", parentId: elevate._id, lastLoginDaysAgo: 1 });
+  result.users++;
+  const elevateOps = await upsertActiveUser({
+    email: `elevate.ops@${EMAIL_DOMAIN}`,
+    accountType: "team_member",
+    parentId: elevate._id,
+    teamRole: "Program Coordinator",
+    tier: "full",
+    teamOfType: "business",
+    lastLoginDaysAgo: 2,
+  });
+  result.users++;
+  await FeedbackPoint.deleteMany({ businessId: elevate._id });
+
+  const elevateTemplate = templateBySector.get("education")!;
+  const elevateCategoryNameById = new Map<string, string>();
+  for (const [name, id] of categoryByName) elevateCategoryNameById.set(id.toString(), name);
+
+  const courseRuns = [
+    { courseName: "Leadership Fundamentals", seriesKey: "leadership-fundamentals", location: "Nairobi", facilitator: "D. Osei", startsAgo: 45, durationDays: 1, responseCount: 18 },
+    { courseName: "Leadership Fundamentals", seriesKey: "leadership-fundamentals", location: "Lagos", facilitator: "D. Osei", startsAgo: 20, durationDays: 1, responseCount: 22 },
+    { courseName: "Excel Fundamentals", seriesKey: "excel-fundamentals", location: "Accra", facilitator: "R. Mensah", startsAgo: 30, durationDays: 2, responseCount: 15 },
+    { courseName: "Excel Fundamentals", seriesKey: "excel-fundamentals", location: "Remote", facilitator: "R. Mensah", startsAgo: 8, durationDays: 2, responseCount: 12 },
+    { courseName: "Excel Fundamentals", seriesKey: "excel-fundamentals", location: "Nairobi", facilitator: "R. Mensah", startsAgo: -5, durationDays: 2, responseCount: 4 },
+  ];
+
+  let elevateLowScoreEvents: LowScoreEvent[] = [];
+  for (const run of courseRuns) {
+    const startsAt = daysAgo(run.startsAgo);
+    const endsAt = new Date(startsAt.getTime() + run.durationDays * 24 * 60 * 60 * 1000);
+    const event = await TrainingEvent.findOneAndUpdate(
+      { businessId: elevate._id, name: run.courseName, location: run.location, startsAt },
+      {
+        $set: {
+          businessId: elevate._id,
+          name: run.courseName,
+          seriesKey: run.seriesKey,
+          facilitator: run.facilitator,
+          location: run.location,
+          startsAt,
+          endsAt,
+          expectedAttendees: run.responseCount + randomInt(3, 10),
+        },
+      },
+      { upsert: true, new: true }
+    );
+    result.events++;
+
+    const point = await FeedbackPoint.create({
+      businessId: elevate._id,
+      product: "customer_experience",
+      eventId: event._id,
+      name: `${run.courseName} — ${run.location}`,
+      description: `Post-session feedback for ${run.courseName} in ${run.location}`,
+      qrToken: randomBytes(16).toString("hex"),
+      scans: run.responseCount + randomInt(2, 8),
+      active: true,
+      startsAt,
+      endsAt: run.startsAgo >= 0 ? endsAt : null, // the one upcoming/ongoing run stays open-ended
+    });
+    result.feedbackPoints++;
+
+    const { lowScoreEvents } = await generateResponsesForPoint({
+      feedbackPoint: point,
+      businessId: elevate._id,
+      questions: elevateTemplate.questions,
+      product: "customer_experience",
+      count: run.responseCount,
+      dayWindow: Math.max(1, run.startsAgo),
+      answerFn: answerValueFor,
+      sentimentFn: (mood, catName, hasComment) => deriveSentimentAndThemes(mood, catName as CategoryName | null, hasComment),
+      categoryNameById: elevateCategoryNameById,
+    });
+    elevateLowScoreEvents = elevateLowScoreEvents.concat(lowScoreEvents);
+  }
+
+  const elevateAlertRule = await AlertRule.findOneAndUpdate(
+    { scope: "business", ownerId: elevate._id, ruleType: "fixed_threshold", metric: "star_average" },
+    { $set: { threshold: 3.5, product: "customer_experience", recipients: [elevateOwner.email], active: true } },
+    { upsert: true, new: true }
+  );
+  result.alertRules++;
+  for (const event of pickSome(elevateLowScoreEvents, Math.min(2, elevateLowScoreEvents.length))) {
+    const categoryLabel = event.categoryId ? elevateCategoryNameById.get(event.categoryId.toString()) ?? "Session" : "Session";
+    const status = pick(["open", "resolved"] as const);
+    await ActionBoardItem.create({
+      parentOrgId: null,
+      businessId: elevate._id,
+      product: "customer_experience",
+      title: `${categoryLabel} feedback from a training session`,
+      description: event.comment ? `Respondent comment: "${event.comment}"` : `A ${event.starValue}-star rating was logged for ${categoryLabel.toLowerCase()}.`,
+      categoryId: event.categoryId,
+      priority: "medium",
+      status,
+      ownerId: elevateOps._id,
+      dueDate: status === "resolved" ? null : daysAgo(-randomInt(2, 10)),
+      sourceResponseIds: [event.responseId],
+      resolutionNote: status === "resolved" ? "Facilitator briefed for the next run of this session." : "",
+      resolvedAt: status === "resolved" ? daysAgo(randomInt(0, 5)) : null,
+      source: "auto_suggested",
+      createdAt: event.submittedAt,
+    });
+    result.actionBoardItems++;
+    await AlertActivity.create({ alertRuleId: elevateAlertRule._id, businessId: elevate._id, triggeredAt: event.submittedAt, snapshotValue: event.starValue });
+    result.alertActivity++;
+  }
+  await addSupportTickets({ ownerType: "business", ownerId: elevate._id, ownerName: elevate.name, submitter: elevateOwner });
 
   // 5. Category owner mappings (business + parentOrg scope) — the feature
   // this session just built, so the showcase demonstrates it directly.
@@ -2035,6 +2786,8 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("categoryOwnerMappings", () => CategoryOwnerMapping.deleteMany({}));
   await del("alertActivity", () => AlertActivity.deleteMany({}));
   await del("alertRules", () => AlertRule.deleteMany({}));
+  await del("supportTickets", () => SupportTicket.deleteMany({}));
+  await del("events", () => TrainingEvent.deleteMany({}));
   await del("responses", () => FeedbackResponse.deleteMany({}));
   await del("feedbackPoints", () => FeedbackPoint.deleteMany({}));
   await del("feedbackPointRequests", () => FeedbackPointRequest.deleteMany({}));
