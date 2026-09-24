@@ -57,7 +57,7 @@ const DIMENSION_LABELS: Record<HoldingBackDimension["dimension"], string> = {
   outcome: "Outcome",
 };
 
-/** CX/EX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /business/cx-pulse or /business/ex-pulse. */
+/** CX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /business/cx-pulse or /business/ex-pulse. */
 function CxPulseHoldingBack({ dimensions, href = "/business/cx-pulse" }: { dimensions: HoldingBackDimension[]; href?: string }) {
   if (dimensions.length === 0) return null;
   return (
@@ -145,7 +145,7 @@ export default function BusinessDashboardClient() {
 
   const isCe = data.product === "colleague_experience";
   const npsLabel = isCe ? "eNPS" : "NPS";
-  const pulseLabel = isCe ? "EX Pulse" : "CX Pulse";
+  const pulseLabel = "CX Pulse";
   const pulseHref = isCe ? "/business/ex-pulse" : "/business/cx-pulse";
 
   if (data.branch) {

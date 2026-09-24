@@ -10,6 +10,7 @@ import {
   getBillingAccessStatus,
   hasFeature,
   hasProduct,
+  primaryProductFor,
   teamMemberCanAccess,
 } from "@oodelscore/shared";
 import "../admin/admin.css";
@@ -52,6 +53,11 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   const isGated = billingStatus !== "active" && !isBillingRoute;
   const bothProductsEnabled = hasProduct(org, "customer_experience") && hasProduct(org, "colleague_experience");
   const viewProduct = bothProductsEnabled ? await resolveViewProduct(org) : null;
+  // Which product "CX Pulse" in the nav should point at — the two pages
+  // (the CX maturity ladder and its Colleague Experience analogue) share
+  // the one label per the branding rule (CX means whichever product you're
+  // currently viewing), so only ever one is shown, never both at once.
+  const cxPulseNavProduct = viewProduct ?? primaryProductFor(org);
 
   return (
     <div className="admin-app">
@@ -88,7 +94,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-understand"
                 label="Understand"
-                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports", "/group/ex-pulse"]}
+                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
               >
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "insights") &&
@@ -102,9 +108,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "reports") &&
                   teamMemberCanAccess(user, "reports") && <a href="/group/reports">Reports</a>}
-                {hasProduct(org, "colleague_experience") && teamMemberCanAccess(user, "exPulse") && (
-                  <a href="/group/ex-pulse">EX Pulse</a>
-                )}
               </NavSection>
               <NavSection
                 storageKey="group-act"
@@ -120,13 +123,20 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   <a href="/group/decision-log">Decision log</a>
                 )}
               </NavSection>
-              {hasProduct(org, "customer_experience") &&
-                hasFeature(org.enabledFeatures, "cxPulse") &&
-                teamMemberCanAccess(user, "cxPulse") && (
-                  <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
-                    <a href="/group/maturity">CX Pulse</a>
-                  </NavSection>
-                )}
+              {cxPulseNavProduct === "customer_experience"
+                ? hasProduct(org, "customer_experience") &&
+                  hasFeature(org.enabledFeatures, "cxPulse") &&
+                  teamMemberCanAccess(user, "cxPulse") && (
+                    <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
+                      <a href="/group/maturity">CX Pulse</a>
+                    </NavSection>
+                  )
+                : hasProduct(org, "colleague_experience") &&
+                  teamMemberCanAccess(user, "exPulse") && (
+                    <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/ex-pulse"]}>
+                      <a href="/group/ex-pulse">CX Pulse</a>
+                    </NavSection>
+                  )}
 
               <NavSection
                 storageKey="group-admin"

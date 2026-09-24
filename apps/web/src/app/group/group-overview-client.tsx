@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PeriodComparisonCards, type Comparisons } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
+import { ThemeCard } from "@/components/theme-card";
 
 interface RecurringFlagRow {
   _id: string;
@@ -161,9 +162,12 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
 
   const isCe = data.product === "colleague_experience";
   const npsLabel = isCe ? "eNPS" : "NPS";
-  const pulseLabel = isCe ? "EX Pulse" : "CX Pulse";
+  const pulseLabel = "CX Pulse";
   const averageLabel = isCe ? "Network average rating" : "Network average";
   const pulseHref = isCe ? "/group/ex-pulse" : "/group/maturity";
+  const respondedToLabel = isCe ? "Colleagues personally responded to" : "Customers personally responded to";
+  const branchNoun = isCe ? "location" : "branch";
+  const branchNounPlural = isCe ? "locations" : "branches";
 
   return (
     <div>
@@ -171,7 +175,8 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         <div>
           <h1>Your Organization</h1>
           <p className="subtitle" style={{ margin: 0 }}>
-            {data.branchCount} branches across {data.regions.length} region{data.regions.length === 1 ? "" : "s"}.
+            {data.branchCount} {data.branchCount === 1 ? branchNoun : branchNounPlural} across {data.regions.length} region
+            {data.regions.length === 1 ? "" : "s"}.
           </p>
         </div>
         <div style={{ position: "relative" }}>
@@ -233,7 +238,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
           </div>
         </div>
         <div className="card">
-          <div className="metric-label">Customers personally responded to</div>
+          <div className="metric-label">{respondedToLabel}</div>
           <div className="metric-val">{data.valueDelivered.customersRespondedTo}</div>
         </div>
         <div className="card">
@@ -249,23 +254,9 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
       {topThemes.length > 0 && (
         <>
           <div className="section-title">Top themes this month</div>
-          <div className="grid grid-3" style={{ marginBottom: 20 }}>
-            {topThemes.map((t) => (
-              <div className="card" key={t.theme}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <b>{t.theme}</b>
-                  {t.trend && (
-                    <span className={`pill ${t.trend === "up" ? "pill-green" : t.trend === "down" ? "pill-red" : "pill-gray"}`}>
-                      {t.trend === "up" ? "▲" : t.trend === "down" ? "▼" : "—"}
-                    </span>
-                  )}
-                </div>
-                <div className="metric-note">{t.frequency} mentions</div>
-                <div className="metric-note">
-                  {t.sentimentBreakdown.positive} positive · {t.sentimentBreakdown.neutral} neutral ·{" "}
-                  {t.sentimentBreakdown.negative} negative
-                </div>
-              </div>
+          <div className="theme-card-row">
+            {topThemes.map((t, i) => (
+              <ThemeCard key={t.theme} rank={i + 1} theme={t} />
             ))}
           </div>
         </>
@@ -273,7 +264,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
 
       <div className="grid grid-4" data-tour="group-kpi-strip" style={{ marginBottom: 20 }}>
         <div className="card">
-          <div className="metric-label">Branches</div>
+          <div className="metric-label">{branchNounPlural.charAt(0).toUpperCase() + branchNounPlural.slice(1)}</div>
           <div className="metric-val">{data.branchCount}</div>
         </div>
         <div className="card">

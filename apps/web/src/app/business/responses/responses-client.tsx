@@ -65,7 +65,9 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<ResponseStats | null>(null);
   const [product, setProduct] = useState<ProductId>("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
+  const [ready, setReady] = useState(false);
 
   function load() {
     setLoading(true);
@@ -83,14 +85,27 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   }
 
   useEffect(() => {
+    if (!ready) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filter, sort, product]);
+  }, [ready, page, filter, sort, product]);
 
+  // Account-scoped enabled products must be known BEFORE the first data
+  // fetch — otherwise a Colleague-Experience-only business always starts by
+  // asking for (empty) Customer Experience data, showing a stale/wrong tab
+  // and an empty page until a second render corrects it.
   useEffect(() => {
     fetch("/api/business/me")
       .then((r) => r.json())
-      .then((d) => setCeEnabled(!!d.business?.enabledProducts?.includes("colleague_experience")));
+      .then((d) => {
+        const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
+        const hasCx = products.includes("customer_experience");
+        const hasCe = products.includes("colleague_experience");
+        setCxEnabled(hasCx);
+        setCeEnabled(hasCe);
+        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setReady(true);
+      });
   }, []);
 
   function changeProduct(p: ProductId) {
@@ -172,7 +187,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
         </div>
       )}
 
-      {ceEnabled && (
+      {cxEnabled && ceEnabled && (
         <div className="filters" style={{ marginBottom: 8 }}>
           <div className={`chip ${product === "customer_experience" ? "active" : ""}`} onClick={() => changeProduct("customer_experience")}>
             Customer Experience

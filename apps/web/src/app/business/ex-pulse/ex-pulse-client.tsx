@@ -108,7 +108,7 @@ export default function BusinessExPulseClient() {
     return (
       <div>
         <div className="page-head">
-          <h1>EX Pulse</h1>
+          <h1>CX Pulse</h1>
         </div>
         <p className="subtitle">Loading…</p>
       </div>
@@ -119,7 +119,7 @@ export default function BusinessExPulseClient() {
     return (
       <div>
         <div className="page-head">
-          <h1>EX Pulse</h1>
+          <h1>CX Pulse</h1>
         </div>
         <div className="callout">Colleague Experience is not enabled for this account.</div>
       </div>
@@ -129,7 +129,7 @@ export default function BusinessExPulseClient() {
   return (
     <div>
       <div className="page-head">
-        <h1>EX Pulse</h1>
+        <h1>CX Pulse</h1>
         <p className="subtitle" style={{ margin: 0 }}>
           Colleague Experience's own maturity score — same 5-dimension mechanic as CX Pulse, plus eNPS as the
           standing headline metric. Recomputed nightly.
@@ -141,7 +141,7 @@ export default function BusinessExPulseClient() {
           apiPath="/api/business/goals"
           categoriesApiPath="/api/business/category-owners"
           product="colleague_experience"
-          title="EX Goals"
+          title="CX Goals"
         />
       </div>
 

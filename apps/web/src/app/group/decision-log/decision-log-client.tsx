@@ -107,6 +107,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
   const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
 
   function load() {
@@ -131,7 +132,14 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
     load();
     fetch("/api/group/me")
       .then((r) => r.json())
-      .then((d) => setCeEnabled(!!d.org?.enabledProducts?.includes("colleague_experience")));
+      .then((d) => {
+        const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
+        const hasCx = products.includes("customer_experience");
+        const hasCe = products.includes("colleague_experience");
+        setCxEnabled(hasCx);
+        setCeEnabled(hasCe);
+        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+      });
   }, []);
 
   // Pre-fill the "Log a decision" form when arriving from Case Management's
@@ -342,7 +350,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
               ))}
             </select>
           </div>
-          {ceEnabled && (
+          {cxEnabled && ceEnabled && (
             <div className="field">
               <label>Product</label>
               <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
@@ -496,7 +504,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
                     <div className="ab-card-head">
                       <div className="ab-title-block">
                         <div className="ab-badges">
-                          {ceEnabled && (
+                          {cxEnabled && ceEnabled && (
                             <span className={`pill ${e.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
                               {e.product === "colleague_experience" ? "Colleague" : "Customer"}
                             </span>

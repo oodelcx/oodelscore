@@ -48,9 +48,30 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<ResponseStats | null>(null);
   const [product, setProduct] = useState<ProductId>("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  // Account-scoped enabled products must be known BEFORE the first data
+  // fetch — otherwise a Colleague-Experience-only account always starts by
+  // asking for (empty) Customer Experience data, showing a stale/wrong tab
+  // and an empty page until a second render corrects it.
+  useEffect(() => {
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
+        const hasCx = products.includes("customer_experience");
+        const hasCe = products.includes("colleague_experience");
+        setCxEnabled(hasCx);
+        setCeEnabled(hasCe);
+        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setReady(true);
+      });
+  }, []);
 
   useEffect(() => {
+    if (!ready) return;
     setLoading(true);
     const params = new URLSearchParams({
       page: String(page),
@@ -67,13 +88,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         setStats(data.stats ?? null);
       })
       .finally(() => setLoading(false));
-  }, [page, negativeOnly, product]);
-
-  useEffect(() => {
-    fetch("/api/group/me")
-      .then((r) => r.json())
-      .then((d) => setCeEnabled(!!d.org?.enabledProducts?.includes("colleague_experience")));
-  }, []);
+  }, [ready, page, negativeOnly, product]);
 
   function setFilter(negative: boolean) {
     setNegativeOnly(negative);
@@ -115,7 +130,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         </div>
       )}
 
-      {ceEnabled && (
+      {cxEnabled && ceEnabled && (
         <div className="filters" style={{ marginBottom: 8 }}>
           <div className={`chip ${product === "customer_experience" ? "active" : ""}`} onClick={() => changeProduct("customer_experience")}>
             Customer Experience
