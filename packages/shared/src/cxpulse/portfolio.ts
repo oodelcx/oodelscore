@@ -48,7 +48,10 @@ export async function findPortfolioSignals(): Promise<PortfolioSignal[]> {
 
   const signals: PortfolioSignal[] = [];
   for (const owner of owners) {
-    const recent = await CxPulseScore.find({ ownerType: owner.ownerType, ownerId: owner.ownerId })
+    // Explicitly customer_experience: CxPulseScore now also carries
+    // colleague_experience rows (see cxpulse/compute.ts), which must never
+    // mix into this CX-specific stuck/ready signal.
+    const recent = await CxPulseScore.find({ ownerType: owner.ownerType, ownerId: owner.ownerId, product: "customer_experience" })
       .sort({ period: -1 })
       .limit(STUCK_MONTHS);
     if (recent.length < STUCK_MONTHS) continue;

@@ -52,7 +52,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     computePeriodComparisons(businessIds, now),
     computeDailyTrend(businessIds, TREND_DAYS, now),
     computeRatingDistribution(businessIds, from30d, now),
-    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: parentOrg._id }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: parentOrg._id, product: "customer_experience" }).sort({ period: -1 }),
     ActionBoardItem.find({ parentOrgId: parentOrg._id }).select("status dueDate"),
     Promise.all(
       businesses.map(async (b) => {

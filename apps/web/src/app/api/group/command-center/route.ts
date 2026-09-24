@@ -56,7 +56,7 @@ export async function GET() {
     computeNetworkSummaries(org._id, from7, now),
     computeNetworkSummaries(org._id, prev7Start, prev7End),
     getCategoriesInUseForParentOrg(org._id),
-    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: org._id }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: org._id, product: "customer_experience" }).sort({ period: -1 }),
     BillingSubscription.findOne({ ownerType: "parentOrg", ownerId: org._id }),
   ]);
 

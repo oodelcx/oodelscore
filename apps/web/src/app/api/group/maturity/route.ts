@@ -17,12 +17,12 @@ export async function GET() {
 
   await connectToDatabase();
 
-  const score = await CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ period: -1 });
-  const history = await CxPulseScore.find({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ period: -1 }).limit(6);
+  const score = await CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id, product: "customer_experience" }).sort({ period: -1 });
+  const history = await CxPulseScore.find({ ownerType: "parentOrg", ownerId: session.org._id, product: "customer_experience" }).sort({ period: -1 }).limit(6);
 
   const businesses = await Business.find({ parentOrgId: session.org._id, active: true }).select("name region").sort({ name: 1 });
   const businessScores = await Promise.all(
-    businesses.map((b) => CxPulseScore.findOne({ ownerType: "business", ownerId: b._id }).sort({ period: -1 }))
+    businesses.map((b) => CxPulseScore.findOne({ ownerType: "business", ownerId: b._id, product: "customer_experience" }).sort({ period: -1 }))
   );
   const branches = businesses.map((b, i) => ({
     businessId: b._id.toString(),

@@ -190,7 +190,7 @@ export async function GET() {
     ...parentOrgs.map((o) => ({ ownerType: "parentOrg" as const, ownerId: o._id })),
   ];
   const latestScores = await Promise.all(
-    owners.map((o) => CxPulseScore.findOne({ ownerType: o.ownerType, ownerId: o.ownerId }).sort({ period: -1 }))
+    owners.map((o) => CxPulseScore.findOne({ ownerType: o.ownerType, ownerId: o.ownerId, product: "customer_experience" }).sort({ period: -1 }))
   );
   const levelCounts: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   const scoredLevels: number[] = [];

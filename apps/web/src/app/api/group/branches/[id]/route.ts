@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const [metrics, openItems, score] = await Promise.all([
     computeBusinessMetrics(business._id, from30d, now),
     ActionBoardItem.find({ businessId: business._id, status: { $ne: "resolved" } }).sort({ dueDate: 1 }).limit(10),
-    CxPulseScore.findOne({ ownerType: "business", ownerId: business._id }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "business", ownerId: business._id, product: "customer_experience" }).sort({ period: -1 }),
   ]);
 
   return NextResponse.json({

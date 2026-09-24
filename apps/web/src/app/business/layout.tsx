@@ -135,16 +135,18 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 </NavSection>
               )}
 
-              {hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "colleagueRoster") && (
-                <NavSection
-                  storageKey="business-colleague-experience"
-                  label="Colleague Experience"
-                  defaultOpen={false}
-                  hrefs={["/business/roster"]}
-                >
-                  <a href="/business/roster">Roster</a>
-                </NavSection>
-              )}
+              {hasProduct(business, "colleague_experience") &&
+                (teamMemberCanAccess(user, "colleagueRoster") || teamMemberCanAccess(user, "exPulse")) && (
+                  <NavSection
+                    storageKey="business-colleague-experience"
+                    label="Colleague Experience"
+                    defaultOpen={false}
+                    hrefs={["/business/roster", "/business/ex-pulse"]}
+                  >
+                    {teamMemberCanAccess(user, "exPulse") && <a href="/business/ex-pulse">EX Pulse</a>}
+                    {teamMemberCanAccess(user, "colleagueRoster") && <a href="/business/roster">Roster</a>}
+                  </NavSection>
+                )}
 
               <NavSection
                 storageKey="business-admin"
