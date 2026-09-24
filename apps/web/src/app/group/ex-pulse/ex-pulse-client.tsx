@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CxGoalsCard } from "@/components/cx-goals-card";
 
 interface ExPulseScore {
   period: string;
@@ -151,6 +152,15 @@ export default function GroupExPulseClient() {
           Colleague Experience's org-wide maturity score, rolled up the same way CX Pulse is — plus eNPS as the
           standing headline metric across every branch. Recomputed nightly.
         </p>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <CxGoalsCard
+          apiPath="/api/group/goals"
+          categoriesApiPath="/api/group/category-owners"
+          product="colleague_experience"
+          title="EX Goals"
+        />
       </div>
 
       {!score ? (
