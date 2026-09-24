@@ -1,6 +1,7 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { DEMOGRAPHIC_MODES, type DemographicMode, type IDemographicConfig, type IBusiness } from "./Business";
 import { PRODUCTS, type Product } from "./products";
+import { LIFECYCLE_STAGES, type LifecycleStage } from "./RosterEntry";
 
 export const FORM_LAYOUTS = ["single_page", "one_per_screen"] as const;
 export type FormLayout = (typeof FORM_LAYOUTS)[number];
@@ -21,6 +22,14 @@ export interface IFeedbackPoint {
   // feedback point that predates Colleague Experience is unaffected.
   product: Product;
   eventId: Types.ObjectId | null; // null = place-based (a fixed branch/till); set = one instance of an Event (a session/flight/class)
+  // Colleague Experience only. null = this is the recurring pulse survey (or
+  // a plain one-off campaign); set = this specific feedback point is the
+  // designated survey for that lifecycle stage (onboarding day-30/90, or
+  // exit) for its business. The lifecycle-trigger cron looks up a business's
+  // feedback point by (product: "colleague_experience", lifecycleTrigger:
+  // <stage>) to know which survey to send someone — a business that hasn't
+  // set one up for a given stage is simply skipped, not an error.
+  lifecycleTrigger: LifecycleStage | null;
   name: string;
   description: string;
   qrToken: string; // random, unguessable — generated server-side on insert
@@ -55,6 +64,7 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
     product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
+    lifecycleTrigger: { type: String, enum: LIFECYCLE_STAGES, default: null },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     qrToken: { type: String, required: true, unique: true },
@@ -74,6 +84,9 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
 // heavily-filtered field, queried on nearly every Feedback Points listing.
 FeedbackPointSchema.index({ businessId: 1 });
 FeedbackPointSchema.index({ eventId: 1 });
+// The daily lifecycle-trigger cron's lookup: "does this business have a
+// designated survey for this stage?"
+FeedbackPointSchema.index({ businessId: 1, product: 1, lifecycleTrigger: 1 });
 
 /** True once `active` is on AND, if a date window is set, `now` falls inside it. */
 export function isFeedbackPointOpen(point: Pick<IFeedbackPoint, "active" | "startsAt" | "endsAt">, now: Date = new Date()): boolean {

@@ -82,6 +82,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "The daily sweep computes a real verdict (not \"not ready\"/\"insufficient data\") for a logged decision",
     category: "alerts",
   },
+  colleague_lifecycle_survey: {
+    label: "Colleague Lifecycle Survey",
+    trigger: "The daily sweep finds someone newly due for an onboarding (day-30/90) or exit survey",
+    category: "alerts",
+  },
 };
 
 const CATEGORY_CHIPS: { id: "all" | CategoryId; label: string }[] = [
