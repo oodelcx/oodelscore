@@ -9,9 +9,13 @@ import {
   ACTION_PRIORITIES,
   CASE_TYPES,
   autoAttachPlaybook,
+  PRODUCTS,
+  type Product,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/lib/caseStats";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 /**
  * Standalone business's own single-business Action Board (spec Section 16
@@ -71,10 +75,12 @@ export async function POST(request: Request) {
   if (!title) return NextResponse.json({ status: "error", message: "title is required" }, { status: 400 });
 
   const priority = ACTION_PRIORITIES.includes(body?.priority) ? body.priority : "medium";
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
 
   const item = await ActionBoardItem.create({
     parentOrgId: null,
     businessId: session.business._id,
+    product,
     title,
     description: typeof body?.description === "string" ? body.description : "",
     categoryId: typeof body?.categoryId === "string" ? body.categoryId : null,

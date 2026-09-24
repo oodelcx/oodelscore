@@ -134,6 +134,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
         description: comment(r) ?? "",
         priority: (starValue(r) ?? 5) <= 2 ? "high" : "medium",
         sourceResponseIds: [r._id],
+        product,
       }),
     });
     setActionSubmitting(false);
