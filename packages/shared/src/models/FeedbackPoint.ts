@@ -16,6 +16,14 @@ export type FormLayout = (typeof FORM_LAYOUTS)[number];
 export const DISTRIBUTION_MODES = ["qr_open", "roster_personalized"] as const;
 export type DistributionMode = (typeof DISTRIBUTION_MODES)[number];
 
+// Automatic send cadence for a roster_personalized recurring pulse survey
+// (lifecycleTrigger: null). null = manual only — the business sends/resends
+// itself from the Colleague Roster page. Meaningless for a lifecycle-
+// triggered survey (that fires per-person off RosterEntry dates, not on a
+// clock) or a qr_open point.
+export const PULSE_CADENCES = ["weekly", "monthly"] as const;
+export type PulseCadence = (typeof PULSE_CADENCES)[number];
+
 export interface IDemographicOverride {
   name: DemographicMode;
   email: DemographicMode;
@@ -45,6 +53,12 @@ export interface IFeedbackPoint {
   // pre-existing point (all customer_experience) is unambiguously "never
   // set", not "explicitly qr_open".
   distributionMode: DistributionMode | null;
+  // Recurring pulse only (see PULSE_CADENCES above). null = send manually.
+  pulseCadence: PulseCadence | null;
+  // Last time the cadence cron (or a manual "send now") went out for this
+  // point — null means never sent. Drives "is this due yet" for the cron
+  // and "last sent" for the Business portal's participation view.
+  lastSentAt: Date | null;
   name: string;
   description: string;
   qrToken: string; // random, unguessable — generated server-side on insert
@@ -81,6 +95,8 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
     lifecycleTrigger: { type: String, enum: LIFECYCLE_STAGES, default: null },
     distributionMode: { type: String, enum: DISTRIBUTION_MODES, default: null },
+    pulseCadence: { type: String, enum: PULSE_CADENCES, default: null },
+    lastSentAt: { type: Date, default: null },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     qrToken: { type: String, required: true, unique: true },
@@ -103,6 +119,8 @@ FeedbackPointSchema.index({ eventId: 1 });
 // The daily lifecycle-trigger cron's lookup: "does this business have a
 // designated survey for this stage?"
 FeedbackPointSchema.index({ businessId: 1, product: 1, lifecycleTrigger: 1 });
+// The daily pulse-cadence cron's scan for due recurring surveys.
+FeedbackPointSchema.index({ product: 1, distributionMode: 1, pulseCadence: 1 });
 
 /** True once `active` is on AND, if a date window is set, `now` falls inside it. */
 export function isFeedbackPointOpen(point: Pick<IFeedbackPoint, "active" | "startsAt" | "endsAt">, now: Date = new Date()): boolean {

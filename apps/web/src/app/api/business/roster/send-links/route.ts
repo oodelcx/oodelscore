@@ -35,7 +35,7 @@ export async function GET() {
       businessId: session.business._id,
       product: "colleague_experience",
       distributionMode: "roster_personalized",
-    }).select("name active");
+    }).select("name active pulseCadence lastSentAt");
 
     const tokenCounts = await RosterSurveyToken.aggregate([
       { $match: { feedbackPointId: { $in: points.map((p) => p._id) } } },
@@ -57,6 +57,8 @@ export async function GET() {
         _id: p._id.toString(),
         name: p.name,
         active: p.active,
+        pulseCadence: p.pulseCadence,
+        lastSentAt: p.lastSentAt,
         tokensIssued: counts.total,
         tokensUsed: counts.used,
         participationRate: counts.total > 0 ? Math.round((counts.used / counts.total) * 100) : null,

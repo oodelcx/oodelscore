@@ -389,6 +389,8 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     product: string;
     lifecycleTrigger: string | null;
     distributionMode: string | null;
+    pulseCadence: string | null;
+    lastSentAt: string | null;
   }
   const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPointRow[]>([]);
   const [fpName, setFpName] = useState("");
@@ -591,6 +593,15 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ distributionMode: distributionMode || null }),
+    });
+    loadFeedbackPoints();
+  }
+
+  async function updateFeedbackPointPulseCadence(fpId: string, pulseCadence: string) {
+    await fetch(`/api/admin/businesses/${params.id}/feedback-points/${fpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pulseCadence: pulseCadence || null }),
     });
     loadFeedbackPoints();
   }
@@ -2458,6 +2469,19 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                                   <option value="roster_personalized">Roster-personalized links</option>
                                 </select>
                               </div>
+                              {fp.distributionMode === "roster_personalized" && !fp.lifecycleTrigger && (
+                                <div className="field">
+                                  <label>Send cadence</label>
+                                  <select
+                                    value={fp.pulseCadence ?? ""}
+                                    onChange={(e) => updateFeedbackPointPulseCadence(fp._id, e.target.value)}
+                                  >
+                                    <option value="">Manual only (send from Business portal)</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                  </select>
+                                </div>
+                              )}
                             </div>
                           )}
                           <div className="field-row">

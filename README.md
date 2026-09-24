@@ -37,8 +37,10 @@ Every timed job (spec Section 10a) is an HTTP route in `apps/web`, called on a s
 | Nightly | `POST /api/cron/recompute-cx-pulse` | `npm run recompute:cx-pulse` |
 | Hourly | `POST /api/cron/auto-escalate-cases` | — |
 | Daily | `POST /api/cron/comp-expiry-reminders` | — |
+| Daily | `POST /api/cron/ce-lifecycle-triggers` | — |
+| Daily | `POST /api/cron/ce-pulse-cadence` | — |
 
-All six are real, wired routes — set up a Render Cron Job for each one, not just the four listed above in earlier docs. Missing either of the last two silently means overdue cases never auto-escalate and comp/pilot accounts never get their expiry reminder, not a crash — check Admin → Platform Health if either looks like it's stopped firing.
+All eight are real, wired routes — set up a Render Cron Job for each one. Missing any of the Colleague Experience or account-lifecycle jobs silently means overdue cases never auto-escalate, comp/pilot accounts never get their expiry reminder, or CE's lifecycle/pulse surveys never go out — not a crash — check Admin → Platform Health if any looks like it's stopped firing.
 
 ```
 curl -X POST -H "x-cron-secret: $CRON_SECRET" https://oodelcx.com/api/cron/recompute-cx-pulse
