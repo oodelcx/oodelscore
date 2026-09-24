@@ -5,6 +5,7 @@ import {
   ActionBoardItem,
   CxPulseScore,
   computeBusinessMetrics,
+  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
@@ -23,17 +24,19 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const business = await Business.findOne({ _id: id, parentOrgId: session.org._id });
   if (!business) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
+  const product = primaryProductFor(business);
   const now = new Date();
   const from30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const [metrics, openItems, score] = await Promise.all([
-    computeBusinessMetrics(business._id, from30d, now),
-    ActionBoardItem.find({ businessId: business._id, status: { $ne: "resolved" } }).sort({ dueDate: 1 }).limit(10),
-    CxPulseScore.findOne({ ownerType: "business", ownerId: business._id, product: "customer_experience" }).sort({ period: -1 }),
+    computeBusinessMetrics(business._id, from30d, now, product),
+    ActionBoardItem.find({ businessId: business._id, product, status: { $ne: "resolved" } }).sort({ dueDate: 1 }).limit(10),
+    CxPulseScore.findOne({ ownerType: "business", ownerId: business._id, product }).sort({ period: -1 }),
   ]);
 
   return NextResponse.json({
     status: "ok",
+    product,
     business: { name: business.name, region: business.region, billingAssignment: business.billingAssignment },
     metrics,
     openActionItems: openItems.map((item) => ({

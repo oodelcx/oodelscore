@@ -6,6 +6,7 @@ import {
   computeBusinessMetrics,
   computeDailyTrend,
   computeBusinessCategoryBreakdown,
+  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
@@ -28,15 +29,17 @@ export async function GET(request: Request) {
 
   const branches = await Promise.all(
     businesses.map(async (b) => {
+      const product = primaryProductFor(b);
       const [metrics, score, trend, categoryBreakdown] = await Promise.all([
-        computeBusinessMetrics(b._id, from30d, now),
-        CxPulseScore.findOne({ ownerType: "business", ownerId: b._id, product: "customer_experience" }).sort({ period: -1 }),
-        computeDailyTrend([b._id], TREND_DAYS, now),
-        computeBusinessCategoryBreakdown(b._id, from30d, now),
+        computeBusinessMetrics(b._id, from30d, now, product),
+        CxPulseScore.findOne({ ownerType: "business", ownerId: b._id, product }).sort({ period: -1 }),
+        computeDailyTrend([b._id], TREND_DAYS, now, product),
+        computeBusinessCategoryBreakdown(b._id, from30d, now, product),
       ]);
       return {
         businessId: b._id.toString(),
         name: b.name,
+        product,
         starAverage: metrics.starAverage,
         npsScore: metrics.npsScore,
         responseCount: metrics.responseCount,
