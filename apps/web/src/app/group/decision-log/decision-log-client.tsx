@@ -10,6 +10,7 @@ interface EntryRow {
   _id: string;
   title: string;
   trigger: string;
+  product?: "customer_experience" | "colleague_experience";
   status: string;
   ownerId: string | null;
   implementationDate: string | null;
@@ -105,6 +106,8 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
   const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
   const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   function load() {
     setLoading(true);
@@ -126,6 +129,9 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
 
   useEffect(() => {
     load();
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.org?.enabledProducts?.includes("colleague_experience")));
   }, []);
 
   // Pre-fill the "Log a decision" form when arriving from Case Management's
@@ -164,6 +170,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
         affectedBusinessIds,
         linkedActionIds,
         outcomeMetricDescription,
+        product,
       }),
     });
     const data = await res.json();
@@ -335,6 +342,15 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
               ))}
             </select>
           </div>
+          {ceEnabled && (
+            <div className="field">
+              <label>Product</label>
+              <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
+                <option value="customer_experience">Customer Experience</option>
+                <option value="colleague_experience">Colleague Experience</option>
+              </select>
+            </div>
+          )}
         </div>
         <div className="field">
           <label>
@@ -480,6 +496,11 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
                     <div className="ab-card-head">
                       <div className="ab-title-block">
                         <div className="ab-badges">
+                          {ceEnabled && (
+                            <span className={`pill ${e.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                              {e.product === "colleague_experience" ? "Colleague" : "Customer"}
+                            </span>
+                          )}
                           <span className={`pill ${e.status === "implemented" ? "pill-green" : e.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
                             {STATUS_LABELS[e.status] ?? e.status}
                           </span>
