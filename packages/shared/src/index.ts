@@ -52,3 +52,4 @@ export * from "./patterns/recurringIssues";
 export * from "./ce/rosterTokens";
 export * from "./ce/lifecycleTriggers";
 export * from "./ce/pulseCadence";
+export * from "./ce/demographicCuts";

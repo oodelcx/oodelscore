@@ -6,6 +6,7 @@ import {
   getTeamMemberProducts,
   computePeriodComparisons,
   computeDailyENPSTrend,
+  computeColleagueDemographicBreakdown,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
@@ -39,10 +40,12 @@ export async function GET() {
     .limit(6);
 
   const now = new Date();
-  const [periodComparisons, dailyTrend] = await Promise.all([
+  const windowFrom = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const [periodComparisons, dailyTrend, demographics] = await Promise.all([
     computePeriodComparisons([session.business._id], now, "colleague_experience"),
     computeDailyENPSTrend([session.business._id], 30, now),
+    computeColleagueDemographicBreakdown([session.business._id], windowFrom, now),
   ]);
 
-  return NextResponse.json({ status: "ok", score, history, periodComparisons, dailyTrend });
+  return NextResponse.json({ status: "ok", score, history, periodComparisons, dailyTrend, demographics });
 }
