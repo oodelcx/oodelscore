@@ -1,5 +1,6 @@
 export * from "./db";
 export * from "./models/index";
+export * from "./anonymity";
 export * from "./auth/password";
 export * from "./auth/tokens";
 export * from "./auth/inviteStatus";

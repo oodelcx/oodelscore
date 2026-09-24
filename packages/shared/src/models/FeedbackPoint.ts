@@ -1,5 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
-import { DEMOGRAPHIC_MODES, type DemographicMode } from "./Business";
+import { DEMOGRAPHIC_MODES, type DemographicMode, type IDemographicConfig, type IBusiness } from "./Business";
 import { PRODUCTS, type Product } from "./products";
 
 export const FORM_LAYOUTS = ["single_page", "one_per_screen"] as const;
@@ -81,6 +81,24 @@ export function isFeedbackPointOpen(point: Pick<IFeedbackPoint, "active" | "star
   if (point.startsAt && now < point.startsAt) return false;
   if (point.endsAt && now > point.endsAt) return false;
   return true;
+}
+
+/**
+ * The demographic config a survey actually renders/enforces for one
+ * feedback point — normally just the business default or the point's own
+ * override, EXCEPT for Colleague Experience, where name/email/phone are
+ * forced to "off" here regardless of what either config says. This is the
+ * one place both the public GET (render) and submit (validate + persist)
+ * routes must call, so there is no path — misconfiguration included —
+ * that collects an employee's identity on a Colleague Experience response.
+ */
+export function effectiveDemographicConfig(
+  point: Pick<IFeedbackPoint, "product" | "demographicOverride">,
+  business: Pick<IBusiness, "demographicConfig">
+): IDemographicConfig {
+  const config = point.demographicOverride ?? business.demographicConfig;
+  if (point.product !== "colleague_experience") return config;
+  return { ...config, name: "off", email: "off", phone: "off" };
 }
 
 export const FeedbackPoint: Model<IFeedbackPoint> =

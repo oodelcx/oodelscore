@@ -12,6 +12,7 @@ import {
   getRequestIp,
   logApiRouteError,
   isFeedbackPointOpen,
+  effectiveDemographicConfig,
 } from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
@@ -84,7 +85,7 @@ async function handleGet(request: NextRequest, qrToken: string) {
   await ScanToken.create({ token: scanToken, feedbackPointId: feedbackPoint._id });
 
   const groupTag = business.parentOrgId ? (await ParentOrganization.findById(business.parentOrgId))?.name ?? null : null;
-  const demographicConfig = feedbackPoint.demographicOverride ?? business.demographicConfig;
+  const demographicConfig = effectiveDemographicConfig(feedbackPoint, business);
   const formLayout = feedbackPoint.formLayoutOverride ?? "single_page";
 
   return NextResponse.json({

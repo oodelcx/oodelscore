@@ -15,6 +15,7 @@ import {
   getRequestIp,
   logApiRouteError,
   isFeedbackPointOpen,
+  effectiveDemographicConfig,
   type QuestionType,
   type DemographicMode,
 } from "@oodelscore/shared";
@@ -101,9 +102,20 @@ async function handlePost(request: NextRequest, qrToken: string) {
   }
 
   const answers: SubmittedAnswer[] = Array.isArray(body?.answers) ? body.answers : [];
-  const respondentName = typeof body?.respondentName === "string" ? body.respondentName.trim() || null : null;
-  const respondentEmail = typeof body?.respondentEmail === "string" ? body.respondentEmail.trim().toLowerCase() || null : null;
-  const respondentPhone = typeof body?.respondentPhone === "string" ? body.respondentPhone.trim() || null : null;
+  // Colleague Experience never collects an employee's identity — hard-null
+  // here regardless of what the client sent, not just left to the
+  // demographicConfig mandatory/off check below, so a malformed or
+  // malicious request body can't smuggle identity onto an anonymous
+  // response even if every other check were somehow bypassed.
+  const isColleagueExperience = feedbackPoint.product === "colleague_experience";
+  const respondentName =
+    !isColleagueExperience && typeof body?.respondentName === "string" ? body.respondentName.trim() || null : null;
+  const respondentEmail =
+    !isColleagueExperience && typeof body?.respondentEmail === "string"
+      ? body.respondentEmail.trim().toLowerCase() || null
+      : null;
+  const respondentPhone =
+    !isColleagueExperience && typeof body?.respondentPhone === "string" ? body.respondentPhone.trim() || null : null;
   const ageGroup = typeof body?.ageGroup === "string" ? body.ageGroup : "";
   const gender = typeof body?.gender === "string" ? body.gender : "";
 
@@ -116,7 +128,7 @@ async function handlePost(request: NextRequest, qrToken: string) {
     }
   }
 
-  const demographicConfig = feedbackPoint.demographicOverride ?? business.demographicConfig;
+  const demographicConfig = effectiveDemographicConfig(feedbackPoint, business);
   const demographicChecks: [string, DemographicMode, unknown][] = [
     ["Name", demographicConfig.name, respondentName],
     ["Email", demographicConfig.email, respondentEmail],
@@ -166,6 +178,7 @@ async function handlePost(request: NextRequest, qrToken: string) {
   const createdResponse = await Response.create({
     feedbackPointId: feedbackPoint._id,
     businessId: business._id,
+    product: feedbackPoint.product,
     eventId: feedbackPoint.eventId,
     answers: responseAnswers,
     respondentName,
