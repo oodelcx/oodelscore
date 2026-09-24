@@ -168,6 +168,9 @@ interface FormState {
   pricingAmount: string;
   pricingCurrency: string;
   pricingInterval: string;
+  cePricingAmount: string;
+  cePricingCurrency: string;
+  cePricingInterval: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -193,6 +196,9 @@ const EMPTY_FORM: FormState = {
   pricingAmount: "",
   pricingCurrency: "usd",
   pricingInterval: "",
+  cePricingAmount: "",
+  cePricingCurrency: "usd",
+  cePricingInterval: "",
 };
 
 const PRICING_INTERVAL_LABELS: Record<string, string> = {
@@ -721,6 +727,9 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
           pricingAmount: b.pricingTerms?.amount != null ? String(b.pricingTerms.amount) : "",
           pricingCurrency: b.pricingTerms?.currency ?? "usd",
           pricingInterval: b.pricingTerms?.interval ?? "",
+          cePricingAmount: b.cePricingTerms?.amount != null ? String(b.cePricingTerms.amount) : "",
+          cePricingCurrency: b.cePricingTerms?.currency ?? "usd",
+          cePricingInterval: b.cePricingTerms?.interval ?? "",
         });
         setGroupPaysCovered(!!b.groupPaysStripeSubscriptionItemId);
         setCheckoutEnabled(!!b.checkoutEnabled);
@@ -842,17 +851,19 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     window.location.href = data.url;
   }
 
-  async function savePriceAndPush() {
+  async function savePriceAndPush(product: "customer_experience" | "colleague_experience" = "customer_experience") {
     setBillingBusy(true);
     setBillingError(null);
     setPriceSaveMessage(null);
+    const isCe = product === "colleague_experience";
     const res = await fetch(`/api/admin/businesses/${params.id}/billing/save-price`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        amount: form.pricingAmount.trim() ? Number(form.pricingAmount) : null,
-        currency: form.pricingCurrency || "usd",
-        interval: form.pricingInterval || null,
+        product,
+        amount: (isCe ? form.cePricingAmount : form.pricingAmount).trim() ? Number(isCe ? form.cePricingAmount : form.pricingAmount) : null,
+        currency: (isCe ? form.cePricingCurrency : form.pricingCurrency) || "usd",
+        interval: (isCe ? form.cePricingInterval : form.pricingInterval) || null,
       }),
     });
     const data = await res.json().catch(() => null);
@@ -1006,6 +1017,11 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         currency: form.pricingCurrency || "usd",
         interval: form.pricingInterval || null,
       },
+      cePricingTerms: {
+        amount: form.cePricingAmount.trim() ? Number(form.cePricingAmount) : null,
+        currency: form.cePricingCurrency || "usd",
+        interval: form.cePricingInterval || null,
+      },
       ...(!isNew && !form.parentOrgId
         ? {
             ragThresholds: {
@@ -1110,6 +1126,12 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   const tabs = form.parentOrgId
     ? [...BASE_TABS, { id: "group" as TabId, label: "Group" }]
     : BASE_TABS;
+
+  // Checkout covers whichever enabled products have a price set — at least
+  // one is enough to start it, not necessarily Customer Experience.
+  const hasAnyPriceSet =
+    (!!form.pricingAmount && !!form.pricingInterval) ||
+    (enabledProducts.includes("colleague_experience") && !!form.cePricingAmount && !!form.cePricingInterval);
 
   return (
     <div>
@@ -1562,10 +1584,58 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
             <p className="card-sub" style={{ margin: "0 0 4px" }}>Saved when you create the business.</p>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={savePriceAndPush}>
+              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={() => savePriceAndPush("customer_experience")}>
                 {billingBusy ? "Saving…" : "Save & push to Stripe"}
               </button>
               {priceSaveMessage && <span className="card-sub" style={{ margin: 0 }}>{priceSaveMessage}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "address" && form.billingAssignment !== "group_pays" && enabledProducts.includes("colleague_experience") && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
+          <h3 style={{ margin: 0 }}>Pricing — Colleague Experience</h3>
+          <p className="card-sub" style={{ margin: "4px 0 0" }}>
+            Charged as a separate line item alongside Customer Experience, if both are enabled.
+          </p>
+          <div className="field-row" style={{ marginTop: 14 }}>
+            <div className="field">
+              <label>Amount</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 29.00"
+                value={form.cePricingAmount}
+                onChange={(e) => setForm((f) => ({ ...f, cePricingAmount: e.target.value }))}
+              />
+            </div>
+            <div className="field">
+              <label>Currency</label>
+              <select value={form.cePricingCurrency} onChange={(e) => setForm((f) => ({ ...f, cePricingCurrency: e.target.value }))}>
+                <option value="usd">USD</option>
+                <option value="eur">EUR</option>
+                <option value="gbp">GBP</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Billing</label>
+              <select value={form.cePricingInterval} onChange={(e) => setForm((f) => ({ ...f, cePricingInterval: e.target.value }))}>
+                <option value="">Not set</option>
+                <option value="monthly">Monthly</option>
+                <option value="annual_monthly_rate">Annual commitment, billed monthly</option>
+                <option value="annual_lump_sum">Annual, one lump-sum payment</option>
+              </select>
+            </div>
+          </div>
+          {isNew ? (
+            <p className="card-sub" style={{ margin: "0 0 4px" }}>Saved when you create the business.</p>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={() => savePriceAndPush("colleague_experience")}>
+                {billingBusy ? "Saving…" : "Save & push to Stripe"}
+              </button>
             </div>
           )}
         </div>
@@ -1618,10 +1688,10 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               {subscription.isComp && (
                 <button
                   className="btn btn-dark btn-sm"
-                  disabled={billingBusy || !form.pricingAmount || !form.pricingInterval}
+                  disabled={billingBusy || !hasAnyPriceSet}
                   onClick={startCheckout}
                   title={
-                    !form.pricingAmount || !form.pricingInterval
+                    !hasAnyPriceSet
                       ? "Set and save a price above first"
                       : "Converts this account off comp once payment completes"
                   }
@@ -1636,9 +1706,9 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
               <div className="btn-group">
                 <button
                   className="btn btn-dark"
-                  disabled={billingBusy || !form.pricingAmount || !form.pricingInterval}
+                  disabled={billingBusy || !hasAnyPriceSet}
                   onClick={startCheckout}
-                  title={!form.pricingAmount || !form.pricingInterval ? "Set and save a price above first" : undefined}
+                  title={!hasAnyPriceSet ? "Set and save a price above first" : undefined}
                 >
                   Start checkout
                 </button>

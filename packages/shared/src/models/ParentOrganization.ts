@@ -30,6 +30,9 @@ export interface IParentOrganization {
   // "group_pays" — the org's Stripe subscription carries one line item per
   // such branch, all priced from this same rate.
   pricingTerms: IPricingTerms;
+  // ADMIN-EDITABLE ONLY. Same meaning as pricingTerms, for the Colleague
+  // Experience line — see Business.cePricingTerms for the full explanation.
+  cePricingTerms: IPricingTerms;
   // ADMIN-EDITABLE ONLY. When true, the org's own billing page shows a
   // self-service "Continue to payment" link straight to Stripe Checkout —
   // covers the org paying for itself and/or its group_pays branches.
@@ -78,6 +81,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     billingAddressSameAsAddress: { type: Boolean, default: true },
     defaultBillingMode: { type: String, enum: BILLING_MODES, default: "branch_pays" },
     pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
+    cePricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
     checkoutEnabled: { type: Boolean, default: false },
     escalationLevels: { type: [EscalationLevelSchema], default: () => DEFAULT_ESCALATION_LEVELS.map((l) => ({ ...l })) },
     escalationSlaHours: { type: Number, default: null },

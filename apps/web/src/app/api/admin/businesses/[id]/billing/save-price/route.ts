@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, savePricingAndPushToStripe } from "@oodelscore/shared";
+import { connectToDatabase, savePricingAndPushToStripe, PRODUCTS } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 import { billingErrorResponse } from "@/lib/billingErrorResponse";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -25,9 +27,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "Invalid request body" }, { status: 400 });
   }
 
+  const product = typeof body.product === "string" && PRODUCT_SET.includes(body.product) ? body.product : "customer_experience";
+
   await connectToDatabase();
   try {
-    const message = await savePricingAndPushToStripe("business", id, {
+    const message = await savePricingAndPushToStripe("business", id, product, {
       amount: typeof body.amount === "number" ? body.amount : null,
       currency: typeof body.currency === "string" ? body.currency : "usd",
       interval: typeof body.interval === "string" ? body.interval : null,

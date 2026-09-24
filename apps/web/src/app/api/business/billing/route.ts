@@ -45,5 +45,7 @@ export async function GET() {
     groupBranchCount,
     checkoutLinkAvailable,
     pricingTerms: session.business.pricingTerms,
+    cePricingTerms: session.business.cePricingTerms,
+    enabledProducts: session.business.enabledProducts,
   });
 }
