@@ -26,6 +26,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
   const initiative = await ImprovementInitiative.create({
     parentOrgId: session.org._id,
+    product: category?.product ?? "customer_experience",
     title: `Reduce ${categoryName} — ${session.org.name} (${flag.businessIds.length} branches)`,
     description: `Auto-suggested from a cross-branch recurring pattern: ${flag.count} "${categoryName}" cases across ${flag.businessIds.length} branches in the last ${flag.windowDays} days.`,
     affectedBusinessIds: flag.businessIds,

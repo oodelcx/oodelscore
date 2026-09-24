@@ -34,6 +34,7 @@ interface HoldingBackDimension {
   value: number;
 }
 interface DashboardData {
+  product: "customer_experience" | "colleague_experience";
   totalResponses: number;
   starAverage: number | null;
   npsScore: number | null;
@@ -56,14 +57,14 @@ const DIMENSION_LABELS: Record<HoldingBackDimension["dimension"], string> = {
   outcome: "Outcome",
 };
 
-/** CX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /business/cx-pulse. */
-function CxPulseHoldingBack({ dimensions }: { dimensions: HoldingBackDimension[] }) {
+/** CX/EX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /business/cx-pulse or /business/ex-pulse. */
+function CxPulseHoldingBack({ dimensions, href = "/business/cx-pulse" }: { dimensions: HoldingBackDimension[]; href?: string }) {
   if (dimensions.length === 0) return null;
   return (
     <div className="metric-note" style={{ marginTop: 8 }}>
       Holding you back: {dimensions.map((d) => `${DIMENSION_LABELS[d.dimension]} (${d.value})`).join(" · ")}
       {" — "}
-      <a href="/business/cx-pulse" style={{ color: "var(--accent)" }}>
+      <a href={href} style={{ color: "var(--accent)" }}>
         full breakdown →
       </a>
     </div>
@@ -142,6 +143,11 @@ export default function BusinessDashboardClient() {
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load your dashboard.</p>;
 
+  const isCe = data.product === "colleague_experience";
+  const npsLabel = isCe ? "eNPS" : "NPS";
+  const pulseLabel = isCe ? "EX Pulse" : "CX Pulse";
+  const pulseHref = isCe ? "/business/ex-pulse" : "/business/cx-pulse";
+
   if (data.branch) {
     const b = data.branch;
     return (
@@ -168,18 +174,18 @@ export default function BusinessDashboardClient() {
           </div>
           <div className="card">
             <div className="metric-label">
-              NPS <InfoTip text={tooltips["nps"]} />
+              {npsLabel} <InfoTip text={tooltips["nps"]} />
             </div>
             <div className="metric-val">{data.npsScore !== null ? formatSigned(data.npsScore) : "—"}</div>
           </div>
           <div className="card">
             <div className="metric-label">
-              CX Pulse <InfoTip text={tooltips["cx-pulse"]} />
+              {pulseLabel} <InfoTip text={tooltips["cx-pulse"]} />
             </div>
             <div className="metric-val" style={{ fontSize: 18 }}>
               {b.cxPulseLevel ? `Level ${b.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[b.cxPulseLevel]}` : "Not yet scored"}
             </div>
-            <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} />
+            <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} href={pulseHref} />
           </div>
         </div>
 
@@ -231,7 +237,7 @@ export default function BusinessDashboardClient() {
         </div>
         <div className="card">
           <div className="metric-label">
-            NPS <InfoTip text={tooltips["nps"]} />
+            {npsLabel} <InfoTip text={tooltips["nps"]} />
           </div>
           <div className="metric-val">{data.npsScore !== null ? formatSigned(data.npsScore) : "—"}</div>
         </div>
@@ -245,12 +251,12 @@ export default function BusinessDashboardClient() {
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="metric-label">
-          CX Pulse <InfoTip text={tooltips["cx-pulse"]} />
+          {pulseLabel} <InfoTip text={tooltips["cx-pulse"]} />
         </div>
         <div className="metric-val" style={{ fontSize: 18 }}>
           {data.cxPulseLevel ? `Level ${data.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[data.cxPulseLevel]}` : "Not yet scored"}
         </div>
-        <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} />
+        <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} href={pulseHref} />
       </div>
 
       <div data-tour="dash-comparisons">

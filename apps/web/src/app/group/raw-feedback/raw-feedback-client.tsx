@@ -22,6 +22,7 @@ interface ResponseStats {
 }
 
 const LIMIT = 25;
+type ProductId = "customer_experience" | "colleague_experience";
 
 function starValue(r: ResponseRow): number | null {
   const star = r.answers.find((a) => a.type === "star_1_5" && typeof a.value === "number");
@@ -46,6 +47,8 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<ResponseStats | null>(null);
+  const [product, setProduct] = useState<ProductId>("customer_experience");
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -53,6 +56,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
       page: String(page),
       limit: String(LIMIT),
       filter: negativeOnly ? "negative" : "all",
+      product,
     });
     fetch(`/api/group/raw-feedback?${params.toString()}`)
       .then((res) => res.json())
@@ -63,10 +67,21 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         setStats(data.stats ?? null);
       })
       .finally(() => setLoading(false));
-  }, [page, negativeOnly]);
+  }, [page, negativeOnly, product]);
+
+  useEffect(() => {
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.org?.enabledProducts?.includes("colleague_experience")));
+  }, []);
 
   function setFilter(negative: boolean) {
     setNegativeOnly(negative);
+    setPage(1);
+  }
+
+  function changeProduct(p: ProductId) {
+    setProduct(p);
     setPage(1);
   }
 
@@ -96,6 +111,17 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
           <div className="card">
             <div className="metric-label">Flagged</div>
             <div className="metric-val">{stats.flagged}</div>
+          </div>
+        </div>
+      )}
+
+      {ceEnabled && (
+        <div className="filters" style={{ marginBottom: 8 }}>
+          <div className={`chip ${product === "customer_experience" ? "active" : ""}`} onClick={() => changeProduct("customer_experience")}>
+            Customer Experience
+          </div>
+          <div className={`chip ${product === "colleague_experience" ? "active" : ""}`} onClick={() => changeProduct("colleague_experience")}>
+            Colleague Experience
           </div>
         </div>
       )}

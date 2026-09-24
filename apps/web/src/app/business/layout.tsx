@@ -94,11 +94,9 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 )}
               </NavSection>
 
-              {hasProduct(business, "customer_experience") && (
-                <NavSection storageKey="business-listen" label="Listen" hrefs={["/business/responses"]}>
-                  {teamMemberCanAccess(user, "rawFeedback") && <a href="/business/responses">Raw Feedback</a>}
-                </NavSection>
-              )}
+              <NavSection storageKey="business-listen" label="Listen" hrefs={["/business/responses"]}>
+                {teamMemberCanAccess(user, "rawFeedback") && <a href="/business/responses">Raw Feedback</a>}
+              </NavSection>
 
               <NavSection
                 storageKey="business-understand"
