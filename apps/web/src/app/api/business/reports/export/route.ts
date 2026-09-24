@@ -6,6 +6,7 @@ import {
   computeBusinessMetrics,
   computeBusinessCategoryBreakdown,
   hasProduct,
+  primaryProductFor,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
@@ -27,32 +28,35 @@ export async function GET(request: Request) {
   const from = fromParam ? new Date(fromParam) : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   await connectToDatabase();
+  const product = primaryProductFor(session.business);
 
   const [metrics, categoryBreakdown, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
-    computeBusinessMetrics(session.business._id, from, to),
-    computeBusinessCategoryBreakdown(session.business._id, from, to),
+    computeBusinessMetrics(session.business._id, from, to, product),
+    computeBusinessCategoryBreakdown(session.business._id, from, to, product),
     ActionBoardItem.countDocuments({
       businessId: session.business._id,
-      product: "customer_experience",
+      product,
       status: "resolved",
       resolvedAt: { $gte: from, $lte: to },
     }),
     ImprovementInitiative.countDocuments({
       $or: [{ businessId: session.business._id }, { affectedBusinessIds: session.business._id }],
+      product,
       status: "completed",
       completedAt: { $gte: from, $lte: to },
     }),
-    ActionBoardItem.countDocuments({ businessId: session.business._id, customerNotifiedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({ businessId: session.business._id, product, customerNotifiedAt: { $gte: from, $lte: to } }),
   ]);
 
   const rows: string[][] = [
     ["Report", session.business.name],
+    ["Product", product === "colleague_experience" ? "Colleague Experience" : "Customer Experience"],
     ["Period", `${from.toISOString().slice(0, 10)} to ${to.toISOString().slice(0, 10)}`],
     [],
     ["Metric", "Value"],
     ["Responses", String(metrics.responseCount)],
     ["Star average", metrics.starAverage !== null ? String(metrics.starAverage) : ""],
-    ["NPS score", metrics.npsScore !== null ? String(metrics.npsScore) : ""],
+    [product === "colleague_experience" ? "eNPS score" : "NPS score", metrics.npsScore !== null ? String(metrics.npsScore) : ""],
     ["Cases resolved", String(casesResolved)],
     ["Customers personally responded to", String(customersRespondedTo)],
     ["Improvement initiatives completed", String(initiativesCompleted)],
@@ -61,7 +65,7 @@ export async function GET(request: Request) {
     ...categoryBreakdown.map((c) => [c.name, String(c.average)]),
   ];
 
-  if (hasProduct(session.business, "colleague_experience")) {
+  if (product === "customer_experience" && hasProduct(session.business, "colleague_experience")) {
     const [ceMetrics, ceCategoryBreakdown, ceCasesResolved] = await Promise.all([
       computeBusinessMetrics(session.business._id, from, to, "colleague_experience"),
       computeBusinessCategoryBreakdown(session.business._id, from, to, "colleague_experience"),

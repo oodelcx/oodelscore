@@ -23,6 +23,7 @@ interface RegionRow {
   npsScore: number | null;
 }
 interface ReportData {
+  product: "customer_experience" | "colleague_experience";
   orgName: string;
   period: { from: string; to: string };
   branches: BranchRow[];
@@ -93,7 +94,10 @@ export default function ReportsClient() {
       {data && (
         <>
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: "0 0 4px" }}>{data.orgName}</h2>
+            <h2 style={{ margin: "0 0 4px" }}>
+              {data.orgName}
+              {data.product === "colleague_experience" && <span className="pill pill-blue" style={{ marginLeft: 10 }}>Colleague Experience</span>}
+            </h2>
             <p className="subtitle" style={{ margin: 0 }}>
               {new Date(data.period.from).toLocaleDateString()} – {new Date(data.period.to).toLocaleDateString()} ·{" "}
               {data.branches.length} branches
@@ -123,7 +127,7 @@ export default function ReportsClient() {
                 <th>Region</th>
                 <th>Branches</th>
                 <th>Average</th>
-                <th>NPS</th>
+                <th>{data.product === "colleague_experience" ? "eNPS" : "NPS"}</th>
               </tr>
             </thead>
             <tbody>
@@ -146,7 +150,7 @@ export default function ReportsClient() {
                 <th>Region</th>
                 <th>Responses</th>
                 <th>Average</th>
-                <th>NPS</th>
+                <th>{data.product === "colleague_experience" ? "eNPS" : "NPS"}</th>
               </tr>
             </thead>
             <tbody>

@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, ActionBoardItem, ImprovementInitiative, computeNetworkSummaries, hasProduct } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  Business,
+  ActionBoardItem,
+  ImprovementInitiative,
+  computeNetworkSummaries,
+  hasProduct,
+  primaryProductFor,
+} from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 function csvEscape(value: string): string {
@@ -20,21 +28,23 @@ export async function GET(request: Request) {
   const from = fromParam ? new Date(fromParam) : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   await connectToDatabase();
+  const product = primaryProductFor(session.org);
 
   const [summaries, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
-    computeNetworkSummaries(session.org._id, from, to),
+    computeNetworkSummaries(session.org._id, from, to, product),
     ActionBoardItem.countDocuments({
       parentOrgId: session.org._id,
-      product: "customer_experience",
+      product,
       status: "resolved",
       resolvedAt: { $gte: from, $lte: to },
     }),
-    ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, status: "completed", completedAt: { $gte: from, $lte: to } }),
-    ActionBoardItem.countDocuments({ parentOrgId: session.org._id, customerNotifiedAt: { $gte: from, $lte: to } }),
+    ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, product, status: "completed", completedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({ parentOrgId: session.org._id, product, customerNotifiedAt: { $gte: from, $lte: to } }),
   ]);
 
   const rows: string[][] = [
     ["Report", session.org.name],
+    ["Product", product === "colleague_experience" ? "Colleague Experience" : "Customer Experience"],
     ["Period", `${from.toISOString().slice(0, 10)} to ${to.toISOString().slice(0, 10)}`],
     [],
     ["Metric", "Value"],
@@ -42,11 +52,11 @@ export async function GET(request: Request) {
     ["Customers personally responded to", String(customersRespondedTo)],
     ["Improvement initiatives completed", String(initiativesCompleted)],
     [],
-    ["Branch", "Region", "Responses", "Star average", "NPS"],
+    ["Branch", "Region", "Responses", "Star average", product === "colleague_experience" ? "eNPS" : "NPS"],
     ...summaries.map((s) => [s.name, s.region, String(s.responseCount), s.starAverage !== null ? String(s.starAverage) : "", s.npsScore !== null ? String(s.npsScore) : ""]),
   ];
 
-  if (hasProduct(session.org, "colleague_experience")) {
+  if (product === "customer_experience" && hasProduct(session.org, "colleague_experience")) {
     const [ceSummaries, ceCasesResolved] = await Promise.all([
       computeNetworkSummaries(session.org._id, from, to, "colleague_experience"),
       ActionBoardItem.countDocuments({
