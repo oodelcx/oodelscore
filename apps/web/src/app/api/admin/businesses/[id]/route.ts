@@ -9,7 +9,7 @@ import {
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
   PRICING_INTERVALS,
-  syncBranchGroupPaysCoverage,
+  syncProductCoverageForOwner,
   assertStaffCanEditBusinessAdminFields,
   canAccessScopedResource,
   ForbiddenFieldWriteError,
@@ -95,6 +95,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
     }
   }
+  if (body.cePricingTerms !== undefined) {
+    const terms = body.cePricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid cePricingTerms" }, { status: 400 });
+    }
+  }
   if (body.escalationLevels !== undefined) {
     const levels = body.escalationLevels;
     const valid =
@@ -155,6 +163,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "billingAddressSameAsAddress",
     "billingAssignment",
     "pricingTerms",
+    "cePricingTerms",
     "checkoutEnabled",
     "escalationLevels",
     "escalationSlaHours",
@@ -184,9 +193,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   // lump sum, etc.) is reported back but never blocks the save, so Admin
   // isn't stuck unable to set billingAssignment until Stripe cooperates.
   let billingSyncWarning: string | null = null;
-  if ("billingAssignment" in body) {
+  if ("billingAssignment" in body || "enabledProducts" in body) {
     try {
-      await syncBranchGroupPaysCoverage(business._id.toString());
+      await syncProductCoverageForOwner("business", business._id.toString());
     } catch (err) {
       billingSyncWarning = err instanceof Error ? err.message : "Failed to sync Stripe billing coverage";
       await logSystemHealthEvent("billing_sync_failure", billingSyncWarning, {

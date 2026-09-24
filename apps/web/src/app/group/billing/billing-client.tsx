@@ -28,6 +28,8 @@ interface BillingData {
   branches: BranchBillingRow[];
   checkoutLinkAvailable: boolean;
   pricingTerms: { amount: number | null; currency: string; interval: "monthly" | "annual_monthly_rate" | "annual_lump_sum" | null };
+  cePricingTerms: { amount: number | null; currency: string; interval: "monthly" | "annual_monthly_rate" | "annual_lump_sum" | null };
+  enabledProducts: ("customer_experience" | "colleague_experience")[] | null;
 }
 
 const INTERVAL_LABELS: Record<string, string> = {
@@ -93,18 +95,24 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
       {data.checkoutLinkAvailable && (
         <div className="callout callout-amber" style={{ marginBottom: 20 }}>
           <b>Ready to continue with OodelCX?</b>{" "}
-          {data.pricingTerms.amount !== null && data.pricingTerms.interval ? (
-            <>
-              Your plan is{" "}
-              <b>
-                {data.pricingTerms.currency.toUpperCase()} {data.pricingTerms.amount.toFixed(2)}
-                {INTERVAL_LABELS[data.pricingTerms.interval] ?? ""}
-              </b>
-              . Click below to enter your card details and start your subscription.
-            </>
-          ) : (
-            "Click below to enter your card details and start your subscription."
-          )}
+          {(() => {
+            const ceEnabled = !!data.enabledProducts?.includes("colleague_experience");
+            const lines = [
+              data.pricingTerms.amount !== null && data.pricingTerms.interval
+                ? `Customer Experience: ${data.pricingTerms.currency.toUpperCase()} ${data.pricingTerms.amount.toFixed(2)}${INTERVAL_LABELS[data.pricingTerms.interval] ?? ""}`
+                : null,
+              ceEnabled && data.cePricingTerms.amount !== null && data.cePricingTerms.interval
+                ? `Colleague Experience: ${data.cePricingTerms.currency.toUpperCase()} ${data.cePricingTerms.amount.toFixed(2)}${INTERVAL_LABELS[data.cePricingTerms.interval] ?? ""}`
+                : null,
+            ].filter((l): l is string => l !== null);
+            return lines.length > 0 ? (
+              <>
+                Your plan is <b>{lines.join(" + ")}</b>. Click below to enter your card details and start your subscription.
+              </>
+            ) : (
+              "Click below to enter your card details and start your subscription."
+            );
+          })()}
           <div style={{ marginTop: 10 }}>
             <button className="btn btn-primary" disabled={busy} onClick={continueToPayment}>
               Continue to payment →

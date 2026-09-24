@@ -12,6 +12,8 @@ import {
   canAccessScopedResource,
   isValidFeatureKey,
   PRODUCTS,
+  syncProductCoverageForOwner,
+  logSystemHealthEvent,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
@@ -79,6 +81,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
     }
   }
+  if (body.cePricingTerms !== undefined) {
+    const terms = body.cePricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid cePricingTerms" }, { status: 400 });
+    }
+  }
 
   if (body.escalationLevels !== undefined) {
     const levels = body.escalationLevels;
@@ -120,6 +130,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       "ragThresholds",
       "commandCenterEnabled",
       "pricingTerms",
+      "cePricingTerms",
       "checkoutEnabled",
       "escalationLevels",
       "escalationSlaHours",
@@ -170,6 +181,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "billingAddressSameAsAddress",
     "defaultBillingMode",
     "pricingTerms",
+    "cePricingTerms",
     "checkoutEnabled",
     "escalationLevels",
     "escalationSlaHours",
@@ -190,7 +202,23 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await parentOrg.save();
-  return NextResponse.json({ status: "ok", parentOrg });
+
+  // Same reasoning as the business PATCH route: never let a Stripe sync
+  // failure block the save itself.
+  let billingSyncWarning: string | null = null;
+  if ("enabledProducts" in body) {
+    try {
+      await syncProductCoverageForOwner("parentOrg", parentOrg._id.toString());
+    } catch (err) {
+      billingSyncWarning = err instanceof Error ? err.message : "Failed to sync Stripe billing coverage";
+      await logSystemHealthEvent("billing_sync_failure", billingSyncWarning, {
+        parentOrgId: parentOrg._id.toString(),
+        parentOrgName: parentOrg.name,
+      });
+    }
+  }
+
+  return NextResponse.json({ status: "ok", parentOrg, billingSyncWarning });
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {

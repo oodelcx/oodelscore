@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const BILLING_OWNER_TYPES = ["business", "parentOrg"] as const;
 export type BillingOwnerType = (typeof BILLING_OWNER_TYPES)[number];
@@ -42,9 +43,18 @@ export interface IBillingSubscription {
   lumpSumRenewalReminderSentAt: Date | null;
   status: SubscriptionStatus;
   paymentMethodLast4: string;
+  // Which Stripe subscription item (within this one subscription) backs
+  // each product this owner is billed for directly — "" when that product
+  // isn't currently a line item (not enabled, no price set yet, or its
+  // coverage is a group_pays branch item living on Business instead, not
+  // here). Lets savePricingAndPushToStripe() reprice or remove exactly one
+  // product's line without touching the other's.
+  productLineItems: Record<Product, string>;
   createdAt: Date;
   updatedAt: Date;
 }
+
+export const DEFAULT_PRODUCT_LINE_ITEMS: Record<Product, string> = { customer_experience: "", colleague_experience: "" };
 
 const BillingSubscriptionSchema = new Schema<IBillingSubscription>(
   {
@@ -64,6 +74,11 @@ const BillingSubscriptionSchema = new Schema<IBillingSubscription>(
     lumpSumRenewalReminderSentAt: { type: Date, default: null },
     status: { type: String, enum: SUBSCRIPTION_STATUSES, default: "active" },
     paymentMethodLast4: { type: String, default: "" },
+    productLineItems: {
+      type: Object.fromEntries(PRODUCTS.map((p) => [p, { type: String, default: "" }])),
+      default: () => ({ ...DEFAULT_PRODUCT_LINE_ITEMS }),
+      _id: false,
+    },
   },
   { timestamps: true }
 );
