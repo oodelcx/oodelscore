@@ -85,10 +85,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-setup"
                 label="Setup"
-                hrefs={["/business/feedback-points", "/business/category-owners"]}
+                hrefs={["/business/feedback-points", "/business/category-owners", "/business/roster"]}
               >
                 {teamMemberCanAccess(user, "feedbackPoints") && <a href="/business/feedback-points">Feedback Points</a>}
                 {!isBusinessTeamMember && <a href="/business/category-owners">Category Owners</a>}
+                {hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "colleagueRoster") && (
+                  <a href="/business/roster">Roster</a>
+                )}
               </NavSection>
 
               {hasProduct(business, "customer_experience") && (
@@ -100,7 +103,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-understand"
                 label="Understand"
-                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports"]}
+                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports", "/business/ex-pulse"]}
               >
                 {hasProduct(business, "customer_experience") &&
                   hasFeature(business.enabledFeatures, "insights") &&
@@ -114,6 +117,9 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 {hasProduct(business, "customer_experience") &&
                   hasFeature(business.enabledFeatures, "reports") &&
                   teamMemberCanAccess(user, "reports") && <a href="/business/reports">Reports</a>}
+                {hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "exPulse") && (
+                  <a href="/business/ex-pulse">EX Pulse</a>
+                )}
               </NavSection>
 
               <NavSection
@@ -136,19 +142,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 teamMemberCanAccess(user, "cxPulse") && (
                   <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
                     <a href="/business/cx-pulse">CX Pulse</a>
-                  </NavSection>
-                )}
-
-              {hasProduct(business, "colleague_experience") &&
-                (teamMemberCanAccess(user, "colleagueRoster") || teamMemberCanAccess(user, "exPulse")) && (
-                  <NavSection
-                    storageKey="business-colleague-experience"
-                    label="Colleague Experience"
-                    defaultOpen={false}
-                    hrefs={["/business/roster", "/business/ex-pulse"]}
-                  >
-                    {teamMemberCanAccess(user, "exPulse") && <a href="/business/ex-pulse">EX Pulse</a>}
-                    {teamMemberCanAccess(user, "colleagueRoster") && <a href="/business/roster">Roster</a>}
                   </NavSection>
                 )}
 

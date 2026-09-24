@@ -85,7 +85,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-understand"
                 label="Understand"
-                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
+                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports", "/group/ex-pulse"]}
               >
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "insights") &&
@@ -99,6 +99,9 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "reports") &&
                   teamMemberCanAccess(user, "reports") && <a href="/group/reports">Reports</a>}
+                {hasProduct(org, "colleague_experience") && teamMemberCanAccess(user, "exPulse") && (
+                  <a href="/group/ex-pulse">EX Pulse</a>
+                )}
               </NavSection>
               <NavSection
                 storageKey="group-act"
@@ -121,17 +124,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     <a href="/group/maturity">CX Pulse</a>
                   </NavSection>
                 )}
-
-              {hasProduct(org, "colleague_experience") && teamMemberCanAccess(user, "exPulse") && (
-                <NavSection
-                  storageKey="group-colleague-experience"
-                  label="Colleague Experience"
-                  defaultOpen={false}
-                  hrefs={["/group/ex-pulse"]}
-                >
-                  <a href="/group/ex-pulse">EX Pulse</a>
-                </NavSection>
-              )}
 
               <NavSection
                 storageKey="group-admin"
