@@ -24,6 +24,7 @@ interface RunHistoryRow {
 interface PlaybookRow {
   _id: string;
   title: string;
+  product?: "customer_experience" | "colleague_experience";
   categoryId: string | null;
   triggerCondition: string;
   triggerMetric: TriggerMetric | null;
@@ -59,6 +60,7 @@ function categoryIcon(name: string | undefined): string {
 interface CategoryRow {
   _id: string;
   name: string;
+  product?: "customer_experience" | "colleague_experience";
 }
 interface TeamRow {
   userId: string;
@@ -99,6 +101,8 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
   const [historyFor, setHistoryFor] = useState<string | null>(null);
   const [historyById, setHistoryById] = useState<Record<string, RunHistoryRow[]>>({});
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   function load() {
     setLoading(true);
@@ -117,6 +121,9 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
 
   useEffect(() => {
     load();
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.business?.enabledProducts?.includes("colleague_experience")));
   }, []);
 
   function categoryName(id: string | null): string {
@@ -148,6 +155,7 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title,
+        product,
         categoryId: categoryId || null,
         triggerCondition,
         steps: steps.split("\n").map((s) => s.trim()).filter(Boolean),
@@ -269,13 +277,24 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
             <label>Category</label>
             <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
               <option value="">Any category</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
+              {categories
+                .filter((c) => (c.product ?? "customer_experience") === product)
+                .map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
             </select>
           </div>
+          {ceEnabled && (
+            <div className="field">
+              <label>Product</label>
+              <select value={product} onChange={(e) => setProduct(e.target.value as typeof product)}>
+                <option value="customer_experience">Customer Experience</option>
+                <option value="colleague_experience">Colleague Experience</option>
+              </select>
+            </div>
+          )}
           <div className="field">
             <label>Trigger condition</label>
             <input
@@ -435,6 +454,11 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
                     </div>
                     <div className="ab-title-block">
                       <div className="ab-badges">
+                        {ceEnabled && (
+                          <span className={`pill ${p.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                            {p.product === "colleague_experience" ? "Colleague" : "Customer"}
+                          </span>
+                        )}
                         <span className="pill pill-gray">{categoryName(p.categoryId)}</span>
                         <span className="pill pill-purple">
                           {p.usageCount} use{p.usageCount === 1 ? "" : "s"}
