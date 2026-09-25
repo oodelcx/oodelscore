@@ -16,22 +16,23 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
   {
     page: "menu",
     navItems: [
-      { key: "product", label: "The Platform", visible: true, order: 0 },
-      { key: "solutions", label: "Solutions", visible: true, order: 1 },
-      { key: "how-it-works", label: "How it works", visible: true, order: 2 },
-      { key: "pricing", label: "Pricing", visible: true, order: 3 },
-      { key: "company", label: "Company", visible: true, order: 4 },
-      { key: "contact", label: "Contact", visible: true, order: 5 },
+      { key: "product", label: "Customer Experience", visible: true, order: 0 },
+      { key: "colleague-pulse", label: "Colleague Pulse", visible: true, order: 1 },
+      { key: "solutions", label: "Solutions", visible: true, order: 2 },
+      { key: "how-it-works", label: "How it works", visible: true, order: 3 },
+      { key: "pricing", label: "Pricing", visible: true, order: 4 },
+      { key: "company", label: "Company", visible: true, order: 5 },
+      { key: "contact", label: "Contact", visible: true, order: 6 },
     ],
     sections: [],
     fields: {
       siteName: "OodelCX",
       footerDescription:
-        "Feedback collection, AI Insights reports, and the tools to actually act on both — for one location or a thousand.",
-      footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
+        "One platform, two ways to listen: Customer Experience and Colleague Pulse. Feedback collection, AI Insights, and the tools to actually act on both — for one location or a thousand.",
+      footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Colleague Pulse", "Pricing"]),
       footerSolutionsLinks: JSON.stringify(["Solutions", "The mechanism", "Pricing"]),
       footerCompanyLinks: JSON.stringify(["About", "Contact", "Privacy policy", "Terms"]),
-      footerProductHeading: "Product",
+      footerProductHeading: "Customer Experience",
       footerSolutionsHeading: "Solutions",
       footerCompanyHeading: "Company",
       copyrightText: "© OodelCX. All rights reserved.",
@@ -44,9 +45,9 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heroHeadline: "Feedback is easy to collect. Acting on it is the hard part.",
       heroSubheadline:
-        "OodelCX turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
+        "OodelCX turns every QR scan — from a customer or a colleague — into tracked, owned work, not another number on a dashboard nobody opens. Built for one location or a thousand.",
       metaDescription:
-        "OodelCX turns customer feedback into tracked, owned work — QR-code surveys, AI Insights reports, and Case Management built for one location or a thousand.",
+        "OodelCX turns customer and colleague feedback into tracked, owned work — QR-code surveys, AI Insights reports, and Case Management built for one location or a thousand.",
       loopHeadline: "Listen. Understand. Act. Measure.",
       loopStages: JSON.stringify([
         { label: "Listen", title: "Collect", body: "A QR scan, a short survey, no app or login." },
@@ -58,6 +59,13 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroPrimaryButton: "Book a demo",
       heroSecondaryButton: "See how it works",
       heroBuiltForLine: "bank branch networks, retail chains, school trusts, and healthcare groups",
+      heroTwoProductsHeadline: "Two ways to listen, one platform to act on both.",
+      heroTwoProductsBody:
+        "Customer Experience and Colleague Pulse run on the exact same engine — QR feedback, AI Insights, Case Management, and a maturity score — pointed at two different audiences. Run one or both.",
+      heroTwoProductsCxLabel: "Customer Experience",
+      heroTwoProductsCxBody: "What customers, clients, or patients tell you after an interaction.",
+      heroTwoProductsCeLabel: "Colleague Pulse",
+      heroTwoProductsCeBody: "What your own staff tell you, including what routes straight to HR, not their manager.",
       narrativeHeadline: "Most tools stop at collecting. We built the other two thirds.",
       narrativeSubhead: "A score with nowhere to go is just a number.",
       narrativeSteps: JSON.stringify([
@@ -110,19 +118,25 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     navItems: [],
     sections: [],
     fields: {
-      heroHeadline: "Straightforward pricing, whatever your size.",
-      heroSubhead: "Every plan includes AI Insights reporting and unlimited responses.",
+      heroHeadline: "Straightforward pricing, for either product — or both.",
+      heroSubhead:
+        "Customer Experience and Colleague Pulse are priced and billed separately, so you only pay for what you actually run. Every plan includes AI Insights reporting and unlimited responses.",
       metaDescription:
-        "OodelCX pricing for single locations and multi-branch groups — every plan includes AI Insights reporting, Case Management, and unlimited responses.",
+        "OodelCX pricing for Customer Experience and Colleague Pulse — single locations and multi-branch groups, every plan includes AI Insights reporting, Case Management, and unlimited responses.",
       loopStripHeadline: "Every plan is the whole loop, not a slice of it.",
       loopStripItems: JSON.stringify([
         { label: "Listen", body: "Unlimited QR feedback points and responses" },
         { label: "Understand", body: "Themes and root causes surfaced automatically" },
         { label: "Act", body: "Case Management, Decision Log, and Playbooks included" },
-        { label: "Measure", body: "CX Pulse scoring on every plan tier" },
+        { label: "Measure", body: "A maturity score on every plan tier" },
       ]),
+      cxPlansHeading: "Customer Experience",
+      cePlansHeading: "Colleague Pulse",
+      cePlansSubhead:
+        "Already running Customer Experience? Adding Colleague Pulse is a second line item on the same account — one login, one AI Insights pipeline, no new dashboard to learn.",
       plans: JSON.stringify([
         {
+          product: "customer_experience",
           name: "Business",
           price: "£79",
           priceNote: "per month, one location",
@@ -131,6 +145,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           features: ["Up to 3 feedback points", "Weekly & monthly AI Insights reports", "Action board & alert rules", "Email support"],
         },
         {
+          product: "customer_experience",
           name: "Group",
           price: "From £249",
           priceNote: "per month, per branch billing available",
@@ -145,6 +160,49 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           ],
         },
         {
+          product: "customer_experience",
+          name: "Enterprise",
+          price: "Custom",
+          priceNote: "for networks of 100+ branches",
+          featured: false,
+          cta: "Talk to sales",
+          features: [
+            "Dedicated account manager",
+            "Custom roles & permissions",
+            "Quarterly business reviews",
+          ],
+        },
+        {
+          product: "colleague_experience",
+          name: "Team",
+          price: "£49",
+          priceNote: "per month, one location",
+          featured: false,
+          cta: "Start free trial",
+          features: [
+            "Unlimited colleague roster",
+            "Sensitive-category routing straight to HR",
+            "eNPS tracked alongside Colleague Pulse",
+            "Email support",
+          ],
+        },
+        {
+          product: "colleague_experience",
+          name: "Network",
+          price: "From £179",
+          priceNote: "per month, per branch billing available",
+          featured: true,
+          cta: "Book a demo",
+          features: [
+            "Unlimited branches",
+            "Colleague Pulse compared branch to branch",
+            "CX ↔ EX Correlation, if you also run Customer Experience",
+            "Shared playbooks & decision log",
+            "Per-branch or group-wide billing",
+          ],
+        },
+        {
+          product: "colleague_experience",
           name: "Enterprise",
           price: "Custom",
           priceNote: "for networks of 100+ branches",
@@ -157,7 +215,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           ],
         },
       ]),
-      enterpriseNote: "Onboarding a school trust, healthcare group, or retail chain?",
+      enterpriseNote: "Onboarding a school trust, healthcare group, or retail chain — for either product, or both?",
     },
   },
   {
@@ -165,11 +223,11 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     navItems: [],
     sections: [],
     fields: {
-      heroHeadline: "Everything from a QR scan to a resolved decision.",
+      heroHeadline: "Customer Experience: everything from a QR scan to a resolved decision.",
       heroSubheadline:
-        "One platform for the whole loop — collecting feedback, turning it into owned work, and proving whether that work is actually changing anything.",
+        "The whole loop for feedback from customers, clients, or patients — collecting it, turning it into owned work, and proving whether that work is actually changing anything. Listening to your own staff instead? See Colleague Pulse.",
       metaDescription:
-        "See how OodelCX collects feedback, turns it into owned work with the Case Management, and measures real improvement with CX Pulse.",
+        "See how OodelCX's Customer Experience product collects feedback, turns it into owned work with Case Management, and measures real improvement with CX Pulse.",
       features: JSON.stringify([
         {
           tag: "Feedback Collection",
@@ -273,15 +331,107 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     },
   },
   {
+    page: "colleague-pulse",
+    navItems: [],
+    sections: [],
+    fields: {
+      heroHeadline: "Colleague Pulse: the same rigor, pointed at your own team.",
+      heroSubheadline:
+        "Staff hear about a broken process, a bad rota, or a manager problem long before it shows up as a resignation letter. Colleague Pulse gives that feedback the same QR-to-case pipeline as your customers get — including a route that bypasses the manager entirely when it needs to.",
+      metaDescription:
+        "Colleague Pulse: internal feedback for staff, built on the same engine as OodelCX's Customer Experience product — QR surveys, AI Insights, sensitive-category routing to HR, Case Management, and eNPS.",
+      features: JSON.stringify([
+        {
+          tag: "Colleague Feedback Collection",
+          menuFeatured: true,
+          group: "understand",
+          headline: "A QR code your team actually uses, not an annual survey they dread",
+          body: "The same short, no-login survey your customers get — at a break room, on a shift-change screen, or sent as a link — so a rota complaint or a safety concern reaches you the week it happens, not in next year's engagement survey.",
+        },
+        {
+          tag: "Colleague Pulse Score",
+          menuFeatured: true,
+          group: "understand",
+          headline: "One number for whether staff feedback actually changes anything",
+          body: "The same five-dimension maturity framework as Customer Experience's CX Pulse — awareness, response speed, ownership, culture, measured outcomes — rebuilt around colleague listening instead of customer listening.",
+        },
+        {
+          tag: "eNPS",
+          menuFeatured: true,
+          group: "understand",
+          headline: "The one number leadership already asks for",
+          body: "Employee Net Promoter Score, tracked alongside Colleague Pulse rather than as a separate spreadsheet someone assembles once a quarter — so \"would you recommend working here\" has a trend line, not just a snapshot.",
+        },
+        {
+          tag: "Sensitive-Category Routing",
+          menuFeatured: true,
+          group: "understand",
+          headline: "A complaint about a manager never lands on that manager's desk",
+          body: "Categories marked sensitive — HR complaints, leadership concerns, harassment — bypass your normal owner routing entirely and go straight to a designated contact, so a colleague reporting a problem with their own manager isn't handing it to the person it's about.",
+        },
+        {
+          tag: "Colleague Roster",
+          group: "understand",
+          headline: "Feedback tied to a real team, not an anonymous pool",
+          body: "Keep a roster of who's being asked, by location and role, so response patterns can be read at the level that's actually useful — this shift, this branch, this department — without losing the option to keep individual responses anonymous.",
+        },
+        {
+          tag: "CX ↔ EX Correlation",
+          menuFeatured: true,
+          group: "understand",
+          headline: "Prove the thing everyone already suspects",
+          body: "Run both products, and see whether a dip in colleague sentiment at a branch actually predicts a dip in customer sentiment a few weeks later — a cross-product view no single-product feedback tool can show you.",
+        },
+        {
+          tag: "Theme Intelligence",
+          group: "understand",
+          headline: "What your team keeps bringing up, without reading every comment",
+          body: "Recurring themes in open-text answers — understaffing, a specific piece of equipment, a scheduling pattern — surface automatically, the same as they do for customer feedback.",
+        },
+        {
+          tag: "AI Insights Reports",
+          group: "understand",
+          headline: "A plain-English summary of colleague sentiment, on a schedule",
+          body: "Weekly, monthly, and quarterly reports generated from real responses, reviewed by a person before anyone outside HR or leadership sees them.",
+        },
+        {
+          tag: "Case Management",
+          menuFeatured: true,
+          group: "act",
+          headline: "A flagged concern becomes an owned case, not a comment in a survey tool",
+          body: "The same Case Management your Customer Experience side uses — an owner, a due date, a status — so a colleague concern gets tracked to resolution instead of read once and filed.",
+        },
+        {
+          tag: "Guided Playbooks",
+          group: "act",
+          headline: "The next step, already agreed on",
+          body: "A recurring issue — the same equipment complaint, the same scheduling gripe — attaches a Playbook with the steps your team already decided on, instead of relitigating the response every time.",
+        },
+        {
+          tag: "Decision Log",
+          group: "act",
+          headline: "Did the fix actually move the number?",
+          body: "Log the change, the trigger that caused it, and a measured before/after — so a rota change or a new onboarding process is something you can show worked, not just something you rolled out.",
+        },
+        {
+          tag: "Automatic Alerts",
+          group: "act",
+          headline: "Know the moment something needs attention",
+          body: "A Colleague Pulse dip, a sudden eNPS drop, or an outlier branch triggers an alert to the right person immediately — same mechanism as Customer Experience's alert rules.",
+        },
+      ]),
+    },
+  },
+  {
     page: "solutions",
     navItems: [],
     sections: [],
     fields: {
-      heroHeadline: "Built for how your organization actually works.",
+      heroHeadline: "Built for how your organization actually works — and who it's actually listening to.",
       heroBody:
-        "Single location, growing chain, or thousand-branch network — the same clarity, without forcing every business to look identical.",
+        "Single location, growing chain, or thousand-branch network. Customer feedback, colleague feedback, or both. The same clarity, without forcing every business — or every audience — to look identical.",
       metaDescription:
-        "OodelCX for single businesses, multi-location groups, and enterprise networks — regional benchmarking, per-branch billing, and custom roles.",
+        "OodelCX for single businesses, multi-location groups, and enterprise networks — regional benchmarking, per-branch billing, and custom roles, for Customer Experience and Colleague Pulse alike.",
       singleTitle: "Everything in one view",
       singlePoints: JSON.stringify([
         "Your own feedback points, question set, and alert rules",
@@ -312,127 +462,73 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         {
           slug: "banking",
           locationNoun: "branch",
-          name: "Banking & Financial Services",
-          tagline: "Every branch accountable for the visit, not the survey score.",
+          name: "Banking & Finance",
+          tagline: "A compliance complaint should never land on the desk of the person it's about.",
           heroBody:
-            "A wait-time complaint and a teller-friendliness dip look identical on a spreadsheet. OodelCX tells you which one it actually was, and gives the branch manager a case to close — not a number to explain away at the next regional call.",
+            "A wait-time gripe and a mis-sold-product complaint look identical in a spreadsheet of star ratings. They are not identical, and routing them the same way is how a real problem sits for a month disguised as a bad Tuesday. OodelCX reads what a complaint actually is before it decides who sees it.",
           standaloneBody:
-            "One branch, one QR code at the counter. Every complaint about a specific visit — the wait, the fee explanation, the teller — becomes a case with an owner and a due date, not a comment that sits in an inbox until someone happens to read it.",
+            "One branch, one QR code at the counter or in the app. A complaint about a fee explanation, a wait, or a specific member of staff becomes a case with an owner and a due date the same day — not a line in an inbox someone gets to eventually.",
           groupBody:
-            "A regional or national branch network sees every location side by side — which branch is quietly losing customers to wait times, which one's compliance-sensitive complaints are actually getting routed to compliance instead of a teller's own manager, and where a fix at one branch is worth rolling out everywhere.",
+            "A regional or national network sees every branch on one screen: which one is quietly bleeding customers to wait times, which one's sensitive complaints are correctly reaching compliance instead of a teller's own line manager, and which fix — a queue change, a script update — is worth rolling out everywhere instead of reinventing at the next branch that hits the same problem.",
           benefits: [
-            "Compliance-sensitive complaints route to a designated contact, never to the person they're about",
-            "Branch-vs-branch benchmarking on wait time and service scores, not just an overall NPS",
-            "A flagged interaction becomes an owned case the same day, with a due date a regional manager can actually track",
-            "Prove a fix worked — before/after numbers on the exact metric a branch was struggling with",
+            "Compliance- and conduct-sensitive complaints route straight to a designated contact — never to the person, or the branch, they're about",
+            "Branch-vs-branch benchmarking on wait time and service scores, not one blended network NPS hiding which locations actually need help",
+            "A flagged interaction becomes an owned case the same day, with a due date a regional manager can actually chase",
+            "A real before/after on the exact metric a branch was struggling with — for the audit trail, not just the team meeting",
           ],
         },
         {
           slug: "education",
           locationNoun: "campus",
           name: "Education",
-          tagline: "Parents and staff both keep telling you things. Now both go somewhere.",
+          tagline: "Parents raise it at pickup. Staff never raise it at all. Now both have somewhere to put it.",
           heroBody:
-            "A school or trust hears from parents at pickup, at parent-teacher conferences, and buried in emails — and from staff, rarely, because there's nowhere for it to go. OodelCX gives both a QR code and a real case that gets worked, not filed.",
+            "A school hears from parents constantly — at the gate, in the WhatsApp group, in a strongly worded email to the office — and from its own staff almost never, because there's no route that doesn't feel like going over someone's head. OodelCX gives both a QR code, and gives the staff route a way to skip straight to a trustee or HR lead when it needs to.",
           standaloneBody:
-            "One campus, one front office. Facilities complaints, communication gaps, and the small things that erode parent trust each become a tracked case instead of a hallway conversation nobody wrote down.",
+            "One campus, one front office. A facilities complaint, a communication gap, or a small thing that's quietly eroding parent trust becomes a tracked case instead of a hallway conversation nobody wrote down and nobody followed up on.",
           groupBody:
-            "A multi-campus trust compares every school side by side — which campus's facilities complaints keep recurring, which one's front-office communication scores lag the network average — and rolls a fix out everywhere it's needed, not just where a principal happened to notice.",
+            "A multi-campus trust compares every school side by side: which campus's facilities complaints keep recurring term after term, which one's front-office communication scores are actually dragging the trust average down, and where a fix that worked at one site is overdue everywhere else.",
           benefits: [
-            "Facilities and communication issues become owned cases instead of hallway conversations that go nowhere",
-            "Campus-vs-campus comparison across a trust, so a facilities fix that worked at one school can be rolled out network-wide",
-            "A recurring complaint pattern — the same issue at the same campus, three times in a month — gets flagged automatically",
-            "Optional colleague feedback for staff, kept fully separate from family-facing surveys",
+            "Facilities and communication issues become owned cases with a due date, not a hallway conversation that goes nowhere",
+            "Campus-vs-campus comparison across a trust, so a fix that worked at one school gets rolled out, not reinvented",
+            "The same complaint at the same campus three times in a term gets flagged as a pattern automatically, not noticed by chance",
+            "Staff feedback stays completely separate from family-facing surveys, with its own route past a direct manager when needed",
           ],
         },
         {
           slug: "retail",
           locationNoun: "store",
           name: "Retail",
-          tagline: "Know which store, which shift, which fix actually worked.",
+          tagline: "A dip in your average tells you nothing. This tells you which store, which shift.",
           heroBody:
-            "A dip in your average rating tells you something's wrong somewhere. OodelCX tells you it's the Saturday afternoon shift at one specific store, and gives that store's manager a case with a due date instead of a number to shrug at.",
+            "\"Our rating dropped this month\" is not an action. \"Store 14's Saturday afternoon shift dropped\" is. OodelCX gives the store manager a case with a due date instead of giving head office a number to shrug at in a review deck.",
           standaloneBody:
-            "One store, one QR code at checkout. Every flagged response — a stockout, a slow line, a rude interaction — becomes a case with an owner, so the next shift lead isn't guessing what needs fixing.",
+            "One store, one QR code at checkout or on the receipt. A stockout complaint, a slow line, a rude interaction — each becomes a case with an owner, so the next shift lead isn't starting the day guessing what actually needs fixing.",
           groupBody:
-            "A multi-store chain compares every location and every shift pattern side by side, spots the store that's quietly dragging the network average down, and shares a playbook across the chain instead of reinventing the fix at each location.",
+            "A multi-store chain compares every location and every shift pattern side by side, spots the store quietly dragging the network average down before quarter-end forces the question, and shares one playbook across the chain instead of every store manager solving the same problem alone.",
           benefits: [
-            "Store-vs-store and shift-pattern comparison, not just one blended average",
-            "A recurring complaint at one store — three stockout mentions in two weeks — gets flagged before it becomes a pattern nobody noticed",
-            "Guided playbooks turn a repeat issue into a standard response the whole chain can reuse",
-            "Downloadable reports for a regional or ops review, not a login every store manager has to remember",
-          ],
-        },
-        {
-          slug: "restaurants-hospitality",
-          locationNoun: "location",
-          name: "Restaurants & Hospitality",
-          tagline: "A bad table turn shouldn't take a bad review to notice.",
-          heroBody:
-            "By the time a bad night shows up as a public review, it's too late to fix that guest's experience. OodelCX catches the same signal at the table, the same night, while there's still a shift manager who can do something about it.",
-          standaloneBody:
-            "One location, one QR code on the table or receipt. A flagged rating during service reaches the shift manager the same night, not the next morning's inbox review.",
-          groupBody:
-            "A multi-location group compares every restaurant and every daypart, spots the location whose service scores are sliding before it shows up in a review site, and shares what actually fixed it with every other location running the same menu.",
-          benefits: [
-            "Same-night visibility on a flagged table, routed to whoever's actually on shift",
-            "Location-vs-location and daypart comparison, so a Friday-dinner problem doesn't get averaged away by a strong Tuesday lunch",
-            "A recurring complaint — slow tickets, a specific dish, a specific server pattern — gets flagged as a pattern, not read one comment at a time",
-            "Prove a service fix actually moved the number, with a real before/after, not a guess",
+            "Store-vs-store and shift-pattern comparison, not one blended average that hides which location actually needs help",
+            "Three stockout mentions in two weeks at one store gets flagged as a pattern before it becomes next quarter's surprise",
+            "A guided playbook turns a repeat issue into a standard response the whole chain reuses instead of relearning",
+            "A clean, exportable report for the regional or ops review — no store manager needs to remember another login",
           ],
         },
         {
           slug: "healthcare",
           locationNoun: "facility",
-          name: "Healthcare & Diagnostics",
-          tagline: "A two-hour wait is a case, not just a complaint.",
+          name: "Healthcare",
+          tagline: "A two-hour wait is a case for clinical ops, not a line in a patient satisfaction PDF.",
           heroBody:
-            "Patients tell you about the wait, the check-in, the way a result was explained — and most of that feedback never reaches anyone who can fix it. OodelCX turns a flagged visit into a case a clinical operations manager can actually close.",
+            "Patients tell you about the wait, the check-in process, the way a result got explained — and on paper-based feedback, almost none of it reaches anyone who can actually change how the day runs. OodelCX turns a flagged visit into a case a clinical operations manager can close, and routes anything sensitive around the clinician it concerns.",
           standaloneBody:
-            "One clinic or facility, one QR code at check-in or discharge. A wait-time or communication complaint becomes an owned case the same day, not a comment card in a box nobody empties.",
+            "One clinic or facility, one QR code at check-in or discharge. A wait-time or communication complaint becomes an owned case the same day — not a comment card in a box that gets emptied once a month, if at all.",
           groupBody:
-            "A multi-facility health network compares wait times and patient-experience scores across every location, spots the facility whose numbers are sliding, and rolls out a fix — a real-time wait tracker, a staffing adjustment — everywhere it's needed.",
+            "A multi-facility network compares wait times and patient-experience scores across every site, spots the facility whose numbers are sliding before it becomes a review-board question, and rolls out the fix — a real-time wait tracker, a staffing change to a specific shift — everywhere it's actually needed, not just where someone happened to notice.",
           benefits: [
             "Wait-time and check-in complaints become owned cases with a due date, not a form in a box",
-            "Facility-vs-facility benchmarking on the metrics that actually drive patient trust",
-            "A recurring wait-time pattern at one facility gets flagged and turned into a tracked improvement initiative",
-            "Prove an operational fix worked with a measured before/after, for the review board that asks",
-          ],
-        },
-        {
-          slug: "fitness",
-          locationNoun: "location",
-          name: "Fitness",
-          tagline: "Know why a member's about to cancel before they do.",
-          heroBody:
-            "A member who's unhappy with equipment upkeep or a class rarely says so until they cancel. OodelCX catches the flagged feedback while there's still time for a location manager to do something about it.",
-          standaloneBody:
-            "One gym or studio, one QR code at the front desk or in the app flow. A complaint about equipment, cleanliness, or a class becomes a case for the location manager, not a comment that disappears into a suggestion box.",
-          groupBody:
-            "A multi-location chain compares every gym side by side — which location's equipment complaints keep recurring, which one's class-satisfaction scores lag — and rolls a fix out chain-wide before it shows up in membership churn.",
-          benefits: [
-            "Equipment, cleanliness, and class-satisfaction complaints become owned cases, not suggestion-box notes",
-            "Location-vs-location comparison across the chain, so a real maintenance problem doesn't hide behind a strong overall average",
-            "A recurring equipment complaint at one location gets flagged as a pattern before it costs you members",
-            "Guided playbooks turn a known fix into a standard response every location manager can follow",
-          ],
-        },
-        {
-          slug: "automotive",
-          locationNoun: "service center",
-          name: "Automotive",
-          tagline: "The service bay's real bottleneck, not just its star rating.",
-          heroBody:
-            "A dealership or service center's rating can hide exactly where it's losing customers — the estimate, the wait, the explanation of what actually got fixed. OodelCX turns a flagged visit into a case the service manager can close the same day.",
-          standaloneBody:
-            "One location, one QR code at the service desk or on the invoice. A complaint about the estimate, the wait, or the explanation of work done becomes a case for the service manager, not a note in a file.",
-          groupBody:
-            "A multi-location dealer group compares every service center side by side, spots the location whose wait-time or estimate-accuracy complaints keep recurring, and shares what fixed it with every other location.",
-          benefits: [
-            "Estimate, wait-time, and communication complaints become owned cases with a due date",
-            "Location-vs-location comparison across a dealer group, not one blended average that hides the problem location",
-            "A recurring complaint pattern at one service center gets flagged automatically",
-            "Prove a service-process fix actually moved the number, with a real before/after",
+            "Facility-vs-facility benchmarking on the metrics that actually drive patient trust, not a single blended satisfaction score",
+            "A recurring wait-time pattern at one facility gets flagged and turned into a tracked improvement initiative automatically",
+            "A measured before/after for the fix, ready for the review board that will ask whether it actually worked",
           ],
         },
       ]),

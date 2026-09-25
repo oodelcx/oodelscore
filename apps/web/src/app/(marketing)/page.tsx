@@ -144,6 +144,37 @@ export default async function MarketingHomePage() {
         </div>
       </section>
 
+      <section className="fork" id="two-products">
+        <div className="wrap">
+          <Reveal className="narrative-head">
+            <h2>{f.heroTwoProductsHeadline}</h2>
+            <p>{f.heroTwoProductsBody}</p>
+          </Reveal>
+          <div className="fork-grid">
+            <Reveal>
+              <div className="fork-card light hover-lift">
+                <div className="fork-eyebrow">{f.heroTwoProductsCxLabel}</div>
+                <h2>Customer Experience</h2>
+                <p>{f.heroTwoProductsCxBody}</p>
+                <a href="/product" className="fork-cta">
+                  Explore Customer Experience →
+                </a>
+              </div>
+            </Reveal>
+            <Reveal delay={100}>
+              <div className="fork-card dark hover-lift">
+                <div className="fork-eyebrow">{f.heroTwoProductsCeLabel}</div>
+                <h2>Colleague Pulse</h2>
+                <p>{f.heroTwoProductsCeBody}</p>
+                <a href="/colleague-pulse" className="fork-cta">
+                  Explore Colleague Pulse →
+                </a>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
       <section className="scale" id="solutions">
         <div className="wrap">
           <Reveal className="scale-head">
