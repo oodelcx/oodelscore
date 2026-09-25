@@ -28,11 +28,10 @@ const CategorySchema = new Schema<ICategory>(
 );
 
 CategorySchema.index({ name: 1, product: 1 }, { unique: true });
-// NOTE: the collection's old single-field unique index on `name` (from
-// before Colleague Experience existed) still needs dropping in each real
-// database when this ships — Mongoose only creates missing indexes, it
-// never drops a stale one. Until that's done the old index still silently
-// enforces global name uniqueness, which is stricter than needed but not
-// unsafe. Run Category.syncIndexes() (or drop it manually) once deployed.
+// The collection's old single-field unique index on `name` (from before
+// Colleague Experience existed) enforces global name uniqueness, which is
+// stricter than needed but not unsafe. connectToDatabase() now runs
+// Category.syncIndexes() once per process on connect, so this self-heals
+// in every environment rather than needing a manual drop.
 
 export const Category: Model<ICategory> = mongoose.models.Category ?? model<ICategory>("Category", CategorySchema);

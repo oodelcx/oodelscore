@@ -66,10 +66,12 @@ const CxPulseScoreSchema = new Schema<ICxPulseScore>(
 );
 
 CxPulseScoreSchema.index({ ownerType: 1, ownerId: 1, period: 1, product: 1 }, { unique: true });
-// NOTE: same caveat as Category's index change — the collection's old
-// 3-field unique index still needs dropping in each real database when
-// this ships (CxPulseScore.syncIndexes() or a manual drop); until then it
-// keeps enforcing the narrower uniqueness, which is safe, just redundant.
+// The collection's old 3-field unique index (no `product`) predates
+// Colleague Experience and rejects the second product's row for the same
+// owner/period outright — not just redundant, an active write-time crash
+// on any dual-product account until dropped. connectToDatabase() now runs
+// CxPulseScore.syncIndexes() once per process on connect, so this
+// self-heals in every environment rather than needing a manual drop.
 
 export const CxPulseScore: Model<ICxPulseScore> =
   mongoose.models.CxPulseScore ?? model<ICxPulseScore>("CxPulseScore", CxPulseScoreSchema);
