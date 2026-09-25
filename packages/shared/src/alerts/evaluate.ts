@@ -39,13 +39,38 @@ function metricValue(metric: string, metrics: { starAverage: number | null; npsS
  * automatically instead of waiting for a manual "Log action taken" — the AI
  * only picks title/severity/category; the owner always comes from the
  * human-configured categoryOwnerMappings, never from the AI.
+ *
+ * Exported (not just called from recordFiringAndNotify below) so the
+ * feedback submit route can also call it directly for Colleague
+ * Experience's unconditional sensitive-comment screen (see
+ * ai/sensitiveScreen.ts) — a one-off HR/leadership complaint that never
+ * crosses a configured Alert Rule threshold must still be caught, not only
+ * ones that happen to also trip an alert.
  */
-async function autoTriageAndCreateActionItem(
+export async function autoTriageAndCreateActionItem(
   business: HydratedDocument<IBusiness>,
   ruleDescription: string,
   triggeringComment: string | null,
   product: Product
 ) {
+  // Guards against the same comment producing two cases: the submit-time
+  // sensitive screen may have already routed this exact comment (see
+  // Response.sensitiveRouted) before this business's alert rules got their
+  // chance to fire on the same response. A short window and an exact text
+  // match is enough — false positives here only mean a genuine second
+  // identical complaint within a minute gets folded together, which is a
+  // fine trade against silently duplicating every routed case.
+  if (triggeringComment) {
+    const recentDuplicate = await ActionBoardItem.findOne({
+      businessId: business._id,
+      product,
+      sensitive: true,
+      description: `Respondent comment: "${triggeringComment}"`,
+      createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
+    });
+    if (recentDuplicate) return;
+  }
+
   const categories = await Category.find({ product });
   const suggestion = await generateTriageSuggestion({
     comment: triggeringComment,

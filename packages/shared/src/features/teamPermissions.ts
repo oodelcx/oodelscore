@@ -21,6 +21,7 @@ export const TEAM_RESTRICTABLE_PAGES = [
   { key: "support", label: "Support" },
   { key: "colleagueRoster", label: "Colleague Roster" },
   { key: "exPulse", label: "EX Pulse" },
+  { key: "cxExCorrelation", label: "CX ↔ EX Correlation" },
 ] as const;
 
 export type TeamPageKey = (typeof TEAM_RESTRICTABLE_PAGES)[number]["key"];
