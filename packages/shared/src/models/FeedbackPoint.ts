@@ -144,8 +144,18 @@ export function effectiveDemographicConfig(
   business: Pick<IBusiness, "demographicConfig">
 ): IDemographicConfig {
   const config = point.demographicOverride ?? business.demographicConfig;
-  if (point.product !== "colleague_experience") return config;
-  return { ...config, name: "off", email: "off", phone: "off" };
+  // Never spread `config` here: business.demographicConfig is a live
+  // Mongoose subdocument, and spreading one pulls in its internal
+  // properties — including $__parent, a full backreference to the parent
+  // Business document (billing IDs, RAG thresholds, plan, everything). That
+  // leaked the entire Business record through this public, no-login
+  // endpoint's response. Build a plain object from named fields only, for
+  // both branches — this function's contract is a plain IDemographicConfig,
+  // never a live Mongoose (sub)document.
+  if (point.product === "colleague_experience") {
+    return { name: "off", email: "off", phone: "off", ageGroup: config.ageGroup, gender: config.gender };
+  }
+  return { name: config.name, email: config.email, phone: config.phone, ageGroup: config.ageGroup, gender: config.gender };
 }
 
 export const FeedbackPoint: Model<IFeedbackPoint> =
