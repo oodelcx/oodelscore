@@ -925,6 +925,104 @@
   border-top: 1px solid var(--line);
   font-size: 12.5px;
   color: var(--text-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  align-items: center;
+}
+.mkt .cookie-manage-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-3);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.mkt .cookie-manage-link:hover {
+  color: var(--ink);
+}
+
+/* ===== COOKIE CONSENT BANNER ===== */
+.mkt .cookie-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+}
+.mkt .cookie-banner-inner {
+  width: 100%;
+  max-width: 760px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(17, 20, 18, 0.16);
+  padding: 18px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  align-items: center;
+  justify-content: space-between;
+}
+.mkt .cookie-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  min-width: 240px;
+  flex: 1;
+}
+.mkt .cookie-banner-text strong {
+  color: var(--ink);
+  font-size: 14.5px;
+}
+.mkt .cookie-banner-text a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.mkt .cookie-banner-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.mkt .cookie-btn {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mkt .cookie-btn-ghost {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.mkt .cookie-btn-ghost:hover {
+  border-color: var(--text-2);
+}
+.mkt .cookie-btn-primary {
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: #fff;
+}
+.mkt .cookie-btn-primary:hover {
+  opacity: 0.9;
+}
+@media (max-width: 560px) {
+  .mkt .cookie-banner-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mkt .cookie-banner-actions {
+    justify-content: flex-end;
+  }
 }
 
 /* ===== PRICING PAGE ===== */
@@ -1758,11 +1856,22 @@
 .mkt .nav-menu-item.open .nav-menu-caret {
   transform: rotate(180deg);
 }
+/* top:100% flush against the trigger (no gap) plus a transparent
+   padding-top bridges the visual gap without leaving dead space the mouse
+   has to cross — a gap made with `top` instead of `padding` sits outside
+   this element's box, so moving from the trigger down into the panel exits
+   .nav-menu-item and fires mouseleave before the pointer ever reaches it.
+   The actual bordered/shadowed surface is the .mega-panel-inner child, so
+   the 18px visual gap still reads the same; only the hit-testing changed. */
 .mkt .mega-panel {
   position: absolute;
-  top: calc(100% + 18px);
+  top: 100%;
   left: 50%;
   transform: translateX(-50%);
+  padding-top: 18px;
+  z-index: 60;
+}
+.mkt .mega-panel-inner {
   min-width: 560px;
   background: var(--paper);
   border: 1px solid var(--line);
@@ -1772,7 +1881,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px 40px;
-  z-index: 60;
 }
 .mkt .mega-col h4 {
   font-size: 11.5px;
@@ -1792,7 +1900,7 @@
 .mkt .mega-col a:hover {
   color: var(--signal-deep);
 }
-.mkt .nav.nav-dark .mega-panel {
+.mkt .nav.nav-dark .mega-panel-inner {
   background: #14171a;
   border-color: rgba(255, 255, 255, 0.12);
 }

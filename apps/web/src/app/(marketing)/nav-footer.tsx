@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { INavItem } from "@oodelscore/shared";
 import { BookDemoButton } from "./demo-modal";
+import { ManageCookiesLink } from "./cookie-consent";
 
 const PATH_BY_KEY: Record<string, string> = {
   product: "/product",
@@ -51,16 +52,18 @@ function MegaMenu({ menuKey, label, data, active }: { menuKey: "product" | "solu
       </Link>
       {open && data.length > 0 && (
         <div className="mega-panel">
-          {data.map((col) => (
-            <div className="mega-col" key={col.label}>
-              <h4>{col.label}</h4>
-              {col.items.map((item) => (
-                <Link key={item.href + item.label} href={item.href} onClick={() => setOpen(false)}>
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          ))}
+          <div className="mega-panel-inner">
+            {data.map((col) => (
+              <div className="mega-col" key={col.label}>
+                <h4>{col.label}</h4>
+                {col.items.map((item) => (
+                  <Link key={item.href + item.label} href={item.href} onClick={() => setOpen(false)}>
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -248,7 +251,10 @@ export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; nav
             ))}
           </div>
         </div>
-        <div className="foot-bottom">{fields?.copyrightText ?? "© OodelCX. All rights reserved."}</div>
+        <div className="foot-bottom">
+          <span>{fields?.copyrightText ?? "© OodelCX. All rights reserved."}</span>
+          <ManageCookiesLink />
+        </div>
       </div>
     </footer>
   );
