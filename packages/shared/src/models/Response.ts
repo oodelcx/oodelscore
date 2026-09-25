@@ -53,6 +53,14 @@ export interface IResponse {
   sentiment: Sentiment | null;
   themes: string[];
   sentimentAnalyzedAt: Date | null;
+  // Colleague Experience only. True once this response's open comment has
+  // gone through the unconditional per-response sensitive-comment screen
+  // (see ai/sensitiveScreen.ts) and, if flagged, already been routed to a
+  // case via autoTriageAndCreateActionItem — regardless of whether an Alert
+  // Rule also later fires on the same response. Prevents that same comment
+  // from being triaged into a second, duplicate case through the ordinary
+  // alert-fire path.
+  sensitiveRouted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -92,6 +100,7 @@ const ResponseSchema = new Schema<IResponse>(
     sentiment: { type: String, enum: SENTIMENTS, default: null },
     themes: { type: [String], default: [] },
     sentimentAnalyzedAt: { type: Date, default: null },
+    sensitiveRouted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

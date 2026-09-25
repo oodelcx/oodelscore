@@ -123,20 +123,31 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   <a href="/group/decision-log">Decision log</a>
                 )}
               </NavSection>
-              {cxPulseNavProduct === "customer_experience"
-                ? hasProduct(org, "customer_experience") &&
-                  hasFeature(org.enabledFeatures, "cxPulse") &&
-                  teamMemberCanAccess(user, "cxPulse") && (
-                    <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
-                      <a href="/group/maturity">CX Pulse</a>
-                    </NavSection>
-                  )
-                : hasProduct(org, "colleague_experience") &&
-                  teamMemberCanAccess(user, "exPulse") && (
-                    <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/ex-pulse"]}>
-                      <a href="/group/ex-pulse">CX Pulse</a>
-                    </NavSection>
-                  )}
+              {(() => {
+                const showCxPulse =
+                  cxPulseNavProduct === "customer_experience"
+                    ? hasProduct(org, "customer_experience") && hasFeature(org.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse")
+                    : hasProduct(org, "colleague_experience") && teamMemberCanAccess(user, "exPulse");
+                const cxPulseHref = cxPulseNavProduct === "customer_experience" ? "/group/maturity" : "/group/ex-pulse";
+                // Only ever meaningful for a dual-product account — a
+                // network-level view of both signals together, so it's
+                // gated the same way the switcher itself is (bothProductsEnabled),
+                // not tied to whichever single product the tab happens to
+                // be on right now.
+                const showCorrelation = bothProductsEnabled && teamMemberCanAccess(user, "cxExCorrelation");
+                if (!showCxPulse && !showCorrelation) return null;
+                return (
+                  <NavSection
+                    storageKey="group-measure"
+                    label="Measure"
+                    defaultOpen={false}
+                    hrefs={[cxPulseHref, "/group/cx-ex-correlation"]}
+                  >
+                    {showCxPulse && <a href={cxPulseHref}>CX Pulse</a>}
+                    {showCorrelation && <a href="/group/cx-ex-correlation">CX ↔ EX Correlation</a>}
+                  </NavSection>
+                );
+              })()}
 
               <NavSection
                 storageKey="group-admin"

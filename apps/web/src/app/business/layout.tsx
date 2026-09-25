@@ -142,20 +142,29 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 )}
               </NavSection>
 
-              {cxPulseNavProduct === "customer_experience"
-                ? hasProduct(business, "customer_experience") &&
-                  hasFeature(business.enabledFeatures, "cxPulse") &&
-                  teamMemberCanAccess(user, "cxPulse") && (
-                    <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
-                      <a href="/business/cx-pulse">CX Pulse</a>
-                    </NavSection>
-                  )
-                : hasProduct(business, "colleague_experience") &&
-                  teamMemberCanAccess(user, "exPulse") && (
-                    <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/ex-pulse"]}>
-                      <a href="/business/ex-pulse">CX Pulse</a>
-                    </NavSection>
-                  )}
+              {(() => {
+                const showCxPulse =
+                  cxPulseNavProduct === "customer_experience"
+                    ? hasProduct(business, "customer_experience") && hasFeature(business.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse")
+                    : hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "exPulse");
+                const cxPulseHref = cxPulseNavProduct === "customer_experience" ? "/business/cx-pulse" : "/business/ex-pulse";
+                // A branch's CX↔EX correlation lives on its parent org's
+                // Group portal, not here — see api/business/cx-ex-correlation
+                // for the same split already used for Decision Log.
+                const showCorrelation = bothProductsEnabled && !isBranch && teamMemberCanAccess(user, "cxExCorrelation");
+                if (!showCxPulse && !showCorrelation) return null;
+                return (
+                  <NavSection
+                    storageKey="business-measure"
+                    label="Measure"
+                    defaultOpen={false}
+                    hrefs={[cxPulseHref, "/business/cx-ex-correlation"]}
+                  >
+                    {showCxPulse && <a href={cxPulseHref}>CX Pulse</a>}
+                    {showCorrelation && <a href="/business/cx-ex-correlation">CX ↔ EX Correlation</a>}
+                  </NavSection>
+                );
+              })()}
 
               <NavSection
                 storageKey="business-admin"
