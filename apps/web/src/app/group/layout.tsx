@@ -37,6 +37,7 @@ const PAGE_ACCESS_KEYS: [string, TeamPageKey][] = [
   ["/group/insights", "insights"],
   ["/group/analytics", "analytics"],
   ["/group/alert-rules", "alertRules"],
+  ["/group/alerts", "alerts"],
   ["/group/reports", "reports"],
   ["/group/improvement-initiatives", "improvementInitiatives"],
   ["/group/decision-log", "decisionLog"],
@@ -135,7 +136,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-understand"
                 label="Understand"
-                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
+                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/alerts", "/group/reports"]}
               >
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "insights") &&
@@ -145,6 +146,9 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   teamMemberCanAccess(user, "analytics") && <a href="/group/analytics">Analytics</a>}
                 {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
                   <a href="/group/alert-rules">Alert rules</a>
+                )}
+                {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alerts") && (
+                  <a href="/group/alerts">Alerts</a>
                 )}
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "reports") &&

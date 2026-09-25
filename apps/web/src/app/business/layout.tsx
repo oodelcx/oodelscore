@@ -36,6 +36,7 @@ const PAGE_ACCESS_KEYS: [string, TeamPageKey][] = [
   ["/business/insights", "insights"],
   ["/business/analytics", "analytics"],
   ["/business/alert-rules", "alertRules"],
+  ["/business/alerts", "alerts"],
   ["/business/reports", "reports"],
   ["/business/improvement-initiatives", "improvementInitiatives"],
   ["/business/decision-log", "decisionLog"],
@@ -151,7 +152,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-understand"
                 label="Understand"
-                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports"]}
+                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/alerts", "/business/reports"]}
               >
                 {hasProduct(business, "customer_experience") &&
                   hasFeature(business.enabledFeatures, "insights") &&
@@ -161,6 +162,9 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   teamMemberCanAccess(user, "analytics") && <a href="/business/analytics">Analytics</a>}
                 {hasFeature(business.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
                   <a href="/business/alert-rules">Alert Rules</a>
+                )}
+                {hasFeature(business.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alerts") && (
+                  <a href="/business/alerts">Alerts</a>
                 )}
                 {hasProduct(business, "customer_experience") &&
                   hasFeature(business.enabledFeatures, "reports") &&
