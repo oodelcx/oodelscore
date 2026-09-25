@@ -52,6 +52,19 @@ function pageKeyForPath(pathname: string): TeamPageKey | null {
   return match ? match[1] : null;
 }
 
+// These three have no TeamPageKey — they're not a togglable per-person
+// permission the way the pages above are, they're only ever shown to the
+// primary owner login to begin with (see the `!isBusinessTeamMember` nav
+// guards above). A Team Member of either tier hitting one directly by URL
+// used to fall through pageKeyForPath() returning null, which the gate
+// below reads as "nothing to check" and rendered the real page — Billing
+// and the dashboard root then crash on data shaped for an owner session,
+// and Team Members/Category Owners silently render as empty.
+const OWNER_ONLY_ROUTES = ["/business/billing", "/business/team-members", "/business/category-owners"];
+function isOwnerOnlyRoute(pathname: string): boolean {
+  return OWNER_ONLY_ROUTES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export default async function BusinessLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -175,6 +188,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                     ? hasProduct(business, "customer_experience") && hasFeature(business.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse")
                     : hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "exPulse");
                 const cxPulseHref = cxPulseNavProduct === "customer_experience" ? "/business/cx-pulse" : "/business/ex-pulse";
+                const cxPulseNavLabel = cxPulseNavProduct === "customer_experience" ? "CX Pulse" : "Colleague Pulse";
                 // A branch's CX↔EX correlation lives on its parent org's
                 // Group portal, not here — see api/business/cx-ex-correlation
                 // for the same split already used for Decision Log.
@@ -187,7 +201,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                     defaultOpen={false}
                     hrefs={[cxPulseHref, "/business/cx-ex-correlation"]}
                   >
-                    {showCxPulse && <a href={cxPulseHref}>CX Pulse</a>}
+                    {showCxPulse && <a href={cxPulseHref}>{cxPulseNavLabel}</a>}
                     {showCorrelation && <a href="/business/cx-ex-correlation">CX ↔ EX Correlation</a>}
                   </NavSection>
                 );
@@ -236,8 +250,15 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
           />
         ) : (() => {
+            if (isBusinessTeamMember && isOwnerOnlyRoute(pathname)) return true;
+            // Dashboard root ("/business" exactly — not a prefix match, so
+            // it doesn't also swallow every other business/* route): the
+            // nav itself only shows this link to non-limited users (see
+            // the isLimitedTeamMember ? ... nav above), and the page's own
+            // data shape assumes a full owner/full-tier session.
+            if (isLimitedTeamMember && pathname === "/business") return true;
             const pageKey = pageKeyForPath(pathname);
-            return pageKey && !teamMemberCanAccess(user, pageKey);
+            return !!pageKey && !teamMemberCanAccess(user, pageKey);
           })() ? (
           <AccessDenied />
         ) : toursEnabled ? (
