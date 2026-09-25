@@ -2235,3 +2235,167 @@
     font-size: 26px;
   }
 }
+
+/* ===== COMPANY PAGE — story / beliefs / audience sections ===== */
+.mkt .company-eyebrow {
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--signal-deep);
+  margin-bottom: 14px;
+}
+.mkt .company-section-head {
+  max-width: 620px;
+  margin: 0 0 44px;
+}
+.mkt .company-section-head-narrow {
+  max-width: 560px;
+}
+.mkt .company-section-head h2,
+.mkt .company-story-text h2 {
+  font-size: clamp(26px, 3.2vw, 36px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+  margin: 0;
+}
+
+.mkt .company-story {
+  padding: 70px 0;
+  border-top: 1px solid var(--line);
+}
+.mkt .company-story-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 60px;
+  align-items: center;
+}
+.mkt .company-story-text h2 {
+  margin: 0 0 22px;
+}
+.mkt .company-story-text p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-2);
+  max-width: 56ch;
+  margin: 0 0 18px;
+}
+.mkt .company-story-text p:last-child {
+  margin-bottom: 0;
+}
+.mkt .company-story-art {
+  display: flex;
+  justify-content: center;
+}
+@media (max-width: 860px) {
+  .mkt .company-story-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .mkt .company-story-art {
+    order: -1;
+  }
+  .mkt .company-story-art svg {
+    max-width: 220px;
+  }
+}
+
+.mkt .company-beliefs {
+  padding: 70px 0;
+  background: var(--paper-alt);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.mkt .company-beliefs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+.mkt .company-belief-card {
+  color: var(--signal);
+}
+.mkt .company-belief-icon {
+  color: var(--signal);
+  margin-bottom: 18px;
+}
+.mkt .company-belief-card h3 {
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.mkt .company-belief-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+  margin: 0;
+}
+@media (max-width: 940px) {
+  .mkt .company-beliefs-grid {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 40px;
+  }
+}
+@media (max-width: 560px) {
+  .mkt .company-beliefs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mkt .company-audience {
+  padding: 80px 0 90px;
+}
+.mkt .company-audience-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 36px;
+}
+.mkt .company-audience-card {
+  padding: 24px 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.mkt .company-audience-card:hover {
+  border-color: var(--signal);
+  transform: translateY(-2px);
+}
+.mkt .company-audience-icon {
+  color: var(--signal-deep);
+  margin-bottom: 14px;
+}
+.mkt .company-audience-card h3 {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.mkt .company-audience-card p {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+  margin: 0;
+}
+.mkt .company-audience-link {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--signal-deep);
+}
+.mkt .company-audience-link:hover {
+  color: var(--signal);
+}
+@media (max-width: 940px) {
+  .mkt .company-audience-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .mkt .company-audience-grid {
+    grid-template-columns: 1fr;
+  }
+}
