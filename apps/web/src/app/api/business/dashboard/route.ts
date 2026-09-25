@@ -13,6 +13,7 @@ import {
   computeRatingDistribution,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 const TREND_DAYS = 14;
 
@@ -21,18 +22,19 @@ export async function GET() {
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
   const businessIds = [session.business._id];
   const now = new Date();
   const from30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const [overall, comparisons, trend, distribution, feedbackPoints, recentWithComments, ownCxPulseScore] = await Promise.all([
-    computeBusinessMetrics(session.business._id, new Date(0), now),
-    computePeriodComparisons(businessIds, now),
-    computeDailyTrend(businessIds, TREND_DAYS, now),
-    computeRatingDistribution(businessIds, from30d, now),
+    computeBusinessMetrics(session.business._id, new Date(0), now, product),
+    computePeriodComparisons(businessIds, now, product),
+    computeDailyTrend(businessIds, TREND_DAYS, now, product),
+    computeRatingDistribution(businessIds, from30d, now, product),
     FeedbackPoint.find({ businessId: session.business._id }),
-    Response.find({ businessId: session.business._id }).sort({ submittedAt: -1 }).limit(20),
-    CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id }).sort({ period: -1 }).lean(),
+    Response.find({ businessId: session.business._id, product }).sort({ submittedAt: -1 }).limit(20),
+    CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id, product }).sort({ period: -1 }).lean(),
   ]);
 
   // CX Pulse as an Overview widget, not a full section: the score plus the
@@ -81,8 +83,8 @@ export async function GET() {
     const siblingIds = siblingBusinesses.map((b) => b._id);
 
     const [siblingMetrics, decisions] = await Promise.all([
-      Promise.all(siblingIds.map((id) => computeBusinessMetrics(id, new Date(0), now))),
-      DecisionLogEntry.find({ affectedBusinessIds: session.business._id }).sort({ createdAt: -1 }).limit(3),
+      Promise.all(siblingIds.map((id) => computeBusinessMetrics(id, new Date(0), now, product))),
+      DecisionLogEntry.find({ affectedBusinessIds: session.business._id, product }).sort({ createdAt: -1 }).limit(3),
     ]);
 
     const regionAverages = siblingMetrics.map((m) => m.starAverage).filter((v): v is number => v !== null);
@@ -108,6 +110,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    product,
     totalResponses: overall.responseCount,
     starAverage: overall.starAverage,
     npsScore: overall.npsScore,

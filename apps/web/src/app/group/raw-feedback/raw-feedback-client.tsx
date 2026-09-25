@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
+import { AccessDenied } from "@/components/access-denied";
 
 interface AnswerRow {
   type: string;
@@ -20,8 +21,13 @@ interface ResponseStats {
   negative: number;
   flagged: number;
 }
+interface BranchOption {
+  _id: string;
+  name: string;
+}
 
 const LIMIT = 25;
+type ProductId = "customer_experience" | "colleague_experience";
 
 function starValue(r: ResponseRow): number | null {
   const star = r.answers.find((a) => a.type === "star_1_5" && typeof a.value === "number");
@@ -46,27 +52,70 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<ResponseStats | null>(null);
+  const [product, setProduct] = useState<ProductId>("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [branchId, setBranchId] = useState("");
+  const [forbidden, setForbidden] = useState(false);
+
+  // Account-scoped enabled products must be known BEFORE the first data
+  // fetch — otherwise a Colleague-Experience-only account always starts by
+  // asking for (empty) Customer Experience data, showing a stale/wrong tab
+  // and an empty page until a second render corrects it.
+  useEffect(() => {
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
+        const hasCx = products.includes("customer_experience");
+        const hasCe = products.includes("colleague_experience");
+        setCxEnabled(hasCx);
+        setCeEnabled(hasCe);
+        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setReady(true);
+      });
+  }, []);
 
   useEffect(() => {
+    if (!ready) return;
     setLoading(true);
     const params = new URLSearchParams({
       page: String(page),
       limit: String(LIMIT),
       filter: negativeOnly ? "negative" : "all",
+      product,
     });
+    if (branchId) params.set("businessId", branchId);
     fetch(`/api/group/raw-feedback?${params.toString()}`)
-      .then((res) => res.json())
-      .then((data) => {
+      .then(async (res) => ({ ok: res.ok, data: await res.json() }))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          setForbidden(true);
+          return;
+        }
         setResponses(data.responses ?? []);
         setTotalPages(data.totalPages ?? 1);
         setTotal(data.total ?? 0);
         setStats(data.stats ?? null);
+        setBranches(data.businesses ?? []);
       })
       .finally(() => setLoading(false));
-  }, [page, negativeOnly]);
+  }, [ready, page, negativeOnly, product, branchId]);
 
   function setFilter(negative: boolean) {
     setNegativeOnly(negative);
+    setPage(1);
+  }
+
+  function changeProduct(p: ProductId) {
+    setProduct(p);
+    setPage(1);
+  }
+
+  function changeBranch(id: string) {
+    setBranchId(id);
     setPage(1);
   }
 
@@ -75,7 +124,8 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
       <h1>Raw feedback</h1>
       <p className="subtitle">Every response across your network — who said what, and where.</p>
 
-      {stats && (
+      {forbidden && <AccessDenied />}
+      {!forbidden && stats && (
         <div className="grid grid-4" style={{ marginBottom: 20 }}>
           <div className="card">
             <div className="metric-label">Responses (filtered)</div>
@@ -100,19 +150,42 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         </div>
       )}
 
-      <div className="filters">
-        <div className={`chip ${!negativeOnly ? "active" : ""}`} onClick={() => setFilter(false)}>
-          All
+      {!forbidden && cxEnabled && ceEnabled && (
+        <div className="filters" style={{ marginBottom: 8 }}>
+          <div className={`chip ${product === "customer_experience" ? "active" : ""}`} onClick={() => changeProduct("customer_experience")}>
+            Customer Experience
+          </div>
+          <div className={`chip ${product === "colleague_experience" ? "active" : ""}`} onClick={() => changeProduct("colleague_experience")}>
+            Colleague Experience
+          </div>
         </div>
-        <div className={`chip ${negativeOnly ? "active" : ""}`} onClick={() => setFilter(true)}>
-          Negative only
-        </div>
-        <InfoTip text={tooltips["negative-only"]} />
-      </div>
+      )}
 
-      {loading && <p className="subtitle">Loading…</p>}
+      {!forbidden && (
+        <div className="filters" style={{ alignItems: "center" }}>
+          <div className={`chip ${!negativeOnly ? "active" : ""}`} onClick={() => setFilter(false)}>
+            All
+          </div>
+          <div className={`chip ${negativeOnly ? "active" : ""}`} onClick={() => setFilter(true)}>
+            Negative only
+          </div>
+          <InfoTip text={tooltips["negative-only"]} />
+          {branches.length > 0 && (
+            <select value={branchId} onChange={(e) => changeBranch(e.target.value)} style={{ marginLeft: "auto" }}>
+              <option value="">All branches</option>
+              {branches.map((b) => (
+                <option key={b._id} value={b._id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {!forbidden && loading && <p className="subtitle">Loading…</p>}
       <div className="content-narrow">
-      {!loading && (
+      {!forbidden && !loading && (
         <div className="ab-list">
           {responses.map((r) => {
             const star = starValue(r);
@@ -143,7 +216,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         </div>
       )}
 
-      {!loading && total > 0 && (
+      {!forbidden && !loading && total > 0 && (
         <div className="pagination">
           <button className="btn btn-sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
             ← Prev

@@ -925,6 +925,104 @@
   border-top: 1px solid var(--line);
   font-size: 12.5px;
   color: var(--text-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  align-items: center;
+}
+.mkt .cookie-manage-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-3);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.mkt .cookie-manage-link:hover {
+  color: var(--ink);
+}
+
+/* ===== COOKIE CONSENT BANNER ===== */
+.mkt .cookie-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+}
+.mkt .cookie-banner-inner {
+  width: 100%;
+  max-width: 760px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(17, 20, 18, 0.16);
+  padding: 18px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  align-items: center;
+  justify-content: space-between;
+}
+.mkt .cookie-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  min-width: 240px;
+  flex: 1;
+}
+.mkt .cookie-banner-text strong {
+  color: var(--ink);
+  font-size: 14.5px;
+}
+.mkt .cookie-banner-text a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.mkt .cookie-banner-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.mkt .cookie-btn {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mkt .cookie-btn-ghost {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.mkt .cookie-btn-ghost:hover {
+  border-color: var(--text-2);
+}
+.mkt .cookie-btn-primary {
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: #fff;
+}
+.mkt .cookie-btn-primary:hover {
+  opacity: 0.9;
+}
+@media (max-width: 560px) {
+  .mkt .cookie-banner-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mkt .cookie-banner-actions {
+    justify-content: flex-end;
+  }
 }
 
 /* ===== PRICING PAGE ===== */
@@ -943,6 +1041,19 @@
   color: var(--text-2);
   max-width: 46ch;
   margin: 0 auto;
+}
+.mkt .pricing-section-heading {
+  font-size: clamp(20px, 2.4vw, 26px);
+  letter-spacing: -0.015em;
+  margin: 0;
+  text-align: center;
+}
+.mkt .pricing-section-subhead {
+  font-size: 15px;
+  color: var(--text-2);
+  max-width: 52ch;
+  margin: 10px auto 0;
+  text-align: center;
 }
 .mkt .pricing-grid {
   display: grid;
@@ -1060,6 +1171,95 @@
   color: var(--text-2);
   max-width: 52ch;
   margin: 0 auto;
+}
+
+/* ===== SECTOR PAGES (/solutions/[slug]) — deliberately distinct from the
+   generic /solutions layout: left-aligned, a named "problem" block up
+   front, benefits as a checklist rather than icon cards. ===== */
+.mkt .sector-hero {
+  padding: 70px 0 36px;
+  border-bottom: 1px solid var(--line);
+}
+.mkt .sector-eyebrow {
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--signal-deep);
+  margin-bottom: 14px;
+}
+.mkt .sector-hero h1 {
+  font-size: clamp(30px, 4vw, 44px);
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  max-width: 20ch;
+  margin: 0 0 24px;
+}
+.mkt .sector-hero-cta {
+  display: flex;
+  gap: 12px;
+}
+.mkt .sector-problem {
+  padding: 48px 0;
+}
+.mkt .sector-problem-block {
+  max-width: 720px;
+  border-left: 3px solid var(--signal-deep);
+  padding-left: 26px;
+}
+.mkt .sector-problem-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+.mkt .sector-problem-block p {
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0;
+}
+.mkt .sector-benefits-section {
+  padding: 60px 0 80px;
+}
+.mkt .sector-benefits-list {
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.mkt .sector-benefit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mkt .sector-benefit-row:last-child {
+  border-bottom: none;
+}
+.mkt .sector-benefit-check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--signal-bg, #e8f4ef);
+  color: var(--signal-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.mkt .sector-benefit-row p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--text-2);
 }
 
 /* ===== FEATURE ROW ===== */
@@ -1689,6 +1889,156 @@
   gap: 10px 24px;
 }
 
+/* ===== SOLUTIONS: INDUSTRIES ===== */
+.mkt .industries {
+  padding: 70px 0;
+  border-top: 1px solid var(--line);
+}
+.mkt .industries h2 {
+  font-size: 26px;
+  margin: 0 0 8px;
+}
+.mkt .industries-sub {
+  color: var(--text-2);
+  font-size: 15px;
+  margin: 0 0 26px;
+}
+.mkt .industry-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.mkt .industry-chip {
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--paper-alt);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.mkt .industry-chip:hover {
+  border-color: var(--signal-deep, var(--ink));
+  background: var(--paper);
+}
+
+/* Anchor targets under the sticky nav shouldn't land flush with the top
+   edge — offset every jump target by the nav's own height plus a little
+   breathing room. */
+.mkt .feature-row,
+.mkt #standalone,
+.mkt #group,
+.mkt #enterprise,
+.mkt #industries {
+  scroll-margin-top: 84px;
+}
+
+/* ===== MEGA MENU ===== */
+.mkt .nav-links {
+  position: relative;
+}
+.mkt .nav-menu-item {
+  position: relative;
+}
+.mkt .nav-menu-trigger {
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.mkt .nav-menu-trigger:hover,
+.mkt .nav-menu-item.open .nav-menu-trigger {
+  color: var(--ink);
+}
+.mkt .nav-menu-caret {
+  width: 8px;
+  height: 8px;
+  transition: transform 0.15s ease;
+}
+.mkt .nav-menu-item.open .nav-menu-caret {
+  transform: rotate(180deg);
+}
+/* top:100% flush against the trigger (no gap) plus a transparent
+   padding-top bridges the visual gap without leaving dead space the mouse
+   has to cross — a gap made with `top` instead of `padding` sits outside
+   this element's box, so moving from the trigger down into the panel exits
+   .nav-menu-item and fires mouseleave before the pointer ever reaches it.
+   The actual bordered/shadowed surface is the .mega-panel-inner child, so
+   the 18px visual gap still reads the same; only the hit-testing changed. */
+.mkt .mega-panel {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding-top: 18px;
+  z-index: 60;
+}
+.mkt .mega-panel-inner {
+  min-width: 480px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 18px 44px rgba(17, 20, 18, 0.1);
+  padding: 26px 30px;
+}
+.mkt .mega-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 40px;
+}
+.mkt .mega-see-all {
+  display: block;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--signal-deep);
+}
+.mkt .nav.nav-dark .mega-see-all {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+.mkt .mega-col h4 {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  margin: 0 0 14px;
+  font-weight: 600;
+}
+.mkt .mega-col a {
+  display: block;
+  font-size: 14.5px;
+  color: var(--ink);
+  padding: 7px 0;
+  border-radius: 6px;
+}
+.mkt .mega-col a:hover {
+  color: var(--signal-deep);
+}
+.mkt .nav.nav-dark .mega-panel-inner {
+  background: #14171a;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.mkt .nav.nav-dark .mega-col a {
+  color: rgba(255, 255, 255, 0.88);
+}
+.mkt .nav.nav-dark .mega-col h4 {
+  color: rgba(255, 255, 255, 0.5);
+}
+@media (max-width: 860px) {
+  .mkt .mega-panel {
+    display: none;
+  }
+}
+
 /* ===== HOW IT WORKS: NUMBERED STEP SEQUENCE ===== */
 .mkt .how-steps-section {
   padding: 20px 0 90px;
@@ -1883,5 +2233,169 @@
   }
   .mkt .quiet-list-index {
     font-size: 26px;
+  }
+}
+
+/* ===== COMPANY PAGE — story / beliefs / audience sections ===== */
+.mkt .company-eyebrow {
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--signal-deep);
+  margin-bottom: 14px;
+}
+.mkt .company-section-head {
+  max-width: 620px;
+  margin: 0 0 44px;
+}
+.mkt .company-section-head-narrow {
+  max-width: 560px;
+}
+.mkt .company-section-head h2,
+.mkt .company-story-text h2 {
+  font-size: clamp(26px, 3.2vw, 36px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+  margin: 0;
+}
+
+.mkt .company-story {
+  padding: 70px 0;
+  border-top: 1px solid var(--line);
+}
+.mkt .company-story-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 60px;
+  align-items: center;
+}
+.mkt .company-story-text h2 {
+  margin: 0 0 22px;
+}
+.mkt .company-story-text p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-2);
+  max-width: 56ch;
+  margin: 0 0 18px;
+}
+.mkt .company-story-text p:last-child {
+  margin-bottom: 0;
+}
+.mkt .company-story-art {
+  display: flex;
+  justify-content: center;
+}
+@media (max-width: 860px) {
+  .mkt .company-story-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .mkt .company-story-art {
+    order: -1;
+  }
+  .mkt .company-story-art svg {
+    max-width: 220px;
+  }
+}
+
+.mkt .company-beliefs {
+  padding: 70px 0;
+  background: var(--paper-alt);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.mkt .company-beliefs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+.mkt .company-belief-card {
+  color: var(--signal);
+}
+.mkt .company-belief-icon {
+  color: var(--signal);
+  margin-bottom: 18px;
+}
+.mkt .company-belief-card h3 {
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.mkt .company-belief-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-2);
+  margin: 0;
+}
+@media (max-width: 940px) {
+  .mkt .company-beliefs-grid {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 40px;
+  }
+}
+@media (max-width: 560px) {
+  .mkt .company-beliefs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mkt .company-audience {
+  padding: 80px 0 90px;
+}
+.mkt .company-audience-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 36px;
+}
+.mkt .company-audience-card {
+  padding: 24px 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.mkt .company-audience-card:hover {
+  border-color: var(--signal);
+  transform: translateY(-2px);
+}
+.mkt .company-audience-icon {
+  color: var(--signal-deep);
+  margin-bottom: 14px;
+}
+.mkt .company-audience-card h3 {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.mkt .company-audience-card p {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-2);
+  margin: 0;
+}
+.mkt .company-audience-link {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--signal-deep);
+}
+.mkt .company-audience-link:hover {
+  color: var(--signal);
+}
+@media (max-width: 940px) {
+  .mkt .company-audience-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .mkt .company-audience-grid {
+    grid-template-columns: 1fr;
   }
 }

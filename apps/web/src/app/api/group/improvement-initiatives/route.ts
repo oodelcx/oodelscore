@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ImprovementInitiative, Business , hasFeature } from "@oodelscore/shared";
+import { connectToDatabase, ImprovementInitiative, Business, hasFeature, PRODUCTS, type Product } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 export async function GET() {
   const session = await requireParentOrgOwner({ requirePage: "improvementInitiatives" });
@@ -10,9 +13,10 @@ export async function GET() {
   }
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.org);
 
-  const initiatives = await ImprovementInitiative.find({ parentOrgId: session.org._id }).sort({ createdAt: -1 });
-  return NextResponse.json({ status: "ok", initiatives });
+  const initiatives = await ImprovementInitiative.find({ parentOrgId: session.org._id, product }).sort({ createdAt: -1 });
+  return NextResponse.json({ status: "ok", product, initiatives });
 }
 
 export async function POST(request: Request) {
@@ -36,8 +40,11 @@ export async function POST(request: Request) {
     }
   }
 
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
+
   const initiative = await ImprovementInitiative.create({
     parentOrgId: session.org._id,
+    product,
     title,
     description: typeof body?.description === "string" ? body.description : "",
     affectedBusinessIds,

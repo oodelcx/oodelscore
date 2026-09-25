@@ -7,8 +7,10 @@ import {
   computeBusinessCategoryBreakdown,
   computeThemeIntelligence,
   hasFeature,
+  hasProduct,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 /**
  * One period's worth of report data for a single business — the numbers a
@@ -33,27 +35,62 @@ export async function GET(req: Request) {
   }
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
 
   const [metrics, categoryBreakdown, themes, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
-    computeBusinessMetrics(session.business._id, from, to),
-    computeBusinessCategoryBreakdown(session.business._id, from, to),
-    computeThemeIntelligence([session.business._id], from, to, from, from),
-    ActionBoardItem.countDocuments({ businessId: session.business._id, status: "resolved", resolvedAt: { $gte: from, $lte: to } }),
+    computeBusinessMetrics(session.business._id, from, to, product),
+    computeBusinessCategoryBreakdown(session.business._id, from, to, product),
+    // Theme intelligence is a CX-only AI feature — meaningless for a
+    // Colleague Experience-primary report.
+    product === "customer_experience" ? computeThemeIntelligence([session.business._id], from, to, from, from) : Promise.resolve([]),
+    ActionBoardItem.countDocuments({
+      businessId: session.business._id,
+      product,
+      status: "resolved",
+      resolvedAt: { $gte: from, $lte: to },
+    }),
     ImprovementInitiative.countDocuments({
       $or: [{ businessId: session.business._id }, { affectedBusinessIds: session.business._id }],
+      product,
       status: "completed",
       completedAt: { $gte: from, $lte: to },
     }),
-    ActionBoardItem.countDocuments({ businessId: session.business._id, customerNotifiedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({ businessId: session.business._id, product, customerNotifiedAt: { $gte: from, $lte: to } }),
   ]);
+
+  // Colleague Experience has no theme-intelligence equivalent yet (that's a
+  // CX-only AI feature) — its report section is scores + categories +
+  // resolved cases only, and only appears as a secondary section when the
+  // business has bought BOTH products (a CE-only business already gets CE
+  // as its primary section above, not a duplicate here).
+  let colleagueExperience: {
+    metrics: Awaited<ReturnType<typeof computeBusinessMetrics>>;
+    categoryBreakdown: Awaited<ReturnType<typeof computeBusinessCategoryBreakdown>>;
+    casesResolved: number;
+  } | null = null;
+  if (product === "customer_experience" && hasProduct(session.business, "colleague_experience")) {
+    const [ceMetrics, ceCategoryBreakdown, ceCasesResolved] = await Promise.all([
+      computeBusinessMetrics(session.business._id, from, to, "colleague_experience"),
+      computeBusinessCategoryBreakdown(session.business._id, from, to, "colleague_experience"),
+      ActionBoardItem.countDocuments({
+        businessId: session.business._id,
+        product: "colleague_experience",
+        status: "resolved",
+        resolvedAt: { $gte: from, $lte: to },
+      }),
+    ]);
+    colleagueExperience = { metrics: ceMetrics, categoryBreakdown: ceCategoryBreakdown, casesResolved: ceCasesResolved };
+  }
 
   return NextResponse.json({
     status: "ok",
+    product,
     businessName: session.business.name,
     period: { from: from.toISOString(), to: to.toISOString() },
     metrics,
     categoryBreakdown,
     themes: themes.slice(0, 10),
     activity: { casesResolved, initiativesCompleted, customersRespondedTo },
+    colleagueExperience,
   });
 }

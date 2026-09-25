@@ -27,6 +27,7 @@ interface ItemRow {
   _id: string;
   title: string;
   description: string;
+  product?: "customer_experience" | "colleague_experience";
   businessId: string;
   categoryId: string | null;
   caseType: string;
@@ -138,6 +139,13 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [ceEnabled, setCeEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.org?.enabledProducts?.includes("colleague_experience")));
+  }, []);
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
@@ -481,6 +489,11 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                   </div>
                   <div className="ab-actions-col">
                     <div className="ab-badges">
+                      {ceEnabled && (
+                        <span className={`pill ${item.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                          {item.product === "colleague_experience" ? "Colleague" : "Customer"}
+                        </span>
+                      )}
                       {item.escalated && (
                         <span className="pill pill-red" title={item.escalationNote || undefined}>
                           Escalated

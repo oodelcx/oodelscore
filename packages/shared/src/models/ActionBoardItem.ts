@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const ACTION_PRIORITIES = ["low", "medium", "high", "critical"] as const;
 export type ActionPriority = (typeof ACTION_PRIORITIES)[number];
@@ -48,6 +49,9 @@ export interface IActionBoardItem {
   // AI-assisted triage fires on any business's Alert Rule, including one with
   // no parent org, so the Act layer can no longer require a group).
   parentOrgId: Types.ObjectId | null;
+  // Which product this case belongs to — defaults to customer_experience so
+  // every case that predates Colleague Experience is unaffected.
+  product: Product;
   title: string;
   description: string;
   businessId: Types.ObjectId;
@@ -67,6 +71,13 @@ export interface IActionBoardItem {
   // free-form guessing. Empty string when there wasn't enough evidence to
   // generate one, or after it's been dismissed.
   suggestedAction: string;
+  // True when this item was routed via the sensitive-category path (see
+  // evaluate.ts's autoTriageAndCreateActionItem) — its category was marked
+  // Category.sensitive, so it bypassed the normal CategoryOwnerMapping and
+  // went to the business/org's sensitiveRoutingContactId instead. A UI flag
+  // only; never reveals anything about the respondent, since Colleague
+  // Experience never collects that identity in the first place.
+  sensitive: boolean;
   // Group-level oversight signal (product decision: Group is read-only on
   // branch Action Board items — assignment/status/priority is the branch's
   // job — but a Group Head can flag something for attention). Distinct from
@@ -110,6 +121,7 @@ export interface IActionBoardItem {
 const ActionBoardItemSchema = new Schema<IActionBoardItem>(
   {
     parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", default: null },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     title: { type: String, required: true },
     description: { type: String, default: "" },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
@@ -124,6 +136,7 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     resolvedAt: { type: Date, default: null },
     source: { type: String, enum: ACTION_SOURCES, default: "manual" },
     suggestedAction: { type: String, default: "" },
+    sensitive: { type: Boolean, default: false },
     escalated: { type: Boolean, default: false },
     escalatedAt: { type: Date, default: null },
     escalationNote: { type: String, default: "" },

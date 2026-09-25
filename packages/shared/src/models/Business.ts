@@ -12,6 +12,7 @@ import {
   type IEscalationLevel,
   DEFAULT_ESCALATION_LEVELS,
 } from "./common";
+import { PRODUCTS, type Product } from "./products";
 
 export const BILLING_ASSIGNMENTS = ["group_pays", "branch_pays", "unassigned"] as const;
 export type BillingAssignment = (typeof BILLING_ASSIGNMENTS)[number];
@@ -41,11 +42,13 @@ export const BUSINESS_ADMIN_ONLY_FIELDS = [
   "questionTemplateId",
   "ragThresholds",
   "pricingTerms",
+  "cePricingTerms",
   "checkoutEnabled",
   "escalationLevels",
   "escalationSlaHours",
   "enabledFeatures",
   "paymentGateEnabled",
+  "enabledProducts",
 ] as const;
 
 export interface IBusiness {
@@ -64,13 +67,22 @@ export interface IBusiness {
   // Meaningless for "group_pays" — the parent org's own pricingTerms covers
   // it instead, one subscription item per group_pays branch.
   pricingTerms: IPricingTerms;
+  // ADMIN-EDITABLE ONLY. Same meaning as pricingTerms above, for the
+  // Colleague Experience line — a business with both products enabled and
+  // paying for itself is charged both prices as two separate Stripe
+  // subscription items, not one blended figure.
+  cePricingTerms: IPricingTerms;
   // Set only while billingAssignment is "group_pays" and the org has an
   // active Stripe subscription to attach to — the Stripe subscription item
-  // ID covering this one branch on the org's single subscription. Lets
-  // syncBranchGroupPaysCoverage() remove exactly this branch's line item
-  // (and nothing else) the moment billingAssignment changes away from
-  // "group_pays", without having to search Stripe for it.
+  // ID covering this one branch's Customer Experience line on the org's
+  // single subscription. Lets syncBranchGroupPaysCoverage() remove exactly
+  // this branch's line item (and nothing else) the moment billingAssignment
+  // changes away from "group_pays", without having to search Stripe for it.
   groupPaysStripeSubscriptionItemId: string;
+  // Same as groupPaysStripeSubscriptionItemId, for this branch's Colleague
+  // Experience line — separate because a branch's two products are covered
+  // (or not) by the org independently, same as they're priced independently.
+  ceGroupPaysStripeSubscriptionItemId: string;
   // ADMIN-EDITABLE ONLY. When true, this business's own billing page shows a
   // self-service "Continue to payment" link straight to Stripe Checkout.
   // Meaningless while billingAssignment is "group_pays" — that link lives on
@@ -104,6 +116,21 @@ export interface IBusiness {
   // (any record saved before this field existed) means "all on" — see
   // hasFeature() — so this never silently locks an existing account out.
   enabledFeatures: string[] | null;
+  // ADMIN-EDITABLE ONLY. Which product line(s) this business has bought —
+  // Customer Experience, Colleague Experience, or both. null/empty means
+  // Customer Experience only (see getEnabledProducts()) — every record
+  // saved before Colleague Experience existed defaults there, never to
+  // "all products". Gates both nav visibility and billing line items.
+  enabledProducts: Product[] | null;
+  // Colleague Experience only, business-owner-editable (not admin-only —
+  // this is the business's own org chart, not a billing/config decision).
+  // Any case auto-triaged into a sensitive category (Category.sensitive)
+  // routes here instead of the normal CategoryOwnerMapping owner, so a
+  // complaint about HR/leadership never lands with the person it's about.
+  // null = no alternate contact configured yet; such a case still gets
+  // created, just with no owner, rather than silently falling through to
+  // the normal (possibly wrong) mapping.
+  sensitiveRoutingContactId: Types.ObjectId | null;
   // ADMIN-EDITABLE ONLY. Per-account override of PlatformSettings'
   // paymentGateEnabled kill switch: null = follow the platform default,
   // true/false = force the gate on/off for this account regardless of the
@@ -139,7 +166,9 @@ const BusinessSchema = new Schema<IBusiness>(
     billingAddressSameAsAddress: { type: Boolean, default: true },
     billingAssignment: { type: String, enum: BILLING_ASSIGNMENTS, default: "unassigned" },
     pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
+    cePricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
     groupPaysStripeSubscriptionItemId: { type: String, default: "" },
+    ceGroupPaysStripeSubscriptionItemId: { type: String, default: "" },
     checkoutEnabled: { type: Boolean, default: false },
     escalationLevels: { type: [EscalationLevelSchema], default: () => DEFAULT_ESCALATION_LEVELS.map((l) => ({ ...l })) },
     escalationSlaHours: { type: Number, default: null },
@@ -151,6 +180,8 @@ const BusinessSchema = new Schema<IBusiness>(
     teamMemberSeatLimit: { type: Number, default: null },
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     enabledFeatures: { type: [String], default: null },
+    enabledProducts: { type: [String], enum: PRODUCTS, default: null },
+    sensitiveRoutingContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     paymentGateEnabled: { type: Boolean, default: null },
     active: { type: Boolean, default: true },
   },

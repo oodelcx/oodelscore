@@ -5,17 +5,19 @@ import { ActionBoardItem } from "../models/ActionBoardItem";
 import { CxPulseScore } from "../models/CxPulseScore";
 import type { BillingOwnerType } from "../models/BillingSubscription";
 import type { CxGoalMetric } from "../models/CxGoal";
+import { hasProduct, type Product } from "../models/products";
 
 const PROGRESS_WINDOW_DAYS = 30;
 
-async function resolveBusinessIds(ownerType: BillingOwnerType, ownerId: Types.ObjectId): Promise<Types.ObjectId[]> {
+async function resolveBusinessIds(ownerType: BillingOwnerType, ownerId: Types.ObjectId, product: Product): Promise<Types.ObjectId[]> {
   if (ownerType === "business") return [ownerId];
-  const businesses = await Business.find({ parentOrgId: ownerId }).select("_id");
-  return businesses.map((b) => b._id);
+  const businesses = await Business.find({ parentOrgId: ownerId }).select("_id enabledProducts");
+  const scoped = product === "customer_experience" ? businesses : businesses.filter((b) => hasProduct(b, product));
+  return scoped.map((b) => b._id);
 }
 
-export async function computeStarAndNps(businessIds: Types.ObjectId[], from: Date, to: Date) {
-  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers").lean();
+export async function computeStarAndNps(businessIds: Types.ObjectId[], from: Date, to: Date, product: Product = "customer_experience") {
+  const responses = await Response.find({ businessId: { $in: businessIds }, product, submittedAt: { $gte: from, $lte: to } }).select("answers").lean();
   let starSum = 0;
   let starCount = 0;
   const npsAnswers: number[] = [];
@@ -37,8 +39,14 @@ export async function computeStarAndNps(businessIds: Types.ObjectId[], from: Dat
   return { starAverage, npsScore };
 }
 
-export async function computeCategoryAverage(businessIds: Types.ObjectId[], categoryId: Types.ObjectId, from: Date, to: Date): Promise<number | null> {
-  const responses = await Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers").lean();
+export async function computeCategoryAverage(
+  businessIds: Types.ObjectId[],
+  categoryId: Types.ObjectId,
+  from: Date,
+  to: Date,
+  product: Product = "customer_experience"
+): Promise<number | null> {
+  const responses = await Response.find({ businessId: { $in: businessIds }, product, submittedAt: { $gte: from, $lte: to } }).select("answers").lean();
   let sum = 0;
   let count = 0;
   for (const r of responses) {
@@ -52,9 +60,9 @@ export async function computeCategoryAverage(businessIds: Types.ObjectId[], cate
   return count === 0 ? null : Math.round((sum / count) * 100) / 100;
 }
 
-async function computeOverdueActionsCount(ownerType: BillingOwnerType, ownerId: Types.ObjectId): Promise<number> {
+async function computeOverdueActionsCount(ownerType: BillingOwnerType, ownerId: Types.ObjectId, product: Product): Promise<number> {
   const filter = ownerType === "business" ? { businessId: ownerId } : { parentOrgId: ownerId };
-  return ActionBoardItem.countDocuments({ ...filter, status: { $ne: "resolved" }, dueDate: { $lt: new Date() } });
+  return ActionBoardItem.countDocuments({ ...filter, product, status: { $ne: "resolved" }, dueDate: { $lt: new Date() } });
 }
 
 export interface GoalMetricRef {
@@ -62,27 +70,28 @@ export interface GoalMetricRef {
   ownerId: Types.ObjectId;
   metric: CxGoalMetric;
   categoryId: Types.ObjectId | null;
+  product: Product;
 }
 
 /** The same metric a goal targets, computed fresh — used both for a goal's live "current value" and to snapshot `startValue` at creation. */
 export async function computeCurrentMetricValue(goal: GoalMetricRef, now: Date = new Date()): Promise<number | null> {
   if (goal.metric === "cxPulseLevel") {
-    const score = await CxPulseScore.findOne({ ownerType: goal.ownerType, ownerId: goal.ownerId }).sort({ period: -1 });
+    const score = await CxPulseScore.findOne({ ownerType: goal.ownerType, ownerId: goal.ownerId, product: goal.product }).sort({ period: -1 });
     return score?.level ?? null;
   }
   if (goal.metric === "overdueActionsCount") {
-    return computeOverdueActionsCount(goal.ownerType, goal.ownerId);
+    return computeOverdueActionsCount(goal.ownerType, goal.ownerId, goal.product);
   }
 
-  const businessIds = await resolveBusinessIds(goal.ownerType, goal.ownerId);
+  const businessIds = await resolveBusinessIds(goal.ownerType, goal.ownerId, goal.product);
   if (businessIds.length === 0) return null;
   const from = new Date(now.getTime() - PROGRESS_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-  if (goal.metric === "starAverage") return (await computeStarAndNps(businessIds, from, now)).starAverage;
-  if (goal.metric === "nps") return (await computeStarAndNps(businessIds, from, now)).npsScore;
+  if (goal.metric === "starAverage") return (await computeStarAndNps(businessIds, from, now, goal.product)).starAverage;
+  if (goal.metric === "nps") return (await computeStarAndNps(businessIds, from, now, goal.product)).npsScore;
   if (goal.metric === "categoryAverage") {
     if (!goal.categoryId) return null;
-    return computeCategoryAverage(businessIds, goal.categoryId, from, now);
+    return computeCategoryAverage(businessIds, goal.categoryId, from, now, goal.product);
   }
   return null;
 }

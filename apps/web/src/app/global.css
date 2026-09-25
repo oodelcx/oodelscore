@@ -3,10 +3,31 @@
  * rely on this, but a stray fixed-width or absolutely-positioned element
  * elsewhere in the app shouldn't be able to make the whole page
  * horizontally scrollable either.
+ *
+ * `overflow-x: hidden` lives on `html` only, never on `body`. The CSS
+ * overflow spec pairs overflow-x/overflow-y on a single element: whichever
+ * axis isn't 'visible' forces the other to compute as 'auto' too, even if
+ * that other axis was set to 'visible' explicitly (an earlier version of
+ * this rule tried exactly that — `overflow-y: visible` alongside
+ * `overflow-x: hidden` — and it does not work, because the spec doesn't
+ * care whether 'visible' was explicit or just the default; the pairing
+ * still fires). On `body`, that pairing turns body into its own scroll
+ * container distinct from the viewport, and any `position: sticky`
+ * descendant (the marketing nav) then sticks only within body's own box —
+ * which reads as the nav disappearing partway down a long page. `html` is
+ * exempt from this in practice because the root element's overflow
+ * propagates directly to the viewport instead of creating a *separate*
+ * scrolling box, so constraining only `html` keeps the horizontal clip
+ * without ever splitting "what the mouse wheel scrolls" from "what sticky
+ * positions against". See admin.css's near-identical note on the portal
+ * sidebar, which hit this same bug and worked around it with a different
+ * (fixed-height shell) pattern instead — not needed here since the fix is
+ * simply not to touch body's overflow at all.
  */
-html,
-body {
+html {
   overflow-x: hidden;
+}
+body {
   max-width: 100%;
   /* Browsers default body to margin:8px. A full-bleed min-height:100vh
      shell (auth-shell, etc.) plus that margin adds up to just over 100vh,

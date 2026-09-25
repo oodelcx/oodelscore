@@ -23,12 +23,14 @@ interface RegionRow {
   npsScore: number | null;
 }
 interface ReportData {
+  product: "customer_experience" | "colleague_experience";
   orgName: string;
   period: { from: string; to: string };
   branches: BranchRow[];
   regions: RegionRow[];
   themes: ThemeRow[];
   activity: { casesResolved: number; initiativesCompleted: number; customersRespondedTo: number };
+  colleagueExperience: { branches: BranchRow[]; casesResolved: number } | null;
 }
 
 function isoDate(d: Date): string {
@@ -92,7 +94,10 @@ export default function ReportsClient() {
       {data && (
         <>
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: "0 0 4px" }}>{data.orgName}</h2>
+            <h2 style={{ margin: "0 0 4px" }}>
+              {data.orgName}
+              {data.product === "colleague_experience" && <span className="pill pill-blue" style={{ marginLeft: 10 }}>Colleague Experience</span>}
+            </h2>
             <p className="subtitle" style={{ margin: 0 }}>
               {new Date(data.period.from).toLocaleDateString()} – {new Date(data.period.to).toLocaleDateString()} ·{" "}
               {data.branches.length} branches
@@ -122,7 +127,7 @@ export default function ReportsClient() {
                 <th>Region</th>
                 <th>Branches</th>
                 <th>Average</th>
-                <th>NPS</th>
+                <th>{data.product === "colleague_experience" ? "eNPS" : "NPS"}</th>
               </tr>
             </thead>
             <tbody>
@@ -145,7 +150,7 @@ export default function ReportsClient() {
                 <th>Region</th>
                 <th>Responses</th>
                 <th>Average</th>
-                <th>NPS</th>
+                <th>{data.product === "colleague_experience" ? "eNPS" : "NPS"}</th>
               </tr>
             </thead>
             <tbody>
@@ -193,6 +198,49 @@ export default function ReportsClient() {
               )}
             </tbody>
           </table>
+
+          {data.colleagueExperience && (
+            <>
+              <div className="section-title" style={{ marginTop: 24 }}>Colleague Experience</div>
+              <div className="card" style={{ marginBottom: 20, maxWidth: 240 }}>
+                <div className="metric-label">Cases resolved</div>
+                <div className="metric-val">{data.colleagueExperience.casesResolved}</div>
+              </div>
+              <div className="section-title">By branch</div>
+              <table className="clean">
+                <thead>
+                  <tr>
+                    <th>Branch</th>
+                    <th>Region</th>
+                    <th>Responses</th>
+                    <th>Average</th>
+                    <th>eNPS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.colleagueExperience.branches.map((b) => (
+                    <tr key={b.businessId}>
+                      <td>{b.name}</td>
+                      <td>{b.region}</td>
+                      <td>
+                        {b.responseCount}
+                        {b.confidence === "insufficient" && <span className="subtitle"> (low sample)</span>}
+                      </td>
+                      <td>{b.starAverage !== null ? `${b.starAverage}/5` : "—"}</td>
+                      <td>{b.npsScore !== null ? b.npsScore : "—"}</td>
+                    </tr>
+                  ))}
+                  {data.colleagueExperience.branches.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="subtitle">
+                        No Colleague-Experience-enabled branches yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
         </>
       )}
     </div>

@@ -12,24 +12,27 @@ import {
   findNeedsAttention,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 export async function GET() {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.org);
   const now = new Date();
   const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const prevFrom = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
   const [summaries, businesses, orgScore] = await Promise.all([
-    computeNetworkSummaries(session.org._id, from, now),
+    computeNetworkSummaries(session.org._id, from, now, product),
     Business.find({ parentOrgId: session.org._id, active: true }).select("_id"),
-    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ period: -1 }).lean(),
+    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id, product }).sort({ period: -1 }).lean(),
   ]);
   const comparisons = await computePeriodComparisons(
     businesses.map((b) => b._id),
-    now
+    now,
+    product
   );
 
   const flaggedActivity = await AlertActivity.find({
@@ -54,15 +57,16 @@ export async function GET() {
   // spend is doing anything, not just a snapshot score.
   const [casesResolvedThisPeriod, casesResolvedPrevPeriod, customersRespondedTo, activeInitiatives, completedInitiatives] =
     await Promise.all([
-      ActionBoardItem.countDocuments({ parentOrgId: session.org._id, status: "resolved", resolvedAt: { $gte: from } }),
+      ActionBoardItem.countDocuments({ parentOrgId: session.org._id, product, status: "resolved", resolvedAt: { $gte: from } }),
       ActionBoardItem.countDocuments({
         parentOrgId: session.org._id,
+        product,
         status: "resolved",
         resolvedAt: { $gte: prevFrom, $lt: from },
       }),
-      ActionBoardItem.countDocuments({ parentOrgId: session.org._id, customerNotifiedAt: { $gte: from } }),
-      ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, status: "in_progress" }),
-      ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, status: "completed", completedAt: { $gte: from } }),
+      ActionBoardItem.countDocuments({ parentOrgId: session.org._id, product, customerNotifiedAt: { $gte: from } }),
+      ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, product, status: "in_progress" }),
+      ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, product, status: "completed", completedAt: { $gte: from } }),
     ]);
 
   // "Needs a decision from you" — cases that have escalated all the way to
@@ -75,6 +79,7 @@ export async function GET() {
     topLevel > 1
       ? await ActionBoardItem.find({
           parentOrgId: session.org._id,
+          product,
           status: { $ne: "resolved" },
           currentEscalationLevel: topLevel,
         })
@@ -113,6 +118,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    product,
     branchCount: businesses.length,
     networkAverage,
     networkNps,

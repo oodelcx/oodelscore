@@ -1,18 +1,99 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { INavItem } from "@oodelscore/shared";
 import { BookDemoButton } from "./demo-modal";
+import { ManageCookiesLink } from "./cookie-consent";
 
 const PATH_BY_KEY: Record<string, string> = {
   product: "/product",
+  "colleague-pulse": "/colleague-pulse",
   solutions: "/solutions",
   "how-it-works": "/how-it-works",
   pricing: "/pricing",
   company: "/company",
   contact: "/contact",
 };
+
+interface MegaMenuLink {
+  label: string;
+  href: string;
+}
+interface MegaMenuColumn {
+  label: string;
+  items: MegaMenuLink[];
+}
+interface MegaMenuSection {
+  columns: MegaMenuColumn[];
+  seeAllHref?: string;
+  seeAllLabel?: string;
+}
+interface MegaMenuData {
+  product: MegaMenuSection;
+  "colleague-pulse": MegaMenuSection;
+  solutions: MegaMenuSection;
+}
+
+/** "Customer Experience," "Colleague Pulse," and "Solutions" each open as a
+ * mega-menu instead of a plain link — content is fetched from
+ * /api/marketing/nav-menu, itself built from the same admin-editable Site
+ * Content fields their own pages render (features, industries), so the
+ * menu can never drift out of sync with what those pages actually say.
+ * Every other nav item stays a plain link. */
+const MEGA_MENU_KEYS = new Set(["product", "colleague-pulse", "solutions"]);
+
+function MegaMenu({
+  menuKey,
+  label,
+  section,
+  active,
+}: {
+  menuKey: "product" | "colleague-pulse" | "solutions";
+  label: string;
+  section: MegaMenuSection;
+  active: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const { columns, seeAllHref, seeAllLabel } = section;
+  return (
+    <div className={`nav-menu-item${open ? " open" : ""}`} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <Link
+        href={PATH_BY_KEY[menuKey]}
+        className={`nav-menu-trigger${active ? " active" : ""}`}
+        onClick={() => setOpen(false)}
+      >
+        {label}
+        <svg className="nav-menu-caret" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </Link>
+      {open && columns.length > 0 && (
+        <div className="mega-panel">
+          <div className="mega-panel-inner">
+            <div className="mega-cols">
+              {columns.map((col) => (
+                <div className="mega-col" key={col.label}>
+                  <h4>{col.label}</h4>
+                  {col.items.map((item) => (
+                    <Link key={item.href + item.label} href={item.href} onClick={() => setOpen(false)}>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </div>
+            {seeAllHref && (
+              <Link className="mega-see-all" href={seeAllHref} onClick={() => setOpen(false)}>
+                {seeAllLabel ?? "See all →"}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MarketingNav({
   active,
@@ -29,6 +110,14 @@ export function MarketingNav({
   const visible = [...navItems].filter((n) => n.visible).sort((a, b) => a.order - b.order);
   const isDark = headerStyle === "dark";
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [megaData, setMegaData] = useState<MegaMenuData | null>(null);
+
+  useEffect(() => {
+    fetch("/api/marketing/nav-menu")
+      .then((r) => r.json())
+      .then((d) => setMegaData(d))
+      .catch(() => setMegaData(null));
+  }, []);
 
   return (
     <nav className={`nav ${isDark ? "nav-dark" : "nav-light"}`}>
@@ -37,11 +126,21 @@ export function MarketingNav({
           <img src={isDark ? "/oodelcx-logo-white.webp" : "/oodelcx-logo-dark.webp"} alt="OodelCX" />
         </Link>
         <div className="nav-links">
-          {visible.map((item) => (
-            <Link key={item.key} href={PATH_BY_KEY[item.key] ?? "/"} className={active === item.key ? "active" : ""}>
-              {item.label}
-            </Link>
-          ))}
+          {visible.map((item) =>
+            MEGA_MENU_KEYS.has(item.key) && megaData ? (
+              <MegaMenu
+                key={item.key}
+                menuKey={item.key as "product" | "colleague-pulse" | "solutions"}
+                label={item.label}
+                active={active === item.key}
+                section={megaData[item.key as "product" | "colleague-pulse" | "solutions"]}
+              />
+            ) : (
+              <Link key={item.key} href={PATH_BY_KEY[item.key] ?? "/"} className={active === item.key ? "active" : ""}>
+                {item.label}
+              </Link>
+            )
+          )}
         </div>
         <div className="nav-right">
           <Link href="/login">Sign in</Link>
@@ -114,6 +213,7 @@ const FOOTER_LINK_HREF: Record<string, string> = {
   "How it works": "/product",
   "The mechanism": "/how-it-works",
   "CX Pulse": "/#cx-pulse",
+  "Colleague Pulse": "/colleague-pulse",
   Pricing: "/pricing",
   Solutions: "/solutions",
   Industries: "/how-it-works",
@@ -177,7 +277,10 @@ export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; nav
             ))}
           </div>
         </div>
-        <div className="foot-bottom">{fields?.copyrightText ?? "© OodelCX. All rights reserved."}</div>
+        <div className="foot-bottom">
+          <span>{fields?.copyrightText ?? "© OodelCX. All rights reserved."}</span>
+          <ManageCookiesLink />
+        </div>
       </div>
     </footer>
   );

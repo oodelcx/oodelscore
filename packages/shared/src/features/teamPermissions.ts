@@ -13,12 +13,16 @@ export const TEAM_RESTRICTABLE_PAGES = [
   { key: "insights", label: "Insights" },
   { key: "analytics", label: "Analytics" },
   { key: "alertRules", label: "Alert Rules" },
+  { key: "alerts", label: "Alerts" },
   { key: "reports", label: "Reports" },
   { key: "improvementInitiatives", label: "Improvement Initiatives" },
   { key: "decisionLog", label: "Decision Log" },
   { key: "cxPulse", label: "CX Pulse" },
   { key: "playbooks", label: "Playbook Library" },
   { key: "support", label: "Support" },
+  { key: "colleagueRoster", label: "Colleague Roster" },
+  { key: "exPulse", label: "EX Pulse" },
+  { key: "cxExCorrelation", label: "CX ↔ EX Correlation" },
 ] as const;
 
 export type TeamPageKey = (typeof TEAM_RESTRICTABLE_PAGES)[number]["key"];

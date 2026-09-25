@@ -10,6 +10,12 @@ import { Reveal } from "../scroll-reveal";
 // Content edit would never show up without a redeploy.
 export const revalidate = 60;
 
+interface IndustryDetail {
+  slug: string;
+  name: string;
+  tagline: string;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const solutions = await getSiteContent("solutions");
   const description = solutions.fields.metaDescription;
@@ -28,6 +34,7 @@ export default async function SolutionsPage() {
   const singlePoints = parseJsonArray<string>(f.singlePoints);
   const groupPoints = parseJsonArray<string>(f.groupPoints);
   const entPoints = parseJsonArray<string>(f.entPoints);
+  const industries = parseJsonArray<IndustryDetail>(f.industryDetails);
 
   return (
     <>
@@ -40,11 +47,11 @@ export default async function SolutionsPage() {
         </div>
       </section>
 
-      <section className="fork">
+      <section className="fork" id="structure">
         <div className="wrap">
           <div className="fork-grid">
             <Reveal>
-              <div className="fork-card light hover-lift">
+              <div className="fork-card light hover-lift" id="standalone">
                 <div className="fork-eyebrow">Standalone</div>
                 <h2>{f.singleTitle}</h2>
                 <p>No setup beyond your QR code. See every response, trend, and flagged issue in one dashboard from day one.</p>
@@ -59,7 +66,7 @@ export default async function SolutionsPage() {
               </div>
             </Reveal>
             <Reveal delay={100}>
-              <div className="fork-card dark hover-lift">
+              <div className="fork-card dark hover-lift" id="group">
                 <div className="fork-eyebrow">Multi-Branch / Group</div>
                 <h2>{f.groupTitle}</h2>
                 <p>A parent organization sees every branch at once — and decides, branch by branch, how much runs centrally versus locally.</p>
@@ -76,7 +83,7 @@ export default async function SolutionsPage() {
           </div>
 
           <Reveal delay={160}>
-            <div className="ent-strip hover-lift">
+            <div className="ent-strip hover-lift" id="enterprise">
               <div>
                 <div className="fork-eyebrow">Enterprise</div>
                 <h3 style={{ margin: 0, fontSize: 20 }}>{f.entTitle}</h3>
@@ -86,6 +93,22 @@ export default async function SolutionsPage() {
                   <li key={i}>· {point}</li>
                 ))}
               </ul>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="industries" id="industries">
+        <div className="wrap">
+          <Reveal>
+            <h2>{f.industriesTitle}</h2>
+            <p className="industries-sub">{f.industriesBody}</p>
+            <div className="industry-chip-row">
+              {industries.map((industry) => (
+                <Link className="industry-chip" href={`/solutions/${industry.slug}`} key={industry.slug}>
+                  {industry.name}
+                </Link>
+              ))}
             </div>
           </Reveal>
         </div>

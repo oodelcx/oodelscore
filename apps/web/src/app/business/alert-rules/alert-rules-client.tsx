@@ -11,6 +11,7 @@ interface RuleRow {
   recipients: string[];
   active: boolean;
   isInherited?: boolean;
+  product?: string;
   activity: { count: number; lastFiredAt: string } | null;
 }
 
@@ -28,8 +29,17 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
   const [metric, setMetric] = useState("star_average");
   const [threshold, setThreshold] = useState("");
   const [recipients, setRecipients] = useState("");
+  const [product, setProduct] = useState("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editMetric, setEditMetric] = useState("star_average");
+  const [editThreshold, setEditThreshold] = useState("");
+  const [editRecipients, setEditRecipients] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   function load() {
     setLoading(true);
@@ -44,6 +54,16 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
 
   useEffect(() => {
     load();
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
+        const hasCx = products.includes("customer_experience");
+        const hasCe = products.includes("colleague_experience");
+        setCxEnabled(hasCx);
+        setCeEnabled(hasCe);
+        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+      });
   }, []);
 
   async function createRule() {
@@ -57,6 +77,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
         metric,
         threshold: threshold ? Number(threshold) : null,
         recipients: recipients.split(",").map((r) => r.trim()).filter(Boolean),
+        product,
       }),
     });
     const data = await res.json();
@@ -67,6 +88,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
     }
     setThreshold("");
     setRecipients("");
+    setProduct("customer_experience");
     load();
   }
 
@@ -81,6 +103,41 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
 
   async function removeRule(id: string) {
     await fetch(`/api/business/alert-rules/${id}`, { method: "DELETE" });
+    load();
+  }
+
+  function startEdit(rule: RuleRow) {
+    setEditingId(rule._id);
+    setEditMetric(rule.metric);
+    setEditThreshold(rule.threshold != null ? String(rule.threshold) : "");
+    setEditRecipients(rule.recipients.join(", "));
+    setEditError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditError(null);
+  }
+
+  async function saveEdit(id: string) {
+    setSaving(true);
+    setEditError(null);
+    const res = await fetch(`/api/business/alert-rules/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        metric: editMetric,
+        threshold: editThreshold ? Number(editThreshold) : null,
+        recipients: editRecipients.split(",").map((r) => r.trim()).filter(Boolean),
+      }),
+    });
+    const data = await res.json();
+    setSaving(false);
+    if (!res.ok) {
+      setEditError(data.message);
+      return;
+    }
+    setEditingId(null);
     load();
   }
 
@@ -110,6 +167,15 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
             </label>
             <input type="number" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
           </div>
+          {cxEnabled && ceEnabled && (
+            <div className="field">
+              <label>Product</label>
+              <select value={product} onChange={(e) => setProduct(e.target.value)}>
+                <option value="customer_experience">Customer Experience</option>
+                <option value="colleague_experience">Colleague Experience</option>
+              </select>
+            </div>
+          )}
         </div>
         {inheritedRules.some((r) => r.metric === metric) && (
           <p className="subtitle" style={{ margin: "0 0 12px" }}>
@@ -138,6 +204,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
             <thead>
               <tr>
                 <th>Condition</th>
+                {cxEnabled && ceEnabled && <th>Product</th>}
                 <th>Channel</th>
                 <th>Activity</th>
                 <th>Active</th>
@@ -145,33 +212,74 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
               </tr>
             </thead>
             <tbody>
-              {ownRules.map((r) => (
-                <tr key={r._id}>
-                  <td>
-                    {METRIC_LABELS[r.metric] ?? r.metric} below {r.threshold ?? "—"}
-                  </td>
-                  <td>Email · {r.recipients.join(", ") || "—"}</td>
-                  <td>
-                    {r.activity
-                      ? `Fired ${r.activity.count} time${r.activity.count === 1 ? "" : "s"} in last 30 days · last: ${new Date(r.activity.lastFiredAt).toLocaleDateString()}`
-                      : "Not fired in last 30 days"}
-                  </td>
-                  <td>
-                    <span className={`pill ${r.active ? "pill-green" : "pill-gray"}`}>{r.active ? "On" : "Off"}</span>
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleActive(r)}>
-                      {r.active ? "Pause" : "Resume"}
-                    </button>
-                    <button className="icon-btn btn-danger" onClick={() => removeRule(r._id)}>
-                      🗑
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {ownRules.map((r) =>
+                editingId === r._id ? (
+                  <tr key={r._id}>
+                    <td colSpan={cxEnabled && ceEnabled ? 6 : 5}>
+                      <div className="field-row" style={{ alignItems: "flex-end" }}>
+                        <div className="field">
+                          <label>Metric</label>
+                          <select value={editMetric} onChange={(e) => setEditMetric(e.target.value)}>
+                            <option value="star_average">Star average</option>
+                            <option value="nps">NPS</option>
+                          </select>
+                        </div>
+                        <div className="field">
+                          <label>Threshold</label>
+                          <input type="number" value={editThreshold} onChange={(e) => setEditThreshold(e.target.value)} />
+                        </div>
+                        <div className="field" style={{ flex: 1 }}>
+                          <label>Recipients (comma-separated emails)</label>
+                          <input value={editRecipients} onChange={(e) => setEditRecipients(e.target.value)} />
+                        </div>
+                        <button className="btn btn-dark btn-sm" disabled={saving} onClick={() => saveEdit(r._id)}>
+                          {saving ? "Saving…" : "Save"}
+                        </button>
+                        <button className="btn btn-sm" onClick={cancelEdit}>
+                          Cancel
+                        </button>
+                      </div>
+                      {editError && <p className="error-text" style={{ margin: "8px 0 0" }}>{editError}</p>}
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={r._id}>
+                    <td>
+                      {METRIC_LABELS[r.metric] ?? r.metric} below {r.threshold ?? "—"}
+                    </td>
+                    {cxEnabled && ceEnabled && (
+                      <td>
+                        <span className={`pill ${r.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                          {r.product === "colleague_experience" ? "Colleague" : "Customer"}
+                        </span>
+                      </td>
+                    )}
+                    <td>Email · {r.recipients.join(", ") || "—"}</td>
+                    <td>
+                      {r.activity
+                        ? `Fired ${r.activity.count} time${r.activity.count === 1 ? "" : "s"} in last 30 days · last: ${new Date(r.activity.lastFiredAt).toLocaleDateString()}`
+                        : "Not fired in last 30 days"}
+                    </td>
+                    <td>
+                      <span className={`pill ${r.active ? "pill-green" : "pill-gray"}`}>{r.active ? "On" : "Off"}</span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startEdit(r)}>
+                        Edit
+                      </button>
+                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleActive(r)}>
+                        {r.active ? "Pause" : "Resume"}
+                      </button>
+                      <button className="icon-btn btn-danger" onClick={() => removeRule(r._id)}>
+                        🗑
+                      </button>
+                    </td>
+                  </tr>
+                )
+              )}
               {ownRules.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="subtitle">
+                  <td colSpan={cxEnabled && ceEnabled ? 6 : 5} className="subtitle">
                     No rules yet.
                   </td>
                 </tr>

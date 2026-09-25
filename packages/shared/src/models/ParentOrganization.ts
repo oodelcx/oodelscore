@@ -12,6 +12,7 @@ import {
   type IEscalationLevel,
   DEFAULT_ESCALATION_LEVELS,
 } from "./common";
+import { PRODUCTS, type Product } from "./products";
 
 export const BILLING_MODES = ["group_pays", "branch_pays"] as const;
 export type BillingMode = (typeof BILLING_MODES)[number];
@@ -29,6 +30,9 @@ export interface IParentOrganization {
   // "group_pays" — the org's Stripe subscription carries one line item per
   // such branch, all priced from this same rate.
   pricingTerms: IPricingTerms;
+  // ADMIN-EDITABLE ONLY. Same meaning as pricingTerms, for the Colleague
+  // Experience line — see Business.cePricingTerms for the full explanation.
+  cePricingTerms: IPricingTerms;
   // ADMIN-EDITABLE ONLY. When true, the org's own billing page shows a
   // self-service "Continue to payment" link straight to Stripe Checkout —
   // covers the org paying for itself and/or its group_pays branches.
@@ -52,6 +56,14 @@ export interface IParentOrganization {
   // undefined/null means "all on" so existing orgs are unaffected until
   // Admin explicitly edits one.
   enabledFeatures: string[] | null;
+  // ADMIN-EDITABLE ONLY. Which product line(s) this org has bought —
+  // see Business.enabledProducts for the full explanation; same meaning
+  // and same null-means-Customer-Experience-only default here.
+  enabledProducts: Product[] | null;
+  // Colleague Experience only, org-owner-editable — see
+  // Business.sensitiveRoutingContactId for the full explanation. A branch
+  // with no contact of its own falls back to its parent org's.
+  sensitiveRoutingContactId: Types.ObjectId | null;
   // ADMIN-EDITABLE ONLY. Same per-account override as Business.paymentGateEnabled
   // — null follows the platform default, true/false forces the gate for this org.
   paymentGateEnabled: boolean | null;
@@ -69,6 +81,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     billingAddressSameAsAddress: { type: Boolean, default: true },
     defaultBillingMode: { type: String, enum: BILLING_MODES, default: "branch_pays" },
     pricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
+    cePricingTerms: { type: PricingTermsSchema, default: () => ({ ...DEFAULT_PRICING_TERMS }) },
     checkoutEnabled: { type: Boolean, default: false },
     escalationLevels: { type: [EscalationLevelSchema], default: () => DEFAULT_ESCALATION_LEVELS.map((l) => ({ ...l })) },
     escalationSlaHours: { type: Number, default: null },
@@ -78,6 +91,8 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     ragThresholds: { type: RagThresholdsSchema, default: () => ({ ...DEFAULT_RAG_THRESHOLDS }) },
     commandCenterEnabled: { type: Boolean, default: true },
     enabledFeatures: { type: [String], default: null },
+    enabledProducts: { type: [String], enum: PRODUCTS, default: null },
+    sensitiveRoutingContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     paymentGateEnabled: { type: Boolean, default: null },
   },
   { timestamps: true }

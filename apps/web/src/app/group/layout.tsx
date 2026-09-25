@@ -9,6 +9,8 @@ import {
   PLATFORM_SETTINGS_SINGLETON_KEY,
   getBillingAccessStatus,
   hasFeature,
+  hasProduct,
+  primaryProductFor,
   teamMemberCanAccess,
 } from "@oodelscore/shared";
 import "../admin/admin.css";
@@ -19,6 +21,10 @@ import { TourProvider } from "@/components/tour/tour-provider";
 import { TourLauncher } from "@/components/tour/tour-launcher";
 import { BillingLockedScreen } from "@/components/billing-locked-screen";
 import { NavSection } from "@/components/nav-section";
+import { ProductViewSwitcher } from "@/components/product-view-switcher";
+import { resolveViewProduct } from "@/lib/viewProduct";
+import { AccessDenied } from "@/components/access-denied";
+import { isAccessDenied, GROUP_ACCESS_CONFIG } from "@/lib/routeAccess";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -32,7 +38,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
 
   await connectToDatabase();
   const org = await ParentOrganization.findById(user.parentId).select(
-    "commandCenterEnabled enabledFeatures paymentGateEnabled"
+    "commandCenterEnabled enabledFeatures enabledProducts paymentGateEnabled"
   );
   if (!org) redirect("/login");
   const commandCenterEnabled = org.commandCenterEnabled ?? true;
@@ -47,6 +53,13 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   const pathname = (await headers()).get("x-pathname") ?? "";
   const isBillingRoute = pathname.startsWith("/group/billing");
   const isGated = billingStatus !== "active" && !isBillingRoute;
+  const bothProductsEnabled = hasProduct(org, "customer_experience") && hasProduct(org, "colleague_experience");
+  const viewProduct = bothProductsEnabled ? await resolveViewProduct(org) : null;
+  // Which product "CX Pulse" in the nav should point at — the two pages
+  // (the CX maturity ladder and its Colleague Experience analogue) share
+  // the one label per the branding rule (CX means whichever product you're
+  // currently viewing), so only ever one is shown, never both at once.
+  const cxPulseNavProduct = viewProduct ?? primaryProductFor(org);
 
   return (
     <div className="admin-app">
@@ -58,6 +71,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
+            {viewProduct && <ProductViewSwitcher current={viewProduct} />}
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
@@ -82,20 +96,23 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-understand"
                 label="Understand"
-                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
+                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/alerts", "/group/reports"]}
               >
-                {hasFeature(org.enabledFeatures, "insights") && teamMemberCanAccess(user, "insights") && (
-                  <a href="/group/insights">Insights</a>
-                )}
-                {hasFeature(org.enabledFeatures, "analytics") && teamMemberCanAccess(user, "analytics") && (
-                  <a href="/group/analytics">Analytics</a>
-                )}
+                {hasProduct(org, "customer_experience") &&
+                  hasFeature(org.enabledFeatures, "insights") &&
+                  teamMemberCanAccess(user, "insights") && <a href="/group/insights">Insights</a>}
+                {hasProduct(org, "customer_experience") &&
+                  hasFeature(org.enabledFeatures, "analytics") &&
+                  teamMemberCanAccess(user, "analytics") && <a href="/group/analytics">Analytics</a>}
                 {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
                   <a href="/group/alert-rules">Alert rules</a>
                 )}
-                {hasFeature(org.enabledFeatures, "reports") && teamMemberCanAccess(user, "reports") && (
-                  <a href="/group/reports">Reports</a>
+                {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alerts") && (
+                  <a href="/group/alerts">Alerts</a>
                 )}
+                {hasProduct(org, "customer_experience") &&
+                  hasFeature(org.enabledFeatures, "reports") &&
+                  teamMemberCanAccess(user, "reports") && <a href="/group/reports">Reports</a>}
               </NavSection>
               <NavSection
                 storageKey="group-act"
@@ -111,11 +128,33 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   <a href="/group/decision-log">Decision log</a>
                 )}
               </NavSection>
-              {hasFeature(org.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse") && (
-                <NavSection storageKey="group-measure" label="Measure" defaultOpen={false} hrefs={["/group/maturity"]}>
-                  <a href="/group/maturity">CX Pulse</a>
-                </NavSection>
-              )}
+              {(() => {
+                const showCxPulse =
+                  cxPulseNavProduct === "customer_experience"
+                    ? hasProduct(org, "customer_experience") && hasFeature(org.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse")
+                    : hasProduct(org, "colleague_experience") && teamMemberCanAccess(user, "exPulse");
+                const cxPulseHref = cxPulseNavProduct === "customer_experience" ? "/group/maturity" : "/group/ex-pulse";
+                const cxPulseNavLabel = cxPulseNavProduct === "customer_experience" ? "CX Pulse" : "Colleague Pulse";
+                // Only ever meaningful for a dual-product account — a
+                // network-level view of both signals together, so it's
+                // gated the same way the switcher itself is (bothProductsEnabled),
+                // not tied to whichever single product the tab happens to
+                // be on right now.
+                const showCorrelation = bothProductsEnabled && teamMemberCanAccess(user, "cxExCorrelation");
+                if (!showCxPulse && !showCorrelation) return null;
+                return (
+                  <NavSection
+                    storageKey="group-measure"
+                    label="Measure"
+                    defaultOpen={false}
+                    hrefs={[cxPulseHref, "/group/cx-ex-correlation"]}
+                  >
+                    {showCxPulse && <a href={cxPulseHref}>{cxPulseNavLabel}</a>}
+                    {showCorrelation && <a href="/group/cx-ex-correlation">CX ↔ EX Correlation</a>}
+                  </NavSection>
+                );
+              })()}
+
               <NavSection
                 storageKey="group-admin"
                 label="Admin"
@@ -163,13 +202,15 @@ export default async function GroupLayout({ children }: { children: ReactNode })
             billingHref="/group/billing"
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
           />
+        ) : isAccessDenied(pathname, user, isOrgTeamMember, isLimitedTeamMember, GROUP_ACCESS_CONFIG) ? (
+          <AccessDenied />
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />
-            {children}
+            <div key={viewProduct ?? "single-product"}>{children}</div>
           </TourProvider>
         ) : (
-          children
+          <div key={viewProduct ?? "single-product"}>{children}</div>
         )}
       </main>
     </div>

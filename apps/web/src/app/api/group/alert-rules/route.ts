@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, AlertRule, AlertActivity, Business, ALERT_RULE_TYPES, ALERT_SCOPES , hasFeature } from "@oodelscore/shared";
+import { connectToDatabase, AlertRule, AlertActivity, Business, ALERT_RULE_TYPES, ALERT_SCOPES, hasFeature, hasProduct } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 /**
@@ -84,10 +84,15 @@ export async function POST(request: Request) {
   }
 
   const recipients = Array.isArray(body?.recipients) ? body.recipients.filter((r: unknown) => typeof r === "string") : [];
+  const product =
+    body?.product === "colleague_experience" && hasProduct(session.org, "colleague_experience")
+      ? "colleague_experience"
+      : "customer_experience";
 
   const rule = await AlertRule.create({
     scope,
     ownerId: session.org._id,
+    product,
     region: scope === "parentOrg_region" && typeof body?.region === "string" ? body.region : "",
     ruleType,
     metric: typeof body?.metric === "string" ? body.metric : "",

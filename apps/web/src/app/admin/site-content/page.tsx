@@ -20,7 +20,8 @@ const TABS: { id: string; label: string }[] = [
   { id: "menu", label: "Menu & Footer" },
   { id: "home", label: "Home" },
   { id: "pricing", label: "Pricing" },
-  { id: "product", label: "Product" },
+  { id: "product", label: "Customer Experience" },
+  { id: "colleague-pulse", label: "Colleague Pulse" },
   { id: "solutions", label: "Solutions" },
   { id: "how-it-works", label: "How it works" },
   { id: "company", label: "Company" },
@@ -143,6 +144,7 @@ export default function SiteContentPage() {
       {current && activeTab === "home" && <HomePanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "pricing" && <PricingPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "product" && <ProductPanel content={current} onFieldChange={updateField} />}
+      {current && activeTab === "colleague-pulse" && <ColleaguePulsePanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "solutions" && <SolutionsPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "how-it-works" && <HowItWorksPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "company" && <CompanyPanel content={current} onFieldChange={updateField} />}
@@ -551,6 +553,47 @@ function HomePanel({
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Two products</h3>
+        <p className="card-sub">The section introducing Customer Experience and Colleague Pulse side by side.</p>
+        <div className="field-row">
+          <Field
+            label="Section headline"
+            value={content.fields.heroTwoProductsHeadline}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsHeadline", v)}
+          />
+        </div>
+        <Field
+          label="Section body"
+          value={content.fields.heroTwoProductsBody}
+          onChange={(v) => onFieldChange("home", "heroTwoProductsBody", v)}
+        />
+        <div className="field-row">
+          <Field
+            label="Customer Experience card eyebrow"
+            value={content.fields.heroTwoProductsCxLabel}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsCxLabel", v)}
+          />
+          <Field
+            label="Colleague Pulse card eyebrow"
+            value={content.fields.heroTwoProductsCeLabel}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsCeLabel", v)}
+          />
+        </div>
+        <div className="field-row">
+          <Field
+            label="Customer Experience card body"
+            value={content.fields.heroTwoProductsCxBody}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsCxBody", v)}
+          />
+          <Field
+            label="Colleague Pulse card body"
+            value={content.fields.heroTwoProductsCeBody}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsCeBody", v)}
+          />
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3>Scale split</h3>
         <div className="field-row">
           <Field
@@ -652,6 +695,7 @@ function HomePanel({
 }
 
 interface Plan {
+  product?: "customer_experience" | "colleague_experience";
   name: string;
   price: string;
   priceNote: string;
@@ -732,10 +776,43 @@ function PricingPanel({
       </div>
       <div className="card" style={{ marginBottom: 20 }}>
         <h3>Plans</h3>
-        <p className="card-sub">&ldquo;Featured&rdquo; highlights one plan visually — only one should be on at a time.</p>
+        <p className="card-sub">
+          &ldquo;Featured&rdquo; highlights one plan visually — only one per product should be on at a time. Each plan
+          is tagged Customer Experience or Colleague Pulse — the public Pricing page renders the two as separate
+          sections using the headings below.
+        </p>
+        <div className="qrow-top" style={{ marginBottom: 12 }}>
+          <input
+            type="text"
+            style={{ flex: 1 }}
+            placeholder="Customer Experience section heading"
+            value={content.fields.cxPlansHeading}
+            onChange={(e) => onFieldChange("pricing", "cxPlansHeading", e.target.value)}
+          />
+          <input
+            type="text"
+            style={{ flex: 1 }}
+            placeholder="Colleague Pulse section heading"
+            value={content.fields.cePlansHeading}
+            onChange={(e) => onFieldChange("pricing", "cePlansHeading", e.target.value)}
+          />
+        </div>
+        <Field
+          label="Colleague Pulse section subhead"
+          value={content.fields.cePlansSubhead}
+          onChange={(v) => onFieldChange("pricing", "cePlansSubhead", v)}
+        />
         {plans.map((plan, i) => (
           <div className="qrow" key={i}>
             <div className="qrow-top">
+              <select
+                value={plan.product ?? "customer_experience"}
+                onChange={(e) => updatePlan(i, { product: e.target.value as Plan["product"] })}
+                style={{ width: 150 }}
+              >
+                <option value="customer_experience">Customer Experience</option>
+                <option value="colleague_experience">Colleague Pulse</option>
+              </select>
               <input type="text" style={{ width: 140, fontWeight: 600 }} value={plan.name} onChange={(e) => updatePlan(i, { name: e.target.value })} />
               <input type="text" style={{ width: 80 }} value={plan.price} onChange={(e) => updatePlan(i, { price: e.target.value })} />
               <input type="text" style={{ flex: 1 }} value={plan.priceNote} onChange={(e) => updatePlan(i, { priceNote: e.target.value })} />
@@ -755,18 +832,38 @@ function PricingPanel({
             />
           </div>
         ))}
-        <button
-          className="btn"
-          onClick={() =>
-            onFieldChange(
-              "pricing",
-              "plans",
-              JSON.stringify([...plans, { name: "New plan", price: "", priceNote: "", featured: false, cta: "", features: [] }])
-            )
-          }
-        >
-          + Add plan
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            className="btn"
+            onClick={() =>
+              onFieldChange(
+                "pricing",
+                "plans",
+                JSON.stringify([
+                  ...plans,
+                  { product: "customer_experience", name: "New plan", price: "", priceNote: "", featured: false, cta: "", features: [] },
+                ])
+              )
+            }
+          >
+            + Add Customer Experience plan
+          </button>
+          <button
+            className="btn"
+            onClick={() =>
+              onFieldChange(
+                "pricing",
+                "plans",
+                JSON.stringify([
+                  ...plans,
+                  { product: "colleague_experience", name: "New plan", price: "", priceNote: "", featured: false, cta: "", features: [] },
+                ])
+              )
+            }
+          >
+            + Add Colleague Pulse plan
+          </button>
+        </div>
       </div>
       <div className="card">
         <h3>Enterprise note</h3>
@@ -780,6 +877,8 @@ interface Feature {
   tag: string;
   headline: string;
   body: string;
+  group?: "understand" | "act";
+  menuFeatured?: boolean;
 }
 
 function ProductPanel({
@@ -823,8 +922,11 @@ function ProductPanel({
       <div className="card">
         <h3>Feature sections</h3>
         <p className="card-sub">
-          Each renders as an alternating text/visual row, in this order. Tag should match a real product capability (CX Pulse, Theme
-          Intelligence, Root Cause Investigation, Driver Analysis, Case Management, Decision Log) so the right illustrative visual shows.
+          Each renders as an alternating text/visual row on this page, in this order. Only real, shipped capabilities
+          belong here — this list is what prospects use to self-qualify before a sales call, so it should never claim
+          more than the product actually does. Tick &quot;In menu&quot; on a handful of headline features to keep the
+          &quot;Platform&quot; mega-menu short (a proper SaaS nav lists a few things, not every feature) — the rest
+          still appear on this page with a &quot;See every feature&quot; link at the bottom of the menu.
         </p>
         {features.map((feature, i) => (
           <div className="qrow" key={i}>
@@ -836,6 +938,14 @@ function ProductPanel({
                 value={feature.tag}
                 onChange={(e) => updateFeature(i, { tag: e.target.value })}
               />
+              <select
+                value={feature.group ?? "understand"}
+                onChange={(e) => updateFeature(i, { group: e.target.value as Feature["group"] })}
+                style={{ width: 130 }}
+              >
+                <option value="understand">Understand</option>
+                <option value="act">Act</option>
+              </select>
               <input
                 type="text"
                 style={{ flex: 1 }}
@@ -843,6 +953,14 @@ function ProductPanel({
                 value={feature.headline}
                 onChange={(e) => updateFeature(i, { headline: e.target.value })}
               />
+              <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, whiteSpace: "nowrap" }}>
+                <input
+                  type="checkbox"
+                  checked={feature.menuFeatured ?? false}
+                  onChange={(e) => updateFeature(i, { menuFeatured: e.target.checked })}
+                />
+                In menu
+              </label>
               <span
                 className="icon-btn btn-danger"
                 onClick={() => onFieldChange("product", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}
@@ -855,10 +973,113 @@ function ProductPanel({
         ))}
         <button
           className="btn"
-          disabled={features.length >= 6}
-          onClick={() => onFieldChange("product", "features", JSON.stringify([...features, { tag: "", headline: "", body: "" }]))}
+          onClick={() => onFieldChange("product", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))}
         >
-          + Add feature (max 6)
+          + Add feature
+        </button>
+      </div>
+    </>
+  );
+}
+
+function ColleaguePulsePanel({
+  content,
+  onFieldChange,
+}: {
+  content: PageContent;
+  onFieldChange: (page: string, key: string, value: string) => void;
+}) {
+  const features = parseJsonArray<Feature>(content.fields.features);
+
+  function updateFeature(i: number, patch: Partial<Feature>) {
+    const next = [...features];
+    next[i] = { ...next[i], ...patch };
+    onFieldChange("colleague-pulse", "features", JSON.stringify(next));
+  }
+
+  return (
+    <>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Search &amp; social</h3>
+        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
+        <Field
+          label="Meta description"
+          textarea
+          value={content.fields.metaDescription}
+          onChange={(v) => onFieldChange("colleague-pulse", "metaDescription", v)}
+        />
+      </div>
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>Intro</h3>
+        <Field
+          label="Headline"
+          value={content.fields.heroHeadline}
+          onChange={(v) => onFieldChange("colleague-pulse", "heroHeadline", v)}
+        />
+        <Field
+          label="Subheadline"
+          textarea
+          value={content.fields.heroSubheadline}
+          onChange={(v) => onFieldChange("colleague-pulse", "heroSubheadline", v)}
+        />
+      </div>
+      <div className="card">
+        <h3>Feature sections</h3>
+        <p className="card-sub">
+          Same convention as Customer Experience&apos;s Feature sections — each renders as an alternating text/visual
+          row on this page, in this order. Only real, shipped capabilities belong here. Tick &quot;In menu&quot; on a
+          handful of headline features to keep the &quot;Colleague Pulse&quot; mega-menu short.
+        </p>
+        {features.map((feature, i) => (
+          <div className="qrow" key={i}>
+            <div className="qrow-top">
+              <input
+                type="text"
+                style={{ width: 160, fontWeight: 600 }}
+                placeholder="Tag"
+                value={feature.tag}
+                onChange={(e) => updateFeature(i, { tag: e.target.value })}
+              />
+              <select
+                value={feature.group ?? "understand"}
+                onChange={(e) => updateFeature(i, { group: e.target.value as Feature["group"] })}
+                style={{ width: 130 }}
+              >
+                <option value="understand">Understand</option>
+                <option value="act">Act</option>
+              </select>
+              <input
+                type="text"
+                style={{ flex: 1 }}
+                placeholder="Headline"
+                value={feature.headline}
+                onChange={(e) => updateFeature(i, { headline: e.target.value })}
+              />
+              <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, whiteSpace: "nowrap" }}>
+                <input
+                  type="checkbox"
+                  checked={feature.menuFeatured ?? false}
+                  onChange={(e) => updateFeature(i, { menuFeatured: e.target.checked })}
+                />
+                In menu
+              </label>
+              <span
+                className="icon-btn btn-danger"
+                onClick={() => onFieldChange("colleague-pulse", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}
+              >
+                🗑
+              </span>
+            </div>
+            <AutoTextarea placeholder="Body" value={feature.body} onChange={(e) => updateFeature(i, { body: e.target.value })} />
+          </div>
+        ))}
+        <button
+          className="btn"
+          onClick={() =>
+            onFieldChange("colleague-pulse", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))
+          }
+        >
+          + Add feature
         </button>
       </div>
     </>
@@ -905,7 +1126,7 @@ function SolutionsPanel({
           onChange={(items) => onFieldChange("solutions", "groupPoints", JSON.stringify(items))}
         />
       </div>
-      <div className="card">
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3>Enterprise panel</h3>
         <Field label="Title" value={content.fields.entTitle} onChange={(v) => onFieldChange("solutions", "entTitle", v)} />
         <StringListEditor
@@ -913,7 +1134,113 @@ function SolutionsPanel({
           onChange={(items) => onFieldChange("solutions", "entPoints", JSON.stringify(items))}
         />
       </div>
+      <div className="card">
+        <h3>Industries</h3>
+        <p className="card-sub">
+          Shown as a chip grid on this page and as the &quot;By Industry&quot; column in the Solutions mega-menu. Each
+          industry gets its own page at /solutions/[slug] — the chip and the mega-menu link both go there.
+        </p>
+        <Field label="Title" value={content.fields.industriesTitle} onChange={(v) => onFieldChange("solutions", "industriesTitle", v)} />
+        <Field
+          label="Subtitle"
+          textarea
+          value={content.fields.industriesBody}
+          onChange={(v) => onFieldChange("solutions", "industriesBody", v)}
+        />
+        <IndustryDetailsEditor
+          items={parseJsonArray<IndustryDetail>(content.fields.industryDetails)}
+          onChange={(items) => onFieldChange("solutions", "industryDetails", JSON.stringify(items))}
+        />
+      </div>
     </>
+  );
+}
+
+interface IndustryDetail {
+  slug: string;
+  name: string;
+  tagline: string;
+  heroBody: string;
+  locationNoun: string;
+  standaloneBody: string;
+  groupBody: string;
+  benefits: string[];
+}
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function IndustryDetailsEditor({ items, onChange }: { items: IndustryDetail[]; onChange: (items: IndustryDetail[]) => void }) {
+  function update(i: number, patch: Partial<IndustryDetail>) {
+    const next = [...items];
+    next[i] = { ...next[i], ...patch };
+    onChange(next);
+  }
+
+  return (
+    <div>
+      {items.map((industry, i) => (
+        <div className="card" style={{ marginBottom: 14, background: "var(--surface-2, #fafaf8)" }} key={i}>
+          <div className="qrow-top">
+            <input
+              type="text"
+              style={{ flex: 1, fontWeight: 600 }}
+              placeholder="Industry name (e.g. Banking & Financial Services)"
+              value={industry.name}
+              onChange={(e) => update(i, { name: e.target.value, slug: industry.slug || slugify(e.target.value) })}
+            />
+            <span className="icon-btn btn-danger" onClick={() => onChange(items.filter((_, idx) => idx !== i))}>
+              🗑
+            </span>
+          </div>
+          <div className="field-row">
+            <div className="field" style={{ flex: 1 }}>
+              <label>URL slug (/solutions/…)</label>
+              <input type="text" value={industry.slug} onChange={(e) => update(i, { slug: slugify(e.target.value) })} />
+            </div>
+            <div className="field" style={{ flex: 1 }}>
+              <label>What one location is called (branch, campus, store…)</label>
+              <input type="text" value={industry.locationNoun} onChange={(e) => update(i, { locationNoun: e.target.value })} />
+            </div>
+          </div>
+          <div className="field">
+            <label>Tagline (page headline)</label>
+            <AutoTextarea value={industry.tagline} onChange={(e) => update(i, { tagline: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Hero body</label>
+            <AutoTextarea value={industry.heroBody} onChange={(e) => update(i, { heroBody: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Standalone (single location) copy</label>
+            <AutoTextarea value={industry.standaloneBody} onChange={(e) => update(i, { standaloneBody: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Multi-branch / group copy</label>
+            <AutoTextarea value={industry.groupBody} onChange={(e) => update(i, { groupBody: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Benefits</label>
+            <StringListEditor items={industry.benefits} onChange={(benefits) => update(i, { benefits })} />
+          </div>
+        </div>
+      ))}
+      <button
+        className="btn"
+        onClick={() =>
+          onChange([
+            ...items,
+            { slug: "", name: "", tagline: "", heroBody: "", locationNoun: "location", standaloneBody: "", groupBody: "", benefits: [] },
+          ])
+        }
+      >
+        + Add industry
+      </button>
+    </div>
   );
 }
 
@@ -994,6 +1321,19 @@ function HowItWorksPanel({
   );
 }
 
+interface BeliefItem {
+  icon: string;
+  title: string;
+  body: string;
+}
+interface AudienceContentItem {
+  slug: string;
+  name: string;
+  body: string;
+}
+
+const BELIEF_ICON_OPTIONS = ["loop", "scale", "check", "signal"] as const;
+
 function CompanyPanel({
   content,
   onFieldChange,
@@ -1001,7 +1341,10 @@ function CompanyPanel({
   content: PageContent;
   onFieldChange: (page: string, key: string, value: string) => void;
 }) {
-  const items = parseJsonArray<TitleBodyItem>(content.fields.howWeWorkItems);
+  const storyParagraphs = parseJsonArray<string>(content.fields.storyParagraphs);
+  const beliefs = parseJsonArray<BeliefItem>(content.fields.beliefs);
+  const audienceItems = parseJsonArray<AudienceContentItem>(content.fields.audienceItems);
+
   return (
     <>
       <div className="card" style={{ marginBottom: 20 }}>
@@ -1029,30 +1372,105 @@ function CompanyPanel({
           Must match a portion of the headline exactly (including punctuation) to be highlighted.
         </div>
         <Field
-          label="Mission statement"
+          label="Mission statement (sits next to the headline)"
           textarea
           value={content.fields.missionStatement}
           onChange={(v) => onFieldChange("company", "missionStatement", v)}
         />
       </div>
+
       <div className="card" style={{ marginBottom: 20 }}>
-        <h3>&ldquo;How we work&rdquo; items</h3>
-        {items.map((item, i) => (
+        <h3>&ldquo;Our story&rdquo; section</h3>
+        <Field
+          label="Eyebrow label"
+          value={content.fields.storyEyebrow}
+          onChange={(v) => onFieldChange("company", "storyEyebrow", v)}
+        />
+        <Field
+          label="Section headline"
+          value={content.fields.storyHeadline}
+          onChange={(v) => onFieldChange("company", "storyHeadline", v)}
+        />
+        <label style={{ display: "block", marginTop: 14, marginBottom: 6, fontWeight: 600, fontSize: 13.5 }}>
+          Paragraphs (rendered in order)
+        </label>
+        {storyParagraphs.map((p, i) => (
           <div className="qrow" key={i}>
             <div className="qrow-top">
+              <span style={{ fontSize: 12.5, color: "var(--text-2)" }}>Paragraph {i + 1}</span>
+              <span
+                className="icon-btn btn-danger"
+                onClick={() =>
+                  onFieldChange("company", "storyParagraphs", JSON.stringify(storyParagraphs.filter((_, idx) => idx !== i)))
+                }
+              >
+                🗑
+              </span>
+            </div>
+            <AutoTextarea
+              value={p}
+              onChange={(e) => {
+                const next = [...storyParagraphs];
+                next[i] = e.target.value;
+                onFieldChange("company", "storyParagraphs", JSON.stringify(next));
+              }}
+            />
+          </div>
+        ))}
+        <button
+          className="btn"
+          onClick={() => onFieldChange("company", "storyParagraphs", JSON.stringify([...storyParagraphs, ""]))}
+        >
+          + Add paragraph
+        </button>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>&ldquo;What we believe&rdquo; section</h3>
+        <Field
+          label="Eyebrow label"
+          value={content.fields.beliefsEyebrow}
+          onChange={(v) => onFieldChange("company", "beliefsEyebrow", v)}
+        />
+        <Field
+          label="Section headline"
+          value={content.fields.beliefsHeadline}
+          onChange={(v) => onFieldChange("company", "beliefsHeadline", v)}
+        />
+        <label style={{ display: "block", marginTop: 14, marginBottom: 6, fontWeight: 600, fontSize: 13.5 }}>
+          Belief cards
+        </label>
+        {beliefs.map((item, i) => (
+          <div className="qrow" key={i}>
+            <div className="qrow-top">
+              <select
+                value={item.icon}
+                onChange={(e) => {
+                  const next = [...beliefs];
+                  next[i] = { ...next[i], icon: e.target.value };
+                  onFieldChange("company", "beliefs", JSON.stringify(next));
+                }}
+                style={{ marginRight: 8 }}
+              >
+                {BELIEF_ICON_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
               <input
                 type="text"
                 style={{ flex: 1, fontWeight: 600 }}
                 value={item.title}
                 onChange={(e) => {
-                  const next = [...items];
+                  const next = [...beliefs];
                   next[i] = { ...next[i], title: e.target.value };
-                  onFieldChange("company", "howWeWorkItems", JSON.stringify(next));
+                  onFieldChange("company", "beliefs", JSON.stringify(next));
                 }}
               />
               <span
                 className="icon-btn btn-danger"
-                onClick={() => onFieldChange("company", "howWeWorkItems", JSON.stringify(items.filter((_, idx) => idx !== i)))}
+                onClick={() => onFieldChange("company", "beliefs", JSON.stringify(beliefs.filter((_, idx) => idx !== i)))}
               >
                 🗑
               </span>
@@ -1060,20 +1478,98 @@ function CompanyPanel({
             <AutoTextarea
               value={item.body}
               onChange={(e) => {
-                const next = [...items];
+                const next = [...beliefs];
                 next[i] = { ...next[i], body: e.target.value };
-                onFieldChange("company", "howWeWorkItems", JSON.stringify(next));
+                onFieldChange("company", "beliefs", JSON.stringify(next));
               }}
             />
           </div>
         ))}
         <button
           className="btn"
-          onClick={() => onFieldChange("company", "howWeWorkItems", JSON.stringify([...items, { title: "", body: "" }]))}
+          onClick={() =>
+            onFieldChange("company", "beliefs", JSON.stringify([...beliefs, { icon: "loop", title: "", body: "" }]))
+          }
         >
-          + Add item
+          + Add belief
         </button>
       </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>&ldquo;Who we build for&rdquo; section</h3>
+        <Field
+          label="Eyebrow label"
+          value={content.fields.audienceEyebrow}
+          onChange={(v) => onFieldChange("company", "audienceEyebrow", v)}
+        />
+        <Field
+          label="Section headline"
+          textarea
+          value={content.fields.audienceHeadline}
+          onChange={(v) => onFieldChange("company", "audienceHeadline", v)}
+        />
+        <div className="field-hint" style={{ marginBottom: 8 }}>
+          The slug controls which icon renders — use banking, education, retail, or healthcare to match the icon set,
+          or any other slug for a generic mark. Each card links to /solutions.
+        </div>
+        {audienceItems.map((item, i) => (
+          <div className="qrow" key={i}>
+            <div className="qrow-top">
+              <input
+                type="text"
+                style={{ width: 110, fontFamily: "monospace", fontSize: 12.5 }}
+                value={item.slug}
+                placeholder="slug"
+                onChange={(e) => {
+                  const next = [...audienceItems];
+                  next[i] = { ...next[i], slug: e.target.value };
+                  onFieldChange("company", "audienceItems", JSON.stringify(next));
+                }}
+              />
+              <input
+                type="text"
+                style={{ flex: 1, fontWeight: 600 }}
+                value={item.name}
+                placeholder="Name"
+                onChange={(e) => {
+                  const next = [...audienceItems];
+                  next[i] = { ...next[i], name: e.target.value };
+                  onFieldChange("company", "audienceItems", JSON.stringify(next));
+                }}
+              />
+              <span
+                className="icon-btn btn-danger"
+                onClick={() =>
+                  onFieldChange("company", "audienceItems", JSON.stringify(audienceItems.filter((_, idx) => idx !== i)))
+                }
+              >
+                🗑
+              </span>
+            </div>
+            <AutoTextarea
+              value={item.body}
+              onChange={(e) => {
+                const next = [...audienceItems];
+                next[i] = { ...next[i], body: e.target.value };
+                onFieldChange("company", "audienceItems", JSON.stringify(next));
+              }}
+            />
+          </div>
+        ))}
+        <button
+          className="btn"
+          onClick={() =>
+            onFieldChange(
+              "company",
+              "audienceItems",
+              JSON.stringify([...audienceItems, { slug: "", name: "", body: "" }])
+            )
+          }
+        >
+          + Add industry
+        </button>
+      </div>
+
       <div className="card">
         <h3>Contact</h3>
         <Field

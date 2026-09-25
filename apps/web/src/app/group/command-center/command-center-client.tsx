@@ -38,6 +38,7 @@ interface Sparkline {
 }
 interface CommandCenterData {
   orgName: string;
+  product: "customer_experience" | "colleague_experience";
   branchTiles: BranchTile[];
   categoryMatrix: CategoryRow[];
   feed: FeedEntry[];
@@ -133,6 +134,7 @@ export default function GroupCommandCenterClient() {
   if (!data) return null;
 
   const branchCount = data.branchTiles.length;
+  const npsLabel = data.product === "colleague_experience" ? "eNPS" : "NPS";
   const firingAlerts = data.feed.filter((f) => f.kind === "alert").length;
   const tickerItems = [...data.branchTiles, ...data.branchTiles];
   const totalOpenActions = data.branchTiles.reduce((sum, b) => sum + b.openActionItems, 0);
@@ -156,7 +158,7 @@ export default function GroupCommandCenterClient() {
               <span className="cc-ticker-item" key={`${b.businessId}-${i}`}>
                 <b className={`cc-band-${b.band ?? "amber"}`}>{b.name}</b>
                 <span>★ {b.starAverage?.toFixed(1) ?? "—"}</span>
-                <span>NPS {b.npsScore ?? "—"}</span>
+                <span>{npsLabel} {b.npsScore ?? "—"}</span>
                 {b.starDelta !== null && (
                   <span className={b.starDelta >= 0 ? "cc-band-green" : "cc-band-red"}>
                     {b.starDelta >= 0 ? "▲" : "▼"} {Math.abs(b.starDelta).toFixed(2)}
@@ -199,7 +201,7 @@ export default function GroupCommandCenterClient() {
                   Branch Health · 30d <InfoTip text={tooltips["health-band"]} />
                 </div>
                 <div className="cc-card-sub">
-                  ★ AVG <InfoTip text={tooltips["star-average"]} /> · NPS <InfoTip text={tooltips["nps"]} /> · RESP{" "}
+                  ★ AVG <InfoTip text={tooltips["star-average"]} /> · {npsLabel} <InfoTip text={tooltips["nps"]} /> · RESP{" "}
                   <InfoTip text={tooltips["response-count"]} /> · WoW TREND <InfoTip text={tooltips["star-delta"]} />
                 </div>
               </div>
@@ -230,7 +232,7 @@ export default function GroupCommandCenterClient() {
                         <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.starAverage?.toFixed(1) ?? "—"}</span>
                       </div>
                       <div>
-                        <span className="cc-bm-label">NPS</span>
+                        <span className="cc-bm-label">{npsLabel}</span>
                         <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.npsScore ?? "—"}</span>
                       </div>
                     </div>

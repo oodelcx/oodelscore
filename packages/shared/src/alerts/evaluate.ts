@@ -1,7 +1,9 @@
 import { Types, type HydratedDocument } from "mongoose";
 import { AlertRule, type IAlertRule } from "../models/AlertRule";
+import type { Product } from "../models/products";
 import { AlertActivity } from "../models/AlertActivity";
 import { Business, type IBusiness } from "../models/Business";
+import { ParentOrganization } from "../models/ParentOrganization";
 import { Category } from "../models/Category";
 import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
 import { ActionBoardItem } from "../models/ActionBoardItem";
@@ -37,44 +39,87 @@ function metricValue(metric: string, metrics: { starAverage: number | null; npsS
  * automatically instead of waiting for a manual "Log action taken" — the AI
  * only picks title/severity/category; the owner always comes from the
  * human-configured categoryOwnerMappings, never from the AI.
+ *
+ * Exported (not just called from recordFiringAndNotify below) so the
+ * feedback submit route can also call it directly for Colleague
+ * Experience's unconditional sensitive-comment screen (see
+ * ai/sensitiveScreen.ts) — a one-off HR/leadership complaint that never
+ * crosses a configured Alert Rule threshold must still be caught, not only
+ * ones that happen to also trip an alert.
  */
-async function autoTriageAndCreateActionItem(
+export async function autoTriageAndCreateActionItem(
   business: HydratedDocument<IBusiness>,
   ruleDescription: string,
-  triggeringComment: string | null
+  triggeringComment: string | null,
+  product: Product
 ) {
-  const categories = await Category.find();
+  // Guards against the same comment producing two cases: the submit-time
+  // sensitive screen may have already routed this exact comment (see
+  // Response.sensitiveRouted) before this business's alert rules got their
+  // chance to fire on the same response. A short window and an exact text
+  // match is enough — false positives here only mean a genuine second
+  // identical complaint within a minute gets folded together, which is a
+  // fine trade against silently duplicating every routed case.
+  if (triggeringComment) {
+    const recentDuplicate = await ActionBoardItem.findOne({
+      businessId: business._id,
+      product,
+      sensitive: true,
+      description: `Respondent comment: "${triggeringComment}"`,
+      createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
+    });
+    if (recentDuplicate) return;
+  }
+
+  const categories = await Category.find({ product });
   const suggestion = await generateTriageSuggestion({
     comment: triggeringComment,
     ruleDescription,
     categories: categories.map((c) => ({ id: c._id.toString(), name: c.name })),
   });
 
+  // A sensitive category (HR/leadership complaints) never goes through the
+  // normal CategoryOwnerMapping — that mapping is exactly what a complaint
+  // about HR needs to bypass. Instead it routes straight to the business's
+  // (or its org's, for a branch with none of its own) designated
+  // sensitiveRoutingContactId, so it can never land with the person it's
+  // about.
+  const matchedCategory = suggestion.categoryId
+    ? categories.find((c) => c._id.toString() === suggestion.categoryId)
+    : null;
+  const isSensitive = matchedCategory?.sensitive ?? false;
+
   // A branch can set its own owner for a category from its own Category
   // Owners page — that's always checked first. Only when the branch hasn't
   // set one does the org-wide default (set on the Group's Category Owners
   // page) apply. A standalone business only ever has the business-scope
   // mapping, since it has no org to fall back to.
-  const mapping = suggestion.categoryId
-    ? (await CategoryOwnerMapping.findOne({
-        ownerScope: "business",
-        ownerScopeId: business._id,
-        categoryId: suggestion.categoryId,
-      })) ??
-      (business.parentOrgId
-        ? await CategoryOwnerMapping.findOne({
-            ownerScope: "parentOrg",
-            ownerScopeId: business.parentOrgId,
-            categoryId: suggestion.categoryId,
-          })
-        : null)
-    : null;
+  const mapping =
+    !isSensitive && suggestion.categoryId
+      ? (await CategoryOwnerMapping.findOne({
+          ownerScope: "business",
+          ownerScopeId: business._id,
+          categoryId: suggestion.categoryId,
+        })) ??
+        (business.parentOrgId
+          ? await CategoryOwnerMapping.findOne({
+              ownerScope: "parentOrg",
+              ownerScopeId: business.parentOrgId,
+              categoryId: suggestion.categoryId,
+            })
+          : null)
+      : null;
 
   // A category owner mapping means items in that category always go
   // straight to that owner — no unassigned "suggested" state, no separate
   // accept/reassign step. Manual reassignment afterward (the owner dropdown
   // on each Action Board item) is unrelated and still works as before.
-  const ownerId = mapping?.defaultOwnerId ?? null;
+  const ownerId = isSensitive
+    ? business.sensitiveRoutingContactId ??
+      (business.parentOrgId
+        ? (await ParentOrganization.findById(business.parentOrgId).select("sensitiveRoutingContactId"))?.sensitiveRoutingContactId ?? null
+        : null)
+    : (mapping?.defaultOwnerId ?? null);
 
   // Same evidence-gated approach Root Cause Analysis already uses (see
   // ai/rootCause.ts): only ever hand Haiku a real computed evidence bundle,
@@ -98,21 +143,25 @@ async function autoTriageAndCreateActionItem(
   const item = await ActionBoardItem.create({
     parentOrgId: business.parentOrgId ?? null,
     businessId: business._id,
+    product,
     title: suggestion.title,
     description: triggeringComment ? `Respondent comment: "${triggeringComment}"` : "",
     categoryId: suggestion.categoryId,
     priority: suggestion.priority,
     ownerId,
-    source: mapping ? "auto_assigned" : "auto_suggested",
+    source: ownerId ? "auto_assigned" : "auto_suggested",
     suggestedAction,
+    sensitive: isSensitive,
   });
 
   await autoAttachPlaybook(item).catch((err) => console.error("[alerts] auto-attach playbook failed", err));
 
   // Notify the owner that they've been assigned this item — no confirmation
-  // language, since the assignment already happened.
-  if (mapping) {
-    const owner = await User.findById(mapping.defaultOwnerId);
+  // language, since the assignment already happened. Covers both the normal
+  // mapping path and the sensitive-routing path, since either can resolve
+  // an ownerId.
+  if (ownerId) {
+    const owner = await User.findById(ownerId);
     if (owner) {
       await sendTemplatedEmail("action_assigned", owner.email, {
         name: owner.email,
@@ -150,7 +199,7 @@ async function recordFiringAndNotify(
   }
 
   if (business) {
-    await autoTriageAndCreateActionItem(business, ruleDescription, triggeringComment).catch((err) =>
+    await autoTriageAndCreateActionItem(business, ruleDescription, triggeringComment, rule.product).catch((err) =>
       console.error("[alerts] AI-assisted triage failed", err)
     );
   }
@@ -166,7 +215,8 @@ async function recordFiringAndNotify(
  */
 export async function evaluateRealTimeAlertsForBusiness(
   businessId: Types.ObjectId | string,
-  triggeringComment: string | null = null
+  triggeringComment: string | null = null,
+  product: Product = "customer_experience"
 ): Promise<void> {
   const business = await Business.findById(businessId);
   if (!business) return;
@@ -182,13 +232,14 @@ export async function evaluateRealTimeAlertsForBusiness(
   const rules = await AlertRule.find({
     active: true,
     ruleType: "fixed_threshold",
+    product,
     $or: ownerFilters,
   });
   if (rules.length === 0) return;
 
   const to = new Date();
   const from = new Date(to.getTime() - METRIC_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const metrics = await computeBusinessMetrics(business._id, from, to);
+  const metrics = await computeBusinessMetrics(business._id, from, to, product);
 
   for (const rule of rules) {
     const value = metricValue(rule.metric, metrics);
@@ -231,8 +282,8 @@ export async function evaluateBaselineAlerts(): Promise<BaselineAlertSweepResult
       const baselineFrom = new Date(baselineTo.getTime() - rule.baselineWindowDays * 24 * 60 * 60 * 1000);
 
       for (const business of businesses) {
-        const current = await computeBusinessMetrics(business._id, currentFrom, to);
-        const baseline = await computeBusinessMetrics(business._id, baselineFrom, baselineTo);
+        const current = await computeBusinessMetrics(business._id, currentFrom, to, rule.product);
+        const baseline = await computeBusinessMetrics(business._id, baselineFrom, baselineTo, rule.product);
         const currentValue = metricValue(rule.metric, current);
         const baselineValue = metricValue(rule.metric, baseline);
         if (currentValue === null || baselineValue === null || baselineValue === 0) continue;
@@ -249,7 +300,7 @@ export async function evaluateBaselineAlerts(): Promise<BaselineAlertSweepResult
       const perBusiness = await Promise.all(
         businesses.map(async (business) => ({
           business,
-          value: metricValue(rule.metric, await computeBusinessMetrics(business._id, from, to)),
+          value: metricValue(rule.metric, await computeBusinessMetrics(business._id, from, to, rule.product)),
         }))
       );
       const values = perBusiness.map((b) => b.value).filter((v): v is number => v !== null);

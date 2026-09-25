@@ -4,16 +4,32 @@ import { getStripeClient } from "./client";
 import {
   BillingSubscription,
   BILLING_OWNER_TYPES,
+  DEFAULT_PRODUCT_LINE_ITEMS,
   type BillingOwnerType,
   type IBillingSubscription,
   type CompPeriod,
 } from "../models/BillingSubscription";
 import { Invoice } from "../models/Invoice";
-import { Business } from "../models/Business";
-import { ParentOrganization } from "../models/ParentOrganization";
+import { Business, type IBusiness } from "../models/Business";
+import { ParentOrganization, type IParentOrganization } from "../models/ParentOrganization";
 import { User } from "../models/User";
 import { sendTemplatedEmail } from "../email/resend";
 import { PRICING_INTERVALS, type IPricingTerms } from "../models/common";
+import { PRODUCTS, hasProduct, type Product } from "../models/products";
+
+/** Which field on Business/ParentOrganization carries a given product's price. */
+function pricingTermsField(product: Product): "pricingTerms" | "cePricingTerms" {
+  return product === "colleague_experience" ? "cePricingTerms" : "pricingTerms";
+}
+
+/** Which field on Business carries the Stripe subscription item ID covering that product's group_pays coverage. */
+function groupPaysItemField(product: Product): "groupPaysStripeSubscriptionItemId" | "ceGroupPaysStripeSubscriptionItemId" {
+  return product === "colleague_experience" ? "ceGroupPaysStripeSubscriptionItemId" : "groupPaysStripeSubscriptionItemId";
+}
+
+function productLabel(product: Product): string {
+  return product === "colleague_experience" ? "Colleague Experience" : "Customer Experience";
+}
 
 /**
  * Legacy Price lookup_keys from before per-owner custom pricing (Admin sets
@@ -79,25 +95,51 @@ async function getOrCreateStripeCustomer(params: {
 }
 
 /** Reads whatever Admin has set on the Business/ParentOrganization record — never a Stripe lookup. */
-async function getPricingTermsForOwner(ownerType: BillingOwnerType, ownerId: string): Promise<IPricingTerms> {
+async function getPricingTermsForOwner(ownerType: BillingOwnerType, ownerId: string, product: Product): Promise<IPricingTerms> {
+  const field = pricingTermsField(product);
   if (ownerType === "business") {
-    const business = await Business.findById(ownerId).select("pricingTerms");
+    const business = await Business.findById(ownerId).select(field);
     if (!business) throw new BillingError("Business not found");
-    return business.pricingTerms;
+    return business[field];
   }
-  const org = await ParentOrganization.findById(ownerId).select("pricingTerms");
+  const org = await ParentOrganization.findById(ownerId).select(field);
   if (!org) throw new BillingError("Parent organization not found");
-  return org.pricingTerms;
+  return org[field];
+}
+
+/**
+ * Every product this owner is enabled for AND would be billed for directly
+ * through its own checkout/subscription — i.e. not a business currently
+ * riding its parent org's subscription via "group_pays" (that business has
+ * no line items of its own at all; its branch-level coverage is handled by
+ * syncBranchGroupPaysCoverage instead).
+ */
+async function getDirectlyBilledProducts(
+  ownerType: BillingOwnerType,
+  owner: Pick<IBusiness, "enabledProducts" | "billingAssignment"> | Pick<IParentOrganization, "enabledProducts">
+): Promise<Product[]> {
+  if (ownerType === "business" && "billingAssignment" in owner && owner.billingAssignment === "group_pays") return [];
+  return PRODUCTS.filter((p) => hasProduct(owner, p));
 }
 
 /**
  * Creates a Stripe Checkout Session (hosted, redirect-based — no Stripe.js
  * or publishable key needed) for a business or parent org to pay for
- * whatever Admin has priced them at (IPricingTerms on their own record).
- * Builds the Stripe price inline (`price_data`) from that stored amount —
- * Admin never creates a Price in the Stripe Dashboard. The webhook
- * (checkout.session.completed) is what actually persists the resulting
- * subscription/payment — this only starts the flow.
+ * whatever Admin has priced them at (IPricingTerms on their own record),
+ * one line item per enabled+priced product (Customer Experience and/or
+ * Colleague Experience). Builds each Stripe price inline (`price_data`)
+ * from the stored amount — Admin never creates a Price in the Stripe
+ * Dashboard. Each line item's inline Product carries `metadata.product` so
+ * the webhook can map the resulting subscription/session items back to
+ * which product they cover. The webhook (checkout.session.completed) is
+ * what actually persists the resulting subscription/payment — this only
+ * starts the flow.
+ *
+ * A single Checkout Session is either "payment" mode (one-time — for
+ * annual_lump_sum) or "subscription" mode — it can't be both. If the owner
+ * has one product priced annual_lump_sum and another priced monthly/
+ * annual_monthly_rate, that combination can't check out together; Admin
+ * has to align both products' pricing intervals first.
  */
 export async function createCheckoutSessionForOwner(params: {
   ownerType: BillingOwnerType;
@@ -109,36 +151,50 @@ export async function createCheckoutSessionForOwner(params: {
     await assertBusinessCanHaveOwnSubscription(params.ownerId);
   }
 
-  const pricingTerms = await getPricingTermsForOwner(params.ownerType, params.ownerId);
-  if (pricingTerms.amount === null || !pricingTerms.interval) {
-    throw new BillingError("Set a price for this account before creating a checkout link.");
+  const owner =
+    params.ownerType === "business" ? await Business.findById(params.ownerId) : await ParentOrganization.findById(params.ownerId);
+  if (!owner) throw new BillingError(params.ownerType === "business" ? "Business not found" : "Parent organization not found");
+
+  const directlyBilledProducts = await getDirectlyBilledProducts(params.ownerType, owner);
+  const priced = await Promise.all(
+    directlyBilledProducts.map(async (product) => ({ product, terms: await getPricingTermsForOwner(params.ownerType, params.ownerId, product) }))
+  );
+  const withPrice = priced.filter((p) => p.terms.amount !== null && p.terms.interval);
+  if (withPrice.length === 0) {
+    throw new BillingError("Set a price for at least one enabled product before creating a checkout link.");
+  }
+
+  const lumpSum = withPrice.filter((p) => p.terms.interval === "annual_lump_sum");
+  const recurring = withPrice.filter((p) => p.terms.interval !== "annual_lump_sum");
+  if (lumpSum.length > 0 && recurring.length > 0) {
+    throw new BillingError(
+      "This account's products are priced on different billing types (annual lump sum vs. a recurring rate) — align both products' pricing interval before checkout."
+    );
   }
 
   const { name, email } = await resolveOwnerNameEmail(params.ownerType, params.ownerId);
   const customerId = await getOrCreateStripeCustomer({ ownerType: params.ownerType, ownerId: params.ownerId, email, name });
 
   const stripe = getStripeClient();
-  const unitAmount = Math.round(pricingTerms.amount * 100);
-  const metadata = { ownerType: params.ownerType, ownerId: params.ownerId, pricingInterval: pricingTerms.interval };
+  const products = withPrice.map((p) => p.product).join(",");
+  const metadata = { ownerType: params.ownerType, ownerId: params.ownerId, products };
   // Same reasoning as before: Stripe's Managed Payments mode requires every
   // product to carry a tax_code, which an inline price_data product
   // doesn't — disable it per-session so checkout always works.
   const managedPayments = { enabled: false } as const;
 
-  if (pricingTerms.interval === "annual_lump_sum") {
+  if (lumpSum.length > 0) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer: customerId,
-      line_items: [
-        {
-          price_data: {
-            currency: pricingTerms.currency,
-            unit_amount: unitAmount,
-            product_data: { name: `${name} — OodelCX annual subscription` },
-          },
-          quantity: 1,
+      line_items: lumpSum.map(({ product, terms }) => ({
+        price_data: {
+          currency: terms.currency,
+          unit_amount: Math.round(terms.amount! * 100),
+          product_data: { name: `${name} — ${productLabel(product)} annual subscription`, metadata: { product } },
         },
-      ],
+        quantity: 1,
+      })),
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
       metadata,
@@ -151,17 +207,15 @@ export async function createCheckoutSessionForOwner(params: {
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
-    line_items: [
-      {
-        price_data: {
-          currency: pricingTerms.currency,
-          unit_amount: unitAmount,
-          recurring: { interval: "month" },
-          product_data: { name: `${name} — OodelCX subscription` },
-        },
-        quantity: 1,
+    line_items: recurring.map(({ product, terms }) => ({
+      price_data: {
+        currency: terms.currency,
+        unit_amount: Math.round(terms.amount! * 100),
+        recurring: { interval: "month" },
+        product_data: { name: `${name} — ${productLabel(product)} subscription`, metadata: { product } },
       },
-    ],
+      quantity: 1,
+    })),
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
     metadata,
@@ -230,40 +284,47 @@ export async function createBillingPortalSession(stripeCustomerId: string, retur
 }
 
 /**
- * Keeps one Business's Stripe coverage in sync with its own
+ * Keeps one Business's Stripe coverage for one product in sync with its own
  * billingAssignment — the mechanism behind "an org's subscription covers
- * some, all, or none of its branches." Call this whenever a business's
- * billingAssignment is written (see the admin businesses PATCH route).
+ * some, all, or none of its branches." Call this once per enabled product
+ * whenever a business's billingAssignment or enabledProducts is written
+ * (see the admin businesses PATCH route) — billingAssignment applies to
+ * whichever product(s) the branch has, there's no separate per-product
+ * assignment.
  *
  * "group_pays": adds a subscription item to the *org's* Stripe
- * subscription, priced from the org's own pricingTerms, and remembers its
- * ID on the business (groupPaysStripeSubscriptionItemId) so it can be
- * removed precisely later. Requires both the org to already have an active
- * Stripe subscription (start it from the Parent Org's own Billing tab
- * first) and the org to have a real recurring price set — an
+ * subscription, priced from the org's own price for this product, and
+ * remembers its ID on the business (groupPaysStripeSubscriptionItemId /
+ * ceGroupPaysStripeSubscriptionItemId) so it can be removed precisely
+ * later. Requires both the org to already have an active Stripe
+ * subscription (start it from the Parent Org's own Billing tab first) and
+ * the org to have a real recurring price set for this product — an
  * "annual_lump_sum" org price can't back a subscription item at all, since
- * a lump sum is a one-time charge, not a recurring line.
+ * a lump sum is a one-time charge, not a recurring line. Skipped
+ * (no-op) for a product the branch doesn't have enabled.
  *
- * Anything else ("branch_pays", "unassigned"): removes the item if one
- * exists, so a branch reassigned away from the org stops being billed
- * through it.
+ * Anything else ("branch_pays", "unassigned"), or a product no longer
+ * enabled on the branch: removes the item if one exists, so a branch
+ * reassigned away from the org, or a product turned off, stops being
+ * billed through it.
  */
-export async function syncBranchGroupPaysCoverage(businessId: string): Promise<void> {
+export async function syncBranchGroupPaysCoverage(businessId: string, product: Product): Promise<void> {
   const business = await Business.findById(businessId);
   if (!business) throw new BillingError("Business not found");
 
   const stripe = getStripeClient();
+  const itemField = groupPaysItemField(product);
 
-  if (business.billingAssignment !== "group_pays") {
-    if (business.groupPaysStripeSubscriptionItemId) {
-      await stripe.subscriptionItems.del(business.groupPaysStripeSubscriptionItemId);
-      business.groupPaysStripeSubscriptionItemId = "";
+  if (business.billingAssignment !== "group_pays" || !hasProduct(business, product)) {
+    if (business[itemField]) {
+      await stripe.subscriptionItems.del(business[itemField]);
+      business[itemField] = "";
       await business.save();
     }
     return;
   }
 
-  if (business.groupPaysStripeSubscriptionItemId) return; // already covered
+  if (business[itemField]) return; // already covered
 
   if (!business.parentOrgId) throw new BillingError("A standalone business can't be billed group_pays — it has no parent org.");
   const org = await ParentOrganization.findById(business.parentOrgId);
@@ -276,59 +337,100 @@ export async function syncBranchGroupPaysCoverage(businessId: string): Promise<v
     );
   }
 
-  if (org.pricingTerms.interval === "annual_lump_sum") {
+  const orgTerms = org[pricingTermsField(product)];
+  if (orgTerms.interval === "annual_lump_sum") {
     throw new BillingError(
-      `${org.name} is priced as an annual lump sum, which can't cover a branch's ongoing subscription — change the org's pricing to Monthly or "Annual commitment, billed monthly" first.`
+      `${org.name}'s ${productLabel(product)} price is an annual lump sum, which can't cover a branch's ongoing subscription — change it to Monthly or "Annual commitment, billed monthly" first.`
     );
   }
-  if (org.pricingTerms.amount === null || !org.pricingTerms.interval) {
-    throw new BillingError(`Set a price for ${org.name} before it can cover any branch.`);
+  if (orgTerms.amount === null || !orgTerms.interval) {
+    throw new BillingError(`Set a ${productLabel(product)} price for ${org.name} before it can cover any branch.`);
   }
 
   // Unlike a Checkout Session's line items, a subscription item's price_data
   // needs a real Product reference — no inline product_data — so create one
   // for this branch first.
-  const product = await stripe.products.create({
-    name: `${business.name} — covered by ${org.name}`,
-    metadata: { businessId: business._id.toString(), parentOrgId: org._id.toString() },
+  const stripeProduct = await stripe.products.create({
+    name: `${business.name} — ${productLabel(product)}, covered by ${org.name}`,
+    metadata: { businessId: business._id.toString(), parentOrgId: org._id.toString(), product },
   });
 
   const item = await stripe.subscriptionItems.create({
     subscription: orgSubscription.stripeSubscriptionId,
     price_data: {
-      currency: org.pricingTerms.currency,
-      unit_amount: Math.round(org.pricingTerms.amount * 100),
+      currency: orgTerms.currency,
+      unit_amount: Math.round(orgTerms.amount * 100),
       recurring: { interval: "month" },
-      product: product.id,
+      product: stripeProduct.id,
     },
     quantity: 1,
-    metadata: { businessId: business._id.toString() },
+    metadata: { businessId: business._id.toString(), product },
   });
 
-  business.groupPaysStripeSubscriptionItemId = item.id;
+  business[itemField] = item.id;
   await business.save();
 }
 
 /**
  * Bulk version for after an org's own subscription is first created — every
  * branch already sitting at billingAssignment "group_pays" from before the
- * org had anywhere to attach to gets its item added now. Best-effort: one
- * branch's failure (e.g. a data issue) doesn't stop the rest from syncing.
+ * org had anywhere to attach to gets its item(s) added now, one per product
+ * the branch has enabled. Best-effort: one branch/product's failure (e.g. a
+ * data issue) doesn't stop the rest from syncing.
  */
 export async function syncGroupPaysBranchesForOrg(orgId: string): Promise<{ synced: number; failed: { businessId: string; message: string }[] }> {
   const branches = await Business.find({ parentOrgId: orgId, billingAssignment: "group_pays" });
   let synced = 0;
   const failed: { businessId: string; message: string }[] = [];
   for (const branch of branches) {
-    if (branch.groupPaysStripeSubscriptionItemId) continue;
-    try {
-      await syncBranchGroupPaysCoverage(branch._id.toString());
-      synced++;
-    } catch (err) {
-      failed.push({ businessId: branch._id.toString(), message: err instanceof Error ? err.message : "Unknown error" });
+    for (const product of PRODUCTS) {
+      if (!hasProduct(branch, product) || branch[groupPaysItemField(product)]) continue;
+      try {
+        await syncBranchGroupPaysCoverage(branch._id.toString(), product);
+        synced++;
+      } catch (err) {
+        failed.push({ businessId: branch._id.toString(), message: err instanceof Error ? err.message : "Unknown error" });
+      }
     }
   }
   return { synced, failed };
+}
+
+/**
+ * Called after a business/org's enabledProducts is written (admin PATCH
+ * routes). Two things need to stay in sync with whichever products are now
+ * enabled: a business's own group_pays coverage per product (delegates to
+ * syncBranchGroupPaysCoverage for each product), and — for whichever
+ * products this owner is billed for *directly* — dropping any Stripe
+ * subscription item for a product that's no longer enabled, so turning
+ * Customer or Colleague Experience off actually stops billing for it
+ * instead of leaving a stale line item on the invoice forever.
+ */
+export async function syncProductCoverageForOwner(ownerType: BillingOwnerType, ownerId: string): Promise<void> {
+  if (ownerType === "business") {
+    for (const product of PRODUCTS) {
+      await syncBranchGroupPaysCoverage(ownerId, product);
+    }
+  }
+
+  const owner = ownerType === "business" ? await Business.findById(ownerId) : await ParentOrganization.findById(ownerId);
+  if (!owner) return;
+  if (ownerType === "business" && "billingAssignment" in owner && owner.billingAssignment === "group_pays") return;
+
+  const subscription = await BillingSubscription.findOne({ ownerType, ownerId });
+  if (!subscription?.stripeSubscriptionId) return;
+
+  const stripe = getStripeClient();
+  let changed = false;
+  for (const product of PRODUCTS) {
+    if (hasProduct(owner, product)) continue;
+    const itemId = subscription.productLineItems[product];
+    if (!itemId) continue;
+    await stripe.subscriptionItems.del(itemId);
+    subscription.productLineItems[product] = "";
+    changed = true;
+  }
+  if (changed) await subscription.save();
 }
 
 /**
@@ -352,16 +454,18 @@ export async function syncGroupPaysBranchesForOrg(orgId: string): Promise<{ sync
 export async function savePricingAndPushToStripe(
   ownerType: BillingOwnerType,
   ownerId: string,
+  product: Product,
   terms: { amount: number | null; currency: string; interval: string | null }
 ): Promise<string> {
   const validInterval = terms.interval === null || (PRICING_INTERVALS as readonly string[]).includes(terms.interval);
   const validAmount = terms.amount === null || (typeof terms.amount === "number" && terms.amount > 0);
   if (!validInterval || !validAmount) throw new BillingError("Invalid price");
 
+  const field = pricingTermsField(product);
   const ownerExists =
     ownerType === "business"
-      ? await Business.findByIdAndUpdate(ownerId, { $set: { pricingTerms: terms } })
-      : await ParentOrganization.findByIdAndUpdate(ownerId, { $set: { pricingTerms: terms } });
+      ? await Business.findByIdAndUpdate(ownerId, { $set: { [field]: terms } })
+      : await ParentOrganization.findByIdAndUpdate(ownerId, { $set: { [field]: terms } });
   if (!ownerExists) throw new BillingError(ownerType === "business" ? "Business not found" : "Parent organization not found");
 
   const subscription = await BillingSubscription.findOne({ ownerType, ownerId });
@@ -381,26 +485,30 @@ export async function savePricingAndPushToStripe(
   const stripe = getStripeClient();
 
   if (ownerType === "business") {
-    const stripeSub = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
-    const firstItem = stripeSub.items.data[0];
-    if (!firstItem) return "Price saved, but the existing subscription has no line item to update — check it in Stripe.";
-    await stripe.subscriptionItems.update(firstItem.id, {
+    const itemId = subscription.productLineItems[product];
+    if (!itemId) {
+      return `Price saved, but ${productLabel(product)} isn't a line item on the existing subscription yet — use "Continue to payment" to add it.`;
+    }
+    const item = await stripe.subscriptionItems.retrieve(itemId);
+    await stripe.subscriptionItems.update(itemId, {
       price_data: {
         currency: terms.currency,
         unit_amount: Math.round(terms.amount * 100),
         recurring: { interval: "month" },
-        product: typeof firstItem.price.product === "string" ? firstItem.price.product : firstItem.price.product.id,
+        product: typeof item.price.product === "string" ? item.price.product : item.price.product.id,
       },
     });
     return "Price saved and pushed live to Stripe.";
   }
 
-  // Parent org: reprice every branch already covered, not the org itself.
-  const coveredBranches = await Business.find({ parentOrgId: ownerId, groupPaysStripeSubscriptionItemId: { $ne: "" } });
+  // Parent org: reprice every branch already covered for this product, not the org itself.
+  const itemField = groupPaysItemField(product);
+  const coveredBranches = await Business.find({ parentOrgId: ownerId, [itemField]: { $ne: "" } });
   let repriced = 0;
   for (const branch of coveredBranches) {
-    const item = await stripe.subscriptionItems.retrieve(branch.groupPaysStripeSubscriptionItemId);
-    await stripe.subscriptionItems.update(branch.groupPaysStripeSubscriptionItemId, {
+    const branchItemId = branch[itemField];
+    const item = await stripe.subscriptionItems.retrieve(branchItemId);
+    await stripe.subscriptionItems.update(branchItemId, {
       price_data: {
         currency: terms.currency,
         unit_amount: Math.round(terms.amount * 100),
@@ -679,7 +787,7 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const session = event.data.object as Stripe.Checkout.Session;
       const ownerType = session.metadata?.ownerType as BillingOwnerType | undefined;
       const ownerId = session.metadata?.ownerId;
-      const pricingInterval = session.metadata?.pricingInterval ?? "";
+      const products = session.metadata?.products ?? "";
       if (!ownerType || !ownerId) break;
 
       const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
@@ -691,7 +799,8 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
         // annual_lump_sum: a real one-time charge, not a Stripe
         // subscription — paidThroughDate (not nextPaymentDate) tracks when
         // this needs renewing, since Stripe won't auto-bill it again the
-        // way a subscription would.
+        // way a subscription would. No ongoing subscription item exists to
+        // remember per product, so productLineItems stays empty here.
         const amountTotal = session.amount_total ?? 0;
         const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
         let paymentMethodLast4 = "";
@@ -702,7 +811,7 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
         }
         stripeFields = {
           stripeSubscriptionId: "",
-          plan: pricingInterval || "annual_lump_sum",
+          plan: products || "annual_lump_sum",
           status: "active",
           // Normalised to a monthly figure like every other plan, so it
           // adds meaningfully into Billing Oversight's Platform MRR total.
@@ -720,16 +829,32 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
         // `paymentMethodLast4` never gets set.
         const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
         if (subscriptionId) {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["default_payment_method"] });
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+            expand: ["default_payment_method", "items.data.price.product"],
+          });
+          // Each line item's inline Product carries metadata.product (set
+          // when the Checkout Session was created) — read it back so later
+          // per-product repricing (savePricingAndPushToStripe) and
+          // per-product removal (syncProductCoverageForOwner) know exactly
+          // which item belongs to which product, instead of guessing.
+          const productLineItems: Record<Product, string> = { ...DEFAULT_PRODUCT_LINE_ITEMS };
+          for (const item of subscription.items.data) {
+            const stripeProduct = item.price.product;
+            const metaProduct = typeof stripeProduct === "string" ? undefined : (stripeProduct as Stripe.Product).metadata?.product;
+            if (metaProduct === "customer_experience" || metaProduct === "colleague_experience") {
+              productLineItems[metaProduct] = item.id;
+            }
+          }
           stripeFields = {
-            ...subscriptionFieldsFromStripe(subscription, { planFallback: pricingInterval }),
+            ...subscriptionFieldsFromStripe(subscription, { planFallback: products }),
             paymentMethodLast4: await resolvePaymentMethodLast4(subscription),
             paidThroughDate: null,
+            productLineItems,
           };
         } else {
           stripeFields = {
             stripeSubscriptionId: "",
-            plan: pricingInterval,
+            plan: products,
             status: "active",
             mrrValue: 0,
             nextPaymentDate: null,
@@ -775,7 +900,7 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
       const deleted = event.type === "customer.subscription.deleted";
       const fields: Partial<IBillingSubscription> = subscriptionFieldsFromStripe(subscription, {
         deleted,
-        planFallback: subscription.metadata?.pricingInterval ?? "",
+        planFallback: subscription.metadata?.products ?? "",
       });
       // Skip the extra Stripe lookups on cancellation — the card that used
       // to be on file isn't worth an API call once there's no active

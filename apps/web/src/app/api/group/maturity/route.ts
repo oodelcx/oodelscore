@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, Business, Category, CategoryOwnerMapping, CxPulseScore, Playbook, getCxPulseFrameworkOrDefault , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 const DIMENSION_KEYS = ["awareness", "response", "ownership", "culture", "outcome"] as const;
 // Rough "healthy" floor per dimension used only to compute the "what would
@@ -17,12 +18,19 @@ export async function GET() {
 
   await connectToDatabase();
 
-  const score = await CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ period: -1 });
-  const history = await CxPulseScore.find({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ period: -1 }).limit(6);
+  // A CE-only org (customer experience never enabled) has no
+  // customer_experience scores and would silently see an empty page
+  // labeled "CX Pulse" — resolve the active product the same way every
+  // other product-scoped route does so this reads and labels correctly
+  // for Colleague Experience too.
+  const product = await resolveViewProduct(session.org);
+
+  const score = await CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id, product }).sort({ period: -1 });
+  const history = await CxPulseScore.find({ ownerType: "parentOrg", ownerId: session.org._id, product }).sort({ period: -1 }).limit(6);
 
   const businesses = await Business.find({ parentOrgId: session.org._id, active: true }).select("name region").sort({ name: 1 });
   const businessScores = await Promise.all(
-    businesses.map((b) => CxPulseScore.findOne({ ownerType: "business", ownerId: b._id }).sort({ period: -1 }))
+    businesses.map((b) => CxPulseScore.findOne({ ownerType: "business", ownerId: b._id, product }).sort({ period: -1 }))
   );
   const branches = businesses.map((b, i) => ({
     businessId: b._id.toString(),
@@ -74,6 +82,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    product,
     score,
     history,
     branches,

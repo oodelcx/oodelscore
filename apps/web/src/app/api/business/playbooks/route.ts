@@ -8,9 +8,14 @@ import {
   PLAYBOOK_TRIGGER_METRICS,
   PLAYBOOK_TRIGGER_COMPARATORS,
   hasFeature,
+  PRODUCTS,
+  type Product,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 // Mirrors /api/group/playbooks, scoped to businessId instead of
 // parentOrgId. Not available to limited-tier team members.
@@ -37,6 +42,9 @@ export async function GET() {
 
   const isBranch = !!session.business.parentOrgId;
 
+  // Both products' playbooks together, same "show all, badge by product"
+  // convention Alert Rules already uses — each row carries its own
+  // `product` field for the client to badge/filter with.
   const [playbooks, categories] = await Promise.all([
     isBranch
       ? Playbook.find({ parentOrgId: session.business.parentOrgId }).sort({ createdAt: -1 })
@@ -67,7 +75,14 @@ export async function GET() {
     }))
   );
 
-  return NextResponse.json({ status: "ok", playbooks: enriched, categories, readOnly: isBranch });
+  // Playbooks themselves stay unfiltered by product (see the comment
+  // above), but the "New playbook" form still needs to know which product
+  // tab is active so it doesn't silently default to Customer Experience —
+  // resolve and return it the same way every other product-scoped route
+  // already does.
+  const product = await resolveViewProduct(session.business);
+
+  return NextResponse.json({ status: "ok", playbooks: enriched, categories, readOnly: isBranch, product });
 }
 
 export async function POST(request: Request) {
@@ -93,9 +108,11 @@ export async function POST(request: Request) {
   const triggerComparator = PLAYBOOK_TRIGGER_COMPARATORS.includes(body?.triggerComparator) ? body.triggerComparator : null;
   const triggerThreshold = typeof body?.triggerThreshold === "number" ? body.triggerThreshold : null;
   const triggerWindowDays = typeof body?.triggerWindowDays === "number" ? body.triggerWindowDays : null;
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
 
   const playbook = await Playbook.create({
     businessId: session.business._id,
+    product,
     title,
     categoryId: typeof body?.categoryId === "string" ? body.categoryId : null,
     triggerCondition: typeof body?.triggerCondition === "string" ? body.triggerCondition : "",

@@ -30,6 +30,7 @@ interface ResponseStats {
 
 type FilterId = "all" | "negative" | "comment" | string;
 type SortId = "newest" | "lowest";
+type ProductId = "customer_experience" | "colleague_experience";
 
 const LIMIT = 25;
 
@@ -63,10 +64,14 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<ResponseStats | null>(null);
+  const [product, setProduct] = useState<ProductId>("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
+  const [ready, setReady] = useState(false);
 
   function load() {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), filter, sort });
+    const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), filter, sort, product });
     fetch(`/api/business/responses?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
@@ -80,9 +85,34 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   }
 
   useEffect(() => {
+    if (!ready) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filter, sort]);
+  }, [ready, page, filter, sort, product]);
+
+  // Account-scoped enabled products must be known BEFORE the first data
+  // fetch — otherwise a Colleague-Experience-only business always starts by
+  // asking for (empty) Customer Experience data, showing a stale/wrong tab
+  // and an empty page until a second render corrects it.
+  useEffect(() => {
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
+        const hasCx = products.includes("customer_experience");
+        const hasCe = products.includes("colleague_experience");
+        setCxEnabled(hasCx);
+        setCeEnabled(hasCe);
+        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setReady(true);
+      });
+  }, []);
+
+  function changeProduct(p: ProductId) {
+    setProduct(p);
+    setPage(1);
+    setFilter("all");
+  }
 
   function changeFilter(f: FilterId) {
     setFilter(f);
@@ -119,6 +149,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
         description: comment(r) ?? "",
         priority: (starValue(r) ?? 5) <= 2 ? "high" : "medium",
         sourceResponseIds: [r._id],
+        product,
       }),
     });
     setActionSubmitting(false);
@@ -152,6 +183,17 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
           <div className="card">
             <div className="metric-label">Flagged</div>
             <div className="metric-val">{stats.flagged}</div>
+          </div>
+        </div>
+      )}
+
+      {cxEnabled && ceEnabled && (
+        <div className="filters" style={{ marginBottom: 8 }}>
+          <div className={`chip ${product === "customer_experience" ? "active" : ""}`} onClick={() => changeProduct("customer_experience")}>
+            Customer Experience
+          </div>
+          <div className={`chip ${product === "colleague_experience" ? "active" : ""}`} onClick={() => changeProduct("colleague_experience")}>
+            Colleague Experience
           </div>
         </div>
       )}

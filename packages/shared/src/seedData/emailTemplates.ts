@@ -130,4 +130,16 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     body: "Hi {{name}}, the decision \"{{decision_title}}\" has a measured outcome: {{verdict}}. {{metric_label}} went from {{outcome_before}} to {{outcome_after}}. View it here: {{decision_link}}",
     availableVars: ["name", "decision_title", "verdict", "metric_label", "outcome_before", "outcome_after", "decision_link"],
   },
+  {
+    key: "colleague_lifecycle_survey",
+    subject: "A quick, anonymous check-in",
+    body: "Hi, we'd like your honest, anonymous feedback — this takes about a minute and nothing you say is linked back to you. {{survey_link}}",
+    availableVars: ["survey_link"],
+  },
+  {
+    key: "colleague_pulse_survey",
+    subject: "Your anonymous pulse survey",
+    body: "Hi, it's time for the regular team pulse survey — your honest, anonymous feedback helps shape what changes next. It takes about a minute and nothing you say is linked back to you. {{survey_link}}",
+    availableVars: ["survey_link"],
+  },
 ];

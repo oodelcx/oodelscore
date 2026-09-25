@@ -28,6 +28,7 @@ interface ItemRow {
   _id: string;
   title: string;
   description: string;
+  product?: "customer_experience" | "colleague_experience";
   categoryId: string | null;
   caseType: string;
   ownerId: string | null;
@@ -43,6 +44,7 @@ interface ItemRow {
   escalatedToOrgNote: string;
   currentEscalationLevel: number;
   escalationHistory: { level: number; action: string; note: string; at: string }[];
+  sensitive?: boolean;
 }
 interface TeamRow {
   userId: string;
@@ -146,6 +148,8 @@ export default function BusinessCasesClient() {
   const [search, setSearch] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [page, setPage] = useState(1);
+  const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
@@ -171,11 +175,24 @@ export default function BusinessCasesClient() {
       setOrgName(itemsData.orgName ?? null);
       setTeam(teamData.team ?? []);
       setCategories(categoryData.categories ?? []);
+      // /api/business/action-board already resolves the account's
+      // currently-active product tab server-side — read it from here so a
+      // new case lands on whichever tab is actually open, instead of the
+      // form silently always defaulting to Customer Experience.
+      if (itemsData.product === "customer_experience" || itemsData.product === "colleague_experience") {
+        setProduct(itemsData.product);
+      }
       setLoading(false);
     });
   }
 
   useEffect(load, []);
+
+  useEffect(() => {
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.business?.enabledProducts?.includes("colleague_experience")));
+  }, []);
 
   function categoryName(id: string | null): string {
     if (!id) return "Any category";
@@ -222,7 +239,7 @@ export default function BusinessCasesClient() {
     const res = await fetch("/api/business/action-board", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, caseType, priority, ownerId: ownerId || null, dueDate: dueDate || null }),
+      body: JSON.stringify({ title, caseType, priority, ownerId: ownerId || null, dueDate: dueDate || null, product }),
     });
     const data = await res.json();
     setCreating(false);
@@ -439,6 +456,15 @@ export default function BusinessCasesClient() {
               </label>
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
+            {ceEnabled && (
+              <div className="field">
+                <label>Product</label>
+                <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
+                  <option value="customer_experience">Customer Experience</option>
+                  <option value="colleague_experience">Colleague Experience</option>
+                </select>
+              </div>
+            )}
           </div>
           {error && <p className="error-text">{error}</p>}
           <button className="btn btn-dark" disabled={creating} onClick={createItem}>
@@ -497,6 +523,11 @@ export default function BusinessCasesClient() {
                           {item.categoryId && (
                             <span className="pill pill-gray">{categoryName(item.categoryId)}</span>
                           )}
+                          {item.sensitive && (
+                            <span className="pill pill-red" title="Routed via sensitive-category handling">
+                              Sensitive
+                            </span>
+                          )}
                           <span>
                             Due: <b>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "—"}</b>
                           </span>
@@ -530,6 +561,11 @@ export default function BusinessCasesClient() {
                     </div>
                     <div className="ab-actions-col">
                       <div className="ab-badges">
+                        {ceEnabled && (
+                          <span className={`pill ${item.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                            {item.product === "colleague_experience" ? "Colleague" : "Customer"}
+                          </span>
+                        )}
                         <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
                           {item.status.replace(/_/g, " ")}
                         </span>

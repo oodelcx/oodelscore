@@ -13,12 +13,18 @@ interface CategoryRow {
   average: number;
 }
 interface ReportData {
+  product: "customer_experience" | "colleague_experience";
   businessName: string;
   period: { from: string; to: string };
   metrics: { responseCount: number; starAverage: number | null; npsScore: number | null };
   categoryBreakdown: CategoryRow[];
   themes: ThemeRow[];
   activity: { casesResolved: number; initiativesCompleted: number; customersRespondedTo: number };
+  colleagueExperience: {
+    metrics: { responseCount: number; starAverage: number | null; npsScore: number | null };
+    categoryBreakdown: CategoryRow[];
+    casesResolved: number;
+  } | null;
 }
 
 function isoDate(d: Date): string {
@@ -84,7 +90,10 @@ export default function ReportsClient() {
       {data && (
         <>
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: "0 0 4px" }}>{data.businessName}</h2>
+            <h2 style={{ margin: "0 0 4px" }}>
+              {data.businessName}
+              {data.product === "colleague_experience" && <span className="pill pill-blue" style={{ marginLeft: 10 }}>Colleague Experience</span>}
+            </h2>
             <p className="subtitle" style={{ margin: 0 }}>
               {new Date(data.period.from).toLocaleDateString()} – {new Date(data.period.to).toLocaleDateString()}
             </p>
@@ -100,7 +109,7 @@ export default function ReportsClient() {
               <div className="metric-val">{data.metrics.starAverage !== null ? `${data.metrics.starAverage}/5` : "—"}</div>
             </div>
             <div className="card">
-              <div className="metric-label">NPS</div>
+              <div className="metric-label">{data.product === "colleague_experience" ? "eNPS" : "NPS"}</div>
               <div className="metric-val">{data.metrics.npsScore !== null ? data.metrics.npsScore : "—"}</div>
             </div>
           </div>
@@ -175,6 +184,58 @@ export default function ReportsClient() {
               )}
             </tbody>
           </table>
+
+          {data.colleagueExperience && (
+            <>
+              <div className="section-title" style={{ marginTop: 24 }}>Colleague Experience</div>
+              <div className="grid grid-3" style={{ marginBottom: 20 }}>
+                <div className="card">
+                  <div className="metric-label">Responses</div>
+                  <div className="metric-val">{data.colleagueExperience.metrics.responseCount}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">Star average</div>
+                  <div className="metric-val">
+                    {data.colleagueExperience.metrics.starAverage !== null ? `${data.colleagueExperience.metrics.starAverage}/5` : "—"}
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">eNPS</div>
+                  <div className="metric-val">
+                    {data.colleagueExperience.metrics.npsScore !== null ? data.colleagueExperience.metrics.npsScore : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="card" style={{ marginBottom: 20, maxWidth: 240 }}>
+                <div className="metric-label">Cases resolved</div>
+                <div className="metric-val">{data.colleagueExperience.casesResolved}</div>
+              </div>
+              <div className="section-title">By category</div>
+              <table className="clean">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Average</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.colleagueExperience.categoryBreakdown.map((c) => (
+                    <tr key={c.categoryId}>
+                      <td>{c.name}</td>
+                      <td>{c.average}/5</td>
+                    </tr>
+                  ))}
+                  {data.colleagueExperience.categoryBreakdown.length === 0 && (
+                    <tr>
+                      <td colSpan={2} className="subtitle">
+                        No category data for this period.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
         </>
       )}
     </div>

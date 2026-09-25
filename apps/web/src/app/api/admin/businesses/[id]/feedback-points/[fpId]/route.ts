@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { connectToDatabase, FeedbackPoint, Event, FORM_LAYOUTS, DEMOGRAPHIC_MODES } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  FeedbackPoint,
+  Event,
+  FORM_LAYOUTS,
+  DEMOGRAPHIC_MODES,
+  LIFECYCLE_STAGES,
+  DISTRIBUTION_MODES,
+  PULSE_CADENCES,
+} from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const DEMOGRAPHIC_MODE_SET: readonly string[] = DEMOGRAPHIC_MODES;
@@ -21,6 +30,22 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!feedbackPoint) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => null);
+  // Colleague Experience fields — only meaningful for a point already
+  // created as colleague_experience; product itself is fixed at creation
+  // (changing it after responses/tokens exist would orphan them), so it's
+  // deliberately not editable here.
+  if (feedbackPoint.product === "colleague_experience") {
+    if (body?.lifecycleTrigger === null || (LIFECYCLE_STAGES as readonly string[]).includes(body?.lifecycleTrigger)) {
+      feedbackPoint.lifecycleTrigger = body.lifecycleTrigger;
+    }
+    if (body?.distributionMode === null || (DISTRIBUTION_MODES as readonly string[]).includes(body?.distributionMode)) {
+      feedbackPoint.distributionMode = body.distributionMode;
+    }
+    if (body?.pulseCadence === null || (PULSE_CADENCES as readonly string[]).includes(body?.pulseCadence)) {
+      feedbackPoint.pulseCadence = body.pulseCadence;
+    }
+  }
+
   if (typeof body?.name === "string") feedbackPoint.name = body.name;
   if (typeof body?.description === "string") feedbackPoint.description = body.description;
   if (typeof body?.active === "boolean") feedbackPoint.active = body.active;

@@ -24,6 +24,7 @@ interface RunHistoryRow {
 interface PlaybookRow {
   _id: string;
   title: string;
+  product?: "customer_experience" | "colleague_experience";
   categoryId: string | null;
   triggerCondition: string;
   triggerMetric: TriggerMetric | null;
@@ -59,6 +60,7 @@ function categoryIcon(name: string | undefined): string {
 interface CategoryRow {
   _id: string;
   name: string;
+  product?: "customer_experience" | "colleague_experience";
 }
 interface TeamRow {
   userId: string;
@@ -98,6 +100,9 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
   const [historyFor, setHistoryFor] = useState<string | null>(null);
   const [historyById, setHistoryById] = useState<Record<string, RunHistoryRow[]>>({});
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   function load() {
     setLoading(true);
@@ -109,12 +114,22 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
       setPlaybooks(playbooksData.playbooks ?? []);
       setCategories(categoryData.categories ?? []);
       setTeam(teamData.team ?? []);
+      if (playbooksData.product === "customer_experience" || playbooksData.product === "colleague_experience") {
+        setProduct(playbooksData.product);
+      }
       setLoading(false);
     });
   }
 
   useEffect(() => {
     load();
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
+      });
   }, []);
 
   async function createPlaybook() {
@@ -126,6 +141,7 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title,
+        product,
         categoryId: categoryId || null,
         triggerCondition,
         steps: steps.split("\n").map((s) => s.trim()).filter(Boolean),
@@ -261,11 +277,13 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
             <label>Applies to category</label>
             <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
               <option value="">None</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
+              {categories
+                .filter((c) => (c.product ?? "customer_experience") === product)
+                .map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
             </select>
           </div>
           <div className="field">
@@ -276,6 +294,15 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
               placeholder="e.g. 3+ mentions in 2 weeks"
             />
           </div>
+          {cxEnabled && ceEnabled && (
+            <div className="field">
+              <label>Product</label>
+              <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
+                <option value="customer_experience">Customer Experience</option>
+                <option value="colleague_experience">Colleague Experience</option>
+              </select>
+            </div>
+          )}
         </div>
         <div className="field">
           <label>Steps (one per line)</label>
@@ -426,9 +453,14 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
                     </div>
                     <div className="ab-title-block">
                       <div className="ab-badges">
+                        {cxEnabled && ceEnabled && (
+                          <span className={`pill ${p.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                            {p.product === "colleague_experience" ? "Colleague" : "Customer"}
+                          </span>
+                        )}
                         {categoryName(p.categoryId) && <span className="pill pill-gray">{categoryName(p.categoryId)}</span>}
                         <span className="pill pill-purple">
-                          {p.usageCount} use{p.usageCount === 1 ? "" : "s"}
+                          {p.usageCount} completed all-time
                         </span>
                         {p.triggerStatus && (
                           <span className={`pill ${p.triggerStatus.isTriggered ? "pill-red" : "pill-green"}`}>

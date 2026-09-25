@@ -10,6 +10,7 @@ interface EntryRow {
   _id: string;
   title: string;
   trigger: string;
+  product?: "customer_experience" | "colleague_experience";
   status: string;
   implementationDate: string | null;
   outcomeMetricDescription: string;
@@ -23,6 +24,7 @@ interface EntryRow {
 interface CategoryOption {
   _id: string;
   name: string;
+  product?: "customer_experience" | "colleague_experience";
 }
 
 interface TeamRow {
@@ -95,6 +97,9 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
   const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
+  const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   function load() {
     setLoading(true);
@@ -103,6 +108,12 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
       .then((data) => {
         setEntries(data.entries ?? []);
         setReadOnly(!!data.readOnly);
+        // The GET route already resolves the account's currently-active
+        // product tab server-side — read it from here instead of guessing
+        // independently, so a new entry lands on whichever tab is open.
+        if (data.product === "customer_experience" || data.product === "colleague_experience") {
+          setProduct(data.product);
+        }
       })
       .finally(() => setLoading(false));
   }
@@ -115,6 +126,13 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     fetch("/api/business/team")
       .then((res) => res.json())
       .then((d) => setTeam(d.team ?? []));
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
+      });
   }, []);
 
   // Pre-fill the "New entry" form when arriving from Case Management's
@@ -145,6 +163,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
         implementationDate: implementationDate || null,
         outcomeMetricDescription,
         linkedActionIds: linkedCaseId ? [linkedCaseId] : [],
+        product,
       }),
     });
     const data = await res.json();
@@ -303,6 +322,15 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                 ))}
               </select>
             </div>
+            {cxEnabled && ceEnabled && (
+              <div className="field">
+                <label>Product</label>
+                <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
+                  <option value="customer_experience">Customer Experience</option>
+                  <option value="colleague_experience">Colleague Experience</option>
+                </select>
+              </div>
+            )}
           </div>
           <div className="field">
             <label>
@@ -383,6 +411,11 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                     <div className="ab-card-head">
                       <div className="ab-title-block">
                         <div className="ab-badges">
+                          {cxEnabled && ceEnabled && (
+                            <span className={`pill ${e.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                              {e.product === "colleague_experience" ? "Colleague" : "Customer"}
+                            </span>
+                          )}
                           <span className={`pill ${e.status === "implemented" ? "pill-green" : e.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
                             {STATUS_LABELS[e.status] ?? e.status}
                           </span>

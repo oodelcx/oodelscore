@@ -7,6 +7,7 @@ interface InitiativeRow {
   _id: string;
   title: string;
   description: string;
+  product?: "customer_experience" | "colleague_experience";
   status: string;
   ownerId: string | null;
   affectedBusinessIds: string[];
@@ -82,6 +83,9 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
 
   const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
   const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
+  const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   function load() {
     setLoading(true);
@@ -95,6 +99,13 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
       setBusinesses(businessesData.businesses ?? []);
       setTeam(teamData.team ?? []);
       setActions((actionsData.items ?? []).map((i: { _id: string; title: string }) => ({ _id: i._id, title: i.title })));
+      // /api/group/improvement-initiatives already resolves the account's
+      // currently-active product tab server-side — read it from here
+      // rather than guessing independently, so a new initiative created
+      // from this form lands on whichever tab is actually open.
+      if (initiativesData.product === "customer_experience" || initiativesData.product === "colleague_experience") {
+        setProduct(initiativesData.product);
+      }
       setLoading(false);
     });
   }
@@ -124,6 +135,13 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
   useEffect(() => {
     load();
     loadFlags();
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
+      });
   }, []);
 
   function toggleAffected(id: string) {
@@ -149,6 +167,7 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
         baselineMetricDescription,
         baselineValue: baselineValue.trim() ? Number(baselineValue) : null,
         targetValue: targetValue.trim() ? Number(targetValue) : null,
+        product,
       }),
     });
     const data = await res.json();
@@ -286,6 +305,15 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
                 ))}
               </select>
             </div>
+            {cxEnabled && ceEnabled && (
+              <div className="field">
+                <label>Product</label>
+                <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
+                  <option value="customer_experience">Customer Experience</option>
+                  <option value="colleague_experience">Colleague Experience</option>
+                </select>
+              </div>
+            )}
           </div>
           <div className="field">
             <label>What's the pattern?</label>
@@ -399,6 +427,11 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
                   <div className="ab-card-head">
                     <div className="ab-title-block">
                       <div className="ab-badges">
+                        {cxEnabled && ceEnabled && (
+                          <span className={`pill ${row.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                            {row.product === "colleague_experience" ? "Colleague" : "Customer"}
+                          </span>
+                        )}
                         <span
                           className={`pill ${row.status === "completed" ? "pill-green" : row.status === "in_progress" ? "pill-amber" : "pill-gray"}`}
                         >

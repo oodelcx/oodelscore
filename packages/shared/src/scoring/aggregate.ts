@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { Response } from "../models/Response";
 import { Category } from "../models/Category";
+import type { Product } from "../models/products";
 
 /**
  * Spec Section 2 / bug #1: star (1-5) and NPS (0-10) answers must never be
@@ -16,10 +17,12 @@ export interface BusinessMetrics {
 export async function computeBusinessMetrics(
   businessId: Types.ObjectId | string,
   from: Date,
-  to: Date
+  to: Date,
+  product: Product = "customer_experience"
 ): Promise<BusinessMetrics> {
   const responses = await Response.find({
     businessId,
+    product,
     submittedAt: { $gte: from, $lte: to },
   }).lean();
 
@@ -69,10 +72,11 @@ export interface CategoryBreakdownEntry {
 export async function computeBusinessCategoryBreakdown(
   businessId: Types.ObjectId | string,
   from: Date,
-  to: Date
+  to: Date,
+  product: Product = "customer_experience"
 ): Promise<CategoryBreakdownEntry[]> {
   const [responses, categories] = await Promise.all([
-    Response.find({ businessId, submittedAt: { $gte: from, $lte: to } }).select("answers").lean(),
+    Response.find({ businessId, product, submittedAt: { $gte: from, $lte: to } }).select("answers").lean(),
     Category.find(),
   ]);
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));

@@ -22,15 +22,19 @@ interface GoalRow {
 interface CategoryOption {
   _id: string;
   name: string;
+  product?: "customer_experience" | "colleague_experience";
 }
 
-const METRIC_LABELS: Record<GoalMetric, string> = {
-  starAverage: "Overall score (stars)",
-  nps: "NPS",
-  categoryAverage: "Category score",
-  cxPulseLevel: "CX Pulse level",
-  overdueActionsCount: "Overdue action items",
-};
+function metricLabels(product: "customer_experience" | "colleague_experience"): Record<GoalMetric, string> {
+  const isCe = product === "colleague_experience";
+  return {
+    starAverage: "Overall score (stars)",
+    nps: isCe ? "eNPS" : "NPS",
+    categoryAverage: "Category score",
+    cxPulseLevel: isCe ? "CX Pulse level" : "CX Pulse level",
+    overdueActionsCount: "Overdue action items",
+  };
+}
 
 function formatValue(metric: GoalMetric, value: number | null): string {
   if (value === null) return "—";
@@ -40,7 +44,18 @@ function formatValue(metric: GoalMetric, value: number | null): string {
 }
 
 /** Shared by Business and Group — "give management something to work toward," tracked against the same computed metrics everything else uses. */
-export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; categoriesApiPath: string }) {
+export function CxGoalsCard({
+  apiPath,
+  categoriesApiPath,
+  product = "customer_experience",
+  title,
+}: {
+  apiPath: string;
+  categoriesApiPath: string;
+  product?: "customer_experience" | "colleague_experience";
+  title?: string;
+}) {
+  const METRIC_LABELS = metricLabels(product);
   const [goals, setGoals] = useState<GoalRow[] | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -60,7 +75,7 @@ export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; c
   const [editSaving, setEditSaving] = useState(false);
 
   function load() {
-    fetch(apiPath)
+    fetch(`${apiPath}?product=${product}`)
       .then((res) => res.json())
       .then((d) => setGoals(d.goals ?? []));
   }
@@ -69,7 +84,15 @@ export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; c
     load();
     fetch(categoriesApiPath)
       .then((res) => res.json())
-      .then((d) => setCategories(d.categories ?? []));
+      .then((d) => {
+        const all: CategoryOption[] = d.categories ?? [];
+        // Category docs carry their own product field — filter client-side
+        // so a Colleague Experience goal's category dropdown doesn't offer
+        // Customer Experience categories (and vice versa). A category
+        // without a product field (pre-CE data) defaults to Customer
+        // Experience, same as everywhere else this rule applies.
+        setCategories(all.filter((c) => (c.product ?? "customer_experience") === product));
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -83,6 +106,7 @@ export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; c
       body: JSON.stringify({
         label: label.trim(),
         metric,
+        product,
         categoryId: metric === "categoryAverage" ? categoryId : undefined,
         targetValue: Number(targetValue),
         targetDate,
@@ -144,7 +168,7 @@ export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; c
     <div className="card">
       <div className="page-head" style={{ marginBottom: 10 }}>
         <div>
-          <h3 style={{ margin: 0 }}>CX Goals</h3>
+          <h3 style={{ margin: 0 }}>{title ?? (product === "colleague_experience" ? "CX Goals" : "CX Goals")}</h3>
           <p className="card-sub" style={{ margin: 0 }}>
             Targets for management to work toward, tracked automatically.
           </p>
@@ -281,7 +305,7 @@ export function CxGoalsCard({ apiPath, categoriesApiPath }: { apiPath: string; c
                 <div className="subtitle">
                   {g.progressPercent === null
                     ? "Not enough data yet"
-                    : `${g.progressPercent}% of the way there · ${g.daysRemaining >= 0 ? `${g.daysRemaining} days left` : "past target date"}`}
+                    : `${Math.max(0, Math.min(100, Math.round(g.progressPercent)))}% of the way there · ${g.daysRemaining >= 0 ? `${g.daysRemaining} days left` : "past target date"}`}
                 </div>
               </>
             )}

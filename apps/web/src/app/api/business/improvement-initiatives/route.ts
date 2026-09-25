@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ImprovementInitiative , hasFeature } from "@oodelscore/shared";
+import { connectToDatabase, ImprovementInitiative, hasFeature, PRODUCTS, type Product } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 // Mirrors /api/group/improvement-initiatives, scoped to a standalone
 // business — same authorship split as Decision Log/Playbooks: a branch
@@ -14,15 +17,16 @@ export async function GET() {
   }
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
 
   const isBranch = !!session.business.parentOrgId;
   const initiatives = await ImprovementInitiative.find(
     isBranch
-      ? { parentOrgId: session.business.parentOrgId, affectedBusinessIds: session.business._id }
-      : { businessId: session.business._id }
+      ? { parentOrgId: session.business.parentOrgId, affectedBusinessIds: session.business._id, product }
+      : { businessId: session.business._id, product }
   ).sort({ createdAt: -1 });
 
-  return NextResponse.json({ status: "ok", initiatives, readOnly: isBranch });
+  return NextResponse.json({ status: "ok", product, initiatives, readOnly: isBranch });
 }
 
 export async function POST(request: Request) {
@@ -44,8 +48,11 @@ export async function POST(request: Request) {
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!title) return NextResponse.json({ status: "error", message: "title is required" }, { status: 400 });
 
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
+
   const initiative = await ImprovementInitiative.create({
     businessId: session.business._id,
+    product,
     title,
     description: typeof body?.description === "string" ? body.description : "",
     affectedBusinessIds: [session.business._id],

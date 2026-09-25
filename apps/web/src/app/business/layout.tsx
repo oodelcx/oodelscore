@@ -10,6 +10,8 @@ import {
   PLATFORM_SETTINGS_SINGLETON_KEY,
   getBillingAccessStatus,
   hasFeature,
+  hasProduct,
+  primaryProductFor,
   teamMemberCanAccess,
 } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
@@ -18,6 +20,10 @@ import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { TourLauncher } from "@/components/tour/tour-launcher";
 import { NavSection } from "@/components/nav-section";
+import { ProductViewSwitcher } from "@/components/product-view-switcher";
+import { resolveViewProduct } from "@/lib/viewProduct";
+import { AccessDenied } from "@/components/access-denied";
+import { isAccessDenied, BUSINESS_ACCESS_CONFIG } from "@/lib/routeAccess";
 import "../admin/admin.css";
 import "./business.css";
 
@@ -59,6 +65,12 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const pathname = (await headers()).get("x-pathname") ?? "";
   const isBillingRoute = pathname.startsWith("/business/billing");
   const isGated = billingStatus !== "active" && !isBillingRoute;
+  const bothProductsEnabled = hasProduct(business, "customer_experience") && hasProduct(business, "colleague_experience");
+  const viewProduct = bothProductsEnabled ? await resolveViewProduct(business) : null;
+  // See group/layout.tsx for the same reasoning: "CX Pulse" is one nav
+  // entry that points at whichever product's maturity page you're viewing,
+  // never two identically-labeled entries at once.
+  const cxPulseNavProduct = viewProduct ?? primaryProductFor(business);
 
   return (
     <div className="admin-app">
@@ -70,6 +82,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
           <div className="admin-sidebar-top">
             <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
             <div className="admin-brand-sub">BUSINESS PORTAL</div>
+            {viewProduct && <ProductViewSwitcher current={viewProduct} />}
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
@@ -84,10 +97,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-setup"
                 label="Setup"
-                hrefs={["/business/feedback-points", "/business/category-owners"]}
+                hrefs={["/business/feedback-points", "/business/category-owners", "/business/roster"]}
               >
                 {teamMemberCanAccess(user, "feedbackPoints") && <a href="/business/feedback-points">Feedback Points</a>}
                 {!isBusinessTeamMember && <a href="/business/category-owners">Category Owners</a>}
+                {hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "colleagueRoster") && (
+                  <a href="/business/roster">Roster</a>
+                )}
               </NavSection>
 
               <NavSection storageKey="business-listen" label="Listen" hrefs={["/business/responses"]}>
@@ -97,20 +113,23 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-understand"
                 label="Understand"
-                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/reports"]}
+                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/alerts", "/business/reports"]}
               >
-                {hasFeature(business.enabledFeatures, "insights") && teamMemberCanAccess(user, "insights") && (
-                  <a href="/business/insights">Insights</a>
-                )}
-                {hasFeature(business.enabledFeatures, "analytics") && teamMemberCanAccess(user, "analytics") && (
-                  <a href="/business/analytics">Analytics</a>
-                )}
+                {hasProduct(business, "customer_experience") &&
+                  hasFeature(business.enabledFeatures, "insights") &&
+                  teamMemberCanAccess(user, "insights") && <a href="/business/insights">Insights</a>}
+                {hasProduct(business, "customer_experience") &&
+                  hasFeature(business.enabledFeatures, "analytics") &&
+                  teamMemberCanAccess(user, "analytics") && <a href="/business/analytics">Analytics</a>}
                 {hasFeature(business.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
                   <a href="/business/alert-rules">Alert Rules</a>
                 )}
-                {hasFeature(business.enabledFeatures, "reports") && teamMemberCanAccess(user, "reports") && (
-                  <a href="/business/reports">Reports</a>
+                {hasFeature(business.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alerts") && (
+                  <a href="/business/alerts">Alerts</a>
                 )}
+                {hasProduct(business, "customer_experience") &&
+                  hasFeature(business.enabledFeatures, "reports") &&
+                  teamMemberCanAccess(user, "reports") && <a href="/business/reports">Reports</a>}
               </NavSection>
 
               <NavSection
@@ -128,11 +147,30 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 )}
               </NavSection>
 
-              {hasFeature(business.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse") && (
-                <NavSection storageKey="business-measure" label="Measure" defaultOpen={false} hrefs={["/business/cx-pulse"]}>
-                  <a href="/business/cx-pulse">CX Pulse</a>
-                </NavSection>
-              )}
+              {(() => {
+                const showCxPulse =
+                  cxPulseNavProduct === "customer_experience"
+                    ? hasProduct(business, "customer_experience") && hasFeature(business.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse")
+                    : hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "exPulse");
+                const cxPulseHref = cxPulseNavProduct === "customer_experience" ? "/business/cx-pulse" : "/business/ex-pulse";
+                const cxPulseNavLabel = cxPulseNavProduct === "customer_experience" ? "CX Pulse" : "Colleague Pulse";
+                // A branch's CX↔EX correlation lives on its parent org's
+                // Group portal, not here — see api/business/cx-ex-correlation
+                // for the same split already used for Decision Log.
+                const showCorrelation = bothProductsEnabled && !isBranch && teamMemberCanAccess(user, "cxExCorrelation");
+                if (!showCxPulse && !showCorrelation) return null;
+                return (
+                  <NavSection
+                    storageKey="business-measure"
+                    label="Measure"
+                    defaultOpen={false}
+                    hrefs={[cxPulseHref, "/business/cx-ex-correlation"]}
+                  >
+                    {showCxPulse && <a href={cxPulseHref}>{cxPulseNavLabel}</a>}
+                    {showCorrelation && <a href="/business/cx-ex-correlation">CX ↔ EX Correlation</a>}
+                  </NavSection>
+                );
+              })()}
 
               <NavSection
                 storageKey="business-admin"
@@ -176,13 +214,15 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             billingHref="/business/billing"
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
           />
+        ) : isAccessDenied(pathname, user, isBusinessTeamMember, isLimitedTeamMember, BUSINESS_ACCESS_CONFIG) ? (
+          <AccessDenied />
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />
-            {children}
+            <div key={viewProduct ?? "single-product"}>{children}</div>
           </TourProvider>
         ) : (
-          children
+          <div key={viewProduct ?? "single-product"}>{children}</div>
         )}
       </main>
     </div>

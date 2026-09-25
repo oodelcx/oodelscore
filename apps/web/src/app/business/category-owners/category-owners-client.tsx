@@ -30,6 +30,9 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
   // immediately fire a save.
   const [repeatDrafts, setRepeatDrafts] = useState<Record<string, { count: string; days: string }>>({});
   const [savingRepeatFor, setSavingRepeatFor] = useState<string | null>(null);
+  const [ceEnabled, setCeEnabled] = useState(false);
+  const [sensitiveRoutingContactId, setSensitiveRoutingContactId] = useState("");
+  const [savingSensitiveContact, setSavingSensitiveContact] = useState(false);
 
   function load() {
     setLoading(true);
@@ -52,11 +55,24 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
       setRepeatDrafts(drafts);
       setTeam(teamData.team ?? []);
       setIsBranch(!!meData.business?.parentOrgId);
+      setCeEnabled(!!data.ceEnabled);
+      setSensitiveRoutingContactId(data.sensitiveRoutingContactId ?? "");
       setLoading(false);
     });
   }
 
   useEffect(load, []);
+
+  async function saveSensitiveRoutingContact(value: string) {
+    setSensitiveRoutingContactId(value);
+    setSavingSensitiveContact(true);
+    await fetch("/api/business/category-owners", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sensitiveRoutingContactId: value || null }),
+    });
+    setSavingSensitiveContact(false);
+  }
 
   async function setOwner(categoryId: string, defaultOwnerId: string) {
     setSavingCategoryId(categoryId);
@@ -120,6 +136,31 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
         &quot;Flag as recurring after&quot; watches this business&rsquo;s own cases only — e.g. 5 times in 30 days.
         Leave blank to turn detection off for that category.
       </div>
+
+      {ceEnabled && (
+        <div className="callout" style={{ marginBottom: 20 }}>
+          <h3 style={{ marginTop: 0 }}>Sensitive category routing</h3>
+          <p className="subtitle" style={{ marginTop: 0 }}>
+            A Colleague Experience category marked &quot;Sensitive&quot; (HR/leadership complaints) never goes to that
+            category&rsquo;s normal owner — it goes here instead, so a complaint about HR never lands with HR.
+          </p>
+          <div className="field" style={{ maxWidth: 320 }}>
+            <label>Sensitive-category contact</label>
+            <select
+              value={sensitiveRoutingContactId}
+              onChange={(e) => saveSensitiveRoutingContact(e.target.value)}
+              disabled={savingSensitiveContact}
+            >
+              <option value="">Not set</option>
+              {team.map((t) => (
+                <option key={t.userId} value={t.userId}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (

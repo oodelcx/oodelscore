@@ -14,14 +14,23 @@ export async function GET() {
   if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const members = await User.find({ accountType: "team_member", teamOfType: "parentOrg", parentId: session.org._id }).sort({
+  const teamMembers = await User.find({ accountType: "team_member", teamOfType: "parentOrg", parentId: session.org._id }).sort({
     createdAt: 1,
   });
+
+  // The org's own primary login has an account here too — without it,
+  // this list silently omits the one person other pages (e.g. the "Group
+  // admin" row on /api/group/team) already show as an assignable owner,
+  // which reads as if that account doesn't exist.
+  const members = [
+    { _id: session.user._id, email: session.user.email, teamRole: "Owner", tier: "full" as const, inviteStatus: session.user.inviteStatus },
+    ...teamMembers,
+  ];
 
   return NextResponse.json({
     status: "ok",
     members,
     seatLimit: session.org.teamMemberSeatLimit,
-    activeCount: members.filter((m) => m.inviteStatus !== "invite_expired").length,
+    activeCount: teamMembers.filter((m) => m.inviteStatus !== "invite_expired").length,
   });
 }

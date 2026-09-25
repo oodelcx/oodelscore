@@ -155,6 +155,9 @@ interface FormState {
   pricingAmount: string;
   pricingCurrency: string;
   pricingInterval: string;
+  cePricingAmount: string;
+  cePricingCurrency: string;
+  cePricingInterval: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -175,6 +178,9 @@ const EMPTY_FORM: FormState = {
   pricingAmount: "",
   pricingCurrency: "usd",
   pricingInterval: "",
+  cePricingAmount: "",
+  cePricingCurrency: "usd",
+  cePricingInterval: "",
 };
 
 const PRICING_INTERVAL_LABELS: Record<string, string> = {
@@ -225,6 +231,9 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [priceSaveMessage, setPriceSaveMessage] = useState<string | null>(null);
   const [checkoutEnabled, setCheckoutEnabled] = useState(false);
+  const [enabledProducts, setEnabledProducts] = useState<string[]>(["customer_experience"]);
+  const [productsBusy, setProductsBusy] = useState(false);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [editingCompPeriod, setEditingCompPeriod] = useState(false);
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
@@ -261,6 +270,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     teamRole: string;
     tier: "full" | "limited";
     restrictedPages: string[];
+    products: string[] | null;
     inviteStatus: string;
   }
   const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
@@ -276,6 +286,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   const [teamEditRole, setTeamEditRole] = useState("");
   const [teamEditTier, setTeamEditTier] = useState<"full" | "limited">("full");
   const [teamEditRestrictedPages, setTeamEditRestrictedPages] = useState<string[]>([]);
+  const [teamEditHasCE, setTeamEditHasCE] = useState(false);
 
   function toggleRestrictedPage(list: string[], key: string): string[] {
     return list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
@@ -329,13 +340,15 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     setTeamEditRole(m.teamRole);
     setTeamEditTier(m.tier);
     setTeamEditRestrictedPages(m.restrictedPages ?? []);
+    setTeamEditHasCE(!!m.products?.includes("colleague_experience"));
   }
 
   async function saveTeamEdit(memberId: string) {
+    const products = teamEditHasCE ? ["customer_experience", "colleague_experience"] : ["customer_experience"];
     const res = await fetch(`/api/admin/parent-orgs/${params.id}/team-members/${memberId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamRole: teamEditRole, tier: teamEditTier, restrictedPages: teamEditRestrictedPages }),
+      body: JSON.stringify({ teamRole: teamEditRole, tier: teamEditTier, restrictedPages: teamEditRestrictedPages, products }),
     });
     if (res.ok) {
       setTeamEditingId(null);
@@ -423,6 +436,9 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
           pricingAmount: o.pricingTerms?.amount != null ? String(o.pricingTerms.amount) : "",
           pricingCurrency: o.pricingTerms?.currency ?? "usd",
           pricingInterval: o.pricingTerms?.interval ?? "",
+          cePricingAmount: o.cePricingTerms?.amount != null ? String(o.cePricingTerms.amount) : "",
+          cePricingCurrency: o.cePricingTerms?.currency ?? "usd",
+          cePricingInterval: o.cePricingTerms?.interval ?? "",
           ragThresholds: o.ragThresholds
             ? {
                 starGreenMin: String(o.ragThresholds.starGreenMin),
@@ -434,6 +450,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         });
         setBusinesses(d.businesses ?? []);
         setCheckoutEnabled(!!o.checkoutEnabled);
+        setEnabledProducts(o.enabledProducts?.length ? o.enabledProducts : ["customer_experience"]);
         setEscalationLevels(o.escalationLevels?.length ? o.escalationLevels : [{ level: 1, label: "Owner" }]);
         setEscalationSlaHours(o.escalationSlaHours != null ? String(o.escalationSlaHours) : "");
         setEnabledFeatures(o.enabledFeatures ?? ALL_FEATURE_KEYS);
@@ -552,17 +569,19 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     window.location.href = data.url;
   }
 
-  async function savePriceAndPush() {
+  async function savePriceAndPush(product: "customer_experience" | "colleague_experience" = "customer_experience") {
     setBillingBusy(true);
     setBillingError(null);
     setPriceSaveMessage(null);
+    const isCe = product === "colleague_experience";
     const res = await fetch(`/api/admin/parent-orgs/${params.id}/billing/save-price`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        amount: form.pricingAmount.trim() ? Number(form.pricingAmount) : null,
-        currency: form.pricingCurrency || "usd",
-        interval: form.pricingInterval || null,
+        product,
+        amount: (isCe ? form.cePricingAmount : form.pricingAmount).trim() ? Number(isCe ? form.cePricingAmount : form.pricingAmount) : null,
+        currency: (isCe ? form.cePricingCurrency : form.pricingCurrency) || "usd",
+        interval: (isCe ? form.cePricingInterval : form.pricingInterval) || null,
       }),
     });
     const data = await res.json().catch(() => null);
@@ -590,6 +609,30 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       return;
     }
     setCheckoutEnabled(next);
+  }
+
+  async function toggleProduct(product: "customer_experience" | "colleague_experience") {
+    setProductsBusy(true);
+    setProductsError(null);
+    const has = enabledProducts.includes(product);
+    if (has && enabledProducts.length === 1) {
+      setProductsBusy(false);
+      setProductsError("An organization needs at least one product enabled.");
+      return;
+    }
+    const next = has ? enabledProducts.filter((p) => p !== product) : [...enabledProducts, product];
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabledProducts: next }),
+    });
+    const data = await res.json().catch(() => null);
+    setProductsBusy(false);
+    if (!res.ok) {
+      setProductsError(data?.message ?? "Failed to update product access");
+      return;
+    }
+    setEnabledProducts(next);
   }
 
   function startMarkComp() {
@@ -693,6 +736,11 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         currency: form.pricingCurrency || "usd",
         interval: form.pricingInterval || null,
       },
+      cePricingTerms: {
+        amount: form.cePricingAmount.trim() ? Number(form.cePricingAmount) : null,
+        currency: form.cePricingCurrency || "usd",
+        interval: form.cePricingInterval || null,
+      },
       ...(isNew && form.compEnabled
         ? { compPeriod: form.compPeriod, compCustomExpiresAt: form.compCustomExpiresAt || undefined }
         : {}),
@@ -792,6 +840,12 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   }
 
   if (loading) return <p className="subtitle">Loading…</p>;
+
+  // Checkout covers whichever enabled products have a price set — at least
+  // one is enough to start it, not necessarily Customer Experience.
+  const hasAnyPriceSet =
+    (!!form.pricingAmount && !!form.pricingInterval) ||
+    (enabledProducts.includes("colleague_experience") && !!form.cePricingAmount && !!form.cePricingInterval);
 
   return (
     <div>
@@ -1183,10 +1237,58 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
             <p className="card-sub" style={{ margin: "0 0 4px" }}>Saved when you create the organization.</p>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={savePriceAndPush}>
+              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={() => savePriceAndPush("customer_experience")}>
                 {billingBusy ? "Saving…" : "Save & push to Stripe"}
               </button>
               {priceSaveMessage && <span className="card-sub" style={{ margin: 0 }}>{priceSaveMessage}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "address" && enabledProducts.includes("colleague_experience") && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
+          <h3 style={{ margin: 0 }}>Pricing — Colleague Experience</h3>
+          <p className="card-sub" style={{ margin: "4px 0 0" }}>
+            Charged as a separate line item alongside Customer Experience, if both are enabled.
+          </p>
+          <div className="field-row" style={{ marginTop: 14 }}>
+            <div className="field">
+              <label>Amount</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 29.00"
+                value={form.cePricingAmount}
+                onChange={(e) => setForm((f) => ({ ...f, cePricingAmount: e.target.value }))}
+              />
+            </div>
+            <div className="field">
+              <label>Currency</label>
+              <select value={form.cePricingCurrency} onChange={(e) => setForm((f) => ({ ...f, cePricingCurrency: e.target.value }))}>
+                <option value="usd">USD</option>
+                <option value="eur">EUR</option>
+                <option value="gbp">GBP</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Billing</label>
+              <select value={form.cePricingInterval} onChange={(e) => setForm((f) => ({ ...f, cePricingInterval: e.target.value }))}>
+                <option value="">Not set</option>
+                <option value="monthly">Monthly</option>
+                <option value="annual_monthly_rate">Annual commitment, billed monthly</option>
+                <option value="annual_lump_sum">Annual, one lump-sum payment</option>
+              </select>
+            </div>
+          </div>
+          {isNew ? (
+            <p className="card-sub" style={{ margin: "0 0 4px" }}>Saved when you create the organization.</p>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={() => savePriceAndPush("colleague_experience")}>
+                {billingBusy ? "Saving…" : "Save & push to Stripe"}
+              </button>
             </div>
           )}
         </div>
@@ -1251,10 +1353,10 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               {subscription.isComp && (
                 <button
                   className="btn btn-dark btn-sm"
-                  disabled={billingBusy || !form.pricingAmount || !form.pricingInterval}
+                  disabled={billingBusy || !hasAnyPriceSet}
                   onClick={startCheckout}
                   title={
-                    !form.pricingAmount || !form.pricingInterval
+                    !hasAnyPriceSet
                       ? "Set and save a price above first"
                       : "Converts this account off comp once payment completes"
                   }
@@ -1269,9 +1371,9 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               <div className="btn-group">
                 <button
                   className="btn btn-dark"
-                  disabled={billingBusy || !form.pricingAmount || !form.pricingInterval}
+                  disabled={billingBusy || !hasAnyPriceSet}
                   onClick={startCheckout}
-                  title={!form.pricingAmount || !form.pricingInterval ? "Set and save a price above first" : undefined}
+                  title={!hasAnyPriceSet ? "Set and save a price above first" : undefined}
                 >
                   Start checkout
                 </button>
@@ -1445,6 +1547,16 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                         </button>
                       </td>
                     </tr>
+                    {enabledProducts.includes("colleague_experience") && (
+                      <tr>
+                        <td colSpan={5} style={{ background: "var(--gray-50, #FAFAFA)" }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                            <input type="checkbox" checked={teamEditHasCE} onChange={() => setTeamEditHasCE((v) => !v)} />
+                            Colleague Experience access
+                          </label>
+                        </td>
+                      </tr>
+                    )}
                     {teamEditTier === "full" && (
                       <tr>
                         <td colSpan={5} style={{ background: "var(--gray-50, #FAFAFA)" }}>
@@ -1782,6 +1894,35 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : "Save"}
           </button>
+        </div>
+      )}
+
+      {tab === "command-center" && !isNew && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 20 }}>
+          <h3>Products (Admin-only)</h3>
+          <p className="card-sub">
+            Which product(s) this org has bought — independently toggleable, an org can run Customer Experience
+            only, Colleague Experience only, or both. Turning one on does not by itself grant any team member
+            access to it — that&apos;s set per person on the Team tab. An org must keep at least one product
+            enabled.
+          </p>
+          {productsError && <p className="error-text">{productsError}</p>}
+          <div className="row-flex" style={{ alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span className={`pill ${enabledProducts.includes("customer_experience") ? "pill-green" : "pill-gray"}`}>
+              Customer Experience: {enabledProducts.includes("customer_experience") ? "on" : "off"}
+            </span>
+            <button className="btn btn-sm" disabled={productsBusy} onClick={() => toggleProduct("customer_experience")}>
+              {productsBusy ? "Saving…" : enabledProducts.includes("customer_experience") ? "Turn off" : "Turn on"}
+            </button>
+          </div>
+          <div className="row-flex" style={{ alignItems: "center", gap: 10 }}>
+            <span className={`pill ${enabledProducts.includes("colleague_experience") ? "pill-green" : "pill-gray"}`}>
+              Colleague Experience: {enabledProducts.includes("colleague_experience") ? "on" : "off"}
+            </span>
+            <button className="btn btn-sm" disabled={productsBusy} onClick={() => toggleProduct("colleague_experience")}>
+              {productsBusy ? "Saving…" : enabledProducts.includes("colleague_experience") ? "Turn off" : "Turn on"}
+            </button>
+          </div>
         </div>
       )}
 

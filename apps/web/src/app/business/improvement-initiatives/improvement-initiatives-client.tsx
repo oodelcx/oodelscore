@@ -7,6 +7,7 @@ interface InitiativeRow {
   _id: string;
   title: string;
   description: string;
+  product?: "customer_experience" | "colleague_experience";
   status: string;
   ownerId: string | null;
   baselineMetricDescription: string;
@@ -20,6 +21,11 @@ interface InitiativeRow {
 interface TeamRow {
   userId: string;
   label: string;
+}
+
+interface CaseOption {
+  _id: string;
+  title: string;
 }
 
 interface RecurringFlagRow {
@@ -70,9 +76,16 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
   const [descriptionDraft, setDescriptionDraft] = useState("");
   const [baselineDraft, setBaselineDraft] = useState("");
   const [targetDraft, setTargetDraft] = useState("");
+  const [linkedCasesDraft, setLinkedCasesDraft] = useState<string[]>([]);
+
+  const [caseOptions, setCaseOptions] = useState<CaseOption[]>([]);
+  const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
 
   const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
   const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
+  const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   function loadFlags() {
     fetch("/api/business/recurring-issues")
@@ -103,6 +116,15 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
       .then((data) => {
         setInitiatives(data.initiatives ?? []);
         setReadOnly(!!data.readOnly);
+        // The GET route already resolves the account's currently-active
+        // product tab server-side (resolveViewProduct) — read it from here
+        // rather than guessing independently from enabledProducts, so a new
+        // initiative created from this form lands on whichever tab is
+        // actually open instead of silently defaulting to Customer
+        // Experience on a dual-product account.
+        if (data.product === "customer_experience" || data.product === "colleague_experience") {
+          setProduct(data.product);
+        }
       })
       .finally(() => setLoading(false));
   }
@@ -113,7 +135,24 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
     fetch("/api/business/team")
       .then((res) => res.json())
       .then((d) => setTeam(d.team ?? []));
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
+      });
+    // For linking a case at create/edit time — the same product-scoped
+    // Case Management list this account already sees.
+    fetch("/api/business/action-board")
+      .then((r) => r.json())
+      .then((d) => setCaseOptions((d.items ?? []).map((i: { _id: string; title: string }) => ({ _id: i._id, title: i.title }))))
+      .catch(() => setCaseOptions([]));
   }, []);
+
+  function toggleId(ids: string[], id: string): string[] {
+    return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+  }
 
   async function createInitiative() {
     if (!title.trim()) return;
@@ -129,6 +168,8 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
         baselineMetricDescription,
         baselineValue: baselineValue.trim() ? Number(baselineValue) : null,
         targetValue: targetValue.trim() ? Number(targetValue) : null,
+        product,
+        linkedActionIds: selectedCaseIds,
       }),
     });
     const data = await res.json();
@@ -143,6 +184,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
     setBaselineMetricDescription("");
     setBaselineValue("");
     setTargetValue("");
+    setSelectedCaseIds([]);
     setShowForm(false);
     load();
   }
@@ -168,6 +210,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
     setDescriptionDraft(row.description);
     setBaselineDraft(row.baselineValue !== null ? String(row.baselineValue) : "");
     setTargetDraft(row.targetValue !== null ? String(row.targetValue) : "");
+    setLinkedCasesDraft(row.linkedActionIds);
   }
 
   async function saveEdit(id: string) {
@@ -180,6 +223,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
         description: descriptionDraft,
         baselineValue: baselineDraft.trim() ? Number(baselineDraft) : undefined,
         targetValue: targetDraft.trim() ? Number(targetDraft) : undefined,
+        linkedActionIds: linkedCasesDraft,
       }),
     });
     setEditingId(null);
@@ -265,6 +309,15 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                 ))}
               </select>
             </div>
+            {cxEnabled && ceEnabled && (
+              <div className="field">
+                <label>Product</label>
+                <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
+                  <option value="customer_experience">Customer Experience</option>
+                  <option value="colleague_experience">Colleague Experience</option>
+                </select>
+              </div>
+            )}
           </div>
           <div className="field">
             <label>What's the pattern?</label>
@@ -292,6 +345,23 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
               <input type="number" step="0.1" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} />
             </div>
           </div>
+          {caseOptions.length > 0 && (
+            <div className="field">
+              <label>Link the cases that revealed this pattern</label>
+              <div style={{ maxHeight: 160, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 6, padding: 8 }}>
+                {caseOptions.map((c) => (
+                  <label key={c._id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", fontSize: 13.5 }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedCaseIds.includes(c._id)}
+                      onChange={() => setSelectedCaseIds((prev) => toggleId(prev, c._id))}
+                    />
+                    {c.title}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           {error && <p className="error-text">{error}</p>}
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn btn-dark" disabled={creating} onClick={createInitiative}>
@@ -344,6 +414,23 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                       <input type="number" step="0.1" value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} />
                     </div>
                   </div>
+                  {caseOptions.length > 0 && (
+                    <div className="field">
+                      <label>Linked cases</label>
+                      <div style={{ maxHeight: 160, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 6, padding: 8 }}>
+                        {caseOptions.map((c) => (
+                          <label key={c._id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", fontSize: 13.5 }}>
+                            <input
+                              type="checkbox"
+                              checked={linkedCasesDraft.includes(c._id)}
+                              onChange={() => setLinkedCasesDraft((prev) => toggleId(prev, c._id))}
+                            />
+                            {c.title}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <button className="btn btn-dark btn-sm" onClick={() => saveEdit(row._id)}>
                     Save
                   </button>{" "}
@@ -356,6 +443,11 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                   <div className="ab-card-head">
                     <div className="ab-title-block">
                       <div className="ab-badges">
+                        {cxEnabled && ceEnabled && (
+                          <span className={`pill ${row.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                            {row.product === "colleague_experience" ? "Colleague" : "Customer"}
+                          </span>
+                        )}
                         <span
                           className={`pill ${row.status === "completed" ? "pill-green" : row.status === "in_progress" ? "pill-amber" : "pill-gray"}`}
                         >

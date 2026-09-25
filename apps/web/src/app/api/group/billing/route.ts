@@ -56,5 +56,7 @@ export async function GET() {
     branches: branchRows,
     checkoutLinkAvailable,
     pricingTerms: session.org.pricingTerms,
+    cePricingTerms: session.org.cePricingTerms,
+    enabledProducts: session.org.enabledProducts,
   });
 }

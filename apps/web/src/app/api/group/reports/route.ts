@@ -8,8 +8,10 @@ import {
   groupByRegion,
   computeThemeIntelligence,
   hasFeature,
+  hasProduct,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 /**
  * The org-wide twin of the business report — per-region rollups plus the
@@ -33,27 +35,59 @@ export async function GET(req: Request) {
   }
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.org);
 
   const businesses = await Business.find({ parentOrgId: session.org._id, active: true }).select("_id");
   const businessIds = businesses.map((b) => b._id);
 
   const [summaries, themes, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
-    computeNetworkSummaries(session.org._id, from, to),
-    computeThemeIntelligence(businessIds, from, to, from, from),
-    ActionBoardItem.countDocuments({ parentOrgId: session.org._id, status: "resolved", resolvedAt: { $gte: from, $lte: to } }),
-    ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, status: "completed", completedAt: { $gte: from, $lte: to } }),
-    ActionBoardItem.countDocuments({ parentOrgId: session.org._id, customerNotifiedAt: { $gte: from, $lte: to } }),
+    computeNetworkSummaries(session.org._id, from, to, product),
+    // Theme intelligence is a CX-only AI feature — meaningless for a
+    // Colleague Experience-primary report.
+    product === "customer_experience" ? computeThemeIntelligence(businessIds, from, to, from, from) : Promise.resolve([]),
+    ActionBoardItem.countDocuments({
+      parentOrgId: session.org._id,
+      product,
+      status: "resolved",
+      resolvedAt: { $gte: from, $lte: to },
+    }),
+    ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, product, status: "completed", completedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({ parentOrgId: session.org._id, product, customerNotifiedAt: { $gte: from, $lte: to } }),
   ]);
 
   const regions = groupByRegion(summaries, new Set()).sort((a, b) => b.businessCount - a.businessCount);
 
+  // Colleague Experience has no theme-intelligence equivalent yet (CX-only
+  // AI feature) — its section is per-branch score summaries + resolved
+  // cases only, and only appears as a secondary section when the org has
+  // bought BOTH products (a CE-only org already gets CE as its primary
+  // section above, not a duplicate here).
+  let colleagueExperience: {
+    branches: Awaited<ReturnType<typeof computeNetworkSummaries>>;
+    casesResolved: number;
+  } | null = null;
+  if (product === "customer_experience" && hasProduct(session.org, "colleague_experience")) {
+    const [ceSummaries, ceCasesResolved] = await Promise.all([
+      computeNetworkSummaries(session.org._id, from, to, "colleague_experience"),
+      ActionBoardItem.countDocuments({
+        parentOrgId: session.org._id,
+        product: "colleague_experience",
+        status: "resolved",
+        resolvedAt: { $gte: from, $lte: to },
+      }),
+    ]);
+    colleagueExperience = { branches: ceSummaries, casesResolved: ceCasesResolved };
+  }
+
   return NextResponse.json({
     status: "ok",
+    product,
     orgName: session.org.name,
     period: { from: from.toISOString(), to: to.toISOString() },
     branches: summaries,
     regions,
     themes: themes.slice(0, 10),
     activity: { casesResolved, initiativesCompleted, customersRespondedTo },
+    colleagueExperience,
   });
 }

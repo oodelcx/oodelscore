@@ -5,8 +5,10 @@ import {
   ImprovementInitiative,
   computeBusinessMetrics,
   computeBusinessCategoryBreakdown,
+  hasProduct,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 function csvEscape(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
@@ -26,27 +28,35 @@ export async function GET(request: Request) {
   const from = fromParam ? new Date(fromParam) : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
 
   const [metrics, categoryBreakdown, casesResolved, initiativesCompleted, customersRespondedTo] = await Promise.all([
-    computeBusinessMetrics(session.business._id, from, to),
-    computeBusinessCategoryBreakdown(session.business._id, from, to),
-    ActionBoardItem.countDocuments({ businessId: session.business._id, status: "resolved", resolvedAt: { $gte: from, $lte: to } }),
+    computeBusinessMetrics(session.business._id, from, to, product),
+    computeBusinessCategoryBreakdown(session.business._id, from, to, product),
+    ActionBoardItem.countDocuments({
+      businessId: session.business._id,
+      product,
+      status: "resolved",
+      resolvedAt: { $gte: from, $lte: to },
+    }),
     ImprovementInitiative.countDocuments({
       $or: [{ businessId: session.business._id }, { affectedBusinessIds: session.business._id }],
+      product,
       status: "completed",
       completedAt: { $gte: from, $lte: to },
     }),
-    ActionBoardItem.countDocuments({ businessId: session.business._id, customerNotifiedAt: { $gte: from, $lte: to } }),
+    ActionBoardItem.countDocuments({ businessId: session.business._id, product, customerNotifiedAt: { $gte: from, $lte: to } }),
   ]);
 
   const rows: string[][] = [
     ["Report", session.business.name],
+    ["Product", product === "colleague_experience" ? "Colleague Experience" : "Customer Experience"],
     ["Period", `${from.toISOString().slice(0, 10)} to ${to.toISOString().slice(0, 10)}`],
     [],
     ["Metric", "Value"],
     ["Responses", String(metrics.responseCount)],
     ["Star average", metrics.starAverage !== null ? String(metrics.starAverage) : ""],
-    ["NPS score", metrics.npsScore !== null ? String(metrics.npsScore) : ""],
+    [product === "colleague_experience" ? "eNPS score" : "NPS score", metrics.npsScore !== null ? String(metrics.npsScore) : ""],
     ["Cases resolved", String(casesResolved)],
     ["Customers personally responded to", String(customersRespondedTo)],
     ["Improvement initiatives completed", String(initiativesCompleted)],
@@ -54,6 +64,30 @@ export async function GET(request: Request) {
     ["Category", "Average"],
     ...categoryBreakdown.map((c) => [c.name, String(c.average)]),
   ];
+
+  if (product === "customer_experience" && hasProduct(session.business, "colleague_experience")) {
+    const [ceMetrics, ceCategoryBreakdown, ceCasesResolved] = await Promise.all([
+      computeBusinessMetrics(session.business._id, from, to, "colleague_experience"),
+      computeBusinessCategoryBreakdown(session.business._id, from, to, "colleague_experience"),
+      ActionBoardItem.countDocuments({
+        businessId: session.business._id,
+        product: "colleague_experience",
+        status: "resolved",
+        resolvedAt: { $gte: from, $lte: to },
+      }),
+    ]);
+    rows.push(
+      [],
+      ["Colleague Experience — Metric", "Value"],
+      ["Responses", String(ceMetrics.responseCount)],
+      ["Star average", ceMetrics.starAverage !== null ? String(ceMetrics.starAverage) : ""],
+      ["eNPS", ceMetrics.npsScore !== null ? String(ceMetrics.npsScore) : ""],
+      ["Cases resolved", String(ceCasesResolved)],
+      [],
+      ["Colleague Experience — Category", "Average"],
+      ...ceCategoryBreakdown.map((c) => [c.name, String(c.average)])
+    );
+  }
 
   const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
   return new NextResponse(csv, {

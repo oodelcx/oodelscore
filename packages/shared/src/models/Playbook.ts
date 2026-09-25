@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const PLAYBOOK_TRIGGER_METRICS = ["categoryAverage", "negativeMentionCount"] as const;
 export type PlaybookTriggerMetric = (typeof PLAYBOOK_TRIGGER_METRICS)[number];
@@ -12,6 +13,9 @@ export interface IPlaybook {
   // org) needs its own Playbooks scope.
   parentOrgId: Types.ObjectId | null;
   businessId: Types.ObjectId | null;
+  // Which product this playbook belongs to — defaults to customer_experience
+  // so every playbook that predates Colleague Experience is unaffected.
+  product: Product;
   title: string;
   categoryId: Types.ObjectId | null;
   triggerCondition: string; // human-readable label, e.g. "3+ mentions in 2 weeks" — shown even when no structured trigger is set below
@@ -35,6 +39,7 @@ const PlaybookSchema = new Schema<IPlaybook>(
   {
     parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", default: null },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", default: null },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     title: { type: String, required: true },
     categoryId: { type: Schema.Types.ObjectId, ref: "Category", default: null },
     triggerCondition: { type: String, default: "" },

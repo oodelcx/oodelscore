@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
 
 type TabId = "businesses" | "orgs" | "staff" | "roles";
@@ -77,7 +78,17 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 export default function AccountsClient({ tooltips }: { tooltips: Record<string, string> }) {
-  const [tab, setTab] = useState<TabId>("businesses");
+  // Lets /admin/businesses and /admin/parent-orgs redirect here landed on
+  // the right tab/filter (both routes used to be their own standalone list
+  // pages before this Accounts view consolidated them) instead of always
+  // opening on the default Businesses tab.
+  const searchParams = useSearchParams();
+  const initialTab: TabId = searchParams.get("tab") === "orgs" ? "orgs" : "businesses";
+  const initialFilter =
+    searchParams.get("filter") === "standalone" || searchParams.get("filter") === "branch"
+      ? (searchParams.get("filter") as "standalone" | "branch")
+      : "all";
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [parentOrgs, setParentOrgs] = useState<ParentOrgRow[]>([]);
   const [staff, setStaff] = useState<StaffRow[]>([]);
@@ -85,7 +96,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [businessSearch, setBusinessSearch] = useState("");
-  const [businessTypeFilter, setBusinessTypeFilter] = useState<"all" | "standalone" | "branch">("all");
+  const [businessTypeFilter, setBusinessTypeFilter] = useState<"all" | "standalone" | "branch">(initialFilter);
   const [orgSearch, setOrgSearch] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
 

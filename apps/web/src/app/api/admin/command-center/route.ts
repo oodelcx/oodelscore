@@ -18,7 +18,9 @@ import {
   ragBandForStar,
   ragBandForNps,
   DEFAULT_RAG_THRESHOLDS,
+  primaryProductFor,
   type IRagThresholds,
+  type Product,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
@@ -31,6 +33,7 @@ interface ClientTile {
   businessId: string; // underlying record id, for links back into admin/businesses or admin/parent-orgs
   name: string;
   kind: string; // "Business" or "Parent Org"
+  product: Product; // which product this tile's numbers are computed against — see primaryProductFor()
   starAverage: number | null;
   npsScore: number | null;
   responseCount: number;
@@ -94,9 +97,9 @@ export async function GET() {
   );
   const orgBranchIds = new Map(parentOrgs.map((o, i) => [o._id.toString(), orgBranches[i].map((b) => b._id)]));
 
-  async function metricsForWindow(businessIds: Types.ObjectId[], from: Date, to: Date) {
+  async function metricsForWindow(businessIds: Types.ObjectId[], from: Date, to: Date, product: Product) {
     if (businessIds.length === 0) return { starAverage: null as number | null, npsScore: null as number | null, responseCount: 0 };
-    const perBusiness = await Promise.all(businessIds.map((id) => computeBusinessMetrics(id, from, to)));
+    const perBusiness = await Promise.all(businessIds.map((id) => computeBusinessMetrics(id, from, to, product)));
     const responseCount = perBusiness.reduce((sum, m) => sum + m.responseCount, 0);
     const starVals = perBusiness.filter((m) => m.starAverage !== null);
     const npsVals = perBusiness.filter((m) => m.npsScore !== null);
@@ -110,10 +113,16 @@ export async function GET() {
 
   for (const b of standaloneBusinesses) {
     const ids = [b._id];
+    // Command Center predates Colleague Experience — each tile computes
+    // against whichever product this client actually has (Customer
+    // Experience if enabled, even alongside Colleague Experience;
+    // Colleague Experience only otherwise), never a hardcoded default that
+    // silently shows a disabled product's empty numbers forever.
+    const product = primaryProductFor(b);
     const [m30, mLastWeek, mPrevWeek] = await Promise.all([
-      metricsForWindow(ids, from30, now),
-      metricsForWindow(ids, from7, now),
-      metricsForWindow(ids, prev7Start, prev7End),
+      metricsForWindow(ids, from30, now, product),
+      metricsForWindow(ids, from7, now, product),
+      metricsForWindow(ids, prev7Start, prev7End, product),
     ]);
     const starDelta = mLastWeek.starAverage !== null && mPrevWeek.starAverage !== null ? mLastWeek.starAverage - mPrevWeek.starAverage : null;
     const thresholds: IRagThresholds = b.ragThresholds ?? DEFAULT_RAG_THRESHOLDS;
@@ -127,6 +136,7 @@ export async function GET() {
       businessId: b._id.toString(),
       name: b.name,
       kind: "Business",
+      product,
       starAverage: m30.starAverage,
       npsScore: m30.npsScore,
       responseCount: m30.responseCount,
@@ -139,10 +149,11 @@ export async function GET() {
 
   for (const o of parentOrgs) {
     const branchIds = orgBranchIds.get(o._id.toString()) ?? [];
+    const product = primaryProductFor(o);
     const [m30, mLastWeek, mPrevWeek] = await Promise.all([
-      metricsForWindow(branchIds, from30, now),
-      metricsForWindow(branchIds, from7, now),
-      metricsForWindow(branchIds, prev7Start, prev7End),
+      metricsForWindow(branchIds, from30, now, product),
+      metricsForWindow(branchIds, from7, now, product),
+      metricsForWindow(branchIds, prev7Start, prev7End, product),
     ]);
     const starDelta = mLastWeek.starAverage !== null && mPrevWeek.starAverage !== null ? mLastWeek.starAverage - mPrevWeek.starAverage : null;
     const thresholds: IRagThresholds = o.ragThresholds ?? DEFAULT_RAG_THRESHOLDS;
@@ -156,6 +167,7 @@ export async function GET() {
       businessId: o._id.toString(),
       name: o.name,
       kind: "Parent Org",
+      product,
       starAverage: m30.starAverage,
       npsScore: m30.npsScore,
       responseCount: m30.responseCount,
@@ -186,11 +198,11 @@ export async function GET() {
   // findPortfolioSignals() below is reused as-is for the risk/expansion
   // chips rather than reimplementing that "stuck 3 months" rule.
   const owners = [
-    ...standaloneBusinesses.map((b) => ({ ownerType: "business" as const, ownerId: b._id })),
-    ...parentOrgs.map((o) => ({ ownerType: "parentOrg" as const, ownerId: o._id })),
+    ...standaloneBusinesses.map((b) => ({ ownerType: "business" as const, ownerId: b._id, product: primaryProductFor(b) })),
+    ...parentOrgs.map((o) => ({ ownerType: "parentOrg" as const, ownerId: o._id, product: primaryProductFor(o) })),
   ];
   const latestScores = await Promise.all(
-    owners.map((o) => CxPulseScore.findOne({ ownerType: o.ownerType, ownerId: o.ownerId }).sort({ period: -1 }))
+    owners.map((o) => CxPulseScore.findOne({ ownerType: o.ownerType, ownerId: o.ownerId, product: o.product }).sort({ period: -1 }))
   );
   const levelCounts: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   const scoredLevels: number[] = [];
@@ -304,6 +316,7 @@ export async function GET() {
     if (ids.length === 0) continue;
     const recentCount = await FeedbackResponse.countDocuments({
       businessId: { $in: ids },
+      product: tile.product,
       submittedAt: { $gte: inactivityCutoff },
     });
     if (recentCount === 0) {
@@ -329,7 +342,10 @@ export async function GET() {
     await Promise.all(
       clientTiles.map(async (t) => {
         const ids = t.ownerType === "business" ? [t.businessId] : (orgBranchIds.get(t.businessId) ?? []).map((id) => id.toString());
-        const count = ids.length === 0 ? 0 : await FeedbackResponse.countDocuments({ businessId: { $in: ids }, submittedAt: { $gte: dayStart, $lt: dayEnd } });
+        const count =
+          ids.length === 0
+            ? 0
+            : await FeedbackResponse.countDocuments({ businessId: { $in: ids }, product: t.product, submittedAt: { $gte: dayStart, $lt: dayEnd } });
         sparkByClient.get(t.clientId)?.days.push(count);
       })
     );

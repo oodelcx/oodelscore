@@ -6,21 +6,29 @@ import {
   CX_GOAL_METRICS,
   computeCurrentMetricValue,
   computeGoalProgress,
+  PRODUCTS,
   type CxGoalMetric,
+  type Product,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 /**
  * Gives a business something to work toward, not just a dashboard to watch —
  * "Increase cleanliness from 3.8 to 4.3 by December" tracked against the
  * same computed metrics every other page already uses. No AI involved.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
+  const { searchParams } = new URL(request.url);
+  const productParam = searchParams.get("product");
+  const product: Product = productParam && PRODUCT_SET.includes(productParam) ? (productParam as Product) : "customer_experience";
+
   await connectToDatabase();
-  const goals = await CxGoal.find({ ownerType: "business", ownerId: session.business._id }).sort({ createdAt: -1 });
+  const goals = await CxGoal.find({ ownerType: "business", ownerId: session.business._id, product }).sort({ createdAt: -1 });
 
   const enriched = await Promise.all(
     goals.map(async (goal) => {
@@ -45,6 +53,7 @@ export async function POST(request: Request) {
   const targetValue = typeof body?.targetValue === "number" ? body.targetValue : NaN;
   const targetDate = typeof body?.targetDate === "string" ? new Date(body.targetDate) : null;
   const categoryId = typeof body?.categoryId === "string" ? body.categoryId : null;
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
 
   if (!label) return NextResponse.json({ status: "error", message: "label is required" }, { status: 400 });
   if (!metric) return NextResponse.json({ status: "error", message: "A valid metric is required" }, { status: 400 });
@@ -62,11 +71,13 @@ export async function POST(request: Request) {
     ownerId: session.business._id,
     metric,
     categoryId: categoryObjectId,
+    product,
   });
 
   const goal = await CxGoal.create({
     ownerType: "business",
     ownerId: session.business._id,
+    product,
     label,
     metric,
     categoryId: categoryObjectId,
