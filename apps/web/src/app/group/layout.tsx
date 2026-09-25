@@ -245,10 +245,16 @@ export default async function GroupLayout({ children }: { children: ReactNode })
         ) : (() => {
             if (isOrgTeamMember && isOwnerOnlyRoute(pathname)) return true;
             // Dashboard root ("/group" exactly — not a prefix match, so it
-            // doesn't also swallow every other group/* route): the nav
-            // itself only shows this link to non-limited users (see the
-            // isLimitedTeamMember ? ... nav above), and the page's own
-            // data shape assumes a full owner/full-tier session.
+            // doesn't also swallow every other group/* route). Deliberately
+            // NOT in OWNER_ONLY_ROUTES: unlike Billing/Team Members/
+            // Category Owners, this one isn't owner-exclusive — a
+            // non-limited ("full access") org team member is meant to see
+            // the Organisation Overview the same way a non-limited Business
+            // team member sees /business, matching the nav (which hides
+            // this link only for isLimitedTeamMember, not for every team
+            // member — see the isLimitedTeamMember ? ... nav above). Only
+            // Limited tier, whose entire nav is "My Cases" and nothing
+            // else, is blocked here.
             if (isLimitedTeamMember && pathname === "/group") return true;
             const pageKey = pageKeyForPath(pathname);
             return !!pageKey && !teamMemberCanAccess(user, pageKey);
