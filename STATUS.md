@@ -18,7 +18,7 @@ Last confirmed deploy: PR #93+94 (see git history around that merge for exact co
 ## Open PRs (not yet merged)
 
 - **[PR #162](https://github.com/oodelcx/oodelscore/pull/162)** — `CxPulseScore` and `Category` both carry a stale pre-Colleague-Experience unique index that Mongoose never drops on its own. For `CxPulseScore` this wasn't just stale — it actively crashed `recomputeAllCxPulseScores()` for any dual-product account (duplicate-key error on the old 3-field index), which is why PR #161's CX Pulse fix only got CX Pulse to a "no longer silently empty, now openly broken" state. Fix: `connectToDatabase()` now runs `syncIndexes()` on both models once per process on connect, so every environment self-heals without a manual migration step. Needs merge + re-verification that CX Pulse recompute actually completes for a dual-product account.
-- **(branch `claude/minor-bugfixes-and-status`, PR not yet opened as of this commit — check GitHub for its number)** — the 6 remaining minor/cosmetic items below, all fixed:
+- **[PR #163](https://github.com/oodelcx/oodelscore/pull/163)** — the 6 remaining minor/cosmetic items below, all fixed:
   - Alert Rules: added in-place edit (threshold/sensitivity/drop%/recipients) to both Business and Group clients — backend already supported it via PATCH, only the UI was missing.
   - Owner badge: business/team's owner label flipped to `"Owner (Business Name)"` so `OwnerBadge` reads "Owner" instead of the business's own name. Both Business and Group Team Members lists now include the primary owner login as a row (previously silently omitted).
   - Group Raw Feedback: added a per-branch filter dropdown (`businessId` query param, org-scoped server-side).
