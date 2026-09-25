@@ -13,14 +13,25 @@ export async function GET() {
   if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const members = await User.find({ accountType: "team_member", teamOfType: "business", parentId: session.business._id }).sort({
-    createdAt: 1,
-  });
+  const [owner, teamMembers] = await Promise.all([
+    User.findOne({ accountType: "business", parentId: session.business._id }),
+    User.find({ accountType: "team_member", teamOfType: "business", parentId: session.business._id }).sort({ createdAt: 1 }),
+  ]);
+
+  // The primary owner login has its own account here too — without it,
+  // this list ("Everyone at your business with their own OodelCX login")
+  // silently omits the one person other pages (e.g. the Owner badge on
+  // Case Management) already show as an assignable owner, which reads as
+  // if that account doesn't exist.
+  const members = [
+    ...(owner ? [{ _id: owner._id, email: owner.email, teamRole: "Owner", tier: "full" as const, inviteStatus: owner.inviteStatus }] : []),
+    ...teamMembers,
+  ];
 
   return NextResponse.json({
     status: "ok",
     members,
     seatLimit: session.business.teamMemberSeatLimit,
-    activeCount: members.filter((m) => m.inviteStatus !== "invite_expired").length,
+    activeCount: teamMembers.filter((m) => m.inviteStatus !== "invite_expired").length,
   });
 }
