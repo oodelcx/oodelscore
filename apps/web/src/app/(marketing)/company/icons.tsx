@@ -131,7 +131,6 @@ export function StoryIllustration() {
     <svg
       viewBox="0 0 380 340"
       width="100%"
-      height="auto"
       fill="none"
       aria-hidden="true"
       style={{ maxWidth: 340 }}
