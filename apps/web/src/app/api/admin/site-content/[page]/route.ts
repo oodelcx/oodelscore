@@ -13,7 +13,18 @@ const PAGE_SET: readonly string[] = SITE_CONTENT_PAGES;
 // work" if you check right away. "menu" backs the nav + footer on every
 // marketing page, so it needs all of them revalidated, not just its own.
 const MARKETING_ROUTES_BY_PAGE: Record<string, string[]> = {
-  menu: ["/", "/product", "/colleague-pulse", "/solutions", "/pricing", "/company", "/contact", "/privacy", "/terms"],
+  menu: [
+    "/",
+    "/product",
+    "/colleague-pulse",
+    "/solutions",
+    "/how-it-works",
+    "/pricing",
+    "/company",
+    "/contact",
+    "/privacy",
+    "/terms",
+  ],
   home: ["/"],
   pricing: ["/pricing"],
   product: ["/product"],
@@ -64,6 +75,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   for (const route of MARKETING_ROUTES_BY_PAGE[page] ?? []) {
     revalidatePath(route);
   }
+  // "menu" backs the nav+footer on every marketing page, including dynamic
+  // ones (/solutions/[slug]) that can't be enumerated by path above like
+  // the static routes can — a hardcoded list here already caused one page
+  // to silently keep showing pre-edit nav/header content indefinitely.
+  // This invalidates every cached route in the app in one call so no page,
+  // present or future, can drift out of sync with a menu change again.
+  if (page === "menu") revalidatePath("/", "layout");
 
   return NextResponse.json({
     status: "ok",
