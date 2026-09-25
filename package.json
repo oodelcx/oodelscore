@@ -15,9 +15,14 @@
     "backfill:subscription-mrr": "npm run backfill:subscription-mrr -w @oodelscore/shared --",
     "evaluate:baseline-alerts": "npm run evaluate:baseline-alerts -w @oodelscore/shared",
     "recompute:cx-pulse": "npm run recompute:cx-pulse -w @oodelscore/shared",
-    "typecheck": "npm run typecheck -w @oodelscore/shared && npm run typecheck -w apps/web"
+    "typecheck": "npm run typecheck -w @oodelscore/shared && npm run typecheck -w apps/web",
+    "test": "vitest run",
+    "test:e2e": "playwright test -c apps/web/playwright.config.ts"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.2"
   }
 }

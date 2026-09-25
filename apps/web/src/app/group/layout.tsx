@@ -24,47 +24,7 @@ import { NavSection } from "@/components/nav-section";
 import { ProductViewSwitcher } from "@/components/product-view-switcher";
 import { resolveViewProduct } from "@/lib/viewProduct";
 import { AccessDenied } from "@/components/access-denied";
-import type { TeamPageKey } from "@oodelscore/shared";
-
-// Maps a Group route to the permission key that gates its nav link (see the
-// teamMemberCanAccess() calls in this file's nav below) — a Team Member
-// whose permissions hide a link can still type the URL directly, so without
-// this the page would render with a 403'd API response and no explanation.
-// Longest-prefix match, so a nested route (e.g. /group/cases/<id>) resolves
-// to its parent page's key.
-const PAGE_ACCESS_KEYS: [string, TeamPageKey][] = [
-  ["/group/raw-feedback", "rawFeedback"],
-  ["/group/insights", "insights"],
-  ["/group/analytics", "analytics"],
-  ["/group/alert-rules", "alertRules"],
-  ["/group/alerts", "alerts"],
-  ["/group/reports", "reports"],
-  ["/group/improvement-initiatives", "improvementInitiatives"],
-  ["/group/decision-log", "decisionLog"],
-  ["/group/maturity", "cxPulse"],
-  ["/group/ex-pulse", "exPulse"],
-  ["/group/cx-ex-correlation", "cxExCorrelation"],
-  ["/group/playbooks", "playbooks"],
-  ["/group/support", "support"],
-  ["/group/cases", "caseManagement"],
-];
-
-function pageKeyForPath(pathname: string): TeamPageKey | null {
-  const match = PAGE_ACCESS_KEYS.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-  return match ? match[1] : null;
-}
-
-// See business/layout.tsx for the same pattern. These three have no
-// TeamPageKey — they're not a togglable per-person permission, they're only
-// ever shown to the primary owner login to begin with (see the
-// !isOrgTeamMember nav guards above). An org Team Member of either tier
-// hitting one directly by URL used to fall through pageKeyForPath()
-// returning null, which the gate below reads as "nothing to check" and
-// rendered the real page against data shaped for an owner session.
-const OWNER_ONLY_ROUTES = ["/group/billing", "/group/team-members", "/group/category-owners"];
-function isOwnerOnlyRoute(pathname: string): boolean {
-  return OWNER_ONLY_ROUTES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
+import { isAccessDenied, GROUP_ACCESS_CONFIG } from "@/lib/routeAccess";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -242,23 +202,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
             billingHref="/group/billing"
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
           />
-        ) : (() => {
-            if (isOrgTeamMember && isOwnerOnlyRoute(pathname)) return true;
-            // Dashboard root ("/group" exactly — not a prefix match, so it
-            // doesn't also swallow every other group/* route). Deliberately
-            // NOT in OWNER_ONLY_ROUTES: unlike Billing/Team Members/
-            // Category Owners, this one isn't owner-exclusive — a
-            // non-limited ("full access") org team member is meant to see
-            // the Organisation Overview the same way a non-limited Business
-            // team member sees /business, matching the nav (which hides
-            // this link only for isLimitedTeamMember, not for every team
-            // member — see the isLimitedTeamMember ? ... nav above). Only
-            // Limited tier, whose entire nav is "My Cases" and nothing
-            // else, is blocked here.
-            if (isLimitedTeamMember && pathname === "/group") return true;
-            const pageKey = pageKeyForPath(pathname);
-            return !!pageKey && !teamMemberCanAccess(user, pageKey);
-          })() ? (
+        ) : isAccessDenied(pathname, user, isOrgTeamMember, isLimitedTeamMember, GROUP_ACCESS_CONFIG) ? (
           <AccessDenied />
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
