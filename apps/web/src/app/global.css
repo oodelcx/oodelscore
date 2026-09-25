@@ -7,6 +7,14 @@
 html,
 body {
   overflow-x: hidden;
+  /* Explicit, not just relying on the default: leaving overflow-y
+     unspecified while overflow-x is set makes the browser compute
+     overflow-y as auto (CSS overflow spec), which silently turns body into
+     its own scroll container. That breaks position:sticky for any
+     descendant (the marketing nav) whose nearest scrolling ancestor is
+     then body instead of the viewport — it "sticks" only within body's own
+     box, which reads as the nav disappearing partway down a long page. */
+  overflow-y: visible;
   max-width: 100%;
   /* Browsers default body to margin:8px. A full-bleed min-height:100vh
      shell (auth-shell, etc.) plus that margin adds up to just over 100vh,

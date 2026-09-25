@@ -51,14 +51,11 @@ export default async function IndustryPage({ params }: RouteParams) {
     <>
       <MarketingNav active="solutions" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
-      <section className="inner-hero">
+      <section className="sector-hero">
         <div className="wrap">
-          <div className="fork-eyebrow" style={{ marginBottom: 10 }}>
-            {industry.name}
-          </div>
+          <div className="sector-eyebrow">{industry.name}</div>
           <h1>{industry.tagline}</h1>
-          <p>{industry.heroBody}</p>
-          <div className="hero-ctas">
+          <div className="sector-hero-cta">
             <BookDemoButton className="btn-primary hover-lift">Book a demo</BookDemoButton>
             <Link className="btn-ghost hover-lift" href="/solutions">
               See all industries
@@ -67,13 +64,24 @@ export default async function IndustryPage({ params }: RouteParams) {
         </div>
       </section>
 
+      <section className="sector-problem">
+        <div className="wrap">
+          <Reveal>
+            <div className="sector-problem-block">
+              <div className="sector-problem-label">The problem</div>
+              <p>{industry.heroBody}</p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       <section className="fork">
         <div className="wrap">
           <div className="fork-grid">
             <Reveal>
               <div className="fork-card light hover-lift">
-                <div className="fork-eyebrow">Single location</div>
-                <h2>Running one {industry.locationNoun}</h2>
+                <div className="fork-eyebrow">Single {industry.locationNoun}</div>
+                <h2>Running it alone</h2>
                 <p>{industry.standaloneBody}</p>
                 <Link href="/pricing" className="fork-cta">
                   See standalone pricing →
@@ -82,7 +90,7 @@ export default async function IndustryPage({ params }: RouteParams) {
             </Reveal>
             <Reveal delay={100}>
               <div className="fork-card dark hover-lift">
-                <div className="fork-eyebrow">Multi-branch / Group</div>
+                <div className="fork-eyebrow">Multi-{industry.locationNoun} / Group</div>
                 <h2>Running a network</h2>
                 <p>{industry.groupBody}</p>
                 <Link href="/pricing" className="fork-cta">
@@ -94,16 +102,19 @@ export default async function IndustryPage({ params }: RouteParams) {
         </div>
       </section>
 
-      <section className="why">
+      <section className="sector-benefits-section">
         <div className="wrap">
           <Reveal className="narrative-head">
             <h2>What {industry.name} teams get</h2>
           </Reveal>
-          <div className="why-grid">
+          <div className="sector-benefits-list">
             {industry.benefits.map((benefit, i) => (
-              <Reveal key={i} delay={i * 80}>
-                <div className="why-item">
-                  <p style={{ margin: 0 }}>{benefit}</p>
+              <Reveal key={i} delay={i * 70}>
+                <div className="sector-benefit-row">
+                  <span className="sector-benefit-check" aria-hidden="true">
+                    ✓
+                  </span>
+                  <p>{benefit}</p>
                 </div>
               </Reveal>
             ))}

@@ -781,6 +781,7 @@ interface Feature {
   headline: string;
   body: string;
   group?: "understand" | "act";
+  menuFeatured?: boolean;
 }
 
 function ProductPanel({
@@ -824,10 +825,11 @@ function ProductPanel({
       <div className="card">
         <h3>Feature sections</h3>
         <p className="card-sub">
-          Each renders as an alternating text/visual row on this page, in this order, and also appears as a link in the
-          &quot;Platform&quot; mega-menu, grouped under Understand or Act. Only real, shipped capabilities belong here —
-          this list is what prospects use to self-qualify before a sales call, so it should never claim more than the
-          product actually does.
+          Each renders as an alternating text/visual row on this page, in this order. Only real, shipped capabilities
+          belong here — this list is what prospects use to self-qualify before a sales call, so it should never claim
+          more than the product actually does. Tick &quot;In menu&quot; on a handful of headline features to keep the
+          &quot;Platform&quot; mega-menu short (a proper SaaS nav lists a few things, not every feature) — the rest
+          still appear on this page with a &quot;See every feature&quot; link at the bottom of the menu.
         </p>
         {features.map((feature, i) => (
           <div className="qrow" key={i}>
@@ -854,6 +856,14 @@ function ProductPanel({
                 value={feature.headline}
                 onChange={(e) => updateFeature(i, { headline: e.target.value })}
               />
+              <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, whiteSpace: "nowrap" }}>
+                <input
+                  type="checkbox"
+                  checked={feature.menuFeatured ?? false}
+                  onChange={(e) => updateFeature(i, { menuFeatured: e.target.checked })}
+                />
+                In menu
+              </label>
               <span
                 className="icon-btn btn-danger"
                 onClick={() => onFieldChange("product", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}

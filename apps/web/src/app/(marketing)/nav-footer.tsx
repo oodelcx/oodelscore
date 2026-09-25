@@ -23,9 +23,14 @@ interface MegaMenuColumn {
   label: string;
   items: MegaMenuLink[];
 }
+interface MegaMenuSection {
+  columns: MegaMenuColumn[];
+  seeAllHref?: string;
+  seeAllLabel?: string;
+}
 interface MegaMenuData {
-  product: { columns: MegaMenuColumn[] };
-  solutions: { columns: MegaMenuColumn[] };
+  product: MegaMenuSection;
+  solutions: MegaMenuSection;
 }
 
 /** "Platform" and "Solutions" open as a two-column mega-menu instead of a
@@ -36,8 +41,9 @@ interface MegaMenuData {
  * item stays a plain link. */
 const MEGA_MENU_KEYS = new Set(["product", "solutions"]);
 
-function MegaMenu({ menuKey, label, data, active }: { menuKey: "product" | "solutions"; label: string; data: MegaMenuColumn[]; active: boolean }) {
+function MegaMenu({ menuKey, label, section, active }: { menuKey: "product" | "solutions"; label: string; section: MegaMenuSection; active: boolean }) {
   const [open, setOpen] = useState(false);
+  const { columns, seeAllHref, seeAllLabel } = section;
   return (
     <div className={`nav-menu-item${open ? " open" : ""}`} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <Link
@@ -50,19 +56,26 @@ function MegaMenu({ menuKey, label, data, active }: { menuKey: "product" | "solu
           <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </Link>
-      {open && data.length > 0 && (
+      {open && columns.length > 0 && (
         <div className="mega-panel">
           <div className="mega-panel-inner">
-            {data.map((col) => (
-              <div className="mega-col" key={col.label}>
-                <h4>{col.label}</h4>
-                {col.items.map((item) => (
-                  <Link key={item.href + item.label} href={item.href} onClick={() => setOpen(false)}>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            ))}
+            <div className="mega-cols">
+              {columns.map((col) => (
+                <div className="mega-col" key={col.label}>
+                  <h4>{col.label}</h4>
+                  {col.items.map((item) => (
+                    <Link key={item.href + item.label} href={item.href} onClick={() => setOpen(false)}>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </div>
+            {seeAllHref && (
+              <Link className="mega-see-all" href={seeAllHref} onClick={() => setOpen(false)}>
+                {seeAllLabel ?? "See all →"}
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -108,7 +121,7 @@ export function MarketingNav({
                 menuKey={item.key as "product" | "solutions"}
                 label={item.label}
                 active={active === item.key}
-                data={megaData[item.key as "product" | "solutions"].columns}
+                section={megaData[item.key as "product" | "solutions"]}
               />
             ) : (
               <Link key={item.key} href={PATH_BY_KEY[item.key] ?? "/"} className={active === item.key ? "active" : ""}>

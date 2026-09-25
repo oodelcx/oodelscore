@@ -173,18 +173,21 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       features: JSON.stringify([
         {
           tag: "Feedback Collection",
+          menuFeatured: true,
           group: "understand",
           headline: "Feedback the moment it happens, not a survey nobody opens",
           body: "A QR code or a link, placed exactly where the interaction happened. No app, no login — a customer answers on their own phone in under a minute, and it's in your dashboard before they've left.",
         },
         {
           tag: "CX Pulse",
+          menuFeatured: true,
           group: "understand",
           headline: "The score that tracks whether you're improving",
           body: "Five dimensions — awareness, response speed, ownership, culture, and measured outcomes — rolled into one number your whole team can rally around. Not a satisfaction score. A measure of whether feedback is actually shaping decisions.",
         },
         {
           tag: "Theme Intelligence",
+          menuFeatured: true,
           group: "understand",
           headline: "What customers keep bringing up, without reading every comment",
           body: "Open-text responses are grouped into recurring themes automatically, so a spike in \"wait time\" complaints surfaces the moment it starts, instead of three weeks and forty comments later.",
@@ -215,30 +218,35 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         },
         {
           tag: "AI Insights Reports",
+          menuFeatured: true,
           group: "understand",
           headline: "A plain-English summary, on a schedule, without anyone writing it",
           body: "Weekly, monthly, and quarterly reports are generated automatically from your real numbers — grounded only in what the data actually shows, and reviewed before anyone outside your team sees it.",
         },
         {
           tag: "Case Management",
+          menuFeatured: true,
           group: "act",
           headline: "A place for the work to actually happen",
           body: "Flagged feedback becomes a tracked case with an owner and a due date — not a comment that gets read once and forgotten.",
         },
         {
           tag: "Automatic Alerts",
+          menuFeatured: true,
           group: "act",
           headline: "Know the moment something needs attention",
           body: "Set a threshold — a score drop, a sudden dip, an outlier branch — and the right person is notified the moment it's crossed, instead of finding out at the end of the month.",
         },
         {
           tag: "Guided Playbooks",
+          menuFeatured: true,
           group: "act",
           headline: "The next step, already written down",
           body: "A repeat problem doesn't need a meeting to decide what to do about it — a Playbook attaches automatically with the exact steps your team already agreed on, checked off as they happen.",
         },
         {
           tag: "Decision Log",
+          menuFeatured: true,
           group: "act",
           headline: "Did the change actually work?",
           body: "Bigger changes get logged with the trigger that caused them and a measured before/after outcome — so \"we fixed it\" is something you can prove, not just claim.",

@@ -10,6 +10,12 @@ interface Feature {
   headline: string;
   body: string;
   group?: "understand" | "act";
+  // Curated subset shown in the nav mega-menu — a SaaS nav lists the
+  // headline items, not every feature on the page (that's what /product
+  // itself is for). Falls back to "show everything" only if literally
+  // nothing is marked, so an old/incompletely-migrated features list still
+  // renders something instead of an empty column.
+  menuFeatured?: boolean;
 }
 
 interface IndustryDetail {
@@ -50,9 +56,10 @@ export async function GET() {
   if (!features.some((f) => f.group === "act")) {
     features = parseJsonArray<Feature>(SEED_PRODUCT.fields.features);
   }
+  const curated = features.some((f) => f.menuFeatured) ? features.filter((f) => f.menuFeatured) : features;
   const toLink = (f: Feature): NavLink => ({ label: f.tag, href: `/product#${featureSlug(f.tag)}` });
-  const understand = features.filter((f) => f.group !== "act").map(toLink);
-  const act = features.filter((f) => f.group === "act").map(toLink);
+  const understand = curated.filter((f) => f.group !== "act").map(toLink);
+  const act = curated.filter((f) => f.group === "act").map(toLink);
 
   let industries = parseJsonArray<IndustryDetail>(solutions.fields.industryDetails);
   if (industries.length === 0) industries = parseJsonArray<IndustryDetail>(SEED_SOLUTIONS.fields.industryDetails);
@@ -73,6 +80,8 @@ export async function GET() {
         { label: "Understand", items: understand },
         { label: "Act", items: act },
       ],
+      seeAllHref: "/product",
+      seeAllLabel: "See every feature →",
     },
     solutions: {
       columns: [
