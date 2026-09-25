@@ -6,6 +6,7 @@ import { BookDemoButton } from "../demo-modal";
 import { Reveal } from "../scroll-reveal";
 
 interface Plan {
+  product?: "customer_experience" | "colleague_experience";
   name: string;
   price: string;
   priceNote: string;
@@ -39,6 +40,11 @@ export default async function PricingPage() {
   const f = pricing.fields;
   const plans = parseJsonArray<Plan>(f.plans);
   const loopItems = parseJsonArray<LoopStripItem>(f.loopStripItems);
+  // Untagged plans (a doc saved before per-product pricing existed) default
+  // to Customer Experience — same convention every other product-tagged
+  // model in this codebase uses.
+  const cxPlans = plans.filter((p) => (p.product ?? "customer_experience") === "customer_experience");
+  const cePlans = plans.filter((p) => p.product === "colleague_experience");
 
   return (
     <>
@@ -67,25 +73,55 @@ export default async function PricingPage() {
             </div>
           </Reveal>
         )}
-        <div className="pricing-grid">
-          {plans.map((plan, i) => (
-            <div className={`plan hover-lift ${plan.featured ? "featured" : ""}`} key={i}>
-              <div className="plan-name">{plan.name}</div>
-              <div className="plan-price">{plan.price}</div>
-              <div className="plan-unit">{plan.priceNote}</div>
-              {/* Every plan CTA opens the demo modal, whatever its label
-                  says — self-serve signup doesn't exist yet, so a dead
-                  href="#" was always a bug, not something tied to specific
-                  button text. */}
-              <BookDemoButton className="plan-cta">{plan.cta}</BookDemoButton>
-              {plan.features.map((feat, j) => (
-                <div className="plan-feat" key={j}>
-                  {feat}
+        {cxPlans.length > 0 && (
+          <>
+            <h2 className="pricing-section-heading" id="customer-experience">
+              {f.cxPlansHeading || "Customer Experience"}
+            </h2>
+            <div className="pricing-grid">
+              {cxPlans.map((plan, i) => (
+                <div className={`plan hover-lift ${plan.featured ? "featured" : ""}`} key={i}>
+                  <div className="plan-name">{plan.name}</div>
+                  <div className="plan-price">{plan.price}</div>
+                  <div className="plan-unit">{plan.priceNote}</div>
+                  {/* Every plan CTA opens the demo modal, whatever its label
+                      says — self-serve signup doesn't exist yet, so a dead
+                      href="#" was always a bug, not something tied to specific
+                      button text. */}
+                  <BookDemoButton className="plan-cta">{plan.cta}</BookDemoButton>
+                  {plan.features.map((feat, j) => (
+                    <div className="plan-feat" key={j}>
+                      {feat}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
+        {cePlans.length > 0 && (
+          <>
+            <h2 className="pricing-section-heading" id="colleague-pulse" style={{ marginTop: 48 }}>
+              {f.cePlansHeading || "Colleague Pulse"}
+            </h2>
+            {f.cePlansSubhead && <p className="pricing-section-subhead">{f.cePlansSubhead}</p>}
+            <div className="pricing-grid">
+              {cePlans.map((plan, i) => (
+                <div className={`plan hover-lift ${plan.featured ? "featured" : ""}`} key={i}>
+                  <div className="plan-name">{plan.name}</div>
+                  <div className="plan-price">{plan.price}</div>
+                  <div className="plan-unit">{plan.priceNote}</div>
+                  <BookDemoButton className="plan-cta">{plan.cta}</BookDemoButton>
+                  {plan.features.map((feat, j) => (
+                    <div className="plan-feat" key={j}>
+                      {feat}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
         <div className="enterprise-note">
           {f.enterpriseNote} <BookDemoButton className="link-cta">Talk to us about volume pricing →</BookDemoButton>
         </div>

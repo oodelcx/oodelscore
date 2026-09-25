@@ -5,6 +5,7 @@ export const SITE_CONTENT_PAGES = [
   "home",
   "pricing",
   "product",
+  "colleague-pulse",
   "solutions",
   "how-it-works",
   "company",

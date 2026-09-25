@@ -3,6 +3,7 @@ import { SEED_SITE_CONTENT } from "@oodelscore/shared";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 
 const SEED_PRODUCT = SEED_SITE_CONTENT.find((s) => s.page === "product")!;
+const SEED_COLLEAGUE_PULSE = SEED_SITE_CONTENT.find((s) => s.page === "colleague-pulse")!;
 const SEED_SOLUTIONS = SEED_SITE_CONTENT.find((s) => s.page === "solutions")!;
 
 interface Feature {
@@ -24,9 +25,9 @@ interface IndustryDetail {
 }
 
 // Mirrors product/page.tsx's featureSlug() exactly — the anchor a feature's
-// own section on /product registers itself under. Duplicated rather than
-// cross-imported from that route file to keep this route independent of
-// another route's internals.
+// own section registers itself under. Duplicated rather than cross-imported
+// from that route file to keep this route independent of another route's
+// internals.
 function featureSlug(tag: string): string {
   return tag
     .toLowerCase()
@@ -38,6 +39,38 @@ interface NavLink {
   label: string;
   href: string;
 }
+interface MegaSection {
+  columns: { label: string; items: NavLink[] }[];
+  seeAllHref?: string;
+  seeAllLabel?: string;
+}
+
+async function buildProductMenu(page: "product" | "colleague-pulse", seed: (typeof SEED_SITE_CONTENT)[number]): Promise<MegaSection> {
+  const content = await getSiteContent(page);
+  let features = parseJsonArray<Feature>(content.fields.features);
+  // A DB doc saved before feature/product `group` tagging existed still has
+  // its `features` key (so the fields-merge fallback in getSiteContent
+  // never kicks in) but every item is missing `group`, which would leave
+  // Act empty forever until someone re-saves the Features editor in Admin.
+  // Self-heal the same way a brand-new install would: fall back to the
+  // seed's tagged list.
+  if (!features.some((f) => f.group === "act")) {
+    features = parseJsonArray<Feature>(seed.fields.features);
+  }
+  const curated = features.some((f) => f.menuFeatured) ? features.filter((f) => f.menuFeatured) : features;
+  const toLink = (f: Feature): NavLink => ({ label: f.tag, href: `/${page}#${featureSlug(f.tag)}` });
+  const understand = curated.filter((f) => f.group !== "act").map(toLink);
+  const act = curated.filter((f) => f.group === "act").map(toLink);
+
+  return {
+    columns: [
+      { label: "Understand", items: understand },
+      { label: "Act", items: act },
+    ],
+    seeAllHref: `/${page}`,
+    seeAllLabel: "See every feature →",
+  };
+}
 
 // Public, read-only, and cheap — same 60s revalidation window as the
 // marketing pages themselves, so a Site Content edit (adding/renaming a
@@ -45,21 +78,11 @@ interface NavLink {
 export const revalidate = 60;
 
 export async function GET() {
-  const [product, solutions] = await Promise.all([getSiteContent("product"), getSiteContent("solutions")]);
-
-  let features = parseJsonArray<Feature>(product.fields.features);
-  // A DB doc saved before feature/product `group` tagging existed still has
-  // its `features` key (so the fields-merge fallback above never kicks in)
-  // but every item is missing `group`, which would leave Act empty forever
-  // until someone re-saves the Features editor in Admin. Self-heal the same
-  // way a brand-new install would: fall back to the seed's tagged list.
-  if (!features.some((f) => f.group === "act")) {
-    features = parseJsonArray<Feature>(SEED_PRODUCT.fields.features);
-  }
-  const curated = features.some((f) => f.menuFeatured) ? features.filter((f) => f.menuFeatured) : features;
-  const toLink = (f: Feature): NavLink => ({ label: f.tag, href: `/product#${featureSlug(f.tag)}` });
-  const understand = curated.filter((f) => f.group !== "act").map(toLink);
-  const act = curated.filter((f) => f.group === "act").map(toLink);
+  const [product, colleaguePulse, solutions] = await Promise.all([
+    buildProductMenu("product", SEED_PRODUCT),
+    buildProductMenu("colleague-pulse", SEED_COLLEAGUE_PULSE),
+    getSiteContent("solutions"),
+  ]);
 
   let industries = parseJsonArray<IndustryDetail>(solutions.fields.industryDetails);
   if (industries.length === 0) industries = parseJsonArray<IndustryDetail>(SEED_SOLUTIONS.fields.industryDetails);
@@ -75,14 +98,8 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
-    product: {
-      columns: [
-        { label: "Understand", items: understand },
-        { label: "Act", items: act },
-      ],
-      seeAllHref: "/product",
-      seeAllLabel: "See every feature →",
-    },
+    product,
+    "colleague-pulse": colleaguePulse,
     solutions: {
       columns: [
         { label: "By Industry", items: industryLinks },

@@ -1042,6 +1042,19 @@
   max-width: 46ch;
   margin: 0 auto;
 }
+.mkt .pricing-section-heading {
+  font-size: clamp(20px, 2.4vw, 26px);
+  letter-spacing: -0.015em;
+  margin: 0;
+  text-align: center;
+}
+.mkt .pricing-section-subhead {
+  font-size: 15px;
+  color: var(--text-2);
+  max-width: 52ch;
+  margin: 10px auto 0;
+  text-align: center;
+}
 .mkt .pricing-grid {
   display: grid;
   /* auto-fit collapses unused tracks instead of reserving a 3rd column, so
