@@ -23,6 +23,35 @@ import { BillingLockedScreen } from "@/components/billing-locked-screen";
 import { NavSection } from "@/components/nav-section";
 import { ProductViewSwitcher } from "@/components/product-view-switcher";
 import { resolveViewProduct } from "@/lib/viewProduct";
+import { AccessDenied } from "@/components/access-denied";
+import type { TeamPageKey } from "@oodelscore/shared";
+
+// Maps a Group route to the permission key that gates its nav link (see the
+// teamMemberCanAccess() calls in this file's nav below) — a Team Member
+// whose permissions hide a link can still type the URL directly, so without
+// this the page would render with a 403'd API response and no explanation.
+// Longest-prefix match, so a nested route (e.g. /group/cases/<id>) resolves
+// to its parent page's key.
+const PAGE_ACCESS_KEYS: [string, TeamPageKey][] = [
+  ["/group/raw-feedback", "rawFeedback"],
+  ["/group/insights", "insights"],
+  ["/group/analytics", "analytics"],
+  ["/group/alert-rules", "alertRules"],
+  ["/group/reports", "reports"],
+  ["/group/improvement-initiatives", "improvementInitiatives"],
+  ["/group/decision-log", "decisionLog"],
+  ["/group/maturity", "cxPulse"],
+  ["/group/ex-pulse", "exPulse"],
+  ["/group/cx-ex-correlation", "cxExCorrelation"],
+  ["/group/playbooks", "playbooks"],
+  ["/group/support", "support"],
+  ["/group/cases", "caseManagement"],
+];
+
+function pageKeyForPath(pathname: string): TeamPageKey | null {
+  const match = PAGE_ACCESS_KEYS.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return match ? match[1] : null;
+}
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -196,6 +225,11 @@ export default async function GroupLayout({ children }: { children: ReactNode })
             billingHref="/group/billing"
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
           />
+        ) : (() => {
+            const pageKey = pageKeyForPath(pathname);
+            return pageKey && !teamMemberCanAccess(user, pageKey);
+          })() ? (
+          <AccessDenied />
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />

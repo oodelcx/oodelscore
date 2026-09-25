@@ -22,8 +22,35 @@ import { TourLauncher } from "@/components/tour/tour-launcher";
 import { NavSection } from "@/components/nav-section";
 import { ProductViewSwitcher } from "@/components/product-view-switcher";
 import { resolveViewProduct } from "@/lib/viewProduct";
+import { AccessDenied } from "@/components/access-denied";
+import type { TeamPageKey } from "@oodelscore/shared";
 import "../admin/admin.css";
 import "./business.css";
+
+// See group/layout.tsx's identical map for why this exists: a Team Member
+// whose permissions hide a nav link can still hit the page directly by URL.
+const PAGE_ACCESS_KEYS: [string, TeamPageKey][] = [
+  ["/business/feedback-points", "feedbackPoints"],
+  ["/business/roster", "colleagueRoster"],
+  ["/business/responses", "rawFeedback"],
+  ["/business/insights", "insights"],
+  ["/business/analytics", "analytics"],
+  ["/business/alert-rules", "alertRules"],
+  ["/business/reports", "reports"],
+  ["/business/improvement-initiatives", "improvementInitiatives"],
+  ["/business/decision-log", "decisionLog"],
+  ["/business/cx-pulse", "cxPulse"],
+  ["/business/ex-pulse", "exPulse"],
+  ["/business/cx-ex-correlation", "cxExCorrelation"],
+  ["/business/support", "support"],
+  ["/business/playbooks", "playbooks"],
+  ["/business/cases", "caseManagement"],
+];
+
+function pageKeyForPath(pathname: string): TeamPageKey | null {
+  const match = PAGE_ACCESS_KEYS.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return match ? match[1] : null;
+}
 
 export default async function BusinessLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -208,6 +235,11 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             billingHref="/business/billing"
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
           />
+        ) : (() => {
+            const pageKey = pageKeyForPath(pathname);
+            return pageKey && !teamMemberCanAccess(user, pageKey);
+          })() ? (
+          <AccessDenied />
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />
