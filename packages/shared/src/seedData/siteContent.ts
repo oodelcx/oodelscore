@@ -19,8 +19,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       { key: "product", label: "Customer Experience", visible: true, order: 0 },
       { key: "colleague-pulse", label: "Colleague Pulse", visible: true, order: 1 },
       { key: "solutions", label: "Solutions", visible: true, order: 2 },
-      { key: "how-it-works", label: "How it works", visible: true, order: 3 },
-      { key: "pricing", label: "Pricing", visible: true, order: 4 },
+      { key: "pricing", label: "Pricing", visible: true, order: 3 },
+      { key: "how-it-works", label: "How it works", visible: true, order: 4 },
       { key: "company", label: "Company", visible: true, order: 5 },
       { key: "contact", label: "Contact", visible: true, order: 6 },
     ],
@@ -581,30 +581,55 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     navItems: [],
     sections: [],
     fields: {
-      heroHeadline: "We think feedback tools stopped too early.",
+      heroHeadline: "We built the part every feedback tool skips.",
       // Must be an exact substring of heroHeadline — same convention as the
       // login page's heroHighlight — the portion shown in italic accent
       // green. Kept independently editable so a future headline edit
       // doesn't silently break the accent (the Admin panel warns if it
       // stops matching).
-      heroHighlight: "too early.",
+      heroHighlight: "every feedback tool skips.",
       metaDescription:
-        "OodelCX exists to turn customer feedback into action, not just a dashboard number. Learn what we build and why.",
+        "OodelCX exists to turn customer and colleague feedback into owned, measured action — not just another dashboard number. Learn what we build and why.",
       missionStatement:
-        "Most platforms treat \"collect feedback\" as the whole job. We think that's the easy third. OodelCX exists because the harder, more valuable work — turning what customers say into something a team actually does, and knowing whether it worked — was left to spreadsheets and good intentions. We built the other two thirds.",
-      howWeWorkItems: JSON.stringify([
+        "A QR code and a star rating are a commodity now. What's still genuinely hard — and what we built OodelCX around — is everything after the chart: a specific person owning a specific fix, and a measured answer to whether it worked.",
+      storyEyebrow: "Our story",
+      storyHeadline: "Why we exist",
+      storyParagraphs: JSON.stringify([
+        "Every feedback platform on the market is good at the same thing: collecting responses and drawing a chart. That part stopped being the hard problem years ago.",
+        "What's still genuinely hard is everything after the chart — turning a pattern in the data into a specific action, assigning it to a specific person, and proving months later whether it actually moved the number. Most organizations still do that part in spreadsheets, hallway conversations, and institutional memory that walks out the door when someone leaves.",
+        "OodelCX is built around that gap, for both sides of an organization at once. Every score on the dashboard traces back to a case someone owns, and every case traces back to a decision someone can measure — for the customers you serve and the people who serve them. That's the whole product, not a feature we bolted on afterward.",
+      ]),
+      beliefsEyebrow: "What we believe",
+      beliefsHeadline: "The rules we build against",
+      beliefs: JSON.stringify([
         {
-          title: "We review AI Insights, not just ship it",
-          body: "Every automated report is checked by a person before a customer ever sees it.",
+          icon: "loop",
+          title: "A score is not an action",
+          body: "A number that moves without anyone knowing why isn't insight, it's noise with a trend line. Every metric in OodelCX is one click from the case that's supposed to move it.",
         },
         {
-          title: "We design for the org chart, not the demo",
-          body: "A single café and a thousand-branch retailer both use OodelCX.",
+          icon: "scale",
+          title: "One location or a thousand, same product",
+          body: "A single café and a thousand-branch retail chain run on the exact same engine, not a stripped-down version and a separate \"enterprise\" build. The complexity lives in the permissions model, not a second codebase.",
         },
         {
-          title: "We stay small and direct",
-          body: "When you email us, a person who understands the product answers.",
+          icon: "check",
+          title: "A human reviews the AI",
+          body: "Every AI-generated insight report is checked by a person before an account ever sees it. We use AI to draft the pattern-finding, never to make the call.",
         },
+        {
+          icon: "signal",
+          title: "Small and direct, on purpose",
+          body: "When you email us, the person who answers understands the product. Not a support queue reading from a script.",
+        },
+      ]),
+      audienceEyebrow: "Who we build for",
+      audienceHeadline: "Multi-location organizations where a bad Tuesday shouldn't take a month to reach the right person.",
+      audienceItems: JSON.stringify([
+        { slug: "banking", name: "Banking & Finance", body: "Branch networks that need conduct-sensitive complaints routed correctly, every time." },
+        { slug: "education", name: "Education", body: "Multi-campus trusts comparing facilities and communication scores term over term." },
+        { slug: "retail", name: "Retail", body: "Store chains that need to know which location, which shift — not one blended average." },
+        { slug: "healthcare", name: "Healthcare", body: "Facility networks turning wait-time complaints into a tracked, measured fix." },
       ]),
       contactEmail: "hello@oodelscore.com",
     },

@@ -1321,6 +1321,19 @@ function HowItWorksPanel({
   );
 }
 
+interface BeliefItem {
+  icon: string;
+  title: string;
+  body: string;
+}
+interface AudienceContentItem {
+  slug: string;
+  name: string;
+  body: string;
+}
+
+const BELIEF_ICON_OPTIONS = ["loop", "scale", "check", "signal"] as const;
+
 function CompanyPanel({
   content,
   onFieldChange,
@@ -1328,7 +1341,10 @@ function CompanyPanel({
   content: PageContent;
   onFieldChange: (page: string, key: string, value: string) => void;
 }) {
-  const items = parseJsonArray<TitleBodyItem>(content.fields.howWeWorkItems);
+  const storyParagraphs = parseJsonArray<string>(content.fields.storyParagraphs);
+  const beliefs = parseJsonArray<BeliefItem>(content.fields.beliefs);
+  const audienceItems = parseJsonArray<AudienceContentItem>(content.fields.audienceItems);
+
   return (
     <>
       <div className="card" style={{ marginBottom: 20 }}>
@@ -1356,30 +1372,105 @@ function CompanyPanel({
           Must match a portion of the headline exactly (including punctuation) to be highlighted.
         </div>
         <Field
-          label="Mission statement"
+          label="Mission statement (sits next to the headline)"
           textarea
           value={content.fields.missionStatement}
           onChange={(v) => onFieldChange("company", "missionStatement", v)}
         />
       </div>
+
       <div className="card" style={{ marginBottom: 20 }}>
-        <h3>&ldquo;How we work&rdquo; items</h3>
-        {items.map((item, i) => (
+        <h3>&ldquo;Our story&rdquo; section</h3>
+        <Field
+          label="Eyebrow label"
+          value={content.fields.storyEyebrow}
+          onChange={(v) => onFieldChange("company", "storyEyebrow", v)}
+        />
+        <Field
+          label="Section headline"
+          value={content.fields.storyHeadline}
+          onChange={(v) => onFieldChange("company", "storyHeadline", v)}
+        />
+        <label style={{ display: "block", marginTop: 14, marginBottom: 6, fontWeight: 600, fontSize: 13.5 }}>
+          Paragraphs (rendered in order)
+        </label>
+        {storyParagraphs.map((p, i) => (
           <div className="qrow" key={i}>
             <div className="qrow-top">
+              <span style={{ fontSize: 12.5, color: "var(--text-2)" }}>Paragraph {i + 1}</span>
+              <span
+                className="icon-btn btn-danger"
+                onClick={() =>
+                  onFieldChange("company", "storyParagraphs", JSON.stringify(storyParagraphs.filter((_, idx) => idx !== i)))
+                }
+              >
+                🗑
+              </span>
+            </div>
+            <AutoTextarea
+              value={p}
+              onChange={(e) => {
+                const next = [...storyParagraphs];
+                next[i] = e.target.value;
+                onFieldChange("company", "storyParagraphs", JSON.stringify(next));
+              }}
+            />
+          </div>
+        ))}
+        <button
+          className="btn"
+          onClick={() => onFieldChange("company", "storyParagraphs", JSON.stringify([...storyParagraphs, ""]))}
+        >
+          + Add paragraph
+        </button>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>&ldquo;What we believe&rdquo; section</h3>
+        <Field
+          label="Eyebrow label"
+          value={content.fields.beliefsEyebrow}
+          onChange={(v) => onFieldChange("company", "beliefsEyebrow", v)}
+        />
+        <Field
+          label="Section headline"
+          value={content.fields.beliefsHeadline}
+          onChange={(v) => onFieldChange("company", "beliefsHeadline", v)}
+        />
+        <label style={{ display: "block", marginTop: 14, marginBottom: 6, fontWeight: 600, fontSize: 13.5 }}>
+          Belief cards
+        </label>
+        {beliefs.map((item, i) => (
+          <div className="qrow" key={i}>
+            <div className="qrow-top">
+              <select
+                value={item.icon}
+                onChange={(e) => {
+                  const next = [...beliefs];
+                  next[i] = { ...next[i], icon: e.target.value };
+                  onFieldChange("company", "beliefs", JSON.stringify(next));
+                }}
+                style={{ marginRight: 8 }}
+              >
+                {BELIEF_ICON_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
               <input
                 type="text"
                 style={{ flex: 1, fontWeight: 600 }}
                 value={item.title}
                 onChange={(e) => {
-                  const next = [...items];
+                  const next = [...beliefs];
                   next[i] = { ...next[i], title: e.target.value };
-                  onFieldChange("company", "howWeWorkItems", JSON.stringify(next));
+                  onFieldChange("company", "beliefs", JSON.stringify(next));
                 }}
               />
               <span
                 className="icon-btn btn-danger"
-                onClick={() => onFieldChange("company", "howWeWorkItems", JSON.stringify(items.filter((_, idx) => idx !== i)))}
+                onClick={() => onFieldChange("company", "beliefs", JSON.stringify(beliefs.filter((_, idx) => idx !== i)))}
               >
                 🗑
               </span>
@@ -1387,20 +1478,98 @@ function CompanyPanel({
             <AutoTextarea
               value={item.body}
               onChange={(e) => {
-                const next = [...items];
+                const next = [...beliefs];
                 next[i] = { ...next[i], body: e.target.value };
-                onFieldChange("company", "howWeWorkItems", JSON.stringify(next));
+                onFieldChange("company", "beliefs", JSON.stringify(next));
               }}
             />
           </div>
         ))}
         <button
           className="btn"
-          onClick={() => onFieldChange("company", "howWeWorkItems", JSON.stringify([...items, { title: "", body: "" }]))}
+          onClick={() =>
+            onFieldChange("company", "beliefs", JSON.stringify([...beliefs, { icon: "loop", title: "", body: "" }]))
+          }
         >
-          + Add item
+          + Add belief
         </button>
       </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>&ldquo;Who we build for&rdquo; section</h3>
+        <Field
+          label="Eyebrow label"
+          value={content.fields.audienceEyebrow}
+          onChange={(v) => onFieldChange("company", "audienceEyebrow", v)}
+        />
+        <Field
+          label="Section headline"
+          textarea
+          value={content.fields.audienceHeadline}
+          onChange={(v) => onFieldChange("company", "audienceHeadline", v)}
+        />
+        <div className="field-hint" style={{ marginBottom: 8 }}>
+          The slug controls which icon renders — use banking, education, retail, or healthcare to match the icon set,
+          or any other slug for a generic mark. Each card links to /solutions.
+        </div>
+        {audienceItems.map((item, i) => (
+          <div className="qrow" key={i}>
+            <div className="qrow-top">
+              <input
+                type="text"
+                style={{ width: 110, fontFamily: "monospace", fontSize: 12.5 }}
+                value={item.slug}
+                placeholder="slug"
+                onChange={(e) => {
+                  const next = [...audienceItems];
+                  next[i] = { ...next[i], slug: e.target.value };
+                  onFieldChange("company", "audienceItems", JSON.stringify(next));
+                }}
+              />
+              <input
+                type="text"
+                style={{ flex: 1, fontWeight: 600 }}
+                value={item.name}
+                placeholder="Name"
+                onChange={(e) => {
+                  const next = [...audienceItems];
+                  next[i] = { ...next[i], name: e.target.value };
+                  onFieldChange("company", "audienceItems", JSON.stringify(next));
+                }}
+              />
+              <span
+                className="icon-btn btn-danger"
+                onClick={() =>
+                  onFieldChange("company", "audienceItems", JSON.stringify(audienceItems.filter((_, idx) => idx !== i)))
+                }
+              >
+                🗑
+              </span>
+            </div>
+            <AutoTextarea
+              value={item.body}
+              onChange={(e) => {
+                const next = [...audienceItems];
+                next[i] = { ...next[i], body: e.target.value };
+                onFieldChange("company", "audienceItems", JSON.stringify(next));
+              }}
+            />
+          </div>
+        ))}
+        <button
+          className="btn"
+          onClick={() =>
+            onFieldChange(
+              "company",
+              "audienceItems",
+              JSON.stringify([...audienceItems, { slug: "", name: "", body: "" }])
+            )
+          }
+        >
+          + Add industry
+        </button>
+      </div>
+
       <div className="card">
         <h3>Contact</h3>
         <Field
