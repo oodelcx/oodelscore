@@ -965,6 +965,26 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     flagStatus: RecurringFlagStatus;
     measured: { before: number; after: number } | null;
   }) {
+    // Re-running the showcase seed (the Admin "Seed showcase data" dev
+    // tool doesn't wipe first — see wipeAllTenantData for that) must not
+    // pile up a second copy of this narrative's cases/initiative/flag/
+    // decision-log-entry every time it's clicked. Categories/businesses/
+    // orgs above are upserted by name so they're already safe; this is the
+    // one spot that used unconditional .create() calls, which is what
+    // QA's duplicate-RecurringIssueFlag and duplicate-Improvement-
+    // Initiative reports were actually seeing. One flag per
+    // (ownerScope, ownerScopeId, categoryId) uniquely identifies "this
+    // narrative already ran" — if it's there, load its cases back and
+    // hand them to the caller instead of creating anything new.
+    const existingFlag = await RecurringIssueFlag.findOne({
+      ownerScope: params.flagScope,
+      ownerScopeId: params.flagScopeId,
+      categoryId: params.categoryId,
+    });
+    if (existingFlag) {
+      return ActionBoardItem.find({ _id: { $in: existingFlag.caseIds } }).sort({ createdAt: 1 });
+    }
+
     const cases: InstanceType<typeof ActionBoardItem>[] = [];
     for (const c of params.comments) {
       const resolved = params.measured !== null || params.flagStatus !== "active";

@@ -68,13 +68,12 @@ const DEMOGRAPHIC_FIELD_LABELS: Record<keyof DemographicBreakdown, string> = {
   gender: "Gender",
 };
 
-const LEVEL_LABELS: Record<number, string> = {
-  1: "Level 1 — Starting out",
-  2: "Level 2 — Building the basics",
-  3: "Level 3 — Established",
-  4: "Level 4 — Mature",
-  5: "Level 5 — Leading",
-};
+// Same five names CX Pulse uses everywhere else in the app (e.g.
+// business-dashboard-client.tsx's CX_PULSE_LEVEL_LABELS) — this page used
+// to have its own unrelated vocabulary ("Starting out", "Established",
+// "Leading"), so the same level read as two different maturity ladders
+// depending on which screen you were on.
+const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
 
 export default function BusinessExPulseClient() {
   const [score, setScore] = useState<ExPulseScore | null>(null);
@@ -108,7 +107,7 @@ export default function BusinessExPulseClient() {
     return (
       <div>
         <div className="page-head">
-          <h1>CX Pulse</h1>
+          <h1>Colleague Pulse</h1>
         </div>
         <p className="subtitle">Loading…</p>
       </div>
@@ -119,7 +118,7 @@ export default function BusinessExPulseClient() {
     return (
       <div>
         <div className="page-head">
-          <h1>CX Pulse</h1>
+          <h1>Colleague Pulse</h1>
         </div>
         <div className="callout">Colleague Experience is not enabled for this account.</div>
       </div>
@@ -129,7 +128,7 @@ export default function BusinessExPulseClient() {
   return (
     <div>
       <div className="page-head">
-        <h1>CX Pulse</h1>
+        <h1>Colleague Pulse</h1>
         <p className="subtitle" style={{ margin: 0 }}>
           Colleague Experience's own maturity score — same 5-dimension mechanic as CX Pulse, plus eNPS as the
           standing headline metric. Recomputed nightly.
@@ -141,7 +140,7 @@ export default function BusinessExPulseClient() {
           apiPath="/api/business/goals"
           categoriesApiPath="/api/business/category-owners"
           product="colleague_experience"
-          title="CX Goals"
+          title="Colleague Goals"
         />
       </div>
 
@@ -154,7 +153,9 @@ export default function BusinessExPulseClient() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
             <div className="callout" style={{ textAlign: "center" }}>
               <div style={{ fontSize: 32, fontWeight: 700 }}>{score.compositeScore}</div>
-              <div className="subtitle" style={{ margin: 0 }}>{LEVEL_LABELS[score.level]}</div>
+              <div className="subtitle" style={{ margin: 0 }}>
+                Level {score.level} · {LEVEL_LABELS[score.level]}
+              </div>
             </div>
             <div className="callout" style={{ textAlign: "center" }}>
               <div style={{ fontSize: 32, fontWeight: 700 }}>{score.enps !== null ? score.enps : "—"}</div>

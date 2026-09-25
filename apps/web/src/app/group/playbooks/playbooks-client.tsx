@@ -460,7 +460,7 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
                         )}
                         {categoryName(p.categoryId) && <span className="pill pill-gray">{categoryName(p.categoryId)}</span>}
                         <span className="pill pill-purple">
-                          {p.usageCount} use{p.usageCount === 1 ? "" : "s"}
+                          {p.usageCount} completed all-time
                         </span>
                         {p.triggerStatus && (
                           <span className={`pill ${p.triggerStatus.isTriggered ? "pill-red" : "pill-green"}`}>

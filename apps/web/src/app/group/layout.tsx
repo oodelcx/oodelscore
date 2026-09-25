@@ -37,6 +37,7 @@ const PAGE_ACCESS_KEYS: [string, TeamPageKey][] = [
   ["/group/insights", "insights"],
   ["/group/analytics", "analytics"],
   ["/group/alert-rules", "alertRules"],
+  ["/group/alerts", "alerts"],
   ["/group/reports", "reports"],
   ["/group/improvement-initiatives", "improvementInitiatives"],
   ["/group/decision-log", "decisionLog"],
@@ -51,6 +52,18 @@ const PAGE_ACCESS_KEYS: [string, TeamPageKey][] = [
 function pageKeyForPath(pathname: string): TeamPageKey | null {
   const match = PAGE_ACCESS_KEYS.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   return match ? match[1] : null;
+}
+
+// See business/layout.tsx for the same pattern. These three have no
+// TeamPageKey — they're not a togglable per-person permission, they're only
+// ever shown to the primary owner login to begin with (see the
+// !isOrgTeamMember nav guards above). An org Team Member of either tier
+// hitting one directly by URL used to fall through pageKeyForPath()
+// returning null, which the gate below reads as "nothing to check" and
+// rendered the real page against data shaped for an owner session.
+const OWNER_ONLY_ROUTES = ["/group/billing", "/group/team-members", "/group/category-owners"];
+function isOwnerOnlyRoute(pathname: string): boolean {
+  return OWNER_ONLY_ROUTES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
@@ -123,7 +136,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-understand"
                 label="Understand"
-                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/reports"]}
+                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/alerts", "/group/reports"]}
               >
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "insights") &&
@@ -133,6 +146,9 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   teamMemberCanAccess(user, "analytics") && <a href="/group/analytics">Analytics</a>}
                 {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
                   <a href="/group/alert-rules">Alert rules</a>
+                )}
+                {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alerts") && (
+                  <a href="/group/alerts">Alerts</a>
                 )}
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "reports") &&
@@ -158,6 +174,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     ? hasProduct(org, "customer_experience") && hasFeature(org.enabledFeatures, "cxPulse") && teamMemberCanAccess(user, "cxPulse")
                     : hasProduct(org, "colleague_experience") && teamMemberCanAccess(user, "exPulse");
                 const cxPulseHref = cxPulseNavProduct === "customer_experience" ? "/group/maturity" : "/group/ex-pulse";
+                const cxPulseNavLabel = cxPulseNavProduct === "customer_experience" ? "CX Pulse" : "Colleague Pulse";
                 // Only ever meaningful for a dual-product account — a
                 // network-level view of both signals together, so it's
                 // gated the same way the switcher itself is (bothProductsEnabled),
@@ -172,7 +189,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     defaultOpen={false}
                     hrefs={[cxPulseHref, "/group/cx-ex-correlation"]}
                   >
-                    {showCxPulse && <a href={cxPulseHref}>CX Pulse</a>}
+                    {showCxPulse && <a href={cxPulseHref}>{cxPulseNavLabel}</a>}
                     {showCorrelation && <a href="/group/cx-ex-correlation">CX ↔ EX Correlation</a>}
                   </NavSection>
                 );
@@ -226,8 +243,15 @@ export default async function GroupLayout({ children }: { children: ReactNode })
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
           />
         ) : (() => {
+            if (isOrgTeamMember && isOwnerOnlyRoute(pathname)) return true;
+            // Dashboard root ("/group" exactly — not a prefix match, so it
+            // doesn't also swallow every other group/* route): the nav
+            // itself only shows this link to non-limited users (see the
+            // isLimitedTeamMember ? ... nav above), and the page's own
+            // data shape assumes a full owner/full-tier session.
+            if (isLimitedTeamMember && pathname === "/group") return true;
             const pageKey = pageKeyForPath(pathname);
-            return pageKey && !teamMemberCanAccess(user, pageKey);
+            return !!pageKey && !teamMemberCanAccess(user, pageKey);
           })() ? (
           <AccessDenied />
         ) : toursEnabled ? (

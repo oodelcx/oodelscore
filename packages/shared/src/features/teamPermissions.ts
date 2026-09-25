@@ -13,6 +13,7 @@ export const TEAM_RESTRICTABLE_PAGES = [
   { key: "insights", label: "Insights" },
   { key: "analytics", label: "Analytics" },
   { key: "alertRules", label: "Alert Rules" },
+  { key: "alerts", label: "Alerts" },
   { key: "reports", label: "Reports" },
   { key: "improvementInitiatives", label: "Improvement Initiatives" },
   { key: "decisionLog", label: "Decision Log" },

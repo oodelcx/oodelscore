@@ -77,13 +77,12 @@ const DEMOGRAPHIC_FIELD_LABELS: Record<keyof DemographicBreakdown, string> = {
   gender: "Gender",
 };
 
-const LEVEL_LABELS: Record<number, string> = {
-  1: "Level 1 — Starting out",
-  2: "Level 2 — Building the basics",
-  3: "Level 3 — Established",
-  4: "Level 4 — Mature",
-  5: "Level 5 — Leading",
-};
+// Same five names CX Pulse uses everywhere else in the app (e.g.
+// business-dashboard-client.tsx's CX_PULSE_LEVEL_LABELS) — this page used
+// to have its own unrelated vocabulary ("Starting out", "Established",
+// "Leading"), so the same level read as two different maturity ladders
+// depending on which screen you were on.
+const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
 
 function levelPillClass(level: number): string {
   if (level >= 4) return "pill-green";
@@ -173,7 +172,9 @@ export default function GroupExPulseClient() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
             <div className="callout" style={{ textAlign: "center" }}>
               <div style={{ fontSize: 32, fontWeight: 700 }}>{score.compositeScore}</div>
-              <div className="subtitle" style={{ margin: 0 }}>{LEVEL_LABELS[score.level]}</div>
+              <div className="subtitle" style={{ margin: 0 }}>
+                Level {score.level} · {LEVEL_LABELS[score.level]}
+              </div>
             </div>
             <div className="callout" style={{ textAlign: "center" }}>
               <div style={{ fontSize: 32, fontWeight: 700 }}>{score.enps !== null ? score.enps : "—"}</div>
