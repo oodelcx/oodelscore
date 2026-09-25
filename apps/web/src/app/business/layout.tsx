@@ -23,48 +23,9 @@ import { NavSection } from "@/components/nav-section";
 import { ProductViewSwitcher } from "@/components/product-view-switcher";
 import { resolveViewProduct } from "@/lib/viewProduct";
 import { AccessDenied } from "@/components/access-denied";
-import type { TeamPageKey } from "@oodelscore/shared";
+import { isAccessDenied, BUSINESS_ACCESS_CONFIG } from "@/lib/routeAccess";
 import "../admin/admin.css";
 import "./business.css";
-
-// See group/layout.tsx's identical map for why this exists: a Team Member
-// whose permissions hide a nav link can still hit the page directly by URL.
-const PAGE_ACCESS_KEYS: [string, TeamPageKey][] = [
-  ["/business/feedback-points", "feedbackPoints"],
-  ["/business/roster", "colleagueRoster"],
-  ["/business/responses", "rawFeedback"],
-  ["/business/insights", "insights"],
-  ["/business/analytics", "analytics"],
-  ["/business/alert-rules", "alertRules"],
-  ["/business/alerts", "alerts"],
-  ["/business/reports", "reports"],
-  ["/business/improvement-initiatives", "improvementInitiatives"],
-  ["/business/decision-log", "decisionLog"],
-  ["/business/cx-pulse", "cxPulse"],
-  ["/business/ex-pulse", "exPulse"],
-  ["/business/cx-ex-correlation", "cxExCorrelation"],
-  ["/business/support", "support"],
-  ["/business/playbooks", "playbooks"],
-  ["/business/cases", "caseManagement"],
-];
-
-function pageKeyForPath(pathname: string): TeamPageKey | null {
-  const match = PAGE_ACCESS_KEYS.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-  return match ? match[1] : null;
-}
-
-// These three have no TeamPageKey — they're not a togglable per-person
-// permission the way the pages above are, they're only ever shown to the
-// primary owner login to begin with (see the `!isBusinessTeamMember` nav
-// guards above). A Team Member of either tier hitting one directly by URL
-// used to fall through pageKeyForPath() returning null, which the gate
-// below reads as "nothing to check" and rendered the real page — Billing
-// and the dashboard root then crash on data shaped for an owner session,
-// and Team Members/Category Owners silently render as empty.
-const OWNER_ONLY_ROUTES = ["/business/billing", "/business/team-members", "/business/category-owners"];
-function isOwnerOnlyRoute(pathname: string): boolean {
-  return OWNER_ONLY_ROUTES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
 
 export default async function BusinessLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -253,17 +214,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             billingHref="/business/billing"
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
           />
-        ) : (() => {
-            if (isBusinessTeamMember && isOwnerOnlyRoute(pathname)) return true;
-            // Dashboard root ("/business" exactly — not a prefix match, so
-            // it doesn't also swallow every other business/* route): the
-            // nav itself only shows this link to non-limited users (see
-            // the isLimitedTeamMember ? ... nav above), and the page's own
-            // data shape assumes a full owner/full-tier session.
-            if (isLimitedTeamMember && pathname === "/business") return true;
-            const pageKey = pageKeyForPath(pathname);
-            return !!pageKey && !teamMemberCanAccess(user, pageKey);
-          })() ? (
+        ) : isAccessDenied(pathname, user, isBusinessTeamMember, isLimitedTeamMember, BUSINESS_ACCESS_CONFIG) ? (
           <AccessDenied />
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
