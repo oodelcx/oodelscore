@@ -158,7 +158,7 @@ export default async function MarketingHomePage() {
                 <p>Every response, every trend, every flagged issue — one dashboard, no setup required beyond your QR code.</p>
                 <div className="scale-mini">
                   <span>Feedback points</span>
-                  <span>OCX Intelligence</span>
+                  <span>AI Insights</span>
                   <span>Alert rules</span>
                 </div>
               </div>

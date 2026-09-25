@@ -12,6 +12,11 @@ interface Feature {
   group?: "understand" | "act";
 }
 
+interface IndustryDetail {
+  slug: string;
+  name: string;
+}
+
 // Mirrors product/page.tsx's featureSlug() exactly — the anchor a feature's
 // own section on /product registers itself under. Duplicated rather than
 // cross-imported from that route file to keep this route independent of
@@ -49,9 +54,12 @@ export async function GET() {
   const understand = features.filter((f) => f.group !== "act").map(toLink);
   const act = features.filter((f) => f.group === "act").map(toLink);
 
-  let industries = parseJsonArray<string>(solutions.fields.industries);
-  if (industries.length === 0) industries = parseJsonArray<string>(SEED_SOLUTIONS.fields.industries);
-  const industryLinks: NavLink[] = industries.map((name) => ({ label: name, href: "/solutions#industries" }));
+  let industries = parseJsonArray<IndustryDetail>(solutions.fields.industryDetails);
+  if (industries.length === 0) industries = parseJsonArray<IndustryDetail>(SEED_SOLUTIONS.fields.industryDetails);
+  // Each industry now has its own page (see solutions/[slug]) — no more
+  // routing every industry to the same shared anchor, which is what made
+  // this column read as "no data" (every link went to the same place).
+  const industryLinks: NavLink[] = industries.map((i) => ({ label: i.name, href: `/solutions/${i.slug}` }));
   const structureLinks: NavLink[] = [
     { label: "Single-location businesses", href: "/solutions#standalone" },
     { label: "Multi-branch groups", href: "/solutions#group" },

@@ -926,8 +926,8 @@ function SolutionsPanel({
       <div className="card">
         <h3>Industries</h3>
         <p className="card-sub">
-          Shown as a chip grid on this page and as the &quot;By Industry&quot; column in the Solutions mega-menu. Names
-          only — no per-industry claims, since there&apos;s no dedicated content behind each one yet.
+          Shown as a chip grid on this page and as the &quot;By Industry&quot; column in the Solutions mega-menu. Each
+          industry gets its own page at /solutions/[slug] — the chip and the mega-menu link both go there.
         </p>
         <Field label="Title" value={content.fields.industriesTitle} onChange={(v) => onFieldChange("solutions", "industriesTitle", v)} />
         <Field
@@ -936,12 +936,100 @@ function SolutionsPanel({
           value={content.fields.industriesBody}
           onChange={(v) => onFieldChange("solutions", "industriesBody", v)}
         />
-        <StringListEditor
-          items={parseJsonArray<string>(content.fields.industries)}
-          onChange={(items) => onFieldChange("solutions", "industries", JSON.stringify(items))}
+        <IndustryDetailsEditor
+          items={parseJsonArray<IndustryDetail>(content.fields.industryDetails)}
+          onChange={(items) => onFieldChange("solutions", "industryDetails", JSON.stringify(items))}
         />
       </div>
     </>
+  );
+}
+
+interface IndustryDetail {
+  slug: string;
+  name: string;
+  tagline: string;
+  heroBody: string;
+  locationNoun: string;
+  standaloneBody: string;
+  groupBody: string;
+  benefits: string[];
+}
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function IndustryDetailsEditor({ items, onChange }: { items: IndustryDetail[]; onChange: (items: IndustryDetail[]) => void }) {
+  function update(i: number, patch: Partial<IndustryDetail>) {
+    const next = [...items];
+    next[i] = { ...next[i], ...patch };
+    onChange(next);
+  }
+
+  return (
+    <div>
+      {items.map((industry, i) => (
+        <div className="card" style={{ marginBottom: 14, background: "var(--surface-2, #fafaf8)" }} key={i}>
+          <div className="qrow-top">
+            <input
+              type="text"
+              style={{ flex: 1, fontWeight: 600 }}
+              placeholder="Industry name (e.g. Banking & Financial Services)"
+              value={industry.name}
+              onChange={(e) => update(i, { name: e.target.value, slug: industry.slug || slugify(e.target.value) })}
+            />
+            <span className="icon-btn btn-danger" onClick={() => onChange(items.filter((_, idx) => idx !== i))}>
+              🗑
+            </span>
+          </div>
+          <div className="field-row">
+            <div className="field" style={{ flex: 1 }}>
+              <label>URL slug (/solutions/…)</label>
+              <input type="text" value={industry.slug} onChange={(e) => update(i, { slug: slugify(e.target.value) })} />
+            </div>
+            <div className="field" style={{ flex: 1 }}>
+              <label>What one location is called (branch, campus, store…)</label>
+              <input type="text" value={industry.locationNoun} onChange={(e) => update(i, { locationNoun: e.target.value })} />
+            </div>
+          </div>
+          <div className="field">
+            <label>Tagline (page headline)</label>
+            <AutoTextarea value={industry.tagline} onChange={(e) => update(i, { tagline: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Hero body</label>
+            <AutoTextarea value={industry.heroBody} onChange={(e) => update(i, { heroBody: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Standalone (single location) copy</label>
+            <AutoTextarea value={industry.standaloneBody} onChange={(e) => update(i, { standaloneBody: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Multi-branch / group copy</label>
+            <AutoTextarea value={industry.groupBody} onChange={(e) => update(i, { groupBody: e.target.value })} />
+          </div>
+          <div className="field">
+            <label>Benefits</label>
+            <StringListEditor items={industry.benefits} onChange={(benefits) => update(i, { benefits })} />
+          </div>
+        </div>
+      ))}
+      <button
+        className="btn"
+        onClick={() =>
+          onChange([
+            ...items,
+            { slug: "", name: "", tagline: "", heroBody: "", locationNoun: "location", standaloneBody: "", groupBody: "", benefits: [] },
+          ])
+        }
+      >
+        + Add industry
+      </button>
+    </div>
   );
 }
 
