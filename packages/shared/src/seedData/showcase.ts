@@ -599,6 +599,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
         feedbackPointId: params.feedbackPoint._id,
         businessId: params.businessId,
         product: params.product,
+        eventId: params.feedbackPoint.eventId ?? null,
         answers,
         respondentName: Math.random() < 0.35 ? pick(["Alex", "Jordan", "Sam", "Taylor", "Morgan", "Casey", "Riley", "Jamie"]) : null,
         respondentEmail: Math.random() < 0.22 ? `respondent${randomInt(1000, 9999)}@example.test` : null,

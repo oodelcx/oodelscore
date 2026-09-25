@@ -90,20 +90,6 @@ async function handlePost(request: NextRequest, qrToken: string) {
 
   const body = await request.json().catch(() => null);
 
-  const scanToken = typeof body?.scanToken === "string" ? body.scanToken : "";
-  const consumedToken = scanToken
-    ? await ScanToken.findOneAndUpdate(
-        { token: scanToken, feedbackPointId: feedbackPoint._id, usedAt: null },
-        { $set: { usedAt: new Date() } }
-      )
-    : null;
-  if (!consumedToken) {
-    return NextResponse.json(
-      { status: "error", message: "This feedback session has already been submitted or expired — please rescan the QR code." },
-      { status: 409 }
-    );
-  }
-
   const answers: SubmittedAnswer[] = Array.isArray(body?.answers) ? body.answers : [];
   // Colleague Experience never collects an employee's identity — hard-null
   // here regardless of what the client sent, not just left to the
@@ -143,6 +129,26 @@ async function handlePost(request: NextRequest, qrToken: string) {
     if (mode === "mandatory" && !value) {
       return NextResponse.json({ status: "error", message: `${label} is required` }, { status: 400 });
     }
+  }
+
+  // Consumed only now, after every validation check above has passed — not
+  // before, as it previously was. Burning the token on a request that then
+  // fails validation left the respondent with a dead token: correcting the
+  // missing field and resubmitting on the same page (the only option the
+  // single-page layout gives them) hit "already submitted" instead of
+  // succeeding, even though nothing had actually been recorded yet.
+  const scanToken = typeof body?.scanToken === "string" ? body.scanToken : "";
+  const consumedToken = scanToken
+    ? await ScanToken.findOneAndUpdate(
+        { token: scanToken, feedbackPointId: feedbackPoint._id, usedAt: null },
+        { $set: { usedAt: new Date() } }
+      )
+    : null;
+  if (!consumedToken) {
+    return NextResponse.json(
+      { status: "error", message: "This feedback session has already been submitted or expired — please rescan the QR code." },
+      { status: 409 }
+    );
   }
 
   // Device-independent recheck: if this respondent gave contact info,

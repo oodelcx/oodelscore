@@ -99,6 +99,13 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
       setBusinesses(businessesData.businesses ?? []);
       setTeam(teamData.team ?? []);
       setActions((actionsData.items ?? []).map((i: { _id: string; title: string }) => ({ _id: i._id, title: i.title })));
+      // /api/group/improvement-initiatives already resolves the account's
+      // currently-active product tab server-side — read it from here
+      // rather than guessing independently, so a new initiative created
+      // from this form lands on whichever tab is actually open.
+      if (initiativesData.product === "customer_experience" || initiativesData.product === "colleague_experience") {
+        setProduct(initiativesData.product);
+      }
       setLoading(false);
     });
   }
@@ -132,11 +139,8 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
       .then((r) => r.json())
       .then((d) => {
         const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
-        const hasCx = products.includes("customer_experience");
-        const hasCe = products.includes("colleague_experience");
-        setCxEnabled(hasCx);
-        setCeEnabled(hasCe);
-        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
       });
   }, []);
 

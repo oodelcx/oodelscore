@@ -108,6 +108,12 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
       .then((data) => {
         setEntries(data.entries ?? []);
         setReadOnly(!!data.readOnly);
+        // The GET route already resolves the account's currently-active
+        // product tab server-side — read it from here instead of guessing
+        // independently, so a new entry lands on whichever tab is open.
+        if (data.product === "customer_experience" || data.product === "colleague_experience") {
+          setProduct(data.product);
+        }
       })
       .finally(() => setLoading(false));
   }
@@ -124,11 +130,8 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
       .then((r) => r.json())
       .then((d) => {
         const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
-        const hasCx = products.includes("customer_experience");
-        const hasCe = products.includes("colleague_experience");
-        setCxEnabled(hasCx);
-        setCeEnabled(hasCe);
-        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
       });
   }, []);
 

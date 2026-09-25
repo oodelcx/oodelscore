@@ -162,7 +162,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
 
   const isCe = data.product === "colleague_experience";
   const npsLabel = isCe ? "eNPS" : "NPS";
-  const pulseLabel = "CX Pulse";
+  const pulseLabel = isCe ? "Colleague Pulse" : "CX Pulse";
   const averageLabel = isCe ? "Network average rating" : "Network average";
   const pulseHref = isCe ? "/group/ex-pulse" : "/group/maturity";
   const respondedToLabel = isCe ? "Colleagues personally responded to" : "Customers personally responded to";

@@ -124,6 +124,13 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
       setTeam(teamData.team ?? []);
       setActions((actionsData.items ?? []).map((i: { _id: string; title: string }) => ({ _id: i._id, title: i.title })));
       setCategories(categoriesData.categories ?? []);
+      // /api/group/decision-log already resolves the account's currently-
+      // active product tab server-side — read it from here rather than
+      // guessing independently, so a new entry lands on whichever tab is
+      // actually open.
+      if (entriesData.product === "customer_experience" || entriesData.product === "colleague_experience") {
+        setProduct(entriesData.product);
+      }
       setLoading(false);
     });
   }
@@ -134,11 +141,8 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
       .then((r) => r.json())
       .then((d) => {
         const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
-        const hasCx = products.includes("customer_experience");
-        const hasCe = products.includes("colleague_experience");
-        setCxEnabled(hasCx);
-        setCeEnabled(hasCe);
-        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
       });
   }, []);
 

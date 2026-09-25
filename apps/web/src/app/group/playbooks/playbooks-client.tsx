@@ -114,6 +114,9 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
       setPlaybooks(playbooksData.playbooks ?? []);
       setCategories(categoryData.categories ?? []);
       setTeam(teamData.team ?? []);
+      if (playbooksData.product === "customer_experience" || playbooksData.product === "colleague_experience") {
+        setProduct(playbooksData.product);
+      }
       setLoading(false);
     });
   }
@@ -124,11 +127,8 @@ export default function PlaybooksClient({ tooltips }: { tooltips: Record<string,
       .then((r) => r.json())
       .then((d) => {
         const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
-        const hasCx = products.includes("customer_experience");
-        const hasCe = products.includes("colleague_experience");
-        setCxEnabled(hasCx);
-        setCeEnabled(hasCe);
-        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
       });
   }, []);
 

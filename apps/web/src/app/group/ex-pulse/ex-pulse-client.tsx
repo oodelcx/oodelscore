@@ -126,7 +126,7 @@ export default function GroupExPulseClient() {
     return (
       <div>
         <div className="page-head">
-          <h1>CX Pulse</h1>
+          <h1>Colleague Pulse</h1>
         </div>
         <p className="subtitle">Loading…</p>
       </div>
@@ -137,7 +137,7 @@ export default function GroupExPulseClient() {
     return (
       <div>
         <div className="page-head">
-          <h1>CX Pulse</h1>
+          <h1>Colleague Pulse</h1>
         </div>
         <div className="callout">Colleague Experience is not enabled for this organization.</div>
       </div>
@@ -147,9 +147,9 @@ export default function GroupExPulseClient() {
   return (
     <div>
       <div className="page-head">
-        <h1>CX Pulse</h1>
+        <h1>Colleague Pulse</h1>
         <p className="subtitle" style={{ margin: 0 }}>
-          Colleague Experience's org-wide maturity score, rolled up the same way CX Pulse is — plus eNPS as the
+          Colleague Experience's org-wide maturity score, rolled up the same way CX Pulse is for Customer Experience — plus eNPS as the
           standing headline metric across every branch. Recomputed nightly.
         </p>
       </div>
@@ -159,7 +159,7 @@ export default function GroupExPulseClient() {
           apiPath="/api/group/goals"
           categoriesApiPath="/api/group/category-owners"
           product="colleague_experience"
-          title="CX Goals"
+          title="Colleague Goals"
         />
       </div>
 
@@ -235,7 +235,7 @@ export default function GroupExPulseClient() {
             </div>
 
             <div>
-              <div className="section-title">Branch-level CX Pulse</div>
+              <div className="section-title">Branch-level Colleague Pulse</div>
               <div className="card">
                 <table className="clean">
                   <thead>

@@ -28,6 +28,7 @@ interface ChecklistItem {
   done: boolean;
 }
 interface MaturityData {
+  product?: "customer_experience" | "colleague_experience";
   score: ScoreDoc | null;
   history: ScoreDoc[];
   branches: BranchRow[];
@@ -70,15 +71,17 @@ export default function MaturityClient({ tooltips }: { tooltips: Record<string, 
       .finally(() => setLoading(false));
   }, []);
 
+  const pulseLabel = data?.product === "colleague_experience" ? "Colleague Pulse" : "CX Pulse";
+
   if (loading) return <p className="subtitle">Loading…</p>;
-  if (!data) return <p className="error-text">Couldn&apos;t load CX Pulse.</p>;
+  if (!data) return <p className="error-text">Couldn&apos;t load {pulseLabel}.</p>;
 
   const blurbs = data.levelDescriptions && data.levelDescriptions.length === 5 ? ["", ...data.levelDescriptions] : FALLBACK_LEVEL_BLURBS;
 
   return (
     <div>
       <h1>
-        CX Pulse
+        {pulseLabel}
         <InfoTip text={tooltips["cx-pulse-composite"]} />
       </h1>
       <p className="subtitle">Your organization&apos;s maturity in acting on feedback, across five dimensions.</p>

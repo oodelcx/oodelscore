@@ -116,6 +116,9 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
         setCategories(data.categories ?? []);
         setReadOnly(!!data.readOnly);
         setTeam(teamData.team ?? []);
+        if (data.product === "customer_experience" || data.product === "colleague_experience") {
+          setProduct(data.product);
+        }
       })
       .finally(() => setLoading(false));
   }
@@ -126,11 +129,8 @@ export default function BusinessPlaybooksClient({ tooltips }: { tooltips: Record
       .then((r) => r.json())
       .then((d) => {
         const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
-        const hasCx = products.includes("customer_experience");
-        const hasCe = products.includes("colleague_experience");
-        setCxEnabled(hasCx);
-        setCeEnabled(hasCe);
-        setProduct(hasCx ? "customer_experience" : "colleague_experience");
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
       });
   }, []);
 
