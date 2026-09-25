@@ -27,7 +27,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       siteName: "OodelCX",
       footerDescription:
-        "Feedback collection, OCX Intelligence reports, and the tools to actually act on both — for one location or a thousand.",
+        "Feedback collection, AI Insights reports, and the tools to actually act on both — for one location or a thousand.",
       footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Pricing"]),
       footerSolutionsLinks: JSON.stringify(["Solutions", "The mechanism", "Pricing"]),
       footerCompanyLinks: JSON.stringify(["About", "Contact", "Privacy policy", "Terms"]),
@@ -46,7 +46,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroSubheadline:
         "OodelCX turns every QR scan into tracked, owned work — not another number on a dashboard nobody opens. Built for one location or a thousand.",
       metaDescription:
-        "OodelCX turns customer feedback into tracked, owned work — QR-code surveys, OCX Intelligence reports, and Case Management built for one location or a thousand.",
+        "OodelCX turns customer feedback into tracked, owned work — QR-code surveys, AI Insights reports, and Case Management built for one location or a thousand.",
       loopHeadline: "Listen. Understand. Act. Measure.",
       loopStages: JSON.stringify([
         { label: "Listen", title: "Collect", body: "A QR scan, a short survey, no app or login." },
@@ -92,7 +92,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       whyItems: JSON.stringify([
         {
           title: "Nothing reaches a dashboard unchecked",
-          body: "Every OCX Intelligence report is reviewed by a person before it publishes.",
+          body: "Every AI Insights report is reviewed by a person before it publishes.",
         },
         {
           title: "Built for the org chart you actually have",
@@ -111,9 +111,9 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     sections: [],
     fields: {
       heroHeadline: "Straightforward pricing, whatever your size.",
-      heroSubhead: "Every plan includes OCX Intelligence reporting and unlimited responses.",
+      heroSubhead: "Every plan includes AI Insights reporting and unlimited responses.",
       metaDescription:
-        "OodelCX pricing for single locations and multi-branch groups — every plan includes OCX Intelligence reporting, Case Management, and unlimited responses.",
+        "OodelCX pricing for single locations and multi-branch groups — every plan includes AI Insights reporting, Case Management, and unlimited responses.",
       loopStripHeadline: "Every plan is the whole loop, not a slice of it.",
       loopStripItems: JSON.stringify([
         { label: "Listen", body: "Unlimited QR feedback points and responses" },
@@ -128,7 +128,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           priceNote: "per month, one location",
           featured: false,
           cta: "Start free trial",
-          features: ["Up to 3 feedback points", "Weekly & monthly OCX Intelligence reports", "Action board & alert rules", "Email support"],
+          features: ["Up to 3 feedback points", "Weekly & monthly AI Insights reports", "Action board & alert rules", "Email support"],
         },
         {
           name: "Group",
@@ -277,7 +277,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       singleTitle: "Everything in one view",
       singlePoints: JSON.stringify([
         "Your own feedback points, question set, and alert rules",
-        "Weekly and monthly OCX Intelligence reports",
+        "Weekly and monthly AI Insights reports",
         "Your own Case Management, Decision Log, and Playbooks",
         "Your own CX Pulse score, tracked over time",
       ]),
@@ -294,14 +294,139 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       ]),
       industriesTitle: "Built for the businesses that already run on it",
       industriesBody: "The same platform, configured to how each industry actually collects and acts on feedback.",
-      industries: JSON.stringify([
-        "Banking & Financial Services",
-        "Education",
-        "Retail",
-        "Restaurants & Hospitality",
-        "Healthcare & Diagnostics",
-        "Fitness",
-        "Automotive",
+      // Structured per-industry content, not just names — each one gets its
+      // own page at /solutions/[slug] (see app/(marketing)/solutions/[slug]).
+      // "industries" (the old plain-string-array field) is intentionally
+      // gone: the chip grid and the mega-menu's "By Industry" column both
+      // now read from this instead, so there's exactly one place an admin
+      // edits an industry's name or copy, never two lists to keep in sync.
+      industryDetails: JSON.stringify([
+        {
+          slug: "banking",
+          locationNoun: "branch",
+          name: "Banking & Financial Services",
+          tagline: "Every branch accountable for the visit, not the survey score.",
+          heroBody:
+            "A wait-time complaint and a teller-friendliness dip look identical on a spreadsheet. OodelCX tells you which one it actually was, and gives the branch manager a case to close — not a number to explain away at the next regional call.",
+          standaloneBody:
+            "One branch, one QR code at the counter. Every complaint about a specific visit — the wait, the fee explanation, the teller — becomes a case with an owner and a due date, not a comment that sits in an inbox until someone happens to read it.",
+          groupBody:
+            "A regional or national branch network sees every location side by side — which branch is quietly losing customers to wait times, which one's compliance-sensitive complaints are actually getting routed to compliance instead of a teller's own manager, and where a fix at one branch is worth rolling out everywhere.",
+          benefits: [
+            "Compliance-sensitive complaints route to a designated contact, never to the person they're about",
+            "Branch-vs-branch benchmarking on wait time and service scores, not just an overall NPS",
+            "A flagged interaction becomes an owned case the same day, with a due date a regional manager can actually track",
+            "Prove a fix worked — before/after numbers on the exact metric a branch was struggling with",
+          ],
+        },
+        {
+          slug: "education",
+          locationNoun: "campus",
+          name: "Education",
+          tagline: "Parents and staff both keep telling you things. Now both go somewhere.",
+          heroBody:
+            "A school or trust hears from parents at pickup, at parent-teacher conferences, and buried in emails — and from staff, rarely, because there's nowhere for it to go. OodelCX gives both a QR code and a real case that gets worked, not filed.",
+          standaloneBody:
+            "One campus, one front office. Facilities complaints, communication gaps, and the small things that erode parent trust each become a tracked case instead of a hallway conversation nobody wrote down.",
+          groupBody:
+            "A multi-campus trust compares every school side by side — which campus's facilities complaints keep recurring, which one's front-office communication scores lag the network average — and rolls a fix out everywhere it's needed, not just where a principal happened to notice.",
+          benefits: [
+            "Facilities and communication issues become owned cases instead of hallway conversations that go nowhere",
+            "Campus-vs-campus comparison across a trust, so a facilities fix that worked at one school can be rolled out network-wide",
+            "A recurring complaint pattern — the same issue at the same campus, three times in a month — gets flagged automatically",
+            "Optional colleague feedback for staff, kept fully separate from family-facing surveys",
+          ],
+        },
+        {
+          slug: "retail",
+          locationNoun: "store",
+          name: "Retail",
+          tagline: "Know which store, which shift, which fix actually worked.",
+          heroBody:
+            "A dip in your average rating tells you something's wrong somewhere. OodelCX tells you it's the Saturday afternoon shift at one specific store, and gives that store's manager a case with a due date instead of a number to shrug at.",
+          standaloneBody:
+            "One store, one QR code at checkout. Every flagged response — a stockout, a slow line, a rude interaction — becomes a case with an owner, so the next shift lead isn't guessing what needs fixing.",
+          groupBody:
+            "A multi-store chain compares every location and every shift pattern side by side, spots the store that's quietly dragging the network average down, and shares a playbook across the chain instead of reinventing the fix at each location.",
+          benefits: [
+            "Store-vs-store and shift-pattern comparison, not just one blended average",
+            "A recurring complaint at one store — three stockout mentions in two weeks — gets flagged before it becomes a pattern nobody noticed",
+            "Guided playbooks turn a repeat issue into a standard response the whole chain can reuse",
+            "Downloadable reports for a regional or ops review, not a login every store manager has to remember",
+          ],
+        },
+        {
+          slug: "restaurants-hospitality",
+          locationNoun: "location",
+          name: "Restaurants & Hospitality",
+          tagline: "A bad table turn shouldn't take a bad review to notice.",
+          heroBody:
+            "By the time a bad night shows up as a public review, it's too late to fix that guest's experience. OodelCX catches the same signal at the table, the same night, while there's still a shift manager who can do something about it.",
+          standaloneBody:
+            "One location, one QR code on the table or receipt. A flagged rating during service reaches the shift manager the same night, not the next morning's inbox review.",
+          groupBody:
+            "A multi-location group compares every restaurant and every daypart, spots the location whose service scores are sliding before it shows up in a review site, and shares what actually fixed it with every other location running the same menu.",
+          benefits: [
+            "Same-night visibility on a flagged table, routed to whoever's actually on shift",
+            "Location-vs-location and daypart comparison, so a Friday-dinner problem doesn't get averaged away by a strong Tuesday lunch",
+            "A recurring complaint — slow tickets, a specific dish, a specific server pattern — gets flagged as a pattern, not read one comment at a time",
+            "Prove a service fix actually moved the number, with a real before/after, not a guess",
+          ],
+        },
+        {
+          slug: "healthcare",
+          locationNoun: "facility",
+          name: "Healthcare & Diagnostics",
+          tagline: "A two-hour wait is a case, not just a complaint.",
+          heroBody:
+            "Patients tell you about the wait, the check-in, the way a result was explained — and most of that feedback never reaches anyone who can fix it. OodelCX turns a flagged visit into a case a clinical operations manager can actually close.",
+          standaloneBody:
+            "One clinic or facility, one QR code at check-in or discharge. A wait-time or communication complaint becomes an owned case the same day, not a comment card in a box nobody empties.",
+          groupBody:
+            "A multi-facility health network compares wait times and patient-experience scores across every location, spots the facility whose numbers are sliding, and rolls out a fix — a real-time wait tracker, a staffing adjustment — everywhere it's needed.",
+          benefits: [
+            "Wait-time and check-in complaints become owned cases with a due date, not a form in a box",
+            "Facility-vs-facility benchmarking on the metrics that actually drive patient trust",
+            "A recurring wait-time pattern at one facility gets flagged and turned into a tracked improvement initiative",
+            "Prove an operational fix worked with a measured before/after, for the review board that asks",
+          ],
+        },
+        {
+          slug: "fitness",
+          locationNoun: "location",
+          name: "Fitness",
+          tagline: "Know why a member's about to cancel before they do.",
+          heroBody:
+            "A member who's unhappy with equipment upkeep or a class rarely says so until they cancel. OodelCX catches the flagged feedback while there's still time for a location manager to do something about it.",
+          standaloneBody:
+            "One gym or studio, one QR code at the front desk or in the app flow. A complaint about equipment, cleanliness, or a class becomes a case for the location manager, not a comment that disappears into a suggestion box.",
+          groupBody:
+            "A multi-location chain compares every gym side by side — which location's equipment complaints keep recurring, which one's class-satisfaction scores lag — and rolls a fix out chain-wide before it shows up in membership churn.",
+          benefits: [
+            "Equipment, cleanliness, and class-satisfaction complaints become owned cases, not suggestion-box notes",
+            "Location-vs-location comparison across the chain, so a real maintenance problem doesn't hide behind a strong overall average",
+            "A recurring equipment complaint at one location gets flagged as a pattern before it costs you members",
+            "Guided playbooks turn a known fix into a standard response every location manager can follow",
+          ],
+        },
+        {
+          slug: "automotive",
+          locationNoun: "service center",
+          name: "Automotive",
+          tagline: "The service bay's real bottleneck, not just its star rating.",
+          heroBody:
+            "A dealership or service center's rating can hide exactly where it's losing customers — the estimate, the wait, the explanation of what actually got fixed. OodelCX turns a flagged visit into a case the service manager can close the same day.",
+          standaloneBody:
+            "One location, one QR code at the service desk or on the invoice. A complaint about the estimate, the wait, or the explanation of work done becomes a case for the service manager, not a note in a file.",
+          groupBody:
+            "A multi-location dealer group compares every service center side by side, spots the location whose wait-time or estimate-accuracy complaints keep recurring, and shares what fixed it with every other location.",
+          benefits: [
+            "Estimate, wait-time, and communication complaints become owned cases with a due date",
+            "Location-vs-location comparison across a dealer group, not one blended average that hides the problem location",
+            "A recurring complaint pattern at one service center gets flagged automatically",
+            "Prove a service-process fix actually moved the number, with a real before/after",
+          ],
+        },
       ]),
     },
   },
@@ -314,7 +439,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroBody:
         "Not a feature list. This is the path a single piece of feedback actually takes through OodelCX, start to finish.",
       metaDescription:
-        "The step-by-step mechanism behind OodelCX — from a QR code scan through OCX Intelligence tagging, alerts, the Case Management, the Decision Log, and CX Pulse.",
+        "The step-by-step mechanism behind OodelCX — from a QR code scan through AI Insights tagging, alerts, the Case Management, the Decision Log, and CX Pulse.",
       steps: JSON.stringify([
         {
           title: "A QR code goes up at the point of service",
@@ -326,7 +451,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         },
         {
           title: "The response lands in the dashboard, already tagged",
-          body: "OCX Intelligence reads the response as it arrives — sentiment, and which recurring theme it belongs to (via Theme Intelligence) — so nothing sits in a raw, unread queue.",
+          body: "AI Insights reads the response as it arrives — sentiment, and which recurring theme it belongs to (via Theme Intelligence) — so nothing sits in a raw, unread queue.",
         },
         {
           title: "Alert rules flag what actually needs attention",
@@ -365,7 +490,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         "Most platforms treat \"collect feedback\" as the whole job. We think that's the easy third. OodelCX exists because the harder, more valuable work — turning what customers say into something a team actually does, and knowing whether it worked — was left to spreadsheets and good intentions. We built the other two thirds.",
       howWeWorkItems: JSON.stringify([
         {
-          title: "We review OCX Intelligence, not just ship it",
+          title: "We review AI Insights, not just ship it",
           body: "Every automated report is checked by a person before a customer ever sees it.",
         },
         {
@@ -410,7 +535,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         },
         {
           heading: "How we use it",
-          text: "Account data is used to operate your dashboard, generate OCX Intelligence insights reports, and send the account-side emails described in your Email Templates. Feedback response data belongs to the business or organization that collected it.",
+          text: "Account data is used to operate your dashboard, generate AI Insights reports, and send the account-side emails described in your Email Templates. Feedback response data belongs to the business or organization that collected it.",
         },
         {
           heading: "Data retention",
@@ -430,7 +555,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heading: "Terms of Service",
       lastUpdated: "September 2026",
-      metaDescription: "The terms governing use of the OodelCX platform, billing, and OCX Intelligence content.",
+      metaDescription: "The terms governing use of the OodelCX platform, billing, and AI Insights content.",
       body: JSON.stringify([
         {
           heading: "Using OodelCX",
@@ -441,8 +566,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           text: "Plans are billed per the pricing shown at signup or agreed with your account manager. Branch and team-seat limits are enforced per your plan tier.",
         },
         {
-          heading: "OCX Intelligence content",
-          text: "Insights reports are drafted with OCX Intelligence and reviewed by a person before publication, but OodelCX does not guarantee the accuracy of OCX Intelligence summaries.",
+          heading: "AI Insights content",
+          text: "Insights reports are AI-drafted and reviewed by a person before publication, but OodelCX does not guarantee the accuracy of AI Insights summaries.",
         },
         {
           heading: "Contact",

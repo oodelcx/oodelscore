@@ -10,6 +10,12 @@ import { Reveal } from "../scroll-reveal";
 // Content edit would never show up without a redeploy.
 export const revalidate = 60;
 
+interface IndustryDetail {
+  slug: string;
+  name: string;
+  tagline: string;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const solutions = await getSiteContent("solutions");
   const description = solutions.fields.metaDescription;
@@ -28,7 +34,7 @@ export default async function SolutionsPage() {
   const singlePoints = parseJsonArray<string>(f.singlePoints);
   const groupPoints = parseJsonArray<string>(f.groupPoints);
   const entPoints = parseJsonArray<string>(f.entPoints);
-  const industries = parseJsonArray<string>(f.industries);
+  const industries = parseJsonArray<IndustryDetail>(f.industryDetails);
 
   return (
     <>
@@ -98,10 +104,10 @@ export default async function SolutionsPage() {
             <h2>{f.industriesTitle}</h2>
             <p className="industries-sub">{f.industriesBody}</p>
             <div className="industry-chip-row">
-              {industries.map((name) => (
-                <span className="industry-chip" key={name}>
-                  {name}
-                </span>
+              {industries.map((industry) => (
+                <Link className="industry-chip" href={`/solutions/${industry.slug}`} key={industry.slug}>
+                  {industry.name}
+                </Link>
               ))}
             </div>
           </Reveal>
