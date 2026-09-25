@@ -202,10 +202,10 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         ) : toursEnabled ? (
           <TourProvider initialSeenTours={[...user.seenTours]}>
             <TourLauncher />
-            {children}
+            <div key={viewProduct ?? "single-product"}>{children}</div>
           </TourProvider>
         ) : (
-          children
+          <div key={viewProduct ?? "single-product"}>{children}</div>
         )}
       </main>
     </div>

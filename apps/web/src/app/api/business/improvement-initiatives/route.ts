@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, ImprovementInitiative, hasFeature, PRODUCTS, type Product } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 const PRODUCT_SET: readonly string[] = PRODUCTS;
 
@@ -16,15 +17,16 @@ export async function GET() {
   }
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
 
   const isBranch = !!session.business.parentOrgId;
   const initiatives = await ImprovementInitiative.find(
     isBranch
-      ? { parentOrgId: session.business.parentOrgId, affectedBusinessIds: session.business._id }
-      : { businessId: session.business._id }
+      ? { parentOrgId: session.business.parentOrgId, affectedBusinessIds: session.business._id, product }
+      : { businessId: session.business._id, product }
   ).sort({ createdAt: -1 });
 
-  return NextResponse.json({ status: "ok", initiatives, readOnly: isBranch });
+  return NextResponse.json({ status: "ok", product, initiatives, readOnly: isBranch });
 }
 
 export async function POST(request: Request) {

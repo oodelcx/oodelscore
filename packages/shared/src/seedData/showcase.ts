@@ -1602,10 +1602,12 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
 
   await mapCategory("parentOrg", meridian.org._id, categoryByName.get("Staff Friendliness")!, meridian.opsLead._id, { thresholdCount: 4, windowDays: 30 });
   await mapCategory("parentOrg", meridian.org._id, categoryByName.get("Communication")!, meridian.secondLead._id);
+  await mapCategory("parentOrg", meridian.org._id, ceCategoryByName.get("Compensation Fairness")!, meridian.opsLead._id, { thresholdCount: 3, windowDays: 30 });
   await mapCategory("parentOrg", skyline.org._id, ceCategoryByName.get("Management Support")!, skyline.opsLead._id, { thresholdCount: 3, windowDays: 30 });
   await mapCategory("parentOrg", horizon.org._id, categoryByName.get("Facilities")!, horizon.opsLead._id);
   await mapCategory("parentOrg", aurora.org._id, ceCategoryByName.get("Work-Life Balance")!, aurora.opsLead._id, { thresholdCount: 3, windowDays: 21 });
   await mapCategory("parentOrg", stAugustine.org._id, categoryByName.get("Service Speed")!, stAugustine.opsLead._id, { thresholdCount: 4, windowDays: 30 });
+  await mapCategory("parentOrg", stAugustine.org._id, ceCategoryByName.get("Growth Opportunities")!, stAugustine.opsLead._id, { thresholdCount: 3, windowDays: 30 });
   await mapCategory("business", olive.business._id, categoryByName.get("Product Quality")!, olive.teamFull._id, { thresholdCount: 3, windowDays: 14 });
 
   // ---------------------------------------------------------------------
@@ -1663,6 +1665,53 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       startedAt: daysAgo(4),
       completedAt: null,
       completedStepIndexes: [0, 1],
+    },
+  });
+
+  const meridianCompensationId = ceCategoryByName.get("Compensation Fairness")!;
+  const meridianCeCases = await buildCaseNarrative({
+    parentOrgId: meridian.org._id,
+    flagScope: "parentOrg",
+    flagScopeId: meridian.org._id,
+    businessIds: [meridianDowntown.business._id, meridianUptown.business._id],
+    businessNameFor: (id) => nameByBusinessId.get(id.toString()) ?? "the branch",
+    product: "colleague_experience",
+    categoryId: meridianCompensationId,
+    categoryLabel: "Compensation Fairness",
+    comments: [
+      { businessId: meridianDowntown.business._id, text: "Pay hasn't kept up with what the role actually requires now.", daysAgoCreated: 40 },
+      { businessId: meridianDowntown.business._id, text: "Found out tellers at other branches start higher for the same job.", daysAgoCreated: 32 },
+      { businessId: meridianUptown.business._id, text: "Raises haven't matched inflation the last two years.", daysAgoCreated: 21 },
+      { businessId: meridianUptown.business._id, text: "Feels like new hires are coming in at the same rate as people with years here.", daysAgoCreated: 10 },
+    ],
+    initiativeTitle: "Benchmark teller pay against comparable branches",
+    initiativeDescription:
+      "Compensation Fairness complaints surfaced at both Downtown and Uptown — this initiative benchmarks teller pay bands against comparable branches and corrects any gaps found.",
+    initiativeOwnerId: meridian.opsLead._id,
+    flagStatus: "converted",
+    measured: { before: 2.8, after: 3.6 },
+  });
+  await addPlaybookWithRun({
+    parentOrgId: meridian.org._id,
+    businessId: null,
+    title: "Compensation Fairness Review",
+    categoryId: meridianCompensationId,
+    trigger: "Compensation Fairness ratings drop below target at a branch",
+    steps: [
+      "People Ops pulls current pay bands for the flagged branch",
+      "Compare against comparable branches in the same region",
+      "Submit any correction for approval",
+      "Re-check the branch's Compensation Fairness score after the next cycle",
+    ],
+    escalationContactId: meridian.opsLead._id,
+    run: {
+      ownerType: "parentOrg",
+      ownerId: meridian.org._id,
+      actionBoardItem: meridianCeCases[meridianCeCases.length - 1],
+      status: "completed",
+      startedAt: daysAgo(30),
+      completedAt: daysAgo(3),
+      completedStepIndexes: [0, 1, 2, 3],
     },
   });
 
@@ -1847,6 +1896,52 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       status: "completed",
       startedAt: daysAgo(30),
       completedAt: daysAgo(1),
+      completedStepIndexes: [0, 1, 2, 3],
+    },
+  });
+
+  const stAugustineGrowthId = ceCategoryByName.get("Growth Opportunities")!;
+  const stAugustineCeCases = await buildCaseNarrative({
+    parentOrgId: stAugustine.org._id,
+    flagScope: "parentOrg",
+    flagScopeId: stAugustine.org._id,
+    businessIds: [stAugustineDowntown.business._id],
+    businessNameFor: (id) => nameByBusinessId.get(id.toString()) ?? "the clinic",
+    product: "colleague_experience",
+    categoryId: stAugustineGrowthId,
+    categoryLabel: "Growth Opportunities",
+    comments: [
+      { businessId: stAugustineDowntown.business._id, text: "There's no clear path for growth here, I feel stuck.", daysAgoCreated: 36 },
+      { businessId: stAugustineDowntown.business._id, text: "Nobody's talked to me about advancement since I started.", daysAgoCreated: 27 },
+      { businessId: stAugustineDowntown.business._id, text: "Would love more training opportunities instead of just more shifts.", daysAgoCreated: 14 },
+    ],
+    initiativeTitle: "Launch a clinical career-ladder program at Downtown",
+    initiativeDescription:
+      "Growth Opportunities complaints kept surfacing at Downtown — this initiative introduces a documented career-ladder path with quarterly advancement check-ins.",
+    initiativeOwnerId: stAugustine.opsLead._id,
+    flagStatus: "converted",
+    measured: { before: 2.9, after: 3.8 },
+  });
+  await addPlaybookWithRun({
+    parentOrgId: stAugustine.org._id,
+    businessId: null,
+    title: "Growth Opportunities Check-in",
+    categoryId: stAugustineGrowthId,
+    trigger: "Growth Opportunities ratings drop below target at a facility",
+    steps: [
+      "People Ops reviews the flagged pulse responses",
+      "Manager schedules a career-path conversation with the affected staff",
+      "Document agreed next steps and training plan",
+      "Re-check the facility's Growth Opportunities score after the next quarter",
+    ],
+    escalationContactId: stAugustine.opsLead._id,
+    run: {
+      ownerType: "parentOrg",
+      ownerId: stAugustine.org._id,
+      actionBoardItem: stAugustineCeCases[stAugustineCeCases.length - 1],
+      status: "completed",
+      startedAt: daysAgo(30),
+      completedAt: daysAgo(2),
       completedStepIndexes: [0, 1, 2, 3],
     },
   });

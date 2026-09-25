@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, RecurringIssueFlag, Category, hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 /**
  * "Own" flags are this business's own repeated cases — actionable here
@@ -9,6 +10,10 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
  * flagged that happen to include this business — shown for visibility
  * only; only the org can convert one of those (see spec discussion: a
  * genuinely cross-branch pattern is the org's call, not any one branch's).
+ *
+ * RecurringIssueFlag has no direct `product` field — scoped instead via
+ * categoryId, with Category carrying the product — so both queries are
+ * filtered to the account's current product view via its category ids.
  */
 export async function GET() {
   const session = await requireBusinessOwner();
@@ -18,9 +23,16 @@ export async function GET() {
   }
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
+  const productCategoryIds = (await Category.find({ product }).select("_id")).map((c) => c._id);
 
   const [ownFlags, orgFlags] = await Promise.all([
-    RecurringIssueFlag.find({ ownerScope: "business", ownerScopeId: session.business._id, status: "active" }).sort({
+    RecurringIssueFlag.find({
+      ownerScope: "business",
+      ownerScopeId: session.business._id,
+      status: "active",
+      categoryId: { $in: productCategoryIds },
+    }).sort({
       lastCaseAt: -1,
     }),
     session.business.parentOrgId
@@ -29,6 +41,7 @@ export async function GET() {
           ownerScopeId: session.business.parentOrgId,
           status: "active",
           businessIds: session.business._id,
+          categoryId: { $in: productCategoryIds },
         }).sort({ lastCaseAt: -1 })
       : Promise.resolve([]),
   ]);
@@ -45,6 +58,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    product,
     flags: [...ownFlags.map((f) => serialize(f, true)), ...orgFlags.map((f) => serialize(f, false))],
   });
 }
