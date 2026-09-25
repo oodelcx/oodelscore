@@ -10,6 +10,17 @@ interface Feature {
   headline: string;
   body: string;
   group?: "understand" | "act";
+  // Curated subset shown in the nav mega-menu — a SaaS nav lists the
+  // headline items, not every feature on the page (that's what /product
+  // itself is for). Falls back to "show everything" only if literally
+  // nothing is marked, so an old/incompletely-migrated features list still
+  // renders something instead of an empty column.
+  menuFeatured?: boolean;
+}
+
+interface IndustryDetail {
+  slug: string;
+  name: string;
 }
 
 // Mirrors product/page.tsx's featureSlug() exactly — the anchor a feature's
@@ -45,13 +56,17 @@ export async function GET() {
   if (!features.some((f) => f.group === "act")) {
     features = parseJsonArray<Feature>(SEED_PRODUCT.fields.features);
   }
+  const curated = features.some((f) => f.menuFeatured) ? features.filter((f) => f.menuFeatured) : features;
   const toLink = (f: Feature): NavLink => ({ label: f.tag, href: `/product#${featureSlug(f.tag)}` });
-  const understand = features.filter((f) => f.group !== "act").map(toLink);
-  const act = features.filter((f) => f.group === "act").map(toLink);
+  const understand = curated.filter((f) => f.group !== "act").map(toLink);
+  const act = curated.filter((f) => f.group === "act").map(toLink);
 
-  let industries = parseJsonArray<string>(solutions.fields.industries);
-  if (industries.length === 0) industries = parseJsonArray<string>(SEED_SOLUTIONS.fields.industries);
-  const industryLinks: NavLink[] = industries.map((name) => ({ label: name, href: "/solutions#industries" }));
+  let industries = parseJsonArray<IndustryDetail>(solutions.fields.industryDetails);
+  if (industries.length === 0) industries = parseJsonArray<IndustryDetail>(SEED_SOLUTIONS.fields.industryDetails);
+  // Each industry now has its own page (see solutions/[slug]) — no more
+  // routing every industry to the same shared anchor, which is what made
+  // this column read as "no data" (every link went to the same place).
+  const industryLinks: NavLink[] = industries.map((i) => ({ label: i.name, href: `/solutions/${i.slug}` }));
   const structureLinks: NavLink[] = [
     { label: "Single-location businesses", href: "/solutions#standalone" },
     { label: "Multi-branch groups", href: "/solutions#group" },
@@ -65,6 +80,8 @@ export async function GET() {
         { label: "Understand", items: understand },
         { label: "Act", items: act },
       ],
+      seeAllHref: "/product",
+      seeAllLabel: "See every feature →",
     },
     solutions: {
       columns: [
