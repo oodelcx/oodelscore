@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, seedShowcaseData, generateDueInsights, ALL_AI_REPORT_PERIODS } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  seedShowcaseData,
+  generateDueInsights,
+  ALL_AI_REPORT_PERIODS,
+  recomputeAllCxPulseScores,
+} from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 /**
@@ -10,9 +16,14 @@ import { requireStaffSession } from "@/lib/adminAuth";
  * connected data instead of empty states. Also generates AI Insight Reports
  * for every owner across every cadence against the data just seeded — via
  * the live Claude API when ANTHROPIC_API_KEY is set, falling back to a
- * deterministic narrative otherwise (see ai/insightsGeneration.ts). Gated
- * behind ENABLE_DEV_DATA_TOOLS=true and the "Admin" system role — never
- * available unless the deploying environment explicitly opts in.
+ * deterministic narrative otherwise (see ai/insightsGeneration.ts) — and
+ * recomputes every owner's CX Pulse score, which otherwise stays
+ * permanently empty on a fresh environment until the nightly
+ * recompute-cx-pulse cron happens to run against it (a staging/demo
+ * environment usually never gets that cron scheduled at all — see
+ * .github/workflows/scheduled-jobs.yml, which only targets production).
+ * Gated behind ENABLE_DEV_DATA_TOOLS=true and the "Admin" system role —
+ * never available unless the deploying environment explicitly opts in.
  */
 export async function POST() {
   if (process.env.ENABLE_DEV_DATA_TOOLS !== "true") {
@@ -26,5 +37,6 @@ export async function POST() {
   await connectToDatabase();
   const result = await seedShowcaseData(session.user._id);
   const insights = await generateDueInsights(new Date(), [...ALL_AI_REPORT_PERIODS]);
-  return NextResponse.json({ status: "ok", result, insights });
+  const cxPulse = await recomputeAllCxPulseScores();
+  return NextResponse.json({ status: "ok", result, insights, cxPulse });
 }

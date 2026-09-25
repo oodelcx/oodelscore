@@ -175,6 +175,13 @@ export default function BusinessCasesClient() {
       setOrgName(itemsData.orgName ?? null);
       setTeam(teamData.team ?? []);
       setCategories(categoryData.categories ?? []);
+      // /api/business/action-board already resolves the account's
+      // currently-active product tab server-side — read it from here so a
+      // new case lands on whichever tab is actually open, instead of the
+      // form silently always defaulting to Customer Experience.
+      if (itemsData.product === "customer_experience" || itemsData.product === "colleague_experience") {
+        setProduct(itemsData.product);
+      }
       setLoading(false);
     });
   }

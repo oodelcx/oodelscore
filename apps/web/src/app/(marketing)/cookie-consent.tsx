@@ -49,14 +49,10 @@ function setCookieConsent(analytics: boolean) {
  */
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
-  const [managing, setManaging] = useState(false);
 
   useEffect(() => {
     if (!getCookieConsent()) setVisible(true);
-    const openManager = () => {
-      setManaging(true);
-      setVisible(true);
-    };
+    const openManager = () => setVisible(true);
     window.addEventListener("oodel:manage-cookies", openManager);
     return () => window.removeEventListener("oodel:manage-cookies", openManager);
   }, []);
@@ -66,7 +62,6 @@ export function CookieConsentBanner() {
   function decide(analytics: boolean) {
     setCookieConsent(analytics);
     setVisible(false);
-    setManaging(false);
   }
 
   return (
@@ -81,7 +76,7 @@ export function CookieConsentBanner() {
         </div>
         <div className="cookie-banner-actions">
           <button type="button" className="cookie-btn cookie-btn-ghost" onClick={() => decide(false)}>
-            {managing ? "Necessary only" : "Reject non-essential"}
+            Necessary only
           </button>
           <button type="button" className="cookie-btn cookie-btn-primary" onClick={() => decide(true)}>
             Accept all

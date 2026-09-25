@@ -14,6 +14,13 @@ export default function DevDataToolsPage() {
   const [seedDemoError, setSeedDemoError] = useState<string | null>(null);
   const [seedDemoResult, setSeedDemoResult] = useState<readonly { email: string; label: string }[] | null>(null);
 
+  const [recomputing, setRecomputing] = useState(false);
+  const [recomputeError, setRecomputeError] = useState<string | null>(null);
+  const [recomputeResult, setRecomputeResult] = useState<{
+    cxPulse: { businessesScored: number; parentOrgsScored: number; ceBusinessesScored: number; ceParentOrgsScored: number };
+    insights: { reportsCreated: number; reportsSkipped: number };
+  } | null>(null);
+
   const [wiping, setWiping] = useState(false);
   const [wipeError, setWipeError] = useState<string | null>(null);
   const [wipeResult, setWipeResult] = useState<Record<string, number> | null>(null);
@@ -55,6 +62,20 @@ export default function DevDataToolsPage() {
       return;
     }
     setSeedDemoResult(data.accounts);
+  }
+
+  async function runRecomputeNow() {
+    setRecomputing(true);
+    setRecomputeError(null);
+    setRecomputeResult(null);
+    const res = await fetch("/api/admin/dev-tools/recompute-now", { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setRecomputing(false);
+    if (!res.ok) {
+      setRecomputeError(data?.message ?? "Failed to recompute");
+      return;
+    }
+    setRecomputeResult({ cxPulse: data.cxPulse, insights: data.insights });
   }
 
   async function runWipe() {
@@ -142,6 +163,29 @@ export default function DevDataToolsPage() {
         {seedDemoResult && (
           <div className="callout" style={{ marginTop: 12 }}>
             Ready: {seedDemoResult.map((a) => `${a.label} (${a.email})`).join(", ")}.
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
+        <h3>Recompute CX Pulse + Insights now</h3>
+        <p className="card-sub">
+          Runs the same work as the nightly <code>recompute-cx-pulse</code> and daily <code>generate-insights</code>{" "}
+          cron jobs, against whatever data already exists — no wipe, no reseed. Use this on any environment where
+          those crons aren&apos;t actually reaching it yet (the scheduled GitHub Actions workflow only targets
+          production by default — see <code>.github/workflows/scheduled-jobs.yml</code>), which otherwise leaves
+          CX Pulse and AI Insights empty indefinitely even with real response data.
+        </p>
+        {recomputeError && <p className="error-text">{recomputeError}</p>}
+        <button className="btn btn-dark" disabled={recomputing} onClick={runRecomputeNow}>
+          {recomputing ? "Recomputing…" : "Recompute now"}
+        </button>
+        {recomputeResult && (
+          <div className="callout" style={{ marginTop: 12 }}>
+            CX Pulse: {recomputeResult.cxPulse.businessesScored} businesses, {recomputeResult.cxPulse.parentOrgsScored}{" "}
+            orgs ({recomputeResult.cxPulse.ceBusinessesScored} + {recomputeResult.cxPulse.ceParentOrgsScored} also
+            scored for Colleague Experience). Insights: {recomputeResult.insights.reportsCreated} reports generated (
+            {recomputeResult.insights.reportsSkipped} skipped — already existed or nothing to report).
           </div>
         )}
       </div>

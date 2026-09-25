@@ -305,7 +305,7 @@ export function CxGoalsCard({
                 <div className="subtitle">
                   {g.progressPercent === null
                     ? "Not enough data yet"
-                    : `${g.progressPercent}% of the way there · ${g.daysRemaining >= 0 ? `${g.daysRemaining} days left` : "past target date"}`}
+                    : `${Math.max(0, Math.min(100, Math.round(g.progressPercent)))}% of the way there · ${g.daysRemaining >= 0 ? `${g.daysRemaining} days left` : "past target date"}`}
                 </div>
               </>
             )}

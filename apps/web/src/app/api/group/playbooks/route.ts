@@ -12,6 +12,7 @@ import {
   type Product,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
 
 const PRODUCT_SET: readonly string[] = PRODUCTS;
@@ -56,7 +57,14 @@ export async function GET() {
     }))
   );
 
-  return NextResponse.json({ status: "ok", playbooks: enriched });
+  // Playbooks themselves stay unfiltered by product (see the comment
+  // above), but the "New playbook" form still needs to know which product
+  // tab is active so it doesn't silently default to Customer Experience —
+  // resolve and return it the same way every other product-scoped route
+  // already does.
+  const product = await resolveViewProduct(session.org);
+
+  return NextResponse.json({ status: "ok", playbooks: enriched, product });
 }
 
 export async function POST(request: Request) {
