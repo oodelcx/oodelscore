@@ -6,28 +6,42 @@
  * Business/Parent Org detail, Question Templates) — see the mockup itself
  * for the full set covering screens not yet built.
  */
+/*
+ * Refined enterprise palette (2026) — cooler/more muted than the original
+ * mockup-derived tokens, tied to the same brand green used on the
+ * marketing site (--accent) rather than a separate near-teal. Semantic
+ * meanings are unchanged (green=good, amber=warning, red=danger/bad,
+ * blue=info) — only the specific hues were refreshed, so every class below
+ * that already reads these variables picks up the new look automatically
+ * without needing its own edit.
+ */
 :root {
   --sidebar-bg: #15181b;
   --sidebar-text: #a9aeb4;
   --sidebar-hover: #1f2327;
   --sidebar-active: #262b30;
-  --bg: #f6f6f4;
+  --bg: #f5f6f8;
+  /* Canonical "subtle fill" token — several existing rules already read
+     var(--bg-2, <hardcoded fallback>) expecting this to exist; defining it
+     here makes them consistent for free instead of each guessing its own
+     fallback shade. */
+  --bg-2: #eef0f3;
   --card: #ffffff;
-  --border: #e6e5e1;
-  --text: #17171a;
-  --text-2: #68686a;
-  --text-3: #9a9a97;
-  --accent: #0f6e56;
-  --accent-bg: #e1f5ee;
-  --green: #3b6d11;
-  --green-bg: #eaf3de;
-  --amber: #854f0b;
-  --amber-bg: #faeeda;
-  --red: #a32d2d;
-  --red-bg: #fcebeb;
-  --blue: #185fa5;
+  --border: #e2e5eb;
+  --text: #12161c;
+  --text-2: #5a6472;
+  --text-3: #8a93a3;
+  --accent: #0a6e4f;
+  --accent-bg: #e6f3ee;
+  --green: #0a6e4f;
+  --green-bg: #e6f3ee;
+  --amber: #b8770a;
+  --amber-bg: #fbf0dc;
+  --red: #b3261e;
+  --red-bg: #fbe9e8;
+  --blue: #1d5fa8;
   --blue-bg: #e6f1fb;
-  --purple: #3c3489;
+  --purple: #4a3f9e;
   --purple-bg: #eeedfe;
   --resend: #5b3df5;
   --resend-bg: #f3eeff;
@@ -51,12 +65,13 @@
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  /* oodel-score-admin-rebuild.html body{}: the three dashboards (Admin,
-     Business, Group) all use this system-font stack in their mockups —
-     distinct from the marketing site's own 'General Sans' choice — so it's
-     scoped here rather than swapped in globally via next/font in
-     apps/web/src/app/layout.tsx. */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  /* Was a hardcoded system-font stack (oodel-score-admin-rebuild.html
+     body{}), overriding the Inter already loaded app-wide via next/font in
+     apps/web/src/app/layout.tsx — this now just lets that inherit through,
+     so the portals match the marketing site's font loading instead of
+     duplicating their own. Inter reads cleaner at the smaller, denser type
+     sizes used throughout these dashboards. */
+  font-family: inherit;
 }
 /* The sidebar is now always an off-canvas drawer (opened by the hamburger
    in .mobile-topbar, at every viewport width, not just narrow ones) rather
@@ -301,13 +316,14 @@ html.mobile-nav-open .admin-sidebar {
   height: 100%;
 }
 h1 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0 0 4px;
 }
 .subtitle {
   color: var(--text-2);
-  font-size: 14px;
+  font-size: 13.5px;
   margin: 0 0 24px;
 }
 .page-head {
@@ -318,18 +334,18 @@ h1 {
   margin-bottom: 22px;
 }
 .btn {
-  border: 1px solid #d8d7d2;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--card);
   color: var(--text);
-  font-size: 13px;
+  font-size: 12.5px;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 }
 .btn:hover {
-  border-color: #bfbeb8;
+  border-color: var(--text-3);
 }
 .btn:disabled {
   opacity: 0.5;
@@ -340,13 +356,16 @@ h1 {
   color: #fff;
   border-color: var(--sidebar-bg);
 }
+.btn-dark:hover {
+  opacity: 0.92;
+}
 .btn-sm {
   padding: 4px 10px;
   font-size: 12px;
 }
 .btn-danger {
   color: var(--red);
-  border-color: #f0c7c7;
+  border-color: var(--red-bg);
 }
 .btn-group {
   display: flex;
@@ -354,10 +373,10 @@ h1 {
 }
 .icon-btn {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -430,8 +449,11 @@ h1 {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 18px 20px;
+  /* Faint depth on top of the border rather than a heavier shadow — keeps
+     the enterprise-flat look while still separating a card from --bg. */
+  box-shadow: 0 1px 2px rgba(16, 24, 32, 0.04);
 }
 .card h3 {
   font-size: 14px;
@@ -464,7 +486,7 @@ h1 {
   color: var(--red);
 }
 .pill-gray {
-  background: #efefec;
+  background: var(--bg-2);
   color: var(--text-2);
 }
 .pill-blue {
@@ -607,17 +629,17 @@ h1 {
 }
 .callout {
   background: var(--accent-bg);
-  border: 1px solid #c7e8dc;
-  border-radius: 10px;
+  border: 1px solid #c9e3d8;
+  border-radius: 9px;
   padding: 12px 16px;
   font-size: 13px;
   color: var(--accent);
   margin-bottom: 20px;
 }
 .callout-amber {
-  background: var(--amber-bg, #faeeda);
-  border-color: #f0dcb0;
-  color: var(--amber, #854f0b);
+  background: var(--amber-bg);
+  border-color: #f3ddad;
+  color: var(--amber);
 }
 .callout-amber b {
   color: inherit;
@@ -679,17 +701,17 @@ input[type="email"],
 input[type="number"] {
   box-sizing: border-box;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 7px;
   padding: 7px 10px;
   font-size: 12.5px;
-  background: #fff;
+  background: var(--card);
   color: var(--text);
   font-family: inherit;
 }
 
 .chip {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
   font-size: 12.5px;
   padding: 6px 12px;
   border-radius: 20px;
@@ -730,7 +752,7 @@ input[type="number"] {
   width: 38px;
   height: 22px;
   border-radius: 20px;
-  background: #dadad5;
+  background: var(--border);
   position: relative;
   cursor: pointer;
   display: inline-block;
@@ -752,7 +774,7 @@ input[type="number"] {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .toggle.on {
-  background: var(--sidebar-bg);
+  background: var(--accent);
 }
 .toggle.on::after {
   left: 18px;
@@ -782,12 +804,12 @@ input[type="number"] {
      within it. */
   box-sizing: border-box;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 7px;
   padding: 9px 11px;
   font-size: 13px;
   font-family: inherit;
   color: var(--text);
-  background: #fff;
+  background: var(--card);
 }
 .field-row {
   display: flex;
@@ -813,8 +835,8 @@ input[type="number"] {
   overflow-y: auto;
 }
 .modal-box {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--card);
+  border-radius: 12px;
   width: 100%;
   max-width: 600px;
   padding: 26px 28px;
@@ -891,14 +913,14 @@ input[type="number"] {
 .subtabs button.active {
   color: var(--text);
   font-weight: 600;
-  border-bottom-color: var(--sidebar-bg);
+  border-bottom-color: var(--accent);
 }
 
 .role-card {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 16px 18px;
-  background: #fff;
+  background: var(--card);
   margin-bottom: 12px;
 }
 .perm-table {
