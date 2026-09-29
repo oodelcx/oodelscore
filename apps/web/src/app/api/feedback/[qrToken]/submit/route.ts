@@ -174,7 +174,8 @@ async function handlePost(request: NextRequest, qrToken: string) {
 
   const responseAnswers = template.questions.map((question, index) => {
     const raw = answerByIndex.get(index) ?? null;
-    const isNumericType = question.type === "star_1_5" || question.type === "nps_0_10" || question.type === "slider";
+    const isNumericType =
+      question.type === "star_1_5" || question.type === "nps_0_10" || question.type === "slider" || question.type === "ces_1_5";
     const value = isNumericType && raw !== null && raw !== "" ? Number(raw) : raw;
     return {
       questionId: question._id!,

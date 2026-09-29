@@ -94,6 +94,8 @@ interface OverviewData {
   branchCount: number;
   networkAverage: number | null;
   networkNps: number | null;
+  networkCsat: number | null;
+  networkCesLowEffort: number | null;
   cxPulseLevel: number | null;
   cxPulseHoldingBack: HoldingBackDimension[];
   comparisons: Comparisons;
@@ -280,6 +282,18 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
             <InfoTip text={tooltips["network-nps"]} />
           </div>
           <div className="metric-val">{data.networkNps !== null ? formatSigned(data.networkNps) : "—"}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            Network CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5, weighted across branches by their response count." />
+          </div>
+          <div className="metric-val">{data.networkCsat !== null ? `${data.networkCsat}%` : "—"}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            Network CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 (low effort = good), weighted across branches by their response count." />
+          </div>
+          <div className="metric-val">{data.networkCesLowEffort !== null ? `${data.networkCesLowEffort}%` : "—"}</div>
         </div>
         <div className="card">
           <div className="metric-label">

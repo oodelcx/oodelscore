@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
 
-type OutcomeMetric = "starAverage" | "nps" | "categoryAverage";
+type OutcomeMetric = "starAverage" | "nps" | "categoryAverage" | "csat" | "ces";
 
 interface EntryRow {
   _id: string;
@@ -18,6 +18,9 @@ interface EntryRow {
   outcomeCategoryId: string | null;
   outcomeBefore: number | null;
   outcomeAfter: number | null;
+  outcomeSampleSizeBefore: number | null;
+  outcomeSampleSizeAfter: number | null;
+  outcomeLowConfidence: boolean;
   ownerId: string | null;
 }
 
@@ -36,6 +39,8 @@ const METRIC_LABELS: Record<OutcomeMetric, string> = {
   starAverage: "Overall score (stars)",
   nps: "NPS",
   categoryAverage: "Category score",
+  csat: "CSAT (% satisfied)",
+  ces: "CES (% low effort)",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -470,6 +475,15 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                             : e.outcomeMetricDescription
                               ? `Measuring: ${e.outcomeMetricDescription}`
                               : "not measured yet"}
+                          {e.outcomeBefore !== null && e.outcomeAfter !== null && e.outcomeLowConfidence && (
+                            <span
+                              className="pill pill-gray"
+                              style={{ marginLeft: 6, fontSize: 10 }}
+                              title={`Built from a small sample — ${e.outcomeSampleSizeBefore ?? 0} response(s) before, ${e.outcomeSampleSizeAfter ?? 0} after. Treat this verdict as low-confidence.`}
+                            >
+                              low sample
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

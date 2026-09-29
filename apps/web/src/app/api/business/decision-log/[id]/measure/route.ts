@@ -47,9 +47,12 @@ export async function POST(request: Request, { params }: RouteParams) {
   });
 
   entry.outcomeBefore = result.outcomeBefore;
+  entry.outcomeSampleSizeBefore = result.sampleSizeBefore;
   if (result.outcomeAfter !== null) {
     entry.outcomeAfter = result.outcomeAfter;
     entry.outcomeMeasuredAt = new Date();
+    entry.outcomeSampleSizeAfter = result.sampleSizeAfter;
+    entry.outcomeLowConfidence = result.lowConfidence;
   }
   await entry.save();
 

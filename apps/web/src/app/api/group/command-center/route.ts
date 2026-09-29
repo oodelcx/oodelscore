@@ -95,6 +95,8 @@ export async function GET() {
       region: s.region,
       starAverage: s.starAverage,
       npsScore: s.npsScore,
+      csatPercent: s.csatPercent,
+      cesLowEffortPercent: s.cesLowEffortPercent,
       responseCount: s.responseCount,
       starDelta,
       band: ragBandForStar(s.starAverage, thresholds) ?? ragBandForNps(s.npsScore, thresholds),
@@ -212,12 +214,36 @@ export async function GET() {
     .filter((b) => b.starDelta !== null)
     .sort((a, b) => (b.starDelta as number) - (a.starDelta as number));
 
+  // Org-wide CSAT/CES headline, alongside star/NPS — weighted by each
+  // branch's own response count so a high-volume branch isn't diluted to
+  // the same weight as a branch with a handful of responses.
+  const csatBranches = summaries30d.filter((s) => s.csatPercent !== null);
+  const csatPercent =
+    csatBranches.length === 0
+      ? null
+      : Math.round(
+          (csatBranches.reduce((sum, s) => sum + (s.csatPercent as number) * s.responseCount, 0) /
+            csatBranches.reduce((sum, s) => sum + s.responseCount, 0)) *
+            10
+        ) / 10;
+  const cesBranches = summaries30d.filter((s) => s.cesLowEffortPercent !== null);
+  const cesLowEffortPercent =
+    cesBranches.length === 0
+      ? null
+      : Math.round(
+          (cesBranches.reduce((sum, s) => sum + (s.cesLowEffortPercent as number) * s.responseCount, 0) /
+            cesBranches.reduce((sum, s) => sum + s.responseCount, 0)) *
+            10
+        ) / 10;
+
   return NextResponse.json({
     status: "ok",
     orgName: org.name,
     product,
     ragThresholds: thresholds,
     branchTiles,
+    csatPercent,
+    cesLowEffortPercent,
     categoryMatrix,
     feed: feed.slice(0, 20),
     cxPulse: orgScore ? { compositeScore: orgScore.compositeScore, level: orgScore.level } : null,

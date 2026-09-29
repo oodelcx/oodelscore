@@ -16,18 +16,44 @@ async function resolveBusinessIds(ownerType: BillingOwnerType, ownerId: Types.Ob
   return scoped.map((b) => b._id);
 }
 
+/**
+ * The three headline signals shown together everywhere (Analytics, Command
+ * Center, CX Pulse), per the CSAT/CES gap fix:
+ *  - NPS (nps_0_10): unchanged, its own metric, never blended with stars —
+ *    this is bug #1 from the spec (the NPS/star score-blending bug).
+ *  - CSAT: formalized here as top-2-box (% of star_1_5 answers that are 4
+ *    or 5) — the star_1_5 question already IS the satisfaction question in
+ *    every template; this just reports it the standard CSAT way alongside
+ *    the raw average, instead of leaving CSAT invisible.
+ *  - CES (ces_1_5): a NEW question type. Inverted scale — 1 is the good
+ *    answer ("very easy"), so cesLowEffortPercent (% answering 1 or 2) is
+ *    the headline number, the same "good outcome %" shape as CSAT's top-box,
+ *    not a raw average that would read backwards next to star/NPS.
+ * Each metric also returns its own sample size so callers can show a
+ * low-confidence flag (see compare-client.tsx's LOW_SAMPLE_THRESHOLD
+ * convention) without a second query.
+ */
 export async function computeStarAndNps(businessIds: Types.ObjectId[], from: Date, to: Date, product: Product = "customer_experience") {
   const responses = await Response.find({ businessId: { $in: businessIds }, product, submittedAt: { $gte: from, $lte: to } }).select("answers").lean();
   let starSum = 0;
   let starCount = 0;
+  let csatSatisfiedCount = 0;
   const npsAnswers: number[] = [];
+  let cesSum = 0;
+  let cesCount = 0;
+  let cesLowEffortCount = 0;
   for (const r of responses) {
     for (const a of r.answers) {
       if (a.type === "star_1_5" && typeof a.value === "number") {
         starSum += a.value;
         starCount += 1;
+        if (a.value >= 4) csatSatisfiedCount += 1;
       } else if (a.type === "nps_0_10" && typeof a.value === "number") {
         npsAnswers.push(a.value);
+      } else if (a.type === "ces_1_5" && typeof a.value === "number") {
+        cesSum += a.value;
+        cesCount += 1;
+        if (a.value <= 2) cesLowEffortCount += 1;
       }
     }
   }
@@ -36,7 +62,19 @@ export async function computeStarAndNps(businessIds: Types.ObjectId[], from: Dat
     npsAnswers.length === 0
       ? null
       : Math.round(((npsAnswers.filter((v) => v >= 9).length - npsAnswers.filter((v) => v <= 6).length) / npsAnswers.length) * 100);
-  return { starAverage, npsScore };
+  const csatPercent = starCount === 0 ? null : Math.round((csatSatisfiedCount / starCount) * 1000) / 10;
+  const cesAverage = cesCount === 0 ? null : Math.round((cesSum / cesCount) * 100) / 100;
+  const cesLowEffortPercent = cesCount === 0 ? null : Math.round((cesLowEffortCount / cesCount) * 1000) / 10;
+  return {
+    starAverage,
+    npsScore,
+    csatPercent,
+    cesAverage,
+    cesLowEffortPercent,
+    starCount,
+    npsCount: npsAnswers.length,
+    cesCount,
+  };
 }
 
 export async function computeCategoryAverage(

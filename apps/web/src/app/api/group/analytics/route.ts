@@ -49,12 +49,26 @@ export async function GET() {
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));
 
   const npsAnswers: number[] = [];
+  let csatSatisfied = 0;
+  let csatTotal = 0;
+  let cesSum = 0;
+  let cesLowEffort = 0;
+  let cesTotal = 0;
   const categoryTotals = new Map<string, { sum: number; count: number }>();
   const comments: string[] = [];
 
   for (const response of responses) {
     for (const answer of response.answers) {
       if (answer.type === "nps_0_10" && typeof answer.value === "number") npsAnswers.push(answer.value);
+      if (answer.type === "star_1_5" && typeof answer.value === "number") {
+        csatTotal += 1;
+        if (answer.value >= 4) csatSatisfied += 1;
+      }
+      if (answer.type === "ces_1_5" && typeof answer.value === "number") {
+        cesTotal += 1;
+        cesSum += answer.value;
+        if (answer.value <= 2) cesLowEffort += 1;
+      }
       if (answer.type === "star_1_5" && typeof answer.value === "number" && answer.categoryId) {
         const key = answer.categoryId.toString();
         const entry = categoryTotals.get(key) ?? { sum: 0, count: 0 };
@@ -79,7 +93,16 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     trend,
-    npsBreakdown: { promoters, passives, detractors },
+    npsBreakdown: { promoters, passives, detractors, sampleSize: npsAnswers.length },
+    csat: {
+      percent: csatTotal === 0 ? null : Math.round((csatSatisfied / csatTotal) * 1000) / 10,
+      sampleSize: csatTotal,
+    },
+    ces: {
+      average: cesTotal === 0 ? null : Math.round((cesSum / cesTotal) * 100) / 100,
+      lowEffortPercent: cesTotal === 0 ? null : Math.round((cesLowEffort / cesTotal) * 1000) / 10,
+      sampleSize: cesTotal,
+    },
     categoryBreakdown,
     commentTags: extractTags(comments),
   });
