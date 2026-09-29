@@ -18,7 +18,7 @@ export type ActionSource = (typeof ACTION_SOURCES)[number];
 export const CASE_TYPES = ["customer_recovery", "operational_fix", "investigation"] as const;
 export type CaseType = (typeof CASE_TYPES)[number];
 
-export const ESCALATION_TRAIL_ACTIONS = ["escalated", "auto_escalated"] as const;
+export const ESCALATION_TRAIL_ACTIONS = ["escalated", "auto_escalated", "de_escalated"] as const;
 export type EscalationTrailAction = (typeof ESCALATION_TRAIL_ACTIONS)[number];
 
 // One entry per level this case has passed through — the audit trail behind

@@ -10,6 +10,13 @@ interface EscalationHistoryRow {
   at: string;
   userEmail: string | null;
 }
+interface TimelineRow {
+  kind: string;
+  label: string;
+  actorLabel: string;
+  note: string;
+  at: string;
+}
 interface CommentRow {
   _id: string;
   authorLabel: string;
@@ -71,6 +78,7 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
   const [recurringFlag, setRecurringFlag] = useState<RecurringFlagSummary | null>(null);
   const [sourceResponses, setSourceResponses] = useState<ResponseRow[]>([]);
   const [comments, setComments] = useState<CommentRow[]>([]);
+  const [timeline, setTimeline] = useState<TimelineRow[]>([]);
   const [businessName, setBusinessName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +86,7 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
   const [posting, setPosting] = useState(false);
   const [escalating, setEscalating] = useState(false);
   const [escalationNote, setEscalationNote] = useState("");
+  const [deEscalating, setDeEscalating] = useState(false);
   const [customerMessage, setCustomerMessage] = useState("");
   const [sendingToCustomer, setSendingToCustomer] = useState(false);
   const [customerSendResult, setCustomerSendResult] = useState<string | null>(null);
@@ -92,6 +101,7 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
         setRecurringFlag(data.recurringFlag ?? null);
         setSourceResponses(data.sourceResponses ?? []);
         setComments(data.comments ?? []);
+        setTimeline(data.timeline ?? []);
         setBusinessName(data.businessName ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -127,6 +137,23 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
     setEscalating(false);
     if (!res.ok) {
       alert(data?.message ?? "Failed to escalate");
+      return;
+    }
+    setEscalationNote("");
+    load();
+  }
+
+  async function deEscalate() {
+    setDeEscalating(true);
+    const res = await fetch(`/api/group/action-board/${caseId}/de-escalate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: escalationNote.trim() }),
+    });
+    const data = await res.json().catch(() => null);
+    setDeEscalating(false);
+    if (!res.ok) {
+      alert(data?.message ?? "Failed to de-escalate");
       return;
     }
     setEscalationNote("");
@@ -233,15 +260,19 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3>Escalation trail</h3>
-        {item.escalationHistory.length === 0 ? (
-          <p className="subtitle">Still at level 1 — hasn't been escalated.</p>
+        <h3>Case timeline</h3>
+        <p className="card-sub" style={{ margin: "0 0 8px" }}>
+          Every status, priority, owner, and escalation change this case has been through, in order — append-only,
+          never edited after the fact.
+        </p>
+        {timeline.length === 0 ? (
+          <p className="subtitle">No changes recorded yet — still exactly as it was created.</p>
         ) : (
           <ul style={{ paddingLeft: 18 }}>
-            {item.escalationHistory.map((h, i) => (
+            {timeline.map((t, i) => (
               <li key={i} style={{ marginBottom: 6, fontSize: 13 }}>
-                Level {h.level} ({h.userEmail ?? "unassigned"}) → escalated{h.note ? `: ${h.note}` : ""} —{" "}
-                {new Date(h.at).toLocaleString()}
+                {t.label} — <span style={{ color: "var(--text-2)" }}>{t.actorLabel}</span>
+                {t.note ? `: ${t.note}` : ""} <span style={{ color: "var(--text-3)" }}>({new Date(t.at).toLocaleString()})</span>
               </li>
             ))}
           </ul>
@@ -249,12 +280,19 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
         {item.status !== "resolved" && (
           <div style={{ marginTop: 10 }}>
             <div className="field" style={{ maxWidth: 480 }}>
-              <label>Escalation note (optional)</label>
+              <label>Note (optional)</label>
               <textarea value={escalationNote} onChange={(e) => setEscalationNote(e.target.value)} />
             </div>
-            <button className="btn btn-sm" disabled={escalating} onClick={escalate}>
-              {escalating ? "Escalating…" : "↑ Escalate to next level"}
-            </button>
+            <div className="btn-group">
+              <button className="btn btn-sm" disabled={escalating} onClick={escalate}>
+                {escalating ? "Escalating…" : "↑ Escalate to next level"}
+              </button>
+              {item.currentEscalationLevel > 1 && (
+                <button className="btn btn-sm" disabled={deEscalating} onClick={deEscalate}>
+                  {deEscalating ? "De-escalating…" : "↓ De-escalate one level"}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

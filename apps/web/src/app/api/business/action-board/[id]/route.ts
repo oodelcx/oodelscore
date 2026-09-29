@@ -14,6 +14,9 @@ import {
   ACTION_PRIORITIES,
   ACTION_STATUSES,
   CASE_TYPES,
+  logCaseEvent,
+  buildCaseTimeline,
+  CaseEventLogEntry,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { attachPlaybookRunsToItems } from "@/lib/caseStats";
@@ -39,10 +42,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   }
 
-  const [sourceResponses, comments, playbooks] = await Promise.all([
+  const [sourceResponses, comments, playbooks, events] = await Promise.all([
     Response.find({ _id: { $in: item.sourceResponseIds } }),
     ActionItemComment.find({ actionItemId: item._id }).sort({ createdAt: 1 }),
     Playbook.find(session.business.parentOrgId ? { parentOrgId: session.business.parentOrgId } : { businessId: session.business._id }),
+    CaseEventLogEntry.find({ actionBoardItemId: item._id }).sort({ createdAt: 1 }),
   ]);
 
   const escalationUserIds = [
@@ -50,6 +54,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   ];
   const escalationUsers = await User.find({ _id: { $in: escalationUserIds } }).select("email");
   const emailByUserId = new Map(escalationUsers.map((u) => [u._id.toString(), u.email]));
+  const timeline = buildCaseTimeline(events, item.escalationHistory, emailByUserId);
 
   const [itemWithRun] = await attachPlaybookRunsToItems([item], playbooks);
 
@@ -86,6 +91,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     },
     sourceResponses,
     comments,
+    timeline,
     recurringFlag,
   });
 }
@@ -109,15 +115,29 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (item.ownerId?.toString() !== session.user._id.toString()) {
       return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
     }
+    const previousStatus = item.status;
     if (ACTION_STATUSES.includes(body?.status)) item.status = body.status;
     if (body?.status === "resolved") item.resolvedAt = new Date();
     if (typeof body?.resolutionNote === "string") item.resolutionNote = body.resolutionNote;
     if (typeof body?.suggestedAction === "string") item.suggestedAction = body.suggestedAction;
     await item.save();
+    if (item.status !== previousStatus) {
+      await logCaseEvent({
+        actionBoardItemId: item._id,
+        businessId: item.businessId,
+        kind: "status_changed",
+        fromValue: previousStatus,
+        toValue: item.status,
+        actorUserId: session.user._id,
+        actorLabel: session.user.email,
+      });
+    }
     return NextResponse.json({ status: "ok", item });
   }
 
   const previousOwnerId = item.ownerId?.toString() ?? null;
+  const previousStatus = item.status;
+  const previousPriority = item.priority;
 
   if (typeof body?.title === "string") item.title = body.title;
   if (typeof body?.description === "string") item.description = body.description;
@@ -153,12 +173,44 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   await item.save();
 
+  if (item.status !== previousStatus) {
+    await logCaseEvent({
+      actionBoardItemId: item._id,
+      businessId: item.businessId,
+      kind: "status_changed",
+      fromValue: previousStatus,
+      toValue: item.status,
+      actorUserId: session.user._id,
+      actorLabel: session.user.email,
+    });
+  }
+  if (item.priority !== previousPriority) {
+    await logCaseEvent({
+      actionBoardItemId: item._id,
+      businessId: item.businessId,
+      kind: "priority_changed",
+      fromValue: previousPriority,
+      toValue: item.priority,
+      actorUserId: session.user._id,
+      actorLabel: session.user.email,
+    });
+  }
+
   const newOwnerId = item.ownerId?.toString() ?? null;
-  if (newOwnerId && newOwnerId !== previousOwnerId) {
-    const owner = await User.findById(newOwnerId);
-    if (owner) {
-      await sendTemplatedEmail("action_assigned", owner.email, {
-        name: owner.email,
+  if (newOwnerId !== previousOwnerId) {
+    const newOwner = newOwnerId ? await User.findById(newOwnerId) : null;
+    await logCaseEvent({
+      actionBoardItemId: item._id,
+      businessId: item.businessId,
+      kind: "owner_changed",
+      fromValue: previousOwnerId,
+      toValue: newOwner?.email ?? null,
+      actorUserId: session.user._id,
+      actorLabel: session.user.email,
+    });
+    if (newOwner) {
+      await sendTemplatedEmail("action_assigned", newOwner.email, {
+        name: newOwner.email,
         action_title: item.title,
         due_date: item.dueDate ? item.dueDate.toISOString().slice(0, 10) : "no due date",
         action_link: `${process.env.APP_URL ?? ""}/business`,
