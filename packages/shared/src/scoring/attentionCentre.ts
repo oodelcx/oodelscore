@@ -7,6 +7,7 @@ import { Playbook } from "../models/Playbook";
 import { DecisionLogEntry, type IDecisionLogEntry } from "../models/DecisionLogEntry";
 import { ImprovementInitiative, type IImprovementInitiative } from "../models/ImprovementInitiative";
 import { Business } from "../models/Business";
+import { ParentOrganization } from "../models/ParentOrganization";
 import { User } from "../models/User";
 import { Response as FeedbackResponse } from "../models/Response";
 import type { BillingOwnerType } from "../models/BillingSubscription";
@@ -21,9 +22,10 @@ import type { Product } from "../models/products";
  * page someone has to separately check).
  *
  * Sort order is fixed and deterministic, never AI-scored: severity band
- * first (critical > high > medium > low), then longest-waiting first within
- * a band. An item's severity is decided entirely by which rule surfaced it
- * — never by an LLM's opinion of how bad it is.
+ * first (critical > high > medium > low), then unassigned before assigned
+ * within that band, then longest-waiting first. An item's severity is
+ * decided entirely by which rule surfaced it — never by an LLM's opinion of
+ * how bad it is.
  */
 
 export const ATTENTION_SEVERITIES = ["critical", "high", "medium", "low"] as const;
@@ -32,6 +34,7 @@ export type AttentionSeverity = (typeof ATTENTION_SEVERITIES)[number];
 export const ATTENTION_KINDS = [
   "overdue_escalated_case",
   "overdue_case",
+  "escalation_deadline_approaching",
   "stalled_sensitive_case",
   "awaiting_customer_reply",
   "alert_fired",
@@ -64,6 +67,10 @@ const NEGATIVE_STAR_THRESHOLD = 2;
 const PLAYBOOK_STALL_DAYS = 7;
 const DECISION_REVIEW_WINDOW_DAYS = 14;
 const INITIATIVE_STALL_DAYS = 14;
+// A case's escalation SLA is "approaching" once it's within this many hours
+// of the auto-escalation cron bumping it a level — same threshold either
+// side of "still fine" vs. "about to move," not configurable per account.
+const ESCALATION_DEADLINE_WARNING_HOURS = 6;
 
 function daysAgo(iso: string, now: Date): number {
   return Math.floor((now.getTime() - new Date(iso).getTime()) / DAY_MS);
@@ -117,8 +124,24 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
   const now = params.now ?? new Date();
   const items: AttentionItem[] = [];
 
-  const businesses = await Business.find({ _id: { $in: businessIds } }).select("name");
+  const businesses = await Business.find({ _id: { $in: businessIds } }).select("name parentOrgId escalationSlaHours");
   const businessNameById = new Map(businesses.map((b) => [b._id.toString(), b.name]));
+
+  // Escalation SLA — a branch's own escalationSlaHours is ignored in favor
+  // of its parent org's, same inheritance rule as ragThresholds/
+  // escalationLevels (see getEscalationConfig's own comment). Resolved here
+  // in bulk (one query for every org referenced, not one per case) so a
+  // busy account's case list doesn't fan out into N escalation-config
+  // lookups.
+  const parentOrgIds = [...new Set(businesses.map((b) => b.parentOrgId?.toString()).filter((x): x is string => !!x))];
+  const parentOrgs = parentOrgIds.length > 0 ? await ParentOrganization.find({ _id: { $in: parentOrgIds } }).select("escalationSlaHours") : [];
+  const slaHoursByOrgId = new Map(parentOrgs.map((o) => [o._id.toString(), o.escalationSlaHours]));
+  const slaHoursByBusinessId = new Map(
+    businesses.map((b) => [
+      b._id.toString(),
+      b.parentOrgId ? slaHoursByOrgId.get(b.parentOrgId.toString()) ?? null : (b.escalationSlaHours ?? null),
+    ])
+  );
 
   // Collect every ownerId referenced across all sources up front so one
   // User query covers the whole page instead of one per source.
@@ -133,6 +156,33 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
   }).select("title businessId ownerId dueDate currentEscalationLevel sensitive createdAt status");
 
   for (const c of openOverdueCases) {
+    if (c.ownerId) userIdsNeeded.add(c.ownerId.toString());
+  }
+
+  // ---- Cases within a few hours of the auto-escalation cron bumping them
+  // a level — a forward-looking SLA warning, distinct from openOverdueCases
+  // above (that's a case already past its own dueDate; this is a case
+  // still on time but about to move up the escalation chain regardless).
+  // Skipped for any business/org with no escalationSlaHours configured —
+  // same "nothing configured yet" case autoEscalateOverdueCases itself
+  // skips silently.
+  const openCasesForSla = await ActionBoardItem.find({
+    businessId: { $in: businessIds },
+    product,
+    status: { $ne: "resolved" },
+  }).select("title businessId ownerId levelEnteredAt currentEscalationLevel createdAt");
+  const approachingDeadlineCases = openCasesForSla
+    .map((c) => {
+      const slaHours = slaHoursByBusinessId.get(c.businessId.toString()) ?? null;
+      if (!slaHours) return null;
+      const levelStarted = c.levelEnteredAt ?? c.createdAt;
+      const hoursSince = (now.getTime() - new Date(levelStarted).getTime()) / (60 * 60 * 1000);
+      const hoursRemaining = slaHours - hoursSince;
+      if (hoursRemaining <= 0 || hoursRemaining > ESCALATION_DEADLINE_WARNING_HOURS) return null;
+      return { c, hoursRemaining };
+    })
+    .filter((x): x is { c: (typeof openCasesForSla)[number]; hoursRemaining: number } => x !== null);
+  for (const { c } of approachingDeadlineCases) {
     if (c.ownerId) userIdsNeeded.add(c.ownerId.toString());
   }
 
@@ -276,6 +326,22 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
     });
   }
 
+  for (const { c, hoursRemaining } of approachingDeadlineCases) {
+    const hours = Math.max(1, Math.round(hoursRemaining));
+    items.push({
+      id: `sla:${c._id.toString()}`,
+      kind: "escalation_deadline_approaching",
+      severity: "high",
+      what: c.title,
+      where: where(c.businessId),
+      who: who(c.ownerId),
+      whyNow: `Escalation deadline in ${hours} hour${hours === 1 ? "" : "s"}`,
+      actionLabel: "Open case",
+      actionHref: `${prefix}/cases/${c._id.toString()}`,
+      at: (c.levelEnteredAt ?? c.createdAt).toISOString(),
+    });
+  }
+
   for (const c of staleSensitiveCases) {
     const waitingDays = daysAgo(c.createdAt.toISOString(), now);
     items.push({
@@ -382,6 +448,11 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
   items.sort((a, b) => {
     const rankDiff = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
     if (rankDiff !== 0) return rankDiff;
+    // Within a severity band, an unassigned item goes first — "unassigned
+    // high-severity cases" is its own named priority tier in the rule
+    // order, not just whatever happens to be oldest.
+    const unassignedDiff = Number(a.who !== "Unassigned") - Number(b.who !== "Unassigned");
+    if (unassignedDiff !== 0) return unassignedDiff;
     return new Date(a.at).getTime() - new Date(b.at).getTime(); // oldest/longest-waiting first within a band
   });
 
