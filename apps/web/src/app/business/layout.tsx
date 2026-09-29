@@ -138,7 +138,14 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-understand"
                 label="Understand"
-                hrefs={["/business/insights", "/business/analytics", "/business/alert-rules", "/business/alerts", "/business/reports"]}
+                hrefs={[
+                  "/business/insights",
+                  "/business/analytics",
+                  "/business/alert-rules",
+                  "/business/alerts",
+                  "/business/reports",
+                  "/business/business-value",
+                ]}
               >
                 {hasProduct(business, "customer_experience") &&
                   hasFeature(business.enabledFeatures, "insights") &&
@@ -176,6 +183,12 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                       Reports
                     </a>
                   )}
+                {hasFeature(business.enabledFeatures, "businessValue") && teamMemberCanAccess(user, "businessValue") && (
+                  <a href="/business/business-value">
+                    <NavIcon name="business-value" />
+                    Business Value
+                  </a>
+                )}
               </NavSection>
 
               <NavSection

@@ -19,6 +19,7 @@ export const TEAM_RESTRICTABLE_PAGES = [
   { key: "improvementInitiatives", label: "Improvement Initiatives" },
   { key: "decisionLog", label: "Decision Log" },
   { key: "closingLoop", label: "Closing the Loop" },
+  { key: "businessValue", label: "Business Value" },
   { key: "cxPulse", label: "CX Pulse" },
   { key: "playbooks", label: "Playbook Library" },
   { key: "support", label: "Support" },

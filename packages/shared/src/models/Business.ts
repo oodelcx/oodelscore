@@ -32,6 +32,23 @@ export interface IDemographicConfig {
 }
 
 /**
+ * The £/$ business-value module (spec: standard field NAMES, each business
+ * enters its own VALUES — never requires integrating with an actual
+ * finance/accounting system). Business-owner-editable, not admin-only: this
+ * is the business's own commercial context, not a platform config decision.
+ * null on every field until a business fills the form in — computeBusiness
+ * ValueImpact treats any null input as "not configured yet" and returns
+ * null for anything that depends on it, never a silently wrong £0.
+ */
+export interface IBusinessValueInputs {
+  avgTransactionValue: number | null; // £/$ an average transaction/visit is worth
+  visitsPerYear: number | null; // average visits per customer per year — avgTransactionValue * visitsPerYear = one customer's annual value
+  acquisitionCost: number | null; // £/$ cost to acquire a replacement customer, if one is lost
+  atRiskStarThreshold: number; // a star_1_5 answer at or below this counts as "at risk" — same negative-feedback convention used elsewhere (e.g. responseStats.ts's negative count)
+  currencySymbol: string;
+}
+
+/**
  * Fields writable only by accountType "admin_staff" — see spec Section 2/4.
  * API routes MUST reject writes to these from Group/Business-level requests
  * even if present in the request body.
@@ -137,6 +154,7 @@ export interface IBusiness {
   // platform default. Lets Admin turn billing enforcement on for one
   // account being tested without affecting every other account.
   paymentGateEnabled: boolean | null;
+  businessValueInputs: IBusinessValueInputs;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -149,6 +167,17 @@ const DemographicConfigSchema = new Schema<IDemographicConfig>(
     phone: { type: String, enum: DEMOGRAPHIC_MODES, default: "off" },
     ageGroup: { type: String, enum: DEMOGRAPHIC_MODES, default: "off" },
     gender: { type: String, enum: DEMOGRAPHIC_MODES, default: "off" },
+  },
+  { _id: false }
+);
+
+const BusinessValueInputsSchema = new Schema<IBusinessValueInputs>(
+  {
+    avgTransactionValue: { type: Number, default: null },
+    visitsPerYear: { type: Number, default: null },
+    acquisitionCost: { type: Number, default: null },
+    atRiskStarThreshold: { type: Number, default: 2 },
+    currencySymbol: { type: String, default: "£" },
   },
   { _id: false }
 );
@@ -183,6 +212,7 @@ const BusinessSchema = new Schema<IBusiness>(
     enabledProducts: { type: [String], enum: PRODUCTS, default: null },
     sensitiveRoutingContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     paymentGateEnabled: { type: Boolean, default: null },
+    businessValueInputs: { type: BusinessValueInputsSchema, default: () => ({}) },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

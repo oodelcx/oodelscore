@@ -21,6 +21,7 @@ export const FEATURE_DEFINITIONS = [
   { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
   { key: "closingLoop", label: "Closing the Loop", description: "\"You said, we did\" broadcast updates to the Colleague Experience roster." },
+  { key: "businessValue", label: "Business Value", description: "The £/$ module translating at-risk feedback into a commercial exposure figure." },
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_DEFINITIONS)[number]["key"];
