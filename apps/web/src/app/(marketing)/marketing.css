@@ -2002,6 +2002,10 @@
   font-weight: 600;
   color: var(--signal-deep);
 }
+.mkt .nav.nav-dark .nav-menu-trigger:hover,
+.mkt .nav.nav-dark .nav-menu-item.open .nav-menu-trigger {
+  color: #fff;
+}
 .mkt .nav.nav-dark .mega-see-all {
   border-top-color: rgba(255, 255, 255, 0.12);
 }
