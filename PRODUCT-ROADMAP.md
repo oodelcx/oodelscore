@@ -8,17 +8,27 @@ Each phase ships the same way: a feature branch off `main`, `npm run typecheck` 
 
 | Phase | Name | Status |
 |---|---|---|
-| 0 | Lock the ANCHOR/REACH naming (Compass) | **Partially locked** — ANCHOR dimensions confirmed (§2 below); REACH still undefined, blocks 7 only |
-| 1 | CSAT/CES + honest before/after | Done, **known gap found** — see §4 below |
-| 2 | Attention Centre | Done — needs a conformance check against the full spec in §1 below |
+| 0 | Lock the ANCHOR/REACH/5-Cs naming (Compass + Act layer) | **Locked** — all three frameworks confirmed, see §0 below |
+| 1 | CSAT/CES + honest before/after | Done — CSAT gap fixed, PR #185, merged |
+| 2 | Attention Centre | Done — conformance fixes shipped, PR #186, merged |
 | 3 | De-escalation | Done |
 | 4 | Closing the loop (CX + EX halves) | Done |
-| 5 | Business Value / £/$ module | Done — needs a field-shape check against §3 below |
-| 6 | Business-side survey builder | **Not started** — needs explicit go-ahead (loosens an Admin-only permission rule) |
-| 7 | OodelCX Compass (7a–7d) | **Not started** — blocked on Phase 0 (REACH) |
+| 5 | Business Value / £/$ module | Done — one open design question, not a bug, see §3 below |
+| 6 | Business-side survey builder | **In progress** |
+| 7 | OodelCX Compass (7a–7d) | **Not started** — unblocked now that naming is locked |
 | 8 | Everything marked "later" | **Not started** |
 
-A QA fix batch (question text in case trail, escalation UX clarity, Closing the Loop redesign, Attention Centre redesign, heavier seed data) landed on top of Phases 1–5 as PR #182, merged into `main`. Docs infra (this file + its link from CLAUDE.md) landed as PR #183.
+Fix batches landed as: PR #182 (QA fix batch — question text, escalation UX, Closing the Loop/Attention Centre redesigns, seed data), PR #183 (this file, wired into CLAUDE.md), PR #184 (full Compass/Attention Centre/Business Value scope), PR #185 (CSAT designated-question fix), PR #186 (Attention Centre conformance: escalation-deadline warning, unassigned-first sort, red flag). All merged into `main`.
+
+## Phase 0 — Naming, locked
+
+Three frameworks, confirmed by the product owner:
+
+- **ANCHOR** (Compass's six assessment dimensions — §7 below): **A**uthority, **N**umbers (Net-worth), **C**ulture, **H**earing, **O**wnership, **R**hythm.
+- **REACH** (the recommendation-engine's five principles — how a Compass finding turns into an actionable nudge, feeding Phase 7d's recommendation engine): **R**ecognize, **E**levate, **A**lign, **C**onnect, **H**abituate.
+- **5 Cs** (the Act-layer/case lifecycle naming — Capture, Clarify, Claim, Close, Confirm): applied to the existing case lifecycle already built in Case Management/Decision Log/Closing the Loop. Working assumption, to confirm: **Capture** = a response becomes a case; **Clarify** = triage/categorize/assign a category; **Claim** = an owner is assigned; **Close** = the case is resolved; **Confirm** = the resolution is confirmed back (Decision Log's before/after measurement, and/or Closing the Loop's "you said, we did"). If this mapping is wrong, correct it before it gets used as UI copy anywhere.
+
+Nothing here is Qualtrics-overlapping vocabulary. **Phase 7 (Compass) is now unblocked.**
 
 ## Scope decisions — what got dropped or merged, and why
 
@@ -34,21 +44,11 @@ Three real overlaps were caught before they turned into duplicate features:
 
 **Command Center vs. Attention Centre — the line between them, on purpose:** Command Center answers "how are we doing" (scores, trends, charts — the existing executive KPI dashboard). Attention Centre answers "what do I need to do right now" (a queue, sorted by urgency). Alerts is not a third landing page competing with these two — it's a raw feed that feeds into Attention Centre.
 
-## Phase 0 — Lock the naming
+## Phase 1 — CSAT/CES + honest before/after — DONE
 
-**ANCHOR is confirmed as the acronym for the six assessment dimensions** (see §2 below): **A**uthority, **N**et Value, **C**ulture, **H**earing, **O**wnership, **R**enewal. These are generic business-maturity terms, not Qualtrics-specific vocabulary — low overlap risk as named.
+Shipped: `ces_1_5` question type with inverted scoring; `csatPercent`/`cesAverage`/`cesLowEffortPercent` computed in `packages/shared/src/scoring/aggregate.ts`; NPS/CSAT/CES surfaced together on Analytics, Command Center, CX Pulse; Decision Log confidence label + sample-size warning. CSAT's blended-star-questions gap (found on reconciliation) was fixed in PR #185: `IQuestion.isCsatQuestion`, Admin-set on the Question Template editor, at most one per template — `csatPercent` now only counts answers to that specific question, returning `null` (not a fabricated 0%) until one is marked.
 
-**REACH is still undefined.** It was named alongside ANCHOR in the original phase plan (as the stage-ladder / overall scoring-system name, distinct from the six ANCHOR dimensions and from the "Established/Emerging" stage labels), but no definition for it has been written down anywhere — not in this doc, not in the codebase, not in the spec. **This is the one open item blocking Phase 7.** Needs the product owner to define: what REACH stands for/represents, and how ANCHOR dimension scores + gates combine into a stage (the "gate-based scoring mechanism").
-
-This blocks Phase 7 only — everything else can proceed in parallel.
-
-## Phase 1 — CSAT/CES + honest before/after — DONE, with a known gap
-
-Shipped: `ces_1_5` question type with inverted scoring; `csatPercent`/`cesAverage`/`cesLowEffortPercent` computed in `packages/shared/src/scoring/aggregate.ts`; NPS/CSAT/CES surfaced together on Analytics, Command Center, CX Pulse; Decision Log confidence label + sample-size warning.
-
-**Gap found on reconciliation:** the agreed design is "a business marks which question in their survey is *the* CSAT question" (a specific, named question) — but the current implementation computes CSAT as top-2-box across **every** `star_1_5` answer in range, blending multiple star questions together (e.g., "friendliness" and "cleanliness" both feed the same CSAT number). This is the same shape of bug as the original NPS/star-blending issue fixed at migration — just one level down, between different star questions instead of between star and NPS. **Needs a follow-up fix:** a business-designated CSAT question (e.g. a `csatQuestionId` on `Business`, defaulting to null/unset until chosen), with `csatPercent` computed only from answers to that specific question.
-
-## Phase 2 — Attention Centre — DONE, needs a conformance check
+## Phase 2 — Attention Centre — DONE
 
 **What it is:** the first screen a logged-in owner or team member sees (after the one-time Compass assessment, for new customers, once Phase 7 exists) — a prioritized queue of everything currently needing a human decision, across every part of the product, in one place.
 
@@ -73,7 +73,7 @@ Shipped: `ces_1_5` question type with inverted scoring; `csatPercent`/`cesAverag
 
 **Permissions:** reuses the existing permission system exactly — an owner sees everything across their business (or every branch, for a Group owner, with a branch column added); a team member sees only what's theirs or in their scope. No new access logic.
 
-**Conformance check needed against the shipped implementation** (`packages/shared/src/scoring/attentionCentre.ts` + `apps/web/src/components/attention-centre.tsx`): confirm the "Unassigned" red-flag treatment exists, confirm the sort order matches this exact rule order, confirm Decision Log "ready to review" and Improvement Initiative "awaiting decision" item kinds are covered (the engine's `ATTENTION_KINDS` list should be checked against this spec's source list above).
+Conformance verified and fixed in PR #186: added `escalation_deadline_approaching` as its own `ATTENTION_KINDS` entry (previously only overdue-by-`dueDate` cases existed, nothing for a case still on time but about to breach its escalation SLA), unassigned-before-assigned as a sort tiebreak within a severity band, and the "Unassigned" red-flag treatment in the frontend.
 
 ## Phase 3 — De-escalation — DONE
 
@@ -94,11 +94,13 @@ Append-only event log, a reason field, a computed "current level." Self-containe
 
 Same four fields for every customer (one calculation engine for everybody); the *values* typed into them are entirely business-specific. **Check the shipped `IBusinessValueInputs` shape** (`packages/shared/src/models/Business.ts`) against this exact field list — it currently has `avgTransactionValue`, `visitsPerYear`, `acquisitionCost`, `atRiskStarThreshold`, `currencySymbol`. `atRiskStarThreshold` is a numeric proxy for field 4 above ("at risk" = a star answer at or below this threshold) — confirm this reads as "manually defined, star-based" per the agreed design, or whether it should be a broader/more explicit "at risk" definition (e.g. also NPS-detractor-based, per the example given: "an NPS detractor score").
 
-## Phase 6 — Business-side survey builder — NOT STARTED
+## Phase 6 — Business-side survey builder — IN PROGRESS
 
-"Business-built surveys, from templates + quota" — templated, not fully freeform (start from existing templates, apply a quota mechanism). Deliberately isolated because it means loosening a rule that's currently hard and server-enforced ("survey/question configuration are Admin-only... reject writes... even if present in the request body" — CLAUDE.md's Working agreement). Needs its own careful review, not bundled into a bigger PR.
+"Business-built surveys, from templates + quota" — templated, not fully freeform (start from existing templates, apply a quota mechanism). Deliberately isolated because it means loosening a rule that's currently hard and server-enforced ("survey/question configuration are Admin-only... reject writes... even if present in the request body" — CLAUDE.md's Working agreement).
 
-## Phase 7 — OodelCX Compass (7a–7d) — NOT STARTED, blocked on Phase 0 (REACH)
+**How this stays true to that rule rather than loosening it:** a business does not get to author new questions, edit question text, or touch categories — that stays exactly as Admin-only as it is today, server-enforced the same way. What a business gets is the ability to **compose** a `FeedbackPoint`'s survey from the Admin-authored `QuestionTemplate` library it's licensed to use — pick a base template, choose which of its already-existing questions to include/exclude/reorder, and set a response quota (a target number of responses, after which the point auto-closes — reusing `startsAt`/`endsAt`-style auto-close already built for Events). The underlying `QuestionTemplate.questions` array itself, and its content, remains untouched and Admin-only. This is a new `FeedbackPoint`-level field (a subset/ordering of the parent template's question ids, plus a quota number), not a loosening of `BUSINESS_ADMIN_ONLY_FIELDS` — `questionTemplateId`/`questionTemplateOverride` writes stay rejected from Business/Group API calls exactly as they are now.
+
+## Phase 7 — OodelCX Compass (7a–7d) — NOT STARTED, unblocked
 
 ### The ANCHOR assessment question bank
 
@@ -109,7 +111,7 @@ Six dimensions. Four are asked once regardless of which product(s) an account ha
 - Is experience performance reviewed at leadership level, on a regular schedule?
 - Are there formal objectives tied to experience outcomes?
 
-**Net Value** (asked once)
+**Numbers** (Net-worth) (asked once)
 - Can you currently point to a specific business outcome (retention, cost, revenue) that improved because of an experience change?
 - Is spend on experience management justified with numbers, or mostly on instinct?
 
@@ -133,17 +135,21 @@ Six dimensions. Four are asked once regardless of which product(s) an account ha
 - When a colleague raises a concern (even anonymously, in aggregate), does anything visibly happen as a result?
 - Is there a defined path for an EX concern to reach the right manager without breaking anonymity?
 
-**Renewal** (asked once)
+**Rhythm** (asked once)
 - When the same problem comes up repeatedly, does it typically trigger a structural change (new training, new process), or does each instance just get handled individually?
 
 **Length:** a single-product customer answers ~28–32 questions total (the shared ~12, plus one flavor of Hearing/Ownership). A dual-product customer answers both flavors of Hearing and Ownership, landing ~36–40. Describe the length as "25–40 questions," not a fixed number — it scales with which products the account actually uses.
 
+### REACH — the recommendation engine's five principles
+
+Each Compass finding's recommendation (Phase 7d) is built around one or more of: **R**ecognize (name the gap in plain language), **E**levate (make it visible to whoever owns it), **A**lign (tie it to a goal/objective already in the system — e.g. a CX Goal), **C**onnect (deep-link into the actual feature that closes the gap — "Set up Category Owners →"), **H**abituate (turn the fix into a recurring habit/cadence, not a one-off — e.g. a Playbook trigger or a CX Pulse re-check).
+
 ### Sub-phases
 
-- **7a** — data model + the gate-based scoring engine, backend only, fully testable before any screen exists. **Blocked until REACH and the gate-scoring mechanics are defined** (Phase 0).
+- **7a** — data model + the gate-based scoring engine, backend only, fully testable before any screen exists. Unblocked now that ANCHOR/REACH are locked; the exact gate thresholds (how a dimension's answers combine into a score, how dimension scores combine into an Established/Emerging stage) still need the product owner's numbers before 7a can be finished — the *mechanism* (gates, not a raw average) is agreed, the *thresholds* are not yet.
 - **7b** — the assessment-taking flow (the ladder-question UI)
 - **7c** — the results page (Established/Emerging stage, ANCHOR bands, evidence text)
-- **7d** — the recommendation engine + deep links into the rest of the product (e.g. "Set up Category Owners →," "Configure Escalation Rules →" — these must point at features already in their final shape, which is why Compass is sequenced after CSAT/CES and Attention Centre)
+- **7d** — the recommendation engine (REACH, above) + deep links into the rest of the product (e.g. "Set up Category Owners →," "Configure Escalation Rules →" — these must point at features already in their final shape, which is why Compass is sequenced after CSAT/CES and Attention Centre)
 
 ## Phase 8 — Everything marked "later" — NOT STARTED
 
