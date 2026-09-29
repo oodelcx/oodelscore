@@ -5,6 +5,7 @@ import { requireStaffSession } from "@/lib/adminAuth";
 import { connectToDatabase, AiInsightReport, Business, FeedbackPointRequest, SupportTicket } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
+import { NavIcon } from "@/components/nav-icon";
 import "./admin.css";
 
 /**
@@ -83,62 +84,125 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
           <div className="nav-group-label">Platform</div>
           <nav className="admin-nav">
-            <a href="/admin">Overview</a>
-            <a href="/admin/command-center">Command Center</a>
+            <a href="/admin">
+              <NavIcon name="overview" />
+              Overview
+            </a>
+            <a href="/admin/command-center">
+              <NavIcon name="command-center" />
+              Command Center
+            </a>
           </nav>
 
           <div className="nav-group-label">Accounts</div>
           <nav className="admin-nav">
-            <a href="/admin/accounts">Accounts</a>
+            <a href="/admin/accounts">
+              <NavIcon name="accounts" />
+              Accounts
+            </a>
           </nav>
 
           <div className="nav-group-label">Survey setup</div>
           <nav className="admin-nav">
-            <a href="/admin/question-templates">Question Templates</a>
-            <a href="/admin/categories">Categories</a>
-            <a href="/admin/industries">Industries</a>
+            <a href="/admin/question-templates">
+              <NavIcon name="question-templates" />
+              Question Templates
+            </a>
+            <a href="/admin/categories">
+              <NavIcon name="categories" />
+              Categories
+            </a>
+            <a href="/admin/industries">
+              <NavIcon name="industries" />
+              Industries
+            </a>
           </nav>
 
           <div className="nav-group-label">Content</div>
           <nav className="admin-nav">
-            <a href="/admin/email-templates">Email Templates</a>
-            <a href="/admin/site-content">Site CMS</a>
-            <a href="/admin/content">Content Settings</a>
-            <a href="/admin/contact-messages">Contact Messages</a>
+            <a href="/admin/email-templates">
+              <NavIcon name="email-templates" />
+              Email Templates
+            </a>
+            <a href="/admin/site-content">
+              <NavIcon name="site-cms" />
+              Site CMS
+            </a>
+            <a href="/admin/content">
+              <NavIcon name="content-settings" />
+              Content Settings
+            </a>
+            <a href="/admin/contact-messages">
+              <NavIcon name="contact-messages" />
+              Contact Messages
+            </a>
           </nav>
 
           <div className="nav-group-label">Oversight</div>
           <nav className="admin-nav">
-            <a href="/admin/feedback-responses">Feedback Responses</a>
+            <a href="/admin/feedback-responses">
+              <NavIcon name="feedback-responses" />
+              Feedback Responses
+            </a>
             <a href="/admin/feedback-requests" style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Feedback Point Requests</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <NavIcon name="feedback-requests" />
+                Feedback Point Requests
+              </span>
               {pendingFeedbackRequestCount > 0 && <span className="nav-badge">{pendingFeedbackRequestCount}</span>}
             </a>
             <a href="/admin/ai-queue" style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>AI Insights Queue</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <NavIcon name="ai-queue" />
+                AI Insights Queue
+              </span>
               {pendingAiCount > 0 && <span className="nav-badge">{pendingAiCount}</span>}
             </a>
-            <a href="/admin/alert-rules">Alert Rules</a>
-            <a href="/admin/billing">Billing Oversight</a>
-            <a href="/admin/cx-pulse">CX Pulse</a>
-            <a href="/admin/platform-health">Platform Health</a>
+            <a href="/admin/alert-rules">
+              <NavIcon name="alert-rules" />
+              Alert Rules
+            </a>
+            <a href="/admin/billing">
+              <NavIcon name="billing" />
+              Billing Oversight
+            </a>
+            <a href="/admin/cx-pulse">
+              <NavIcon name="pulse" />
+              CX Pulse
+            </a>
+            <a href="/admin/platform-health">
+              <NavIcon name="platform-health" />
+              Platform Health
+            </a>
             <a href="/admin/support-queue" style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Support Queue</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                <NavIcon name="support" />
+                Support Queue
+              </span>
               {openSupportTicketCount > 0 && <span className="nav-badge">{openSupportTicketCount}</span>}
             </a>
-            <a href="/admin/audit-log">Audit Log</a>
+            <a href="/admin/audit-log">
+              <NavIcon name="audit-log" />
+              Audit Log
+            </a>
           </nav>
 
           <div className="nav-group-label">Account</div>
           <nav className="admin-nav">
-            <a href="/admin/security">Security</a>
+            <a href="/admin/security">
+              <NavIcon name="security" />
+              Security
+            </a>
           </nav>
 
           {devToolsVisible && (
             <>
               <div className="nav-group-label">Danger zone</div>
               <nav className="admin-nav">
-                <a href="/admin/dev-tools">Dev Data Tools</a>
+                <a href="/admin/dev-tools">
+                  <NavIcon name="dev-tools" />
+                  Dev Data Tools
+                </a>
               </nav>
             </>
           )}
