@@ -14,11 +14,8 @@ import { QuestionTemplate } from "../models/QuestionTemplate";
  * template, a very old response's wording may drift — the same limitation
  * every other question-text lookup in this app already has.
  */
-export async function resolveQuestionTextByQuestionId(
-  responses: { feedbackPointId: Types.ObjectId | null; answers: { questionId: Types.ObjectId }[] }[]
-): Promise<Record<string, string>> {
-  const feedbackPointIds = [...new Set(responses.map((r) => r.feedbackPointId?.toString()).filter((x): x is string => !!x))];
-  if (feedbackPointIds.length === 0) return {};
+async function resolveTemplateIdsForFeedbackPoints(feedbackPointIds: string[]): Promise<string[]> {
+  if (feedbackPointIds.length === 0) return [];
 
   const points = await FeedbackPoint.find({ _id: { $in: feedbackPointIds } }).select("businessId questionTemplateOverride");
   const businessIds = [...new Set(points.map((p) => p.businessId.toString()))];
@@ -30,9 +27,17 @@ export async function resolveQuestionTextByQuestionId(
     const templateId = p.questionTemplateOverride?.toString() ?? templateIdByBusinessId.get(p.businessId.toString());
     if (templateId) templateIds.add(templateId);
   }
-  if (templateIds.size === 0) return {};
+  return [...templateIds];
+}
 
-  const templates = await QuestionTemplate.find({ _id: { $in: [...templateIds] } });
+export async function resolveQuestionTextByQuestionId(
+  responses: { feedbackPointId: Types.ObjectId | null; answers: { questionId: Types.ObjectId }[] }[]
+): Promise<Record<string, string>> {
+  const feedbackPointIds = [...new Set(responses.map((r) => r.feedbackPointId?.toString()).filter((x): x is string => !!x))];
+  const templateIds = await resolveTemplateIdsForFeedbackPoints(feedbackPointIds);
+  if (templateIds.length === 0) return {};
+
+  const templates = await QuestionTemplate.find({ _id: { $in: templateIds } });
   const textById: Record<string, string> = {};
   for (const template of templates) {
     for (const q of template.questions) {
@@ -40,4 +45,30 @@ export async function resolveQuestionTextByQuestionId(
     }
   }
   return textById;
+}
+
+/**
+ * The set of questionIds marked as "the" CSAT question across whichever
+ * template(s) cover this set of responses — the fix for CSAT previously
+ * being computed by blending every star_1_5 answer together (the same
+ * shape of bug as the original NPS/star-blending issue, one level down).
+ * A response's questionId only counts toward csatPercent when it's in this
+ * set; an empty set means no template involved has a CSAT question marked
+ * yet, and callers should report csatPercent as null rather than 0%.
+ */
+export async function resolveCsatQuestionIds(
+  responses: { feedbackPointId: Types.ObjectId | null }[]
+): Promise<Set<string>> {
+  const feedbackPointIds = [...new Set(responses.map((r) => r.feedbackPointId?.toString()).filter((x): x is string => !!x))];
+  const templateIds = await resolveTemplateIdsForFeedbackPoints(feedbackPointIds);
+  if (templateIds.length === 0) return new Set();
+
+  const templates = await QuestionTemplate.find({ _id: { $in: templateIds } });
+  const csatIds = new Set<string>();
+  for (const template of templates) {
+    for (const q of template.questions) {
+      if (q.isCsatQuestion && q._id) csatIds.add(q._id.toString());
+    }
+  }
+  return csatIds;
 }

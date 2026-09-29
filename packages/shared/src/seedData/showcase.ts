@@ -173,6 +173,7 @@ interface QuestionDef {
   category: CategoryName | null;
   required?: boolean;
   options?: string[];
+  isCsatQuestion?: boolean;
 }
 
 interface SectorDef {
@@ -188,7 +189,7 @@ const SECTORS: SectorDef[] = [
     industry: "Banking",
     templateName: "Banking Branch Survey",
     questions: [
-      { text: "How friendly was our staff during your visit?", type: "star_1_5", category: "Staff Friendliness", required: true },
+      { text: "How friendly was our staff during your visit?", type: "star_1_5", category: "Staff Friendliness", required: true , isCsatQuestion: true },
       { text: "How clean and well-maintained was the branch?", type: "star_1_5", category: "Cleanliness" },
       { text: "How would you rate the speed of service today?", type: "star_1_5", category: "Service Speed" },
       { text: "How likely are you to recommend us to a friend or colleague?", type: "nps_0_10", category: null, required: true },
@@ -208,7 +209,7 @@ const SECTORS: SectorDef[] = [
     industry: "Education",
     templateName: "School Feedback Survey",
     questions: [
-      { text: "How friendly and approachable was our staff?", type: "star_1_5", category: "Staff Friendliness", required: true },
+      { text: "How friendly and approachable was our staff?", type: "star_1_5", category: "Staff Friendliness", required: true , isCsatQuestion: true },
       { text: "How clean and well-maintained are our facilities?", type: "star_1_5", category: "Facilities" },
       { text: "How satisfied are you with communication from the school?", type: "star_1_5", category: "Communication" },
       { text: "How likely are you to recommend this school to another family?", type: "nps_0_10", category: null, required: true },
@@ -228,7 +229,7 @@ const SECTORS: SectorDef[] = [
     industry: "Restaurant",
     templateName: "Restaurant Guest Survey",
     questions: [
-      { text: "How friendly was our staff?", type: "star_1_5", category: "Staff Friendliness", required: true },
+      { text: "How friendly was our staff?", type: "star_1_5", category: "Staff Friendliness", required: true , isCsatQuestion: true },
       { text: "How would you rate the food quality?", type: "star_1_5", category: "Product Quality" },
       { text: "How clean was the restaurant?", type: "star_1_5", category: "Cleanliness" },
       { text: "How likely are you to recommend us to a friend?", type: "nps_0_10", category: null, required: true },
@@ -248,7 +249,7 @@ const SECTORS: SectorDef[] = [
     industry: "Healthcare",
     templateName: "Patient Experience Survey",
     questions: [
-      { text: "How friendly and attentive was our staff?", type: "star_1_5", category: "Staff Friendliness", required: true },
+      { text: "How friendly and attentive was our staff?", type: "star_1_5", category: "Staff Friendliness", required: true , isCsatQuestion: true },
       { text: "How clean was the facility?", type: "star_1_5", category: "Cleanliness" },
       { text: "How would you rate the wait time for your visit?", type: "star_1_5", category: "Service Speed" },
       { text: "How likely are you to recommend us to family or friends?", type: "nps_0_10", category: null, required: true },
@@ -263,7 +264,7 @@ const SECTORS: SectorDef[] = [
     industry: "Community Development & Training",
     templateName: "Workshop Feedback Survey",
     questions: [
-      { text: "How would you rate the facilitator?", type: "star_1_5", category: "Staff Friendliness", required: true },
+      { text: "How would you rate the facilitator?", type: "star_1_5", category: "Staff Friendliness", required: true , isCsatQuestion: true },
       { text: "How relevant was the content to your work or life?", type: "star_1_5", category: "Product Quality" },
       { text: "How well organized was the session?", type: "star_1_5", category: "Facilities" },
       { text: "How likely are you to recommend this program to others?", type: "nps_0_10", category: null, required: true },
@@ -400,7 +401,7 @@ function deriveCeSentimentAndThemes(
 }
 
 const CE_QUESTIONS: QuestionDef[] = [
-  { text: "How supported do you feel by your manager?", type: "star_1_5", category: "Management Support" as unknown as CategoryName, required: true },
+  { text: "How supported do you feel by your manager?", type: "star_1_5", category: "Management Support" as unknown as CategoryName, required: true, isCsatQuestion: true },
   { text: "How would you rate your work-life balance right now?", type: "star_1_5", category: "Work-Life Balance" as unknown as CategoryName },
   { text: "How satisfied are you with growth opportunities here?", type: "star_1_5", category: "Growth Opportunities" as unknown as CategoryName },
   { text: "How likely are you to recommend this as a great place to work?", type: "nps_0_10", category: null, required: true },
@@ -547,6 +548,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       categoryId: q.category ? categoryByName.get(q.category)! : null,
       required: q.required ?? false,
       options: q.options ?? [],
+      isCsatQuestion: q.isCsatQuestion ?? false,
     }));
     const template = await QuestionTemplate.findOneAndUpdate(
       { name: sector.templateName },
@@ -568,6 +570,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
           categoryId: q.category ? ceCategoryByName.get(q.category as unknown as CeCategoryName)! : null,
           required: q.required ?? false,
           options: q.options ?? [],
+          isCsatQuestion: q.isCsatQuestion ?? false,
         })),
       },
     },

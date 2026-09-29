@@ -85,6 +85,7 @@ interface QuestionRow {
   categoryId: string;
   required: boolean;
   options: string[];
+  isCsatQuestion: boolean;
 }
 
 const EMPTY_QUESTION: QuestionRow = {
@@ -93,6 +94,7 @@ const EMPTY_QUESTION: QuestionRow = {
   categoryId: "",
   required: false,
   options: [],
+  isCsatQuestion: false,
 };
 
 export default function QuestionTemplateBuilderPage() {
@@ -134,6 +136,7 @@ export default function QuestionTemplateBuilderPage() {
             categoryId: q.categoryId ?? "",
             required: !!q.required,
             options: q.options ?? [],
+            isCsatQuestion: !!q.isCsatQuestion,
           }))
         );
       })
@@ -159,6 +162,11 @@ export default function QuestionTemplateBuilderPage() {
 
   function updateQuestion(index: number, patch: Partial<QuestionRow>) {
     setQuestions((qs) => qs.map((q, i) => (i === index ? { ...q, ...patch } : q)));
+  }
+
+  // At most one CSAT question per template — checking one unchecks any other.
+  function setCsatQuestion(index: number, checked: boolean) {
+    setQuestions((qs) => qs.map((q, i) => ({ ...q, isCsatQuestion: i === index ? checked : checked ? false : q.isCsatQuestion })));
   }
 
   function removeQuestion(index: number) {
@@ -211,6 +219,7 @@ export default function QuestionTemplateBuilderPage() {
         categoryId: q.categoryId || null,
         required: q.required,
         options: q.options.map((o) => o.trim()).filter(Boolean),
+        isCsatQuestion: q.type === "star_1_5" && q.isCsatQuestion,
       })),
     };
 
@@ -348,6 +357,12 @@ export default function QuestionTemplateBuilderPage() {
                   <input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(i, { required: e.target.checked })} />
                   Required
                 </label>
+                {q.type === "star_1_5" && (
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }} title="CSAT is reported from this question's answers only, never blended across every star rating in the template.">
+                    <input type="checkbox" checked={q.isCsatQuestion} onChange={(e) => setCsatQuestion(i, e.target.checked)} />
+                    This is the CSAT question
+                  </label>
+                )}
               </div>
               {OPTION_BASED_TYPES.includes(q.type as (typeof OPTION_BASED_TYPES)[number]) && (
                 <div className="q-options" style={{ marginTop: 10 }}>
