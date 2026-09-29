@@ -7,6 +7,7 @@
  * only, regardless of this list.
  */
 export const TEAM_RESTRICTABLE_PAGES = [
+  { key: "attentionCentre", label: "Attention Centre" },
   { key: "caseManagement", label: "Case Management" },
   { key: "rawFeedback", label: "Raw Feedback" },
   { key: "feedbackPoints", label: "Feedback Points" },

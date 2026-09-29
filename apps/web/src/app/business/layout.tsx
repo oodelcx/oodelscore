@@ -181,8 +181,14 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-act"
                 label="Act"
-                hrefs={["/business/cases", "/business/improvement-initiatives", "/business/decision-log"]}
+                hrefs={["/business/attention-centre", "/business/cases", "/business/improvement-initiatives", "/business/decision-log"]}
               >
+                {teamMemberCanAccess(user, "attentionCentre") && (
+                  <a href="/business/attention-centre">
+                    <NavIcon name="attention-centre" />
+                    Attention Centre
+                  </a>
+                )}
                 {teamMemberCanAccess(user, "caseManagement") && (
                   <a href="/business/cases">
                     <NavIcon name="cases" />

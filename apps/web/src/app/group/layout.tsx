@@ -161,8 +161,14 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-act"
                 label="Act"
-                hrefs={["/group/cases", "/group/improvement-initiatives", "/group/decision-log"]}
+                hrefs={["/group/attention-centre", "/group/cases", "/group/improvement-initiatives", "/group/decision-log"]}
               >
+                {teamMemberCanAccess(user, "attentionCentre") && (
+                  <a href="/group/attention-centre">
+                    <NavIcon name="attention-centre" />
+                    Attention Centre
+                  </a>
+                )}
                 {teamMemberCanAccess(user, "caseManagement") && (
                   <a href="/group/cases">
                     <NavIcon name="cases" />

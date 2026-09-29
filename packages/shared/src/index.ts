@@ -29,6 +29,7 @@ export * from "./scoring/rootCauseEvidence";
 export * from "./scoring/playbookTrigger";
 export * from "./scoring/cxExCorrelation";
 export * from "./scoring/caseAutoAttach";
+export * from "./scoring/attentionCentre";
 export * from "./analytics/questionTrend";
 export * from "./security/rateLimit";
 export * from "./config/validateEnv";
