@@ -23,6 +23,7 @@ export * from "./AiInsightReport";
 export * from "./ActionBoardItem";
 export * from "./ActionItemComment";
 export * from "./DecisionLogEntry";
+export * from "./ClosingLoopUpdate";
 export * from "./Playbook";
 export * from "./CxPulseScore";
 export * from "./CxPulseFramework";

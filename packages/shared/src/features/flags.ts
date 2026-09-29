@@ -20,6 +20,7 @@ export const FEATURE_DEFINITIONS = [
   { key: "decisionLog", label: "Decision Log", description: "Decision log with before/after outcome measurement." },
   { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
+  { key: "closingLoop", label: "Closing the Loop", description: "\"You said, we did\" broadcast updates to the Colleague Experience roster." },
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_DEFINITIONS)[number]["key"];

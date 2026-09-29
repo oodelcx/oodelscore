@@ -181,7 +181,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               <NavSection
                 storageKey="business-act"
                 label="Act"
-                hrefs={["/business/attention-centre", "/business/cases", "/business/improvement-initiatives", "/business/decision-log"]}
+                hrefs={[
+                  "/business/attention-centre",
+                  "/business/cases",
+                  "/business/improvement-initiatives",
+                  "/business/decision-log",
+                  "/business/closing-the-loop",
+                ]}
               >
                 {teamMemberCanAccess(user, "attentionCentre") && (
                   <a href="/business/attention-centre">
@@ -208,6 +214,14 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                     Decision Log
                   </a>
                 )}
+                {hasProduct(business, "colleague_experience") &&
+                  hasFeature(business.enabledFeatures, "closingLoop") &&
+                  teamMemberCanAccess(user, "closingLoop") && (
+                    <a href="/business/closing-the-loop">
+                      <NavIcon name="closing-loop" />
+                      Closing the Loop
+                    </a>
+                  )}
               </NavSection>
 
               {(() => {
