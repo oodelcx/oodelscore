@@ -8,6 +8,7 @@ import { DecisionLogEntry, type IDecisionLogEntry } from "../models/DecisionLogE
 import { ImprovementInitiative, type IImprovementInitiative } from "../models/ImprovementInitiative";
 import { Business } from "../models/Business";
 import { User } from "../models/User";
+import { Response as FeedbackResponse } from "../models/Response";
 import type { BillingOwnerType } from "../models/BillingSubscription";
 import type { Product } from "../models/products";
 
@@ -32,6 +33,7 @@ export const ATTENTION_KINDS = [
   "overdue_escalated_case",
   "overdue_case",
   "stalled_sensitive_case",
+  "awaiting_customer_reply",
   "alert_fired",
   "stalled_playbook",
   "decision_ready_for_review",
@@ -57,6 +59,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ALERT_WINDOW_DAYS = 3;
 const SENSITIVE_STALE_HOURS = 48;
+const AWAITING_REPLY_WINDOW_DAYS = 14;
+const NEGATIVE_STAR_THRESHOLD = 2;
 const PLAYBOOK_STALL_DAYS = 7;
 const DECISION_REVIEW_WINDOW_DAYS = 14;
 const INITIATIVE_STALL_DAYS = 14;
@@ -143,6 +147,43 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
   }).select("title businessId ownerId createdAt");
 
   for (const c of staleSensitiveCases) {
+    if (c.ownerId) userIdsNeeded.add(c.ownerId.toString());
+  }
+
+  // ---- CX half of Closing the Loop: negative feedback never personally
+  // replied to. The proactive counterpart to the existing respond-to-
+  // customer button — that mechanism already exists and works, it just
+  // never surfaced itself; this makes it a prompt instead of something a
+  // business only finds by happening to open the right case. Colleague
+  // Experience is excluded entirely: it never captures a respondent email
+  // in the first place (anonymity floor), so there's nothing to reply to —
+  // see ClosingLoopUpdate's own comment for that product's broadcast-only
+  // mechanism instead.
+  const awaitingReplyWindowStart = new Date(now.getTime() - AWAITING_REPLY_WINDOW_DAYS * DAY_MS);
+  const candidateCases = await ActionBoardItem.find({
+    businessId: { $in: businessIds },
+    product: "customer_experience",
+    customerNotifiedAt: null,
+    createdAt: { $gte: awaitingReplyWindowStart },
+    sourceResponseIds: { $ne: [] },
+  }).select("title businessId ownerId createdAt sourceResponseIds sensitive");
+
+  const candidateResponseIds = [...new Set(candidateCases.flatMap((c) => c.sourceResponseIds.map((id) => id.toString())))];
+  const candidateResponses =
+    candidateResponseIds.length > 0
+      ? await FeedbackResponse.find({ _id: { $in: candidateResponseIds }, respondentEmail: { $ne: null } }).select(
+          "answers respondentEmail"
+        )
+      : [];
+  const responseById = new Map(candidateResponses.map((r) => [r._id.toString(), r]));
+
+  const awaitingReplyCases = candidateCases.filter((c) => {
+    const response = c.sourceResponseIds.map((id) => responseById.get(id.toString())).find((r) => r);
+    if (!response) return false; // no captured email on any linked response — nothing to reply to
+    if (c.sensitive) return true;
+    return response.answers.some((a) => a.type === "star_1_5" && typeof a.value === "number" && a.value <= NEGATIVE_STAR_THRESHOLD);
+  });
+  for (const c of awaitingReplyCases) {
     if (c.ownerId) userIdsNeeded.add(c.ownerId.toString());
   }
 
@@ -246,6 +287,22 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
       who: who(c.ownerId),
       whyNow: `Sensitive case, untouched for ${waitingDays} day${waitingDays === 1 ? "" : "s"}`,
       actionLabel: "Open case",
+      actionHref: `${prefix}/cases/${c._id.toString()}`,
+      at: c.createdAt.toISOString(),
+    });
+  }
+
+  for (const c of awaitingReplyCases) {
+    const waitingDays = daysAgo(c.createdAt.toISOString(), now);
+    items.push({
+      id: `awaiting-reply:${c._id.toString()}`,
+      kind: "awaiting_customer_reply",
+      severity: "medium",
+      what: c.title,
+      where: where(c.businessId),
+      who: who(c.ownerId),
+      whyNow: `Negative feedback with a captured email, no personal reply sent yet — ${waitingDays} day${waitingDays === 1 ? "" : "s"} since`,
+      actionLabel: "Reply to customer",
       actionHref: `${prefix}/cases/${c._id.toString()}`,
       at: c.createdAt.toISOString(),
     });

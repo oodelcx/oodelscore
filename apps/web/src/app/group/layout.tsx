@@ -161,7 +161,13 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-act"
                 label="Act"
-                hrefs={["/group/attention-centre", "/group/cases", "/group/improvement-initiatives", "/group/decision-log"]}
+                hrefs={[
+                  "/group/attention-centre",
+                  "/group/cases",
+                  "/group/improvement-initiatives",
+                  "/group/decision-log",
+                  "/group/closing-the-loop",
+                ]}
               >
                 {teamMemberCanAccess(user, "attentionCentre") && (
                   <a href="/group/attention-centre">
@@ -188,6 +194,14 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     Decision log
                   </a>
                 )}
+                {hasProduct(org, "colleague_experience") &&
+                  hasFeature(org.enabledFeatures, "closingLoop") &&
+                  teamMemberCanAccess(user, "closingLoop") && (
+                    <a href="/group/closing-the-loop">
+                      <NavIcon name="closing-loop" />
+                      Closing the Loop
+                    </a>
+                  )}
               </NavSection>
               {(() => {
                 const showCxPulse =

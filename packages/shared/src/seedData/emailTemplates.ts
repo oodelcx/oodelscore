@@ -142,4 +142,10 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     body: "Hi, it's time for the regular team pulse survey — your honest, anonymous feedback helps shape what changes next. It takes about a minute and nothing you say is linked back to you. {{survey_link}}",
     availableVars: ["survey_link"],
   },
+  {
+    key: "you_said_we_did",
+    subject: "You said, we did: {{update_title}}",
+    body: "Hi, here's an update on feedback you and your colleagues shared.\n\nWhat we heard:\n{{what_we_heard}}\n\nWhat we're doing:\n{{what_were_doing}}\n\nThanks for speaking up — it's what makes these changes happen.",
+    availableVars: ["update_title", "what_we_heard", "what_were_doing"],
+  },
 ];

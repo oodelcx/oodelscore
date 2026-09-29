@@ -48,6 +48,7 @@ const PATHS: Record<string, string> = {
   "audit-log": "M8.5 14a5.5 5.5 0 100-11 5.5 5.5 0 000 11z|M8.5 5.5V8.5l2 1.5",
   "dev-tools": "M5 4l-3 4.5 3 4.5|M12 4l3 4.5-3 4.5|M10 3l-3 11",
   "attention-centre": "M8.5 2.5v3|M8.5 2.5a5.5 5.5 0 015.5 5.5c0 3-1 4.3-2 5.3H5c-1-1-2-2.3-2-5.3a5.5 5.5 0 015.5-5.5z|M6.5 15h4",
+  "closing-loop": "M8.5 14.5a6 6 0 100-12 6 6 0 000 12z|M6 8.5l1.8 1.8L11.5 6.5",
 };
 
 export function NavIcon({ name }: { name: string }) {

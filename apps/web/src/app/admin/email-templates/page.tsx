@@ -92,6 +92,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A business sends its roster-personalized pulse survey links (Business portal, Colleague Roster)",
     category: "alerts",
   },
+  you_said_we_did: {
+    label: "You Said, We Did",
+    trigger: "A business/group sends a Closing the Loop broadcast to its Colleague Experience roster",
+    category: "alerts",
+  },
 };
 
 const CATEGORY_CHIPS: { id: "all" | CategoryId; label: string }[] = [
