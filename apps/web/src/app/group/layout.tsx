@@ -119,7 +119,14 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-understand"
                 label="Understand"
-                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/alerts", "/group/reports"]}
+                hrefs={[
+                  "/group/insights",
+                  "/group/analytics",
+                  "/group/alert-rules",
+                  "/group/alerts",
+                  "/group/reports",
+                  "/group/business-value",
+                ]}
               >
                 {hasProduct(org, "customer_experience") &&
                   hasFeature(org.enabledFeatures, "insights") &&
@@ -157,6 +164,12 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                       Reports
                     </a>
                   )}
+                {hasFeature(org.enabledFeatures, "businessValue") && teamMemberCanAccess(user, "businessValue") && (
+                  <a href="/group/business-value">
+                    <NavIcon name="business-value" />
+                    Business Value
+                  </a>
+                )}
               </NavSection>
               <NavSection
                 storageKey="group-act"
