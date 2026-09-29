@@ -5,7 +5,8 @@ This repo is the real implementation of Oodel Score, a B2B feedback-intelligence
 ## Before making changes, read these in order
 
 1. `oodel-score-engineering-spec.md` (repo root) — the full spec: MongoDB data model for every collection, the role/permission matrix, Stripe billing logic (including the per-branch "who pays" rule), the CX Pulse scoring framework, every Resend email trigger, and a list of known bugs to fix during migration, not after.
-2. The HTML mockups at the repo root — these are the exact, click-tested visual and interaction spec. Open them in a browser; every button, modal, and page transition shown is real and intentional, not decorative:
+2. `PRODUCT-ROADMAP.md` (repo root) — the phased plan for everything built after the initial migration (Phases 0–8: naming lock, CSAT/CES, Attention Centre, De-escalation, Closing the Loop, Business Value, survey builder, OodelCX Compass, and the "later" backlog). Check its status table before proposing what to build next or resuming a phase — this is the actual source of truth for "what's next," not this file's own build order below, which only covers the original migration.
+3. The HTML mockups at the repo root — these are the exact, click-tested visual and interaction spec. Open them in a browser; every button, modal, and page transition shown is real and intentional, not decorative:
    - `oodel-score-admin-rebuild.html` — Oodel Score's internal Admin portal
    - `oodel-score-group-dashboard.html` — the Parent Organization (Group) portal, for accounts managing multiple businesses
    - `oodel-score-redesign.html` — the standalone Business portal (single location, no parent org)
