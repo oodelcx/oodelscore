@@ -17,6 +17,8 @@ import {
   logCaseEvent,
   buildCaseTimeline,
   CaseEventLogEntry,
+  resolveQuestionTextByQuestionId,
+  getEscalationConfig,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { attachPlaybookRunsToItems } from "@/lib/caseStats";
@@ -55,6 +57,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const escalationUsers = await User.find({ _id: { $in: escalationUserIds } }).select("email");
   const emailByUserId = new Map(escalationUsers.map((u) => [u._id.toString(), u.email]));
   const timeline = buildCaseTimeline(events, item.escalationHistory, emailByUserId);
+  const questionTextById = await resolveQuestionTextByQuestionId(sourceResponses);
+  const escalationConfig = await getEscalationConfig(session.business);
+  const topLevel = escalationConfig.levels.length > 0 ? Math.max(...escalationConfig.levels.map((l) => l.level)) : null;
 
   const [itemWithRun] = await attachPlaybookRunsToItems([item], playbooks);
 
@@ -90,8 +95,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
       })),
     },
     sourceResponses,
+    questionTextById,
     comments,
     timeline,
+    escalation: {
+      levelsConfigured: escalationConfig.levels.length,
+      topLevel,
+      canEscalate: topLevel !== null && item.currentEscalationLevel < topLevel,
+      canDeEscalate: item.currentEscalationLevel > 1,
+    },
     recurringFlag,
   });
 }
