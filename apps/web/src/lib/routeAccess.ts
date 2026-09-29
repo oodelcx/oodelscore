@@ -66,6 +66,7 @@ export const BUSINESS_ACCESS_CONFIG: PortalAccessConfig = {
   dashboardRoot: "/business",
   ownerOnlyRoutes: ["/business/billing", "/business/team-members", "/business/category-owners"],
   pageAccessKeys: [
+    ["/business/attention-centre", "attentionCentre"],
     ["/business/feedback-points", "feedbackPoints"],
     ["/business/roster", "colleagueRoster"],
     ["/business/responses", "rawFeedback"],
@@ -89,6 +90,7 @@ export const GROUP_ACCESS_CONFIG: PortalAccessConfig = {
   dashboardRoot: "/group",
   ownerOnlyRoutes: ["/group/billing", "/group/team-members", "/group/category-owners"],
   pageAccessKeys: [
+    ["/group/attention-centre", "attentionCentre"],
     ["/group/raw-feedback", "rawFeedback"],
     ["/group/insights", "insights"],
     ["/group/analytics", "analytics"],
