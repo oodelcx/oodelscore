@@ -36,6 +36,7 @@ const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low"];
 const KIND_LABEL: Record<string, string> = {
   overdue_escalated_case: "Overdue escalated case",
   overdue_case: "Overdue case",
+  escalation_deadline_approaching: "Escalation deadline approaching",
   stalled_sensitive_case: "Stalled sensitive case",
   awaiting_customer_reply: "Awaiting customer reply",
   alert_fired: "Alert fired",
@@ -253,7 +254,12 @@ export default function AttentionCentreClient({ apiPath }: { apiPath: string }) 
                         <span style={{ fontWeight: 600, fontSize: 14 }}>{item.what}</span>
                       </div>
                       <div style={{ fontSize: 12.5, color: "var(--text-2)" }}>
-                        {item.where} · {item.who}
+                        {item.where} ·{" "}
+                        {item.who === "Unassigned" ? (
+                          <span style={{ color: "var(--red)", fontWeight: 600 }}>Unassigned</span>
+                        ) : (
+                          item.who
+                        )}
                       </div>
                       <div style={{ fontSize: 12.5, color: "var(--text-2)", marginTop: 2 }}>{item.whyNow}</div>
                     </div>
