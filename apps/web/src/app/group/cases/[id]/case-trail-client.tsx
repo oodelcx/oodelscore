@@ -24,6 +24,7 @@ interface CommentRow {
   createdAt: string;
 }
 interface AnswerRow {
+  questionId: string;
   type: string;
   value: unknown;
 }
@@ -46,6 +47,12 @@ interface RecurringFlagSummary {
   categoryName: string | null;
   caseCount: number;
   branchCount: number;
+}
+interface EscalationInfo {
+  levelsConfigured: number;
+  topLevel: number | null;
+  canEscalate: boolean;
+  canDeEscalate: boolean;
 }
 interface CaseDetail {
   _id: string;
@@ -79,6 +86,8 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
   const [sourceResponses, setSourceResponses] = useState<ResponseRow[]>([]);
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [timeline, setTimeline] = useState<TimelineRow[]>([]);
+  const [questionTextById, setQuestionTextById] = useState<Record<string, string>>({});
+  const [escalation, setEscalation] = useState<EscalationInfo>({ levelsConfigured: 0, topLevel: null, canEscalate: false, canDeEscalate: false });
   const [businessName, setBusinessName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +111,8 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
         setSourceResponses(data.sourceResponses ?? []);
         setComments(data.comments ?? []);
         setTimeline(data.timeline ?? []);
+        setQuestionTextById(data.questionTextById ?? {});
+        setEscalation(data.escalation ?? { levelsConfigured: 0, topLevel: null, canEscalate: false, canDeEscalate: false });
         setBusinessName(data.businessName ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -239,8 +250,8 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
               <tbody>
                 {r.answers.map((a, i) => (
                   <tr key={i}>
-                    <td>{a.type}</td>
-                    <td style={{ textAlign: "right" }}>{String(a.value)}</td>
+                    <td>{questionTextById[a.questionId] ?? a.type}</td>
+                    <td style={{ textAlign: "right" }}>{Array.isArray(a.value) ? a.value.join(", ") : String(a.value)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -279,20 +290,33 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
         )}
         {item.status !== "resolved" && (
           <div style={{ marginTop: 10 }}>
-            <div className="field" style={{ maxWidth: 480 }}>
-              <label>Note (optional)</label>
-              <textarea value={escalationNote} onChange={(e) => setEscalationNote(e.target.value)} />
-            </div>
-            <div className="btn-group">
-              <button className="btn btn-sm" disabled={escalating} onClick={escalate}>
-                {escalating ? "Escalating…" : "↑ Escalate to next level"}
-              </button>
-              {item.currentEscalationLevel > 1 && (
-                <button className="btn btn-sm" disabled={deEscalating} onClick={deEscalate}>
-                  {deEscalating ? "De-escalating…" : "↓ De-escalate one level"}
-                </button>
-              )}
-            </div>
+            {escalation.levelsConfigured <= 1 ? (
+              <p className="subtitle" style={{ margin: 0 }}>
+                No escalation chain is configured for this account beyond the owner — there is nowhere to escalate
+                to or de-escalate from yet. An Admin can add further levels under Accounts → Escalation Workflow.
+              </p>
+            ) : (
+              <>
+                <div className="field" style={{ maxWidth: 480 }}>
+                  <label>Note (optional)</label>
+                  <textarea value={escalationNote} onChange={(e) => setEscalationNote(e.target.value)} />
+                </div>
+                <div className="btn-group">
+                  <button className="btn btn-sm" disabled={escalating || !escalation.canEscalate} onClick={escalate}>
+                    {escalating
+                      ? "Escalating…"
+                      : escalation.canEscalate
+                        ? "↑ Escalate to next level"
+                        : "↑ Already at the top level"}
+                  </button>
+                  {escalation.canDeEscalate && (
+                    <button className="btn btn-sm" disabled={deEscalating} onClick={deEscalate}>
+                      {deEscalating ? "De-escalating…" : "↓ De-escalate one level"}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -9,7 +9,7 @@ import type { IEscalationLevel } from "../models/common";
 
 export class EscalationError extends Error {}
 
-interface EscalationConfig {
+export interface EscalationConfig {
   levels: IEscalationLevel[];
   slaHours: number | null;
 }
@@ -17,9 +17,15 @@ interface EscalationConfig {
 /**
  * A branch's escalation chain always comes from its parent org when it has
  * one (same inheritance rule as ragThresholds) — a branch's own
- * escalationLevels field only applies while it's standalone.
+ * escalationLevels field only applies while it's standalone. Exported so
+ * the case detail routes can tell the UI up front whether Escalate/
+ * De-escalate would even do anything, instead of the button only revealing
+ * "nothing configured" after a click (see EscalationError's messages
+ * below) — an account that never configured level 2+ (the schema default
+ * is a single level, "Owner") would otherwise see a dead-end button with
+ * no explanation.
  */
-async function getEscalationConfig(business: Pick<IBusiness, "parentOrgId" | "escalationLevels" | "escalationSlaHours">): Promise<EscalationConfig> {
+export async function getEscalationConfig(business: Pick<IBusiness, "parentOrgId" | "escalationLevels" | "escalationSlaHours">): Promise<EscalationConfig> {
   if (business.parentOrgId) {
     const org = await ParentOrganization.findById(business.parentOrgId);
     if (org) return { levels: org.escalationLevels, slaHours: org.escalationSlaHours };

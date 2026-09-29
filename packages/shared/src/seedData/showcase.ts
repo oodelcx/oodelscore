@@ -31,6 +31,8 @@ import { PlaybookRun } from "../models/PlaybookRun";
 import { AuditLogEntry } from "../models/AuditLogEntry";
 import { SupportTicket, type SupportTicketCategory, type SupportTicketStatus } from "../models/SupportTicket";
 import { Event as TrainingEvent } from "../models/Event";
+import { ClosingLoopUpdate } from "../models/ClosingLoopUpdate";
+import { RosterEntry } from "../models/RosterEntry";
 import { hashPassword } from "../auth/password";
 import { markOwnerComp } from "../stripe/billing";
 import { recomputeAllCxPulseScores } from "../cxpulse/compute";
@@ -190,6 +192,7 @@ const SECTORS: SectorDef[] = [
       { text: "How clean and well-maintained was the branch?", type: "star_1_5", category: "Cleanliness" },
       { text: "How would you rate the speed of service today?", type: "star_1_5", category: "Service Speed" },
       { text: "How likely are you to recommend us to a friend or colleague?", type: "nps_0_10", category: null, required: true },
+      { text: "How easy was it to get your issue resolved today?", type: "ces_1_5", category: "Service Speed" },
       { text: "Was your issue fully resolved today?", type: "yes_no", category: "Communication" },
       {
         text: "Which services did you use today?",
@@ -209,6 +212,7 @@ const SECTORS: SectorDef[] = [
       { text: "How clean and well-maintained are our facilities?", type: "star_1_5", category: "Facilities" },
       { text: "How satisfied are you with communication from the school?", type: "star_1_5", category: "Communication" },
       { text: "How likely are you to recommend this school to another family?", type: "nps_0_10", category: null, required: true },
+      { text: "How easy was it to get the information you needed?", type: "ces_1_5", category: "Communication" },
       { text: "Did you get a response to your inquiry in a timely manner?", type: "yes_no", category: "Service Speed" },
       {
         text: "Which best describes your relationship to the school?",
@@ -228,6 +232,7 @@ const SECTORS: SectorDef[] = [
       { text: "How would you rate the food quality?", type: "star_1_5", category: "Product Quality" },
       { text: "How clean was the restaurant?", type: "star_1_5", category: "Cleanliness" },
       { text: "How likely are you to recommend us to a friend?", type: "nps_0_10", category: null, required: true },
+      { text: "How easy was it to get your order the way you wanted it?", type: "ces_1_5", category: "Service Speed" },
       { text: "Was your order served in a reasonable time?", type: "yes_no", category: "Service Speed" },
       {
         text: "How did you dine with us today?",
@@ -247,6 +252,7 @@ const SECTORS: SectorDef[] = [
       { text: "How clean was the facility?", type: "star_1_5", category: "Cleanliness" },
       { text: "How would you rate the wait time for your visit?", type: "star_1_5", category: "Service Speed" },
       { text: "How likely are you to recommend us to family or friends?", type: "nps_0_10", category: null, required: true },
+      { text: "How easy was it to get the care you needed today?", type: "ces_1_5", category: "Service Speed" },
       { text: "Did our staff clearly explain your diagnosis or treatment plan?", type: "yes_no", category: "Communication" },
       { text: "Overall, how was your visit today?", type: "emoji_scale", category: null },
       { text: "Anything else you'd like us to know?", type: "open_text", category: null },
@@ -261,6 +267,7 @@ const SECTORS: SectorDef[] = [
       { text: "How relevant was the content to your work or life?", type: "star_1_5", category: "Product Quality" },
       { text: "How well organized was the session?", type: "star_1_5", category: "Facilities" },
       { text: "How likely are you to recommend this program to others?", type: "nps_0_10", category: null, required: true },
+      { text: "How easy was it to sign up and take part in this session?", type: "ces_1_5", category: "Facilities" },
       { text: "Did this session meet your expectations?", type: "yes_no", category: "Communication" },
       {
         text: "Which program track was this?",
@@ -302,6 +309,9 @@ function answerValueFor(question: IQuestion, mood: "bad" | "neutral" | "good"): 
       return mood === "bad" ? pick([1, 2]) : mood === "neutral" ? 3 : pick([4, 5]);
     case "nps_0_10":
       return mood === "bad" ? randomInt(0, 4) : mood === "neutral" ? randomInt(5, 6) : randomInt(7, 10);
+    case "ces_1_5":
+      // Inverted scale — 1 is low effort (good), 5 is high effort (bad).
+      return mood === "bad" ? pick([4, 5]) : mood === "neutral" ? 3 : pick([1, 2]);
     case "emoji_scale":
       return mood === "bad" ? pick([1, 2]) : mood === "neutral" ? 3 : pick([4, 5]);
     case "slider":
@@ -361,6 +371,9 @@ function ceAnswerValueFor(question: IQuestion, mood: "bad" | "neutral" | "good")
       return mood === "bad" ? pick([1, 2]) : mood === "neutral" ? 3 : pick([4, 5]);
     case "nps_0_10":
       return mood === "bad" ? randomInt(0, 4) : mood === "neutral" ? randomInt(5, 6) : randomInt(7, 10);
+    case "ces_1_5":
+      // Inverted scale — 1 is low effort (good), 5 is high effort (bad).
+      return mood === "bad" ? pick([4, 5]) : mood === "neutral" ? 3 : pick([1, 2]);
     case "yes_no":
       return mood === "bad" ? pick(["no", "no", "yes"]) : "yes";
     case "dropdown":
@@ -391,6 +404,7 @@ const CE_QUESTIONS: QuestionDef[] = [
   { text: "How would you rate your work-life balance right now?", type: "star_1_5", category: "Work-Life Balance" as unknown as CategoryName },
   { text: "How satisfied are you with growth opportunities here?", type: "star_1_5", category: "Growth Opportunities" as unknown as CategoryName },
   { text: "How likely are you to recommend this as a great place to work?", type: "nps_0_10", category: null, required: true },
+  { text: "How easy is it to get the support you need from HR or management?", type: "ces_1_5", category: "Management Support" as unknown as CategoryName },
   { text: "Do you feel fairly compensated for your role?", type: "yes_no", category: "Compensation Fairness" as unknown as CategoryName },
   { text: "Which best describes your team?", type: "dropdown", category: null, options: ["Frontline", "Support", "Management", "Remote"] },
   { text: "Anything else you'd like to share?", type: "open_text", category: null },
@@ -435,6 +449,8 @@ export interface ShowcaseSeedResult {
   auditLogEntries: number;
   supportTickets: number;
   events: number;
+  closingLoopUpdates: number;
+  rosterEntries: number;
 }
 
 interface ProductFeedbackInfo {
@@ -487,6 +503,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     auditLogEntries: 0,
     supportTickets: 0,
     events: 0,
+    closingLoopUpdates: 0,
+    rosterEntries: 0,
   };
 
   // 1. Categories (CX + CE) and industries, upserted by name.
@@ -726,6 +744,28 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
           demographicConfig: { name: "optional", email: "optional", phone: "off", ageGroup: "optional", gender: "optional" },
           accountManagerId: adminUserId ?? null,
           active: true,
+          // A branch's own escalationLevels is ignored in favor of its
+          // parent org's (set on buildOrg above) — only a standalone
+          // business's own chain here actually takes effect. Either way,
+          // seeding a real multi-level chain means QA can exercise
+          // Escalate/De-escalate instead of hitting a wall on the schema's
+          // single-level default.
+          ...(params.parentOrgId
+            ? {}
+            : {
+                escalationLevels: [
+                  { level: 1, label: "Owner" },
+                  { level: 2, label: params.opsRoleLabel },
+                ],
+                escalationSlaHours: 48,
+              }),
+          // Business Value inputs are CX-only (a "customer at risk" concept)
+          // — filled in wherever a business carries customer_experience so
+          // the Business Value page never shows its empty "set these up"
+          // state anywhere in the showcase.
+          ...(params.products.includes("customer_experience")
+            ? { businessValueInputs: { avgTransactionValue: 45, visitsPerYear: 12, acquisitionCost: 120, atRiskStarThreshold: 2, currencySymbol: "$" } }
+            : {}),
         },
       },
       { upsert: true, new: true }
@@ -857,6 +897,11 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       const categoryLabel = event.categoryId ? info.categoryNameById.get(event.categoryId.toString()) ?? "Service" : "Service";
       const status = pick(["open", "in_progress", "resolved"] as const);
       const ownerId = ownerCandidates.length ? pick(ownerCandidates)._id : null;
+      // A slice of still-open cases are pre-escalated to level 2 so QA can
+      // exercise De-escalate immediately, without having to escalate one
+      // first — every org/standalone business now has a real level-2+
+      // chain configured (see buildOrg/createBusinessShell above).
+      const preEscalated = status !== "resolved" && Math.random() < 0.25;
       const item = await ActionBoardItem.create({
         parentOrgId,
         businessId: business._id,
@@ -864,7 +909,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
         title: `${categoryLabel} concern reported at ${business.name}`,
         description: event.comment ? `Respondent comment: "${event.comment}"` : `A ${event.starValue}-star rating was logged for ${categoryLabel.toLowerCase()}.`,
         categoryId: event.categoryId,
-        priority: event.starValue <= 1 ? "high" : "medium",
+        priority: event.starValue <= 1 ? "high" : preEscalated ? "high" : "medium",
         status,
         ownerId,
         dueDate: status === "resolved" ? null : daysAgo(-randomInt(2, 10)),
@@ -880,6 +925,18 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
         resolvedAt: status === "resolved" ? daysAgo(randomInt(0, 5)) : null,
         source: ownerId ? "auto_assigned" : "auto_suggested",
         createdAt: event.submittedAt,
+        currentEscalationLevel: preEscalated ? 2 : 1,
+        escalationHistory: preEscalated
+          ? [
+              {
+                level: 1,
+                userId: ownerId,
+                action: "escalated" as const,
+                note: "Escalating — this needs a second set of eyes before it goes any further.",
+                at: daysAgo(randomInt(0, 3)),
+              },
+            ]
+          : [],
       });
       result.actionBoardItems++;
       await autoAttachPlaybook(item);
@@ -1252,6 +1309,15 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
           defaultBillingMode: "group_pays",
           enabledProducts: params.products,
           accountManagerId: adminUserId ?? null,
+          // A real multi-level chain (not just the schema default single
+          // "Owner" level) so QA can actually exercise Escalate/De-escalate
+          // instead of hitting the "nothing configured" wall on every case.
+          escalationLevels: [
+            { level: 1, label: "Owner" },
+            { level: 2, label: params.opsRoleLabel },
+            { level: 3, label: "Executive" },
+          ],
+          escalationSlaHours: 48,
         },
       },
       { upsert: true, new: true }
@@ -1491,6 +1557,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
         demographicConfig: { name: "optional", email: "off", phone: "off", ageGroup: "off", gender: "off" },
         accountManagerId: adminUserId ?? null,
         active: true,
+        businessValueInputs: { avgTransactionValue: 180, visitsPerYear: 1, acquisitionCost: 300, atRiskStarThreshold: 2, currencySymbol: "$" },
       },
     },
     { upsert: true, new: true }
@@ -2273,6 +2340,104 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     }
   }
 
+  // Closing the Loop (Colleague Experience only) — one sent broadcast and
+  // one still-drafting update per CE-enabled org, so the page never shows
+  // its empty state and QA can see both halves of the lifecycle at once.
+  const ceOrgs: { org: OrgResult; heard: string; doing: string }[] = [
+    {
+      org: meridian,
+      heard: "Several of you told us the break room coffee situation needed work.",
+      doing: "New machines are in at every branch as of this month — let us know what you think.",
+    },
+    {
+      org: skyline,
+      heard: "Scheduling changes with too little notice came up a lot in the last pulse.",
+      doing: "We're moving to a 2-week minimum notice window for shift changes starting next month.",
+    },
+    {
+      org: aurora,
+      heard: "Crew feedback flagged that the JFK hub break area is too small for peak shift overlap.",
+      doing: "A larger break space opens at JFK next quarter — layout is finalized and construction has started.",
+    },
+    {
+      org: stAugustine,
+      heard: "Staff asked for clearer escalation paths when a shift is short-staffed.",
+      doing: "A new on-call charge nurse rotation launches this month, with the escalation steps posted at every nursing station.",
+    },
+  ];
+  // RosterEntry — Colleague Experience's own employee list, which drives
+  // lifecycle-triggered surveys (onboarding day-30/90, exit). A handful of
+  // rows per branch: mostly still-active, a couple mid-onboarding, one
+  // already exited — so the lifecycle cron has real rows to evaluate and
+  // an eventual roster-management UI never shows an empty account.
+  for (const { org } of ceOrgs) {
+    for (const branch of org.branches) {
+      const rows: { email: string; startDaysAgo: number; endDaysAgo: number | null }[] = [
+        { email: `roster.1.${slug(branch.business.name)}@${EMAIL_DOMAIN}`, startDaysAgo: 400, endDaysAgo: null },
+        { email: `roster.2.${slug(branch.business.name)}@${EMAIL_DOMAIN}`, startDaysAgo: 220, endDaysAgo: null },
+        { email: `roster.3.${slug(branch.business.name)}@${EMAIL_DOMAIN}`, startDaysAgo: 60, endDaysAgo: null },
+        { email: `roster.4.${slug(branch.business.name)}@${EMAIL_DOMAIN}`, startDaysAgo: 20, endDaysAgo: null },
+        { email: `roster.5.${slug(branch.business.name)}@${EMAIL_DOMAIN}`, startDaysAgo: 500, endDaysAgo: 10 },
+      ];
+      for (const row of rows) {
+        await RosterEntry.findOneAndUpdate(
+          { businessId: branch.business._id, email: row.email },
+          {
+            $setOnInsert: {
+              businessId: branch.business._id,
+              email: row.email,
+              startDate: daysAgo(row.startDaysAgo),
+              endDate: row.endDaysAgo === null ? null : daysAgo(row.endDaysAgo),
+              triggeredStages: row.startDaysAgo >= 90 ? ["onboarding_30", "onboarding_90"] : row.startDaysAgo >= 30 ? ["onboarding_30"] : [],
+            },
+          },
+          { upsert: true }
+        );
+        result.rosterEntries++;
+      }
+    }
+  }
+
+  for (const { org, heard, doing } of ceOrgs) {
+    const branchIds = org.branches.map((b) => b.business._id);
+    const rosterSize = org.branches.length * randomInt(8, 18);
+    await ClosingLoopUpdate.findOneAndUpdate(
+      { parentOrgId: org.org._id, title: `${org.org.name.split(" ")[0]} team update — what we heard` },
+      {
+        $setOnInsert: {
+          parentOrgId: org.org._id,
+          product: "colleague_experience",
+          title: `${org.org.name.split(" ")[0]} team update — what we heard`,
+          whatWeHeard: heard,
+          whatWereDoing: doing,
+          affectedBusinessIds: branchIds,
+          status: "sent",
+          sentAt: daysAgo(randomInt(5, 20)),
+          recipientCount: rosterSize,
+        },
+      },
+      { upsert: true }
+    );
+    result.closingLoopUpdates++;
+
+    await ClosingLoopUpdate.findOneAndUpdate(
+      { parentOrgId: org.org._id, title: "Next quarter — in progress" },
+      {
+        $setOnInsert: {
+          parentOrgId: org.org._id,
+          product: "colleague_experience",
+          title: "Next quarter — in progress",
+          whatWeHeard: "",
+          whatWereDoing: "",
+          affectedBusinessIds: branchIds,
+          status: "draft",
+        },
+      },
+      { upsert: true }
+    );
+    result.closingLoopUpdates++;
+  }
+
   void meridianPlaybook;
   void foodQualityPlaybook;
   void skylineCases;
@@ -2310,6 +2475,8 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("alertActivity", () => AlertActivity.deleteMany({}));
   await del("alertRules", () => AlertRule.deleteMany({}));
   await del("supportTickets", () => SupportTicket.deleteMany({}));
+  await del("closingLoopUpdates", () => ClosingLoopUpdate.deleteMany({}));
+  await del("rosterEntries", () => RosterEntry.deleteMany({}));
   await del("events", () => TrainingEvent.deleteMany({}));
   await del("responses", () => FeedbackResponse.deleteMany({}));
   await del("feedbackPoints", () => FeedbackPoint.deleteMany({}));

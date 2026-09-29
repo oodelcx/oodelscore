@@ -45,6 +45,7 @@ export * from "./cxpulse/compute";
 export * from "./cxpulse/portfolio";
 export * from "./qr/generate";
 export * from "./feedback/dedup";
+export * from "./feedback/questionText";
 export * from "./categories/usage";
 export * from "./observability/systemHealth";
 export * from "./observability/stuckOnboarding";
