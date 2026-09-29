@@ -11,6 +11,10 @@ export const QUESTION_TYPES = [
   "multi_select",
   "slider",
   "dropdown",
+  // Customer Effort Score — 1 (very easy) to 5 (very difficult). Inverted:
+  // a LOW value is the good outcome, opposite of star_1_5/nps_0_10. Scoring
+  // in scoring/goals.ts must never average this together with star_1_5.
+  "ces_1_5",
 ] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 

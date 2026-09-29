@@ -124,6 +124,11 @@ async function computeOwnerMetrics(businessIds: Types.ObjectId[], from: Date, to
   const responseCount = perBusiness.reduce((sum, r) => sum + r.responseCount, 0);
   const starResults = perBusiness.filter((r) => r.starAverage !== null);
   const npsResults = perBusiness.filter((r) => r.npsScore !== null);
+  const csatResults = perBusiness.filter((r) => r.csatPercent !== null);
+  const cesResults = perBusiness.filter((r) => r.cesAverage !== null);
+  const starCount = perBusiness.reduce((sum, r) => sum + r.starCount, 0);
+  const npsCount = perBusiness.reduce((sum, r) => sum + r.npsCount, 0);
+  const cesCount = perBusiness.reduce((sum, r) => sum + r.cesCount, 0);
 
   const [casesResolved, casesStillOpenOverdue] = await Promise.all([
     ActionBoardItem.countDocuments({
@@ -143,6 +148,17 @@ async function computeOwnerMetrics(businessIds: Types.ObjectId[], from: Date, to
     starAverage:
       starResults.length === 0 ? null : Math.round((starResults.reduce((s, r) => s + (r.starAverage as number), 0) / starResults.length) * 100) / 100,
     npsScore: npsResults.length === 0 ? null : Math.round(npsResults.reduce((s, r) => s + (r.npsScore as number), 0) / npsResults.length),
+    csatPercent:
+      csatResults.length === 0 ? null : Math.round((csatResults.reduce((s, r) => s + (r.csatPercent as number), 0) / csatResults.length) * 10) / 10,
+    cesAverage:
+      cesResults.length === 0 ? null : Math.round((cesResults.reduce((s, r) => s + (r.cesAverage as number), 0) / cesResults.length) * 100) / 100,
+    cesLowEffortPercent:
+      cesResults.length === 0
+        ? null
+        : Math.round((cesResults.reduce((s, r) => s + (r.cesLowEffortPercent as number), 0) / cesResults.length) * 10) / 10,
+    starCount,
+    npsCount,
+    cesCount,
     casesResolved,
     casesStillOpenOverdue,
   };

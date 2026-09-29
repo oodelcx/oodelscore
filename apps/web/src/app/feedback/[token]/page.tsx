@@ -245,6 +245,23 @@ function QuestionInput({
       </div>
     );
   }
+  if (question.type === "ces_1_5") {
+    return (
+      <div>
+        <div className="ff-nps-row">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button key={n} className={value === n ? "sel" : ""} onClick={() => onChange(n)}>
+              {n}
+            </button>
+          ))}
+        </div>
+        <div className="ff-nps-labels">
+          <span>Very easy</span>
+          <span>Very difficult</span>
+        </div>
+      </div>
+    );
+  }
   if (question.type === "yes_no") {
     return (
       <div className="ff-yn-row">

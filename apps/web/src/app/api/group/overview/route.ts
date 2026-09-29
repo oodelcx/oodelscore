@@ -53,6 +53,27 @@ export async function GET() {
   const networkAverage = withScores.length === 0 ? null : Math.round((withScores.reduce((sum, s) => sum + (s.starAverage as number), 0) / withScores.length) * 100) / 100;
   const networkNps = withNps.length === 0 ? null : Math.round(withNps.reduce((sum, s) => sum + (s.npsScore as number), 0) / withNps.length);
 
+  // Weighted by each branch's own response count, same reasoning as
+  // Command Center's org-wide roll-up.
+  const csatBranches = summaries.filter((s) => s.csatPercent !== null);
+  const networkCsat =
+    csatBranches.length === 0
+      ? null
+      : Math.round(
+          (csatBranches.reduce((sum, s) => sum + (s.csatPercent as number) * s.responseCount, 0) /
+            csatBranches.reduce((sum, s) => sum + s.responseCount, 0)) *
+            10
+        ) / 10;
+  const cesBranches = summaries.filter((s) => s.cesLowEffortPercent !== null);
+  const networkCesLowEffort =
+    cesBranches.length === 0
+      ? null
+      : Math.round(
+          (cesBranches.reduce((sum, s) => sum + (s.cesLowEffortPercent as number) * s.responseCount, 0) /
+            cesBranches.reduce((sum, s) => sum + s.responseCount, 0)) *
+            10
+        ) / 10;
+
   // "Value delivered this period" — what an exec sees to judge whether the
   // spend is doing anything, not just a snapshot score.
   const [casesResolvedThisPeriod, casesResolvedPrevPeriod, customersRespondedTo, activeInitiatives, completedInitiatives] =
@@ -122,6 +143,8 @@ export async function GET() {
     branchCount: businesses.length,
     networkAverage,
     networkNps,
+    networkCsat,
+    networkCesLowEffort,
     cxPulseLevel: orgScore?.level ?? null,
     cxPulseHoldingBack,
     comparisons,

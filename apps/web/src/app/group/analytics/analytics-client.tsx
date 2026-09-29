@@ -7,12 +7,30 @@ import { ScoreDriversCard } from "@/components/score-drivers-card";
 
 interface AnalyticsData {
   trend: { date: string; starAverage: number | null }[];
-  npsBreakdown: { promoters: number; passives: number; detractors: number };
+  npsBreakdown: { promoters: number; passives: number; detractors: number; sampleSize: number };
+  csat: { percent: number | null; sampleSize: number };
+  ces: { average: number | null; lowEffortPercent: number | null; sampleSize: number };
   categoryBreakdown: { name: string; average: number }[];
   commentTags: { word: string; count: number; negative: boolean }[];
 }
 
 const CATEGORY_COLORS = ["#639922", "#7F77DD", "#EF9F27", "#E24B4A", "#5DCAA5", "#185FA5"];
+
+// Same convention as compare-client.tsx's LOW_SAMPLE_THRESHOLD.
+const LOW_SAMPLE_THRESHOLD = 10;
+
+function LowSamplePill({ sampleSize }: { sampleSize: number }) {
+  if (sampleSize === 0 || sampleSize >= LOW_SAMPLE_THRESHOLD) return null;
+  return (
+    <span
+      className="pill pill-gray"
+      style={{ marginLeft: 6, fontSize: 10 }}
+      title={`Fewer than ${LOW_SAMPLE_THRESHOLD} responses — treat this as low-confidence`}
+    >
+      low sample
+    </span>
+  );
+}
 
 function trendSvgPoints(trend: { starAverage: number | null }[]): string {
   const known = trend.map((t) => t.starAverage).filter((v): v is number => v !== null);
@@ -112,6 +130,32 @@ export default function GroupAnalyticsClient({ tooltips }: { tooltips: Record<st
               <div className="bar-val">{data.npsBreakdown.detractors}</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <div className="card">
+          <h3>
+            CSAT
+            <InfoTip text="% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number, reported separately from the raw average and from NPS." />
+            <LowSamplePill sampleSize={data.csat.sampleSize} />
+          </h3>
+          <div className="metric-val">{data.csat.percent !== null ? `${data.csat.percent}%` : "—"}</div>
+          <p style={{ fontSize: 12.5, color: "var(--text-2)", margin: "4px 0 0" }}>
+            {data.csat.sampleSize} rated response{data.csat.sampleSize === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="card">
+          <h3>
+            CES — Customer Effort
+            <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy'). Low effort is the good outcome, opposite of star/NPS/CSAT." />
+            <LowSamplePill sampleSize={data.ces.sampleSize} />
+          </h3>
+          <div className="metric-val">{data.ces.lowEffortPercent !== null ? `${data.ces.lowEffortPercent}%` : "—"}</div>
+          <p style={{ fontSize: 12.5, color: "var(--text-2)", margin: "4px 0 0" }}>
+            {data.ces.average !== null ? `Average effort score ${data.ces.average}/5 · ` : ""}
+            {data.ces.sampleSize} response{data.ces.sampleSize === 1 ? "" : "s"}
+          </p>
         </div>
       </div>
 

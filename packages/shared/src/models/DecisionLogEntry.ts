@@ -4,7 +4,7 @@ import { PRODUCTS, type Product } from "./products";
 export const DECISION_STATUSES = ["planned", "in_progress", "implemented"] as const;
 export type DecisionStatus = (typeof DECISION_STATUSES)[number];
 
-export const DECISION_OUTCOME_METRICS = ["starAverage", "nps", "categoryAverage"] as const;
+export const DECISION_OUTCOME_METRICS = ["starAverage", "nps", "categoryAverage", "csat", "ces"] as const;
 export type DecisionOutcomeMetric = (typeof DECISION_OUTCOME_METRICS)[number];
 
 export interface IDecisionLogEntry {
@@ -36,6 +36,14 @@ export interface IDecisionLogEntry {
   outcomeBefore: number | null;
   outcomeAfter: number | null;
   outcomeMeasuredAt: Date | null;
+  // Response counts behind the before/after numbers, and whether either
+  // fell below the low-sample threshold — set alongside outcomeBefore/After
+  // by computeDecisionOutcome, so the confidence flag persists with the
+  // measurement instead of being recomputed (and potentially drifting) on
+  // every page load.
+  outcomeSampleSizeBefore: number | null;
+  outcomeSampleSizeAfter: number | null;
+  outcomeLowConfidence: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +66,9 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
     outcomeBefore: { type: Number, default: null },
     outcomeAfter: { type: Number, default: null },
     outcomeMeasuredAt: { type: Date, default: null },
+    outcomeSampleSizeBefore: { type: Number, default: null },
+    outcomeSampleSizeAfter: { type: Number, default: null },
+    outcomeLowConfidence: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

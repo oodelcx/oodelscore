@@ -12,6 +12,8 @@ interface BranchTile {
   region: string;
   starAverage: number | null;
   npsScore: number | null;
+  csatPercent: number | null;
+  cesLowEffortPercent: number | null;
   responseCount: number;
   starDelta: number | null;
   band: "green" | "amber" | "red" | null;
@@ -40,6 +42,8 @@ interface CommandCenterData {
   orgName: string;
   product: "customer_experience" | "colleague_experience";
   branchTiles: BranchTile[];
+  csatPercent: number | null;
+  cesLowEffortPercent: number | null;
   categoryMatrix: CategoryRow[];
   feed: FeedEntry[];
   cxPulse: { compositeScore: number; level: number } | null;
@@ -178,6 +182,12 @@ export default function GroupCommandCenterClient() {
           <div className="cc-chip-row">
             <div className="cc-chip live">● LIVE</div>
             <div className="cc-chip">{branchCount} BRANCHES</div>
+            <div className="cc-chip" title="% of star-rating responses that are 4 or 5 out of 5">
+              CSAT {data.csatPercent !== null ? `${data.csatPercent}%` : "—"}
+            </div>
+            <div className="cc-chip" title="% of effort-question responses answering 1 or 2 out of 5 (low effort = good)">
+              CES {data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}
+            </div>
             {firingAlerts > 0 && <div className="cc-chip alert">{firingAlerts} ALERTS FIRING</div>}
             <button
               type="button"
@@ -234,6 +244,14 @@ export default function GroupCommandCenterClient() {
                       <div>
                         <span className="cc-bm-label">{npsLabel}</span>
                         <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.npsScore ?? "—"}</span>
+                      </div>
+                      <div>
+                        <span className="cc-bm-label">CSAT</span>
+                        <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.csatPercent !== null ? `${b.csatPercent}%` : "—"}</span>
+                      </div>
+                      <div>
+                        <span className="cc-bm-label">CES</span>
+                        <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.cesLowEffortPercent !== null ? `${b.cesLowEffortPercent}%` : "—"}</span>
                       </div>
                     </div>
                     <div className="cc-branch-foot">

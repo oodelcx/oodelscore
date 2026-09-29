@@ -38,6 +38,12 @@ interface DashboardData {
   totalResponses: number;
   starAverage: number | null;
   npsScore: number | null;
+  csatPercent: number | null;
+  cesAverage: number | null;
+  cesLowEffortPercent: number | null;
+  starCount: number;
+  npsCount: number;
+  cesCount: number;
   conversionRate: number | null;
   comparisons: { week: Comparison; month: Comparison; quarter: Comparison; year: Comparison };
   trend: TrendPoint[];
@@ -180,6 +186,18 @@ export default function BusinessDashboardClient() {
           </div>
           <div className="card">
             <div className="metric-label">
+              CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number." />
+            </div>
+            <div className="metric-val">{data.csatPercent !== null ? `${data.csatPercent}%` : "—"}</div>
+          </div>
+          <div className="card">
+            <div className="metric-label">
+              CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome." />
+            </div>
+            <div className="metric-val">{data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}</div>
+          </div>
+          <div className="card">
+            <div className="metric-label">
               {pulseLabel} <InfoTip text={tooltips["cx-pulse"]} />
             </div>
             <div className="metric-val" style={{ fontSize: 18 }}>
@@ -240,6 +258,18 @@ export default function BusinessDashboardClient() {
             {npsLabel} <InfoTip text={tooltips["nps"]} />
           </div>
           <div className="metric-val">{data.npsScore !== null ? formatSigned(data.npsScore) : "—"}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number." />
+          </div>
+          <div className="metric-val">{data.csatPercent !== null ? `${data.csatPercent}%` : "—"}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome." />
+          </div>
+          <div className="metric-val">{data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}</div>
         </div>
         <div className="card">
           <div className="metric-label">

@@ -7,6 +7,7 @@ import Link from "next/link";
 const QUESTION_TYPES = [
   ["star_1_5", "Star Rating (1–5)"],
   ["nps_0_10", "NPS (0–10)"],
+  ["ces_1_5", "Effort (CES, 1–5)"],
   ["open_text", "Open-ended / Free text"],
   ["yes_no", "Yes / No"],
   ["emoji_scale", "Emoji / Smiley scale"],
@@ -37,6 +38,13 @@ function QuestionPreview({ q }: { q: QuestionRow }) {
       {q.type === "nps_0_10" && (
         <div className="nps-preview">
           {Array.from({ length: 11 }, (_, n) => (
+            <span key={n}>{n}</span>
+          ))}
+        </div>
+      )}
+      {q.type === "ces_1_5" && (
+        <div className="nps-preview" style={{ maxWidth: 220 }}>
+          {[1, 2, 3, 4, 5].map((n) => (
             <span key={n}>{n}</span>
           ))}
         </div>

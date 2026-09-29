@@ -5,13 +5,30 @@ import type { Product } from "../models/products";
 
 /**
  * Spec Section 2 / bug #1: star (1-5) and NPS (0-10) answers must never be
- * blended into one average. This is the single place that computes both,
- * so every consumer (Alert Rules, AI Insights, CX Pulse) gets it right.
+ * blended into one average. This is the single place that computes all
+ * three headline signals, so every consumer (Alert Rules, AI Insights, CX
+ * Pulse, Analytics, Command Center) gets them right and consistently:
+ *  - starAverage / npsScore: unchanged.
+ *  - csatPercent: top-2-box % of star_1_5 answers (4 or 5) — the star
+ *    question already IS the satisfaction question; this reports it the
+ *    standard CSAT way instead of leaving CSAT invisible next to NPS.
+ *  - cesAverage / cesLowEffortPercent: from the ces_1_5 question type.
+ *    Inverted scale (1 = very easy = good), so cesLowEffortPercent (%
+ *    answering 1 or 2) is the headline "good outcome %", the same shape as
+ *    csatPercent — a raw average would read backwards next to star/NPS/CSAT.
+ * Sample sizes (starCount/npsCount/cesCount) ride along so any caller can
+ * show a low-confidence flag without a second query.
  */
 export interface BusinessMetrics {
   responseCount: number;
   starAverage: number | null; // null when there are no star_1_5 answers in range
   npsScore: number | null; // null when there are no nps_0_10 answers in range
+  csatPercent: number | null; // null when there are no star_1_5 answers in range
+  cesAverage: number | null; // null when there are no ces_1_5 answers in range
+  cesLowEffortPercent: number | null; // null when there are no ces_1_5 answers in range
+  starCount: number;
+  npsCount: number;
+  cesCount: number;
 }
 
 export async function computeBusinessMetrics(
@@ -28,15 +45,24 @@ export async function computeBusinessMetrics(
 
   let starSum = 0;
   let starCount = 0;
+  let csatSatisfiedCount = 0;
   const npsAnswers: number[] = [];
+  let cesSum = 0;
+  let cesCount = 0;
+  let cesLowEffortCount = 0;
 
   for (const response of responses) {
     for (const answer of response.answers) {
       if (answer.type === "star_1_5" && typeof answer.value === "number") {
         starSum += answer.value;
         starCount += 1;
+        if (answer.value >= 4) csatSatisfiedCount += 1;
       } else if (answer.type === "nps_0_10" && typeof answer.value === "number") {
         npsAnswers.push(answer.value);
+      } else if (answer.type === "ces_1_5" && typeof answer.value === "number") {
+        cesSum += answer.value;
+        cesCount += 1;
+        if (answer.value <= 2) cesLowEffortCount += 1;
       }
     }
   }
@@ -54,6 +80,12 @@ export async function computeBusinessMetrics(
     responseCount: responses.length,
     starAverage: starCount === 0 ? null : Math.round((starSum / starCount) * 100) / 100,
     npsScore,
+    csatPercent: starCount === 0 ? null : Math.round((csatSatisfiedCount / starCount) * 1000) / 10,
+    cesAverage: cesCount === 0 ? null : Math.round((cesSum / cesCount) * 100) / 100,
+    cesLowEffortPercent: cesCount === 0 ? null : Math.round((cesLowEffortCount / cesCount) * 1000) / 10,
+    starCount,
+    npsCount: npsAnswers.length,
+    cesCount,
   };
 }
 
