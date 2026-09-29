@@ -11,6 +11,8 @@ import {
   Category,
   sendTemplatedEmail,
   ACTION_STATUSES,
+  buildCaseTimeline,
+  CaseEventLogEntry,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { attachPlaybookRunsToItems } from "@/lib/caseStats";
@@ -30,11 +32,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   }
 
-  const [sourceResponses, comments, playbooks, business] = await Promise.all([
+  const [sourceResponses, comments, playbooks, business, events] = await Promise.all([
     Response.find({ _id: { $in: item.sourceResponseIds } }),
     ActionItemComment.find({ actionItemId: item._id }).sort({ createdAt: 1 }),
     Playbook.find({ parentOrgId: session.org._id }),
     Business.findById(item.businessId).select("name"),
+    CaseEventLogEntry.find({ actionBoardItemId: item._id }).sort({ createdAt: 1 }),
   ]);
 
   const escalationUserIds = [
@@ -42,6 +45,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   ];
   const escalationUsers = await User.find({ _id: { $in: escalationUserIds } }).select("email");
   const emailByUserId = new Map(escalationUsers.map((u) => [u._id.toString(), u.email]));
+  const timeline = buildCaseTimeline(events, item.escalationHistory, emailByUserId);
 
   const [itemWithRun] = await attachPlaybookRunsToItems([item], playbooks);
 
@@ -78,6 +82,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     },
     sourceResponses,
     comments,
+    timeline,
     businessName: business?.name ?? null,
     recurringFlag,
   });

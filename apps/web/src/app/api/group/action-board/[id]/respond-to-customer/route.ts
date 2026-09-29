@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ActionBoardItem, Business, Response, sendTemplatedEmail } from "@oodelscore/shared";
+import { connectToDatabase, ActionBoardItem, Business, Response, sendTemplatedEmail, logCaseEvent } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -61,6 +61,16 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   item.customerNotifiedAt = new Date();
   await item.save();
+
+  await logCaseEvent({
+    actionBoardItemId: item._id,
+    businessId: item.businessId,
+    kind: "customer_notified",
+    fromValue: null,
+    toValue: responseWithEmail.respondentEmail,
+    actorUserId: session.user._id,
+    actorLabel: session.user.email,
+  });
 
   return NextResponse.json({ status: "ok", item });
 }

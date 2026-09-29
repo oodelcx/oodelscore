@@ -131,6 +131,63 @@ export async function escalateActionBoardItem(
 }
 
 /**
+ * The corrective counterpart to escalateActionBoardItem: steps a case back
+ * down one configured level — for when it was escalated too eagerly, or the
+ * issue turned out simpler than it looked. Records the move in
+ * escalationHistory with action "de_escalated" (same append-only array,
+ * never edited afterward), reassigns to whoever holds the lower level, and
+ * notifies them, mirroring escalate's own notification. Refuses at level 1
+ * — there's nowhere lower to go.
+ */
+export async function deEscalateActionBoardItem(
+  item: HydratedDocument<IActionBoardItem>,
+  opts: { note: string }
+): Promise<HydratedDocument<IActionBoardItem>> {
+  const business = await Business.findById(item.businessId);
+  if (!business) throw new EscalationError("Business not found");
+
+  const config = await getEscalationConfig(business);
+  const levels = config.levels.slice().sort((a, b) => a.level - b.level);
+  if (!levels.length) throw new EscalationError("No escalation levels configured for this account yet.");
+
+  const currentIndex = levels.findIndex((l) => l.level === item.currentEscalationLevel);
+  const prevLevelConfig = currentIndex <= 0 ? null : levels[currentIndex - 1];
+  if (!prevLevelConfig) throw new EscalationError("This case is already at the bottom of the escalation chain.");
+
+  item.escalationHistory.push({
+    level: item.currentEscalationLevel,
+    userId: item.ownerId,
+    action: "de_escalated",
+    note: opts.note,
+    at: new Date(),
+  });
+
+  item.currentEscalationLevel = prevLevelConfig.level;
+  item.levelEnteredAt = new Date();
+
+  const prevUserId = await resolveEscalationAssignee(item.businessId.toString(), prevLevelConfig.level);
+  if (prevUserId) item.ownerId = prevUserId;
+
+  await item.save();
+
+  if (prevUserId) {
+    const recipient = await User.findById(prevUserId);
+    if (recipient) {
+      await sendTemplatedEmail("case_escalated", recipient.email, {
+        name: recipient.email,
+        level_label: prevLevelConfig.label,
+        business_name: business.name,
+        action_title: item.title,
+        escalation_note: opts.note || "(de-escalated, no note added)",
+        action_link: `${process.env.APP_URL ?? ""}/business/action-board`,
+      }).catch((err) => console.error("[escalation] failed to send case_escalated (de-escalate)", err));
+    }
+  }
+
+  return item;
+}
+
+/**
  * The cron's sweep: any open case that's been sitting at its current level
  * longer than its owner's configured escalationSlaHours gets bumped one
  * level automatically. Already-at-the-top and no-levels-configured are

@@ -36,6 +36,7 @@ export * from "./FeedbackPointRequest";
 export * from "./CxGoal";
 export * from "./PlaybookRun";
 export * from "./AuditLogEntry";
+export * from "./CaseEventLogEntry";
 export * from "./PlatformSettings";
 export * from "./EscalationAssignment";
 export * from "./ImprovementInitiative";
