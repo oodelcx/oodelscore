@@ -48,11 +48,18 @@ interface RecurringFlagSummary {
   caseCount: number;
   branchCount: number;
 }
+interface EscalationLevelPreview {
+  level: number;
+  label: string;
+  assigneeEmail: string | null;
+}
 interface EscalationInfo {
   levelsConfigured: number;
   topLevel: number | null;
   canEscalate: boolean;
   canDeEscalate: boolean;
+  nextLevel: EscalationLevelPreview | null;
+  prevLevel: EscalationLevelPreview | null;
 }
 interface CaseDetail {
   _id: string;
@@ -87,7 +94,14 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [timeline, setTimeline] = useState<TimelineRow[]>([]);
   const [questionTextById, setQuestionTextById] = useState<Record<string, string>>({});
-  const [escalation, setEscalation] = useState<EscalationInfo>({ levelsConfigured: 0, topLevel: null, canEscalate: false, canDeEscalate: false });
+  const [escalation, setEscalation] = useState<EscalationInfo>({
+    levelsConfigured: 0,
+    topLevel: null,
+    canEscalate: false,
+    canDeEscalate: false,
+    nextLevel: null,
+    prevLevel: null,
+  });
   const [businessName, setBusinessName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +126,9 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
         setComments(data.comments ?? []);
         setTimeline(data.timeline ?? []);
         setQuestionTextById(data.questionTextById ?? {});
-        setEscalation(data.escalation ?? { levelsConfigured: 0, topLevel: null, canEscalate: false, canDeEscalate: false });
+        setEscalation(
+          data.escalation ?? { levelsConfigured: 0, topLevel: null, canEscalate: false, canDeEscalate: false, nextLevel: null, prevLevel: null }
+        );
         setBusinessName(data.businessName ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -297,6 +313,20 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
               </p>
             ) : (
               <>
+                {escalation.canEscalate && escalation.nextLevel && (
+                  <p className="subtitle" style={{ margin: "0 0 8px" }}>
+                    {escalation.nextLevel.assigneeEmail ? (
+                      <>
+                        Escalating sends this to <b>{escalation.nextLevel.assigneeEmail}</b> ({escalation.nextLevel.label}).
+                      </>
+                    ) : (
+                      <span className="error-text">
+                        No one is assigned to {escalation.nextLevel.label} yet — escalating will move the level but won&apos;t
+                        notify anyone until an Admin fills it in.
+                      </span>
+                    )}
+                  </p>
+                )}
                 <div className="field" style={{ maxWidth: 480 }}>
                   <label>Note (optional)</label>
                   <textarea value={escalationNote} onChange={(e) => setEscalationNote(e.target.value)} />
@@ -306,12 +336,14 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
                     {escalating
                       ? "Escalating…"
                       : escalation.canEscalate
-                        ? "↑ Escalate to next level"
+                        ? `↑ Escalate to ${escalation.nextLevel?.label ?? "next level"}`
                         : "↑ Already at the top level"}
                   </button>
                   {escalation.canDeEscalate && (
                     <button className="btn btn-sm" disabled={deEscalating} onClick={deEscalate}>
-                      {deEscalating ? "De-escalating…" : "↓ De-escalate one level"}
+                      {deEscalating
+                        ? "De-escalating…"
+                        : `↓ De-escalate to ${escalation.prevLevel?.label ?? "previous level"}${escalation.prevLevel?.assigneeEmail ? ` (${escalation.prevLevel.assigneeEmail})` : ""}`}
                     </button>
                   )}
                 </div>

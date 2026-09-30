@@ -285,6 +285,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   "/group/category-owners",
                   "/group/support",
                   "/group/billing",
+                  "/group/escalation",
                   "/group/playbooks",
                   "/group/security",
                 ]}
@@ -315,6 +316,12 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   <a href="/group/billing">
                     <NavIcon name="billing" />
                     Billing
+                  </a>
+                )}
+                {!isOrgTeamMember && (
+                  <a href="/group/escalation">
+                    <NavIcon name="escalation" />
+                    Escalation hierarchy
                   </a>
                 )}
                 {hasFeature(org.enabledFeatures, "playbooks") && teamMemberCanAccess(user, "playbooks") && (

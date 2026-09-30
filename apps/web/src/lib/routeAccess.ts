@@ -64,7 +64,7 @@ export function isAccessDenied(
 
 export const BUSINESS_ACCESS_CONFIG: PortalAccessConfig = {
   dashboardRoot: "/business",
-  ownerOnlyRoutes: ["/business/billing", "/business/team-members", "/business/category-owners"],
+  ownerOnlyRoutes: ["/business/billing", "/business/team-members", "/business/category-owners", "/business/escalation"],
   pageAccessKeys: [
     ["/business/attention-centre", "attentionCentre"],
     ["/business/feedback-points", "feedbackPoints"],
@@ -91,7 +91,7 @@ export const BUSINESS_ACCESS_CONFIG: PortalAccessConfig = {
 
 export const GROUP_ACCESS_CONFIG: PortalAccessConfig = {
   dashboardRoot: "/group",
-  ownerOnlyRoutes: ["/group/billing", "/group/team-members", "/group/category-owners"],
+  ownerOnlyRoutes: ["/group/billing", "/group/team-members", "/group/category-owners", "/group/escalation"],
   pageAccessKeys: [
     ["/group/attention-centre", "attentionCentre"],
     ["/group/feedback-points", "feedbackPoints"],
