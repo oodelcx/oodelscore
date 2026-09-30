@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@oodelscore/shared";
+import { connectToDatabase, hasProduct } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 export async function GET() {
   const session = await requireParentOrgOwner();
@@ -8,5 +9,8 @@ export async function GET() {
 
   await connectToDatabase();
 
-  return NextResponse.json({ status: "ok", org: session.org });
+  const bothProductsEnabled = hasProduct(session.org, "customer_experience") && hasProduct(session.org, "colleague_experience");
+  const viewProduct = bothProductsEnabled ? await resolveViewProduct(session.org) : null;
+
+  return NextResponse.json({ status: "ok", org: session.org, viewProduct });
 }

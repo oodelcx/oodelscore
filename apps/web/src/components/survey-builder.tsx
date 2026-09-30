@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 export type QuestionType =
   | "star_1_5"
@@ -28,6 +28,32 @@ const QUESTION_TYPE_OPTIONS: { type: QuestionType; label: string }[] = [
 ];
 
 const CHOICE_TYPES: QuestionType[] = ["multiple_choice", "multi_select", "dropdown"];
+
+const TYPE_ICON: Record<QuestionType, string> = {
+  star_1_5: "★",
+  nps_0_10: "🎯",
+  ces_1_5: "⚡",
+  multiple_choice: "◉",
+  multi_select: "☑",
+  dropdown: "▾",
+  yes_no: "✓",
+  emoji_scale: "🙂",
+  slider: "━",
+  open_text: "✎",
+};
+
+const TYPE_COLOR_VAR: Record<QuestionType, string> = {
+  star_1_5: "--amber",
+  nps_0_10: "--blue",
+  ces_1_5: "--purple",
+  multiple_choice: "--accent",
+  multi_select: "--accent",
+  dropdown: "--accent",
+  yes_no: "--green",
+  emoji_scale: "--amber",
+  slider: "--blue",
+  open_text: "--text-3",
+};
 
 let nextLocalKey = 1;
 
@@ -85,6 +111,11 @@ interface SurveyBuilderPanelProps {
   categoriesApiPath: string;
   cxEnabled: boolean;
   ceEnabled: boolean;
+  // When set (a dual-product account actively viewing one product tab),
+  // the product picker is hidden entirely and every dropdown/template list
+  // is locked to this product — building a survey for the tab you're not
+  // even looking at is never something the UI should offer.
+  lockedProduct?: "customer_experience" | "colleague_experience" | null;
   submitting: boolean;
   error: string | null;
   submitLabel?: string;
@@ -109,6 +140,7 @@ export function SurveyBuilderPanel({
   categoriesApiPath,
   cxEnabled,
   ceEnabled,
+  lockedProduct,
   submitting,
   error,
   submitLabel = "Create feedback point",
@@ -118,13 +150,18 @@ export function SurveyBuilderPanel({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">(
-    cxEnabled ? "customer_experience" : "colleague_experience"
+    lockedProduct ?? (cxEnabled ? "customer_experience" : "colleague_experience")
   );
   const [quota, setQuota] = useState("");
   const [questions, setQuestions] = useState<AuthoredQuestion[]>([]);
   const [templates, setTemplates] = useState<TemplateOption[] | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (lockedProduct) setProduct(lockedProduct);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedProduct]);
 
   useEffect(() => {
     fetch(templatesApiPath)
@@ -160,6 +197,22 @@ export function SurveyBuilderPanel({
 
   function updateQuestion(localKey: number, patch: Partial<AuthoredQuestion>) {
     setQuestions((qs) => qs.map((q) => (q.localKey === localKey ? { ...q, ...patch } : q)));
+  }
+
+  function changeQuestionType(localKey: number, type: QuestionType) {
+    setQuestions((qs) =>
+      qs.map((q) => {
+        if (q.localKey !== localKey) return q;
+        const wasChoice = CHOICE_TYPES.includes(q.type);
+        const isChoice = CHOICE_TYPES.includes(type);
+        return {
+          ...q,
+          type,
+          options: isChoice ? (wasChoice && q.options.length >= 2 ? q.options : ["", ""]) : [],
+          isCsatQuestion: type === "star_1_5" ? q.isCsatQuestion : false,
+        };
+      })
+    );
   }
 
   function removeQuestion(localKey: number) {
@@ -234,7 +287,7 @@ export function SurveyBuilderPanel({
   const shownError = error ?? localError;
 
   return (
-    <div>
+    <div className="qb">
       <div className="field-row">
         <div className="field">
           <label>Name</label>
@@ -244,7 +297,7 @@ export function SurveyBuilderPanel({
           <label>Description (optional)</label>
           <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
-        {cxEnabled && ceEnabled && (
+        {!lockedProduct && cxEnabled && ceEnabled && (
           <div className="field">
             <label>Product</label>
             <select value={product} onChange={(e) => setProduct(e.target.value as "customer_experience" | "colleague_experience")}>
@@ -259,42 +312,36 @@ export function SurveyBuilderPanel({
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 18, marginTop: 8 }}>
-        <div>
-          <h4 style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--text-2)", margin: "0 0 8px" }}>
-            Question types
-          </h4>
-          <p className="field-hint" style={{ margin: "0 0 8px" }}>
+      <div className="qb-layout">
+        <div className="qb-palette">
+          <h4 className="qb-palette-heading">Question types</h4>
+          <p className="field-hint" style={{ margin: "0 0 10px" }}>
             Click to add a question of this type — you write the wording.
           </p>
           {QUESTION_TYPE_OPTIONS.map((opt) => (
             <button
               key={opt.type}
               type="button"
-              className="btn btn-sm"
-              style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 4 }}
+              className="qb-type-chip"
+              style={{ "--qb-color": `var(${TYPE_COLOR_VAR[opt.type]})` } as CSSProperties}
               onClick={() => addQuestion(opt.type)}
             >
-              + {opt.label}
+              <span className="qb-type-chip-icon">{TYPE_ICON[opt.type]}</span>
+              {opt.label}
             </button>
           ))}
 
           {visibleTemplates.length > 0 && (
             <>
-              <h4 style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--text-2)", margin: "16px 0 8px" }}>
+              <h4 className="qb-palette-heading" style={{ marginTop: 16 }}>
                 Start from a template
               </h4>
               <p className="field-hint" style={{ margin: "0 0 8px" }}>
                 Loads a copy onto the canvas — fully yours to edit from there.
               </p>
               {visibleTemplates.map((t) => (
-                <div
-                  key={t._id}
-                  className="card"
-                  style={{ padding: "8px 10px", marginBottom: 6, cursor: "pointer" }}
-                  onClick={() => loadTemplate(t)}
-                >
-                  <b style={{ display: "block", fontSize: 12 }}>{t.name}</b>
+                <div key={t._id} className="qb-template-card" onClick={() => loadTemplate(t)}>
+                  <b style={{ display: "block", fontSize: 12.5 }}>{t.name}</b>
                   <span style={{ fontSize: 11, color: "var(--text-3)" }}>{t.questions.length} questions</span>
                 </div>
               ))}
@@ -302,16 +349,33 @@ export function SurveyBuilderPanel({
           )}
         </div>
 
-        <div style={{ border: "1.5px dashed var(--border-strong)", borderRadius: 12, padding: 16, minHeight: 200, background: "var(--bg-2, #f5f6f8)" }}>
+        <div className="qb-canvas">
           {questions.length === 0 && (
-            <p className="subtitle" style={{ margin: 0 }}>
-              Add a question type from the left, or start from a template.
-            </p>
+            <div className="qb-canvas-empty">
+              <span style={{ fontSize: 28 }}>✎</span>
+              <p className="subtitle" style={{ margin: 0 }}>
+                Add a question type from the left, or start from a template.
+              </p>
+            </div>
           )}
           {questions.map((q, index) => (
-            <div className="card" key={q.localKey} style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span className="pill pill-accent">{QUESTION_TYPE_OPTIONS.find((o) => o.type === q.type)?.label ?? q.type}</span>
+            <div
+              className="qb-question-card"
+              key={q.localKey}
+              style={{ "--qb-color": `var(${TYPE_COLOR_VAR[q.type]})` } as CSSProperties}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8 }}>
+                <select
+                  value={q.type}
+                  onChange={(e) => changeQuestionType(q.localKey, e.target.value as QuestionType)}
+                  className="qb-type-select"
+                >
+                  {QUESTION_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.type} value={opt.type}>
+                      {TYPE_ICON[opt.type]} {opt.label}
+                    </option>
+                  ))}
+                </select>
                 <div style={{ display: "flex", gap: 4 }}>
                   <button type="button" className="icon-btn btn-sm" onClick={() => moveQuestion(q.localKey, -1)} disabled={index === 0}>
                     ↑
@@ -394,24 +458,26 @@ export function SurveyBuilderPanel({
               </div>
             </div>
           ))}
-          <button type="button" className="btn" style={{ width: "100%", borderStyle: "dashed" }} onClick={() => addQuestion("open_text")}>
+          <button
+            type="button"
+            className="qb-add-another"
+            onClick={() => addQuestion(questions.length > 0 ? questions[questions.length - 1].type : "star_1_5")}
+          >
             + Add another question
           </button>
         </div>
       </div>
 
-      {shownError && (
-        <p className="error-text" style={{ marginTop: 10 }}>
-          {shownError}
-        </p>
-      )}
-      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-        <button type="button" className="btn btn-dark" onClick={handleSubmit} disabled={submitting}>
-          {submitting ? "Creating…" : submitLabel}
-        </button>
-        <button type="button" className="btn" onClick={onCancel} disabled={submitting}>
-          Cancel
-        </button>
+      <div className="qb-footer">
+        {shownError && <p className="error-text" style={{ margin: 0 }}>{shownError}</p>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" className="btn btn-dark" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "Creating…" : submitLabel}
+          </button>
+          <button type="button" className="btn" onClick={onCancel} disabled={submitting}>
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

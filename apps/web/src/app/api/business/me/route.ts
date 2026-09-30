@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@oodelscore/shared";
+import { connectToDatabase, hasProduct } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 export async function GET() {
   const session = await requireBusinessOwner();
@@ -8,5 +9,8 @@ export async function GET() {
 
   await connectToDatabase();
 
-  return NextResponse.json({ status: "ok", business: session.business });
+  const bothProductsEnabled = hasProduct(session.business, "customer_experience") && hasProduct(session.business, "colleague_experience");
+  const viewProduct = bothProductsEnabled ? await resolveViewProduct(session.business) : null;
+
+  return NextResponse.json({ status: "ok", business: session.business, viewProduct });
 }

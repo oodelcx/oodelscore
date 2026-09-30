@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ReportHero, ReportKpiGrid, ReportBarList, ReportThemeList, starTone, npsTone } from "@/components/report-widgets";
 
 interface ThemeRow {
   theme: string;
@@ -93,152 +94,87 @@ export default function ReportsClient() {
       {loading && !data && <p className="subtitle">Loading…</p>}
       {data && (
         <>
-          <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: "0 0 4px" }}>
-              {data.orgName}
-              {data.product === "colleague_experience" && <span className="pill pill-blue" style={{ marginLeft: 10 }}>Colleague Experience</span>}
-            </h2>
-            <p className="subtitle" style={{ margin: 0 }}>
-              {new Date(data.period.from).toLocaleDateString()} – {new Date(data.period.to).toLocaleDateString()} ·{" "}
-              {data.branches.length} branches
-            </p>
+          <ReportHero
+            title={data.orgName}
+            badge={
+              data.product === "colleague_experience" ? (
+                <span className="pill pill-blue" style={{ marginLeft: 4 }}>
+                  Colleague Experience
+                </span>
+              ) : undefined
+            }
+            subtitle={`${new Date(data.period.from).toLocaleDateString()} – ${new Date(data.period.to).toLocaleDateString()} · ${data.branches.length} branches`}
+          />
+
+          <div className="rpt-section">
+            <div className="section-title">Activity this period</div>
+            <ReportKpiGrid
+              items={[
+                { label: "Cases resolved", value: String(data.activity.casesResolved), icon: "✓" },
+                { label: "Customers personally responded to", value: String(data.activity.customersRespondedTo), icon: "✉" },
+                { label: "Initiatives completed", value: String(data.activity.initiativesCompleted), icon: "🚀" },
+              ]}
+            />
           </div>
 
-          <div className="section-title">Activity this period</div>
-          <div className="grid grid-3" style={{ marginBottom: 20 }}>
-            <div className="card">
-              <div className="metric-label">Cases resolved</div>
-              <div className="metric-val">{data.activity.casesResolved}</div>
-            </div>
-            <div className="card">
-              <div className="metric-label">Customers personally responded to</div>
-              <div className="metric-val">{data.activity.customersRespondedTo}</div>
-            </div>
-            <div className="card">
-              <div className="metric-label">Initiatives completed</div>
-              <div className="metric-val">{data.activity.initiativesCompleted}</div>
-            </div>
-          </div>
+          <ReportBarList
+            title="By region"
+            emptyText="No region data for this period."
+            rows={data.regions.map((r) => ({
+              key: r.region,
+              label: r.region,
+              sublabel: `${r.businessCount} branch${r.businessCount === 1 ? "" : "es"}`,
+              value: r.starAverage,
+              max: 5,
+              displayValue: r.starAverage !== null ? `${r.starAverage}/5` : "—",
+              tone: starTone(r.starAverage),
+            }))}
+          />
 
-          <div className="section-title">By region</div>
-          <table className="clean" style={{ marginBottom: 20 }}>
-            <thead>
-              <tr>
-                <th>Region</th>
-                <th>Branches</th>
-                <th>Average</th>
-                <th>{data.product === "colleague_experience" ? "eNPS" : "NPS"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.regions.map((r) => (
-                <tr key={r.region}>
-                  <td>{r.region}</td>
-                  <td>{r.businessCount}</td>
-                  <td>{r.starAverage !== null ? `${r.starAverage}/5` : "—"}</td>
-                  <td>{r.npsScore !== null ? r.npsScore : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ReportBarList
+            title="By branch"
+            emptyText="No branch data for this period."
+            rows={data.branches.map((b) => ({
+              key: b.businessId,
+              label: b.name,
+              sublabel: `${b.region} · ${b.responseCount} resp.${b.confidence === "insufficient" ? " (low sample)" : ""}`,
+              value: b.starAverage,
+              max: 5,
+              displayValue: b.starAverage !== null ? `${b.starAverage}/5` : "—",
+              tone: starTone(b.starAverage),
+            }))}
+          />
 
-          <div className="section-title">By branch</div>
-          <table className="clean" style={{ marginBottom: 20 }}>
-            <thead>
-              <tr>
-                <th>Branch</th>
-                <th>Region</th>
-                <th>Responses</th>
-                <th>Average</th>
-                <th>{data.product === "colleague_experience" ? "eNPS" : "NPS"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.branches.map((b) => (
-                <tr key={b.businessId}>
-                  <td>{b.name}</td>
-                  <td>{b.region}</td>
-                  <td>
-                    {b.responseCount}
-                    {b.confidence === "insufficient" && <span className="subtitle"> (low sample)</span>}
-                  </td>
-                  <td>{b.starAverage !== null ? `${b.starAverage}/5` : "—"}</td>
-                  <td>{b.npsScore !== null ? b.npsScore : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="section-title">Top themes</div>
-          <table className="clean">
-            <thead>
-              <tr>
-                <th>Theme</th>
-                <th>Mentions</th>
-                <th>Sentiment</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.themes.map((t) => (
-                <tr key={t.theme}>
-                  <td>{t.theme}</td>
-                  <td>{t.frequency}</td>
-                  <td>
-                    {t.sentimentBreakdown.positive} positive · {t.sentimentBreakdown.neutral} neutral ·{" "}
-                    {t.sentimentBreakdown.negative} negative
-                  </td>
-                </tr>
-              ))}
-              {data.themes.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="subtitle">
-                    No themes detected for this period.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <ReportThemeList
+            emptyText="No themes detected for this period."
+            rows={data.themes.map((t) => ({
+              theme: t.theme,
+              frequency: t.frequency,
+              positive: t.sentimentBreakdown.positive,
+              neutral: t.sentimentBreakdown.neutral,
+              negative: t.sentimentBreakdown.negative,
+            }))}
+          />
 
           {data.colleagueExperience && (
             <>
-              <div className="section-title" style={{ marginTop: 24 }}>Colleague Experience</div>
-              <div className="card" style={{ marginBottom: 20, maxWidth: 240 }}>
-                <div className="metric-label">Cases resolved</div>
-                <div className="metric-val">{data.colleagueExperience.casesResolved}</div>
+              <div className="section-title" style={{ marginTop: 4 }}>
+                Colleague Experience
               </div>
-              <div className="section-title">By branch</div>
-              <table className="clean">
-                <thead>
-                  <tr>
-                    <th>Branch</th>
-                    <th>Region</th>
-                    <th>Responses</th>
-                    <th>Average</th>
-                    <th>eNPS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.colleagueExperience.branches.map((b) => (
-                    <tr key={b.businessId}>
-                      <td>{b.name}</td>
-                      <td>{b.region}</td>
-                      <td>
-                        {b.responseCount}
-                        {b.confidence === "insufficient" && <span className="subtitle"> (low sample)</span>}
-                      </td>
-                      <td>{b.starAverage !== null ? `${b.starAverage}/5` : "—"}</td>
-                      <td>{b.npsScore !== null ? b.npsScore : "—"}</td>
-                    </tr>
-                  ))}
-                  {data.colleagueExperience.branches.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="subtitle">
-                        No Colleague-Experience-enabled branches yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <ReportKpiGrid items={[{ label: "Cases resolved", value: String(data.colleagueExperience.casesResolved), icon: "✓" }]} />
+              <ReportBarList
+                title="By branch"
+                emptyText="No Colleague-Experience-enabled branches yet."
+                rows={data.colleagueExperience.branches.map((b) => ({
+                  key: b.businessId,
+                  label: b.name,
+                  sublabel: `${b.region} · ${b.responseCount} resp.${b.confidence === "insufficient" ? " (low sample)" : ""}`,
+                  value: b.starAverage,
+                  max: 5,
+                  displayValue: b.starAverage !== null ? `${b.starAverage}/5` : "—",
+                  tone: starTone(b.starAverage),
+                }))}
+              />
             </>
           )}
         </>
