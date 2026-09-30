@@ -108,12 +108,14 @@ interface OverviewData {
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — see group/maturity/maturity-client.tsx for why
+// these differ from the schema field names.
 const DIMENSION_LABELS: Record<HoldingBackDimension["dimension"], string> = {
-  awareness: "Awareness",
-  response: "Response",
-  ownership: "Ownership",
-  culture: "Culture",
-  outcome: "Outcome",
+  awareness: "Signal",
+  response: "Speed",
+  ownership: "Accountability",
+  culture: "Buy-in",
+  outcome: "Impact",
 };
 
 /** CX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /group/maturity. */

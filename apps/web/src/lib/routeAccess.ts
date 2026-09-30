@@ -93,6 +93,7 @@ export const GROUP_ACCESS_CONFIG: PortalAccessConfig = {
   ownerOnlyRoutes: ["/group/billing", "/group/team-members", "/group/category-owners"],
   pageAccessKeys: [
     ["/group/attention-centre", "attentionCentre"],
+    ["/group/feedback-points", "feedbackPoints"],
     ["/group/raw-feedback", "rawFeedback"],
     ["/group/insights", "insights"],
     ["/group/analytics", "analytics"],

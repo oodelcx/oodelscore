@@ -1,21 +1,26 @@
 import { NextResponse } from "next/server";
 import { Types } from "mongoose";
-import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForBusiness, hasProduct } from "@oodelscore/shared";
+import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForBusiness, getEnabledProducts, hasProduct } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /** Feeds AI-assisted Action Board triage (spec Section 16): the AI picks
- * the category, this mapping says who the item should go to. Only shows
- * categories actually in use on this business's real survey — the full
- * platform-wide category list would include plenty that don't apply here
- * (a restaurant's categories showing up for a bank branch, etc.). */
+ * the category, this mapping says who the item should go to. `categories`
+ * only shows ones actually in use on this business's real survey — the
+ * full platform-wide category list would include plenty that don't apply
+ * here (a restaurant's categories showing up for a bank branch, etc.).
+ * `allCategories` (product-scoped, not usage-filtered) is separate: the
+ * survey builder needs the full pickable list, since a category a business
+ * is about to tag its first question with is by definition not "in use"
+ * yet. */
 export async function GET() {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const [inUseIds, mappings] = await Promise.all([
+  const [inUseIds, mappings, allCategories] = await Promise.all([
     getCategoriesInUseForBusiness(session.business._id),
     CategoryOwnerMapping.find({ ownerScope: "business", ownerScopeId: session.business._id }),
+    Category.find({ product: { $in: getEnabledProducts(session.business) } }).sort({ name: 1 }).select("name product"),
   ]);
   const categories = inUseIds.size
     ? await Category.find({ _id: { $in: [...inUseIds] } }).sort({ name: 1 })
@@ -24,6 +29,7 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     categories,
+    allCategories,
     mappings,
     ceEnabled: hasProduct(session.business, "colleague_experience"),
     sensitiveRoutingContactId: session.business.sensitiveRoutingContactId,

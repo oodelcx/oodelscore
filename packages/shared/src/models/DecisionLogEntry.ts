@@ -18,6 +18,10 @@ export interface IDecisionLogEntry {
   // Which product this decision belongs to — defaults to customer_experience
   // so every entry that predates Colleague Experience is unaffected.
   product: Product;
+  // Set when this entry was created from an Improvement Initiative's "Log
+  // outcome" button — lets the initiative show its own decision log entry
+  // rather than a user having to find it by title.
+  linkedInitiativeId: Types.ObjectId | null;
   title: string;
   trigger: string;
   linkedActionIds: Types.ObjectId[];
@@ -53,6 +57,7 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
     parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", default: null },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", default: null },
     product: { type: String, enum: PRODUCTS, default: "customer_experience" },
+    linkedInitiativeId: { type: Schema.Types.ObjectId, ref: "ImprovementInitiative", default: null },
     title: { type: String, required: true },
     trigger: { type: String, default: "" },
     linkedActionIds: { type: [Schema.Types.ObjectId], ref: "ActionBoardItem", default: [] },

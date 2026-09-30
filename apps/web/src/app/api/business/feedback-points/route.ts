@@ -1,19 +1,26 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "node:crypto";
-import { connectToDatabase, FeedbackPoint, QuestionTemplate, Event, getEnabledProducts, type IDemographicConfig } from "@oodelscore/shared";
+import { connectToDatabase, FeedbackPoint, QuestionTemplate, Event, buildFeedbackPointFromTemplate, type IDemographicConfig } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
  * Mostly view-only for the Business portal (per the mockup): a business
  * sees its feedback points and can request Admin-side changes it can't
  * make itself (see .../request). The one thing it CAN do itself, as of
- * PRODUCT-ROADMAP.md Phase 6, is create a new point via POST below — but
- * only by composing from an Admin-authored QuestionTemplate's own already-
- * existing questions, never by writing new question text/categories.
- * Everything Admin-only about a feedback point (which template a business
- * defaults to, formLayoutOverride, demographicOverride, event linkage)
- * stays exactly as Admin-only as it's always been — see the admin creation
- * path at /api/admin/businesses/[id]/feedback-points for that route.
+ * PRODUCT-ROADMAP.md Phase 6, is create a new point via POST below — a
+ * real survey builder: any question text, any QUESTION_TYPES, optionally
+ * starting from a copy of an Admin template as a first draft. Everything
+ * else Admin-only about a feedback point (formLayoutOverride,
+ * demographicOverride, event linkage) stays exactly as Admin-only as it's
+ * always been — see the admin creation path at
+ * /api/admin/businesses/[id]/feedback-points for that route.
+ *
+ * Self-service building is standalone-business-only. A branch never gets
+ * this itself — the product owner's explicit call was "don't give survey
+ * building to branches, else every branch ends up with its own survey";
+ * for a branch, the Group (parent org) owner builds centrally instead (see
+ * /api/group/feedback-points), picking which branch a new point is for.
+ * This keeps one place deciding what a multi-branch org's surveys look
+ * like, instead of drift accumulating branch by branch.
  *
  * Also surfaces, per feedback point, the effective question/demographic
  * config (own template/demographic override, falling back to the business
@@ -42,9 +49,11 @@ export async function GET() {
   const templatesById = new Map(templates.map((t) => [t._id.toString(), t]));
 
   const feedbackPoints = points.map((p) => {
+    const hasCustomQuestions = !!p.customQuestions && p.customQuestions.length > 0;
     const templateId = (p.questionTemplateOverride ?? session.business.questionTemplateId)?.toString() ?? null;
-    const template = templateId ? templatesById.get(templateId) : null;
-    const types = new Set(template?.questions.map((q) => q.type) ?? []);
+    const template = !hasCustomQuestions && templateId ? templatesById.get(templateId) : null;
+    const questions = hasCustomQuestions ? p.customQuestions! : (template?.questions ?? []);
+    const types = new Set(questions.map((q) => q.type));
     const demographics: IDemographicConfig = p.demographicOverride ?? session.business.demographicConfig;
 
     return {
@@ -58,80 +67,42 @@ export async function GET() {
       // each point can override the template/layout independently), so
       // the Feedback Points page shows the effective value per point
       // instead of a separate settings screen.
-      templateName: template?.name ?? "No template configured",
+      templateName: hasCustomQuestions ? "Custom survey" : (template?.name ?? "No template configured"),
       isTemplateOverridden: !!p.questionTemplateOverride,
       effectiveFormLayout: p.formLayoutOverride ?? "single_page",
       isLayoutOverridden: !!p.formLayoutOverride,
     };
   });
 
-  return NextResponse.json({ status: "ok", feedbackPoints });
+  return NextResponse.json({ status: "ok", feedbackPoints, isBranch: !!session.business.parentOrgId });
 }
 
 /**
- * The business-side survey builder's create path. Deliberately narrow:
- * name/description/active are the business's own to set (same as any
- * other point), but the survey itself is always composed FROM an
- * Admin-authored template already available to this business's product(s)
- * — a chosen subset of that template's own question ids, in whatever order
- * the business picked. There is no field here for question text, type, or
- * category: those stay Admin-only, enforced by construction (this route
- * never accepts them) rather than by a rejected-field check.
+ * The business-side survey builder's create path — standalone businesses
+ * only (see this file's top comment). name/description/product are the
+ * business's own to set, and so is every question: real text, any of the
+ * QUESTION_TYPES, its own options/required/category — validated and
+ * normalized by buildFeedbackPointFromTemplate, which also enforces the
+ * account's plan cap and enabled products.
  */
 export async function POST(request: Request) {
   const session = await requireBusinessOwner({ requirePage: "feedbackPoints" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
-
-  await connectToDatabase();
-
-  const existingCount = await FeedbackPoint.countDocuments({ businessId: session.business._id });
-  if (existingCount >= session.business.maxFeedbackPoints) {
+  if (session.business.parentOrgId) {
     return NextResponse.json(
-      { status: "error", message: `Your plan allows up to ${session.business.maxFeedbackPoints} feedback point(s). Contact your account manager to add more.` },
-      { status: 400 }
+      { status: "error", message: "Feedback points for a branch are built centrally by your parent organization." },
+      { status: 403 }
     );
   }
 
+  await connectToDatabase();
   const body = await request.json().catch(() => null);
-  const name = typeof body?.name === "string" ? body.name.trim() : "";
-  if (!name) return NextResponse.json({ status: "error", message: "Name is required" }, { status: 400 });
-
-  const templateId = typeof body?.templateId === "string" ? body.templateId : "";
-  if (!templateId) return NextResponse.json({ status: "error", message: "Pick a survey template to build from" }, { status: 400 });
-
-  const template = await QuestionTemplate.findById(templateId);
-  if (!template || !getEnabledProducts(session.business).includes(template.product)) {
-    return NextResponse.json({ status: "error", message: "That template isn't available on your account" }, { status: 400 });
-  }
-
-  const templateQuestionIds = new Set(template.questions.map((q) => q._id?.toString()).filter((x): x is string => !!x));
-  const requestedIds: string[] = Array.isArray(body?.selectedQuestionIds)
-    ? body.selectedQuestionIds.filter((id: unknown) => typeof id === "string")
-    : [];
-  const selectedQuestionIds = requestedIds.filter((id) => templateQuestionIds.has(id));
-  if (selectedQuestionIds.length === 0) {
-    return NextResponse.json({ status: "error", message: "Pick at least one question from the template" }, { status: 400 });
-  }
-
-  let responseQuota: number | null = null;
-  if (body?.responseQuota !== undefined && body?.responseQuota !== null && body?.responseQuota !== "") {
-    const quota = Number(body.responseQuota);
-    if (!Number.isFinite(quota) || quota < 1) {
-      return NextResponse.json({ status: "error", message: "Response quota must be a positive number" }, { status: 400 });
-    }
-    responseQuota = Math.floor(quota);
-  }
-
-  const feedbackPoint = await FeedbackPoint.create({
+  const result = await buildFeedbackPointFromTemplate({
     businessId: session.business._id,
-    product: template.product,
-    name,
-    description: typeof body?.description === "string" ? body.description.trim() : "",
-    qrToken: randomBytes(16).toString("hex"),
-    questionTemplateOverride: template._id,
-    selectedQuestionIds,
-    responseQuota,
+    enabledProducts: session.business.enabledProducts,
+    maxFeedbackPoints: session.business.maxFeedbackPoints,
+    body,
   });
-
-  return NextResponse.json({ status: "ok", feedbackPoint }, { status: 201 });
+  if (result.status === "error") return NextResponse.json(result, { status: 400 });
+  return NextResponse.json(result, { status: 201 });
 }

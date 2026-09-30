@@ -50,6 +50,13 @@ interface TeamRow {
   userId: string;
   label: string;
 }
+interface RecurringFlagRow {
+  _id: string;
+  categoryName: string;
+  count: number;
+  windowDays: number;
+  actionable: boolean;
+}
 interface PlaybookRow {
   _id: string;
   categoryId: string | null;
@@ -150,6 +157,29 @@ export default function BusinessCasesClient() {
   const [page, setPage] = useState(1);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
   const [ceEnabled, setCeEnabled] = useState(false);
+  const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
+  const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
+
+  function loadFlags() {
+    fetch("/api/business/recurring-issues")
+      .then((r) => r.json())
+      .then((d) => setFlags(d.flags ?? []))
+      .catch(() => setFlags([]));
+  }
+
+  async function convertFlag(id: string) {
+    setConvertingFlagId(id);
+    await fetch(`/api/business/recurring-issues/${id}/convert`, { method: "POST" });
+    setConvertingFlagId(null);
+    loadFlags();
+  }
+
+  async function dismissFlag(id: string) {
+    setConvertingFlagId(id);
+    await fetch(`/api/business/recurring-issues/${id}/dismiss`, { method: "POST" });
+    setConvertingFlagId(null);
+    loadFlags();
+  }
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
@@ -187,6 +217,7 @@ export default function BusinessCasesClient() {
   }
 
   useEffect(load, []);
+  useEffect(loadFlags, []);
 
   useEffect(() => {
     fetch("/api/business/me")
@@ -377,6 +408,38 @@ export default function BusinessCasesClient() {
           )}
         </div>
       </div>
+
+      {!isLimited && flags.length > 0 && (
+        <div className="card" style={{ marginBottom: 18, borderColor: "var(--amber, #E0A100)" }}>
+          <h3 style={{ margin: "0 0 4px" }}>Recurring patterns in these cases</h3>
+          <p className="card-sub" style={{ margin: "0 0 10px" }}>
+            The same category keeps coming up here — the system noticed the pattern automatically. Turn it into a
+            tracked Improvement Initiative, or dismiss it if it&rsquo;s not worth one right now.
+          </p>
+          {flags.map((f) => (
+            <div
+              key={f._id}
+              className="field-row"
+              style={{ alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--border)" }}
+            >
+              <div>
+                <b>{f.categoryName}</b> — {f.count} cases in the last {f.windowDays} days
+                {!f.actionable && <span className="subtitle"> · handled by your parent organization</span>}
+              </div>
+              {f.actionable && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn btn-sm btn-dark" disabled={convertingFlagId === f._id} onClick={() => convertFlag(f._id)}>
+                    {convertingFlagId === f._id ? "…" : "Create initiative from this"}
+                  </button>
+                  <button className="btn btn-sm" disabled={convertingFlagId === f._id} onClick={() => dismissFlag(f._id)}>
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {!isLimited && (
         <div className="grid grid-5 kpi-strip" data-tour="cases-kpi-strip" style={{ marginBottom: 20 }}>

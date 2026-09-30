@@ -21,12 +21,17 @@ interface Weights {
 }
 
 const LEVEL_NAMES = ["Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — the underlying field names (awareness/response/
+// ownership/culture/outcome) are unchanged to avoid a data migration.
+// Renamed so CX Pulse's dimensions stop using the same words as Compass's
+// ANCHOR assessment (Culture, Ownership); keep these in sync with the
+// customer-facing labels in the Business/Group CX Pulse pages.
 const DIMENSION_LABELS: { key: keyof Weights; label: string }[] = [
-  { key: "awareness", label: "Awareness" },
-  { key: "response", label: "Response" },
-  { key: "ownership", label: "Ownership" },
-  { key: "culture", label: "Culture" },
-  { key: "outcome", label: "Outcome" },
+  { key: "awareness", label: "Signal" },
+  { key: "response", label: "Speed" },
+  { key: "ownership", label: "Accountability" },
+  { key: "culture", label: "Buy-in" },
+  { key: "outcome", label: "Impact" },
 ];
 const CONTENT_TABS = [
   { id: "site-name", label: "Site name" },

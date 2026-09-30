@@ -13,12 +13,32 @@ Each phase ships the same way: a feature branch off `main`, `npm run typecheck` 
 | 2 | Attention Centre | Done — conformance fixes shipped, PR #186, merged |
 | 3 | De-escalation | Done |
 | 4 | Closing the loop (CX + EX halves) | Done |
-| 5 | Business Value / £/$ module | Done — one open design question, not a bug, see §3 below |
-| 6 | Business-side survey builder | Done |
+| 5 | Business Value / £/$ module | Done — top-account-only editing added, see §5a below |
+| 6 | Business-side survey builder | Done — centralized to Group for branches, see §6a below |
 | 7 | OodelCX Compass (7a–7d) | **Not started** — unblocked now that naming is locked |
 | 8 | Everything marked "later" | **Not started** |
 
-Fix batches landed as: PR #182 (QA fix batch — question text, escalation UX, Closing the Loop/Attention Centre redesigns, seed data), PR #183 (this file, wired into CLAUDE.md), PR #184 (full Compass/Attention Centre/Business Value scope), PR #185 (CSAT designated-question fix), PR #186 (Attention Centre conformance: escalation-deadline warning, unassigned-first sort, red flag). All merged into `main`.
+Fix batches landed as: PR #182 (QA fix batch — question text, escalation UX, Closing the Loop/Attention Centre redesigns, seed data), PR #183 (this file, wired into CLAUDE.md), PR #184 (full Compass/Attention Centre/Business Value scope), PR #185 (CSAT designated-question fix), PR #186 (Attention Centre conformance: escalation-deadline warning, unassigned-first sort, red flag). All merged into `main`. PR #187 (branch-aware Feedback Points builder). Branch `feat/centralize-survey-value-build` (not yet merged): centralizes survey building to Group for branches, narrows Business Value editing to the top account only, renames CX Pulse's dimension display labels to stop colliding with Compass's ANCHOR, auto-chains the Act layer (Improvement Initiative → Decision Log → Closing the Loop), and surfaces recurring-issue flags inside Case Management itself — see §6a/§5a/§0a/§4a/§2a below.
+
+### §6a — Survey building: Group-only for branches (this branch)
+
+Confirmed by the product owner: a branch must never get its own self-service survey builder, or every branch ends up with its own survey and the network drifts. Only a Group (parent org) or a standalone business (its own top account) builds surveys. For a branch, Group now has a new **Feedback Points** section (`/group/feedback-points`) that picks the branch first, then builds the same way the Business builder always has (template → questions → quota). `POST /api/business/feedback-points` now 403s for a branch's own login. Shared create-validation logic lives in `packages/shared/src/feedback/surveyBuilder.ts` so both routes stay in sync.
+
+### §5a — Business Value: top-account-only editing (this branch)
+
+Confirmed by the product owner: only the actual owner login of the top-level account — the Group owner for a branch, or the business owner itself if standalone — may edit Business Value inputs. A team member of any tier, and a branch's own login, can view but not write. `PATCH /api/business/business-value` now rejects both; the Group portal's Business Value page, previously pure read-only rollup, gained real per-branch edit UI (`PATCH /api/group/business-value` with `businessId`).
+
+### §0a — CX Pulse dimension labels renamed off ANCHOR's words (this branch)
+
+CX Pulse (the pre-existing feedback-maturity framework, unrelated to Compass) used `Ownership`/`Culture` as two of its five dimension labels — an exact word collision with two of ANCHOR's six letters (Culture, Ownership), confusing "your CX Pulse Culture score" with "your Compass Culture gate." *Display* labels only were renamed: Awareness→Signal, Response→Speed, Ownership→Accountability, Culture→Buy-in, Outcome→Impact. Schema field names (`awareness/response/ownership/culture/outcome`) are unchanged — no data migration. Ladder stage names (Collecting→Embedded) are unchanged, since they don't collide with anything ANCHOR/REACH-named.
+
+### §4a — Act layer auto-chained (this branch)
+
+An Improvement Initiative's "Log outcome →" button now opens Decision Log pre-filled with the initiative's title/pattern and a new `DecisionLogEntry.linkedInitiativeId` field. A measured Decision Log entry for a *Colleague Experience* decision gets a "Close the loop →" button that opens the Closing the Loop composer pre-filled with `linkedDecisionId` and seeded draft text (the ClosingLoopUpdate API already accepted these fields — they were never sent by any form before this). The Improvement Initiatives page now shows the linked Decision Log entry + Closing the Loop update inline. "Close the loop" is CE-only by design — the CX half of closing the loop is a per-response reply from Case Management, since CX respondents aren't anonymous, while ClosingLoopUpdate is the CE-only roster broadcast (CE responses are anonymous).
+
+### §2a — Recurring-issue flags surfaced in Case Management (this branch)
+
+The `RecurringIssueFlag` system already auto-computed patterns and surfaced them on the Dashboard widget and Improvement Initiatives page, but never inside Case Management itself — where a user is actually working the cases. Added the same "Suggested — recurring patterns" card (convert to initiative / dismiss) to the top of both the Business and Group Case Management pages, reusing the existing `/api/{business,group}/recurring-issues` endpoints.
 
 ## Phase 0 — Naming, locked
 

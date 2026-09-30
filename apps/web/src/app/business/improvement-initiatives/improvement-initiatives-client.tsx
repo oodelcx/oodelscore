@@ -16,6 +16,15 @@ interface InitiativeRow {
   startedAt: string | null;
   completedAt: string | null;
   linkedActionIds: string[];
+  linkedDecision: {
+    _id: string;
+    title: string;
+    status: string;
+    outcomeBefore: number | null;
+    outcomeAfter: number | null;
+    outcomeMetricDescription: string;
+    closingLoop: { _id: string; title: string; status: string; sentAt: string | null } | null;
+  } | null;
 }
 
 interface TeamRow {
@@ -486,6 +495,25 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                         <b>{row.baselineMetricDescription || "Metric"}:</b>{" "}
                         {progressLabel(row) ?? "no baseline/target set yet"}
                       </div>
+                      {row.linkedDecision && (
+                        <div className="ab-callout">
+                          <b>Decision Log:</b> {row.linkedDecision.title} ({STATUS_LABELS[row.linkedDecision.status] ?? row.linkedDecision.status})
+                          {row.linkedDecision.outcomeBefore !== null && row.linkedDecision.outcomeAfter !== null && (
+                            <>
+                              {" — "}
+                              {row.linkedDecision.outcomeMetricDescription || "score"} {row.linkedDecision.outcomeBefore} →{" "}
+                              {row.linkedDecision.outcomeAfter}
+                            </>
+                          )}
+                          {row.linkedDecision.closingLoop && (
+                            <>
+                              {" · "}
+                              <b>Closing the Loop:</b> {row.linkedDecision.closingLoop.title} (
+                              {row.linkedDecision.closingLoop.status === "sent" ? "sent" : "draft"})
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {!readOnly && (
@@ -493,6 +521,14 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
                       <button type="button" className="btn btn-sm action-btn" onClick={() => startEdit(row)}>
                         ✎ Edit
                       </button>
+                      {!row.linkedDecision && (
+                        <a
+                          className="btn btn-sm action-btn"
+                          href={`/business/decision-log?new=1&title=${encodeURIComponent(row.title)}&trigger=${encodeURIComponent(row.description)}&linkedInitiativeId=${row._id}`}
+                        >
+                          Log outcome →
+                        </a>
+                      )}
                       <button type="button" className="icon-btn btn-danger" onClick={() => removeInitiative(row._id)}>
                         🗑
                       </button>
