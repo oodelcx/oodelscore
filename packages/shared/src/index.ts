@@ -62,3 +62,6 @@ export * from "./ce/lifecycleTriggers";
 export * from "./ce/pulseCadence";
 export * from "./ce/demographicCuts";
 export * from "./ce/closingLoop";
+export * from "./compass/questionBank";
+export * from "./compass/scoring";
+export * from "./compass/industryContent";
