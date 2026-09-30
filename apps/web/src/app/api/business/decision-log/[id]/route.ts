@@ -38,6 +38,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
   if (typeof body?.ownerId === "string") entry.ownerId = new Types.ObjectId(body.ownerId);
   else if ("ownerId" in (body ?? {}) && body.ownerId === null) entry.ownerId = null;
+  if (typeof body?.addNote === "string" && body.addNote.trim()) {
+    entry.notes.push({ text: body.addNote.trim(), authorLabel: session.user.email || "Team member", createdAt: new Date() });
+  }
   await entry.save();
 
   return NextResponse.json({ status: "ok", entry });

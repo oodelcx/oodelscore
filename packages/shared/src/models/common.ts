@@ -120,6 +120,28 @@ export const EscalationLevelSchema = new Schema<IEscalationLevel>(
   { _id: false }
 );
 
+/**
+ * A single append-only note on a record (Improvement Initiative, Decision
+ * Log entry, etc.) — a running commentary thread, not a field anyone
+ * edits in place. `authorLabel` is captured at write time (not a live
+ * ref lookup) so a note still reads sensibly after its author leaves the
+ * team or is deleted.
+ */
+export interface INoteEntry {
+  text: string;
+  authorLabel: string;
+  createdAt: Date;
+}
+
+export const NoteEntrySchema = new Schema<INoteEntry>(
+  {
+    text: { type: String, required: true, trim: true },
+    authorLabel: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 // A brand-new account starts with just the one rung every business already
 // has for free — its own owner. Admin adds more during implementation.
 export const DEFAULT_ESCALATION_LEVELS: IEscalationLevel[] = [{ level: 1, label: "Owner" }];

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
+import { DetailDrawer, NotesThread } from "@/components/detail-drawer";
 
 type OutcomeMetric = "starAverage" | "nps" | "categoryAverage" | "csat" | "ces";
 
@@ -23,6 +24,7 @@ interface EntryRow {
   outcomeLowConfidence: boolean;
   ownerId: string | null;
   linkedInitiativeId: string | null;
+  notes: { text: string; authorLabel: string; createdAt: string }[];
 }
 
 interface CategoryOption {
@@ -101,7 +103,6 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
   const [titleDraft, setTitleDraft] = useState("");
   const [triggerDraft, setTriggerDraft] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
-  const [expandedTriggerFor, setExpandedTriggerFor] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
@@ -291,7 +292,25 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     return team.find((t) => t.userId === id)?.label ?? "Unassigned";
   }
 
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+
+  async function addNote(id: string) {
+    if (!noteDraft.trim()) return;
+    setAddingNote(true);
+    await fetch(`/api/business/decision-log/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ addNote: noteDraft.trim() }),
+    });
+    setNoteDraft("");
+    setAddingNote(false);
+    load();
+  }
+
   const visibleEntries = entries.filter((e) => statusFilter === "all" || e.status === statusFilter);
+  const openRow = openId ? entries.find((e) => e._id === openId) ?? null : null;
 
   return (
     <div>
@@ -394,24 +413,77 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <div className="ab-list">
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
           {visibleEntries.map((e, index) => {
             const delta = outcomeDelta(e);
-            const triggerExpanded = expandedTriggerFor === e._id;
-            const triggerIsLong = e.trigger.length > 160;
             return (
-              <div className="card ab-card" data-tour={index === 0 ? "dl-first-card" : undefined} key={e._id}>
+              <div
+                className="summary-card"
+                data-tour={index === 0 ? "dl-first-card" : undefined}
+                key={e._id}
+                onClick={() => {
+                  setOpenId(e._id);
+                  setNoteDraft("");
+                }}
+              >
+                <div className="badge-row" style={{ marginBottom: 8 }}>
+                  {cxEnabled && ceEnabled && (
+                    <span className={`pill ${e.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                      {e.product === "colleague_experience" ? "Colleague" : "Customer"}
+                    </span>
+                  )}
+                  <span className={`pill ${e.status === "implemented" ? "pill-green" : e.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
+                    {STATUS_LABELS[e.status] ?? e.status}
+                  </span>
+                  {delta && (
+                    <span className={`pill ${delta.startsWith("+") ? "pill-green" : "pill-red"}`}>
+                      {delta.startsWith("+") ? "Improved " : "Declined "}
+                      {delta}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 14.5, marginBottom: 6 }}>{e.title}</div>
+                <div className="subtitle" style={{ margin: "0 0 8px" }}>
+                  Owner: <b style={{ color: "var(--text-1)" }}>{ownerLabel(e.ownerId)}</b>
+                </div>
+                <div style={{ fontSize: 12.5, color: "var(--text-2)" }}>
+                  <b>Outcome:</b>{" "}
+                  {e.outcomeBefore !== null && e.outcomeAfter !== null
+                    ? `${e.outcomeMetricDescription || "Score"} ${e.outcomeBefore} → ${e.outcomeAfter}`
+                    : e.outcomeMetricDescription
+                      ? `Measuring: ${e.outcomeMetricDescription}`
+                      : "not measured yet"}
+                </div>
+                {e.notes.length > 0 && (
+                  <div style={{ marginTop: 10, fontSize: 11.5, color: "var(--text-3)" }}>
+                    {e.notes.length} note{e.notes.length === 1 ? "" : "s"}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {visibleEntries.length === 0 && (
+            <div className="ab-empty">{entries.length === 0 ? "No decisions logged yet." : "No decisions with this status."}</div>
+          )}
+        </div>
+      )}
+
+      <DetailDrawer open={!!openRow} onClose={() => setOpenId(null)} title={openRow?.title ?? ""}>
+        {openRow &&
+          (() => {
+            const e = openRow;
+            const delta = outcomeDelta(e);
+            return (
+              <div>
                 {editingId === e._id ? (
                   <div className="ab-panel" style={{ margin: 0 }}>
-                    <div className="field-row">
-                      <div className="field">
-                        <label>Title</label>
-                        <input value={titleDraft} onChange={(ev) => setTitleDraft(ev.target.value)} />
-                      </div>
-                      <div className="field">
-                        <label>Trigger</label>
-                        <input value={triggerDraft} onChange={(ev) => setTriggerDraft(ev.target.value)} />
-                      </div>
+                    <div className="field">
+                      <label>Title</label>
+                      <input value={titleDraft} onChange={(ev) => setTitleDraft(ev.target.value)} />
+                    </div>
+                    <div className="field">
+                      <label>Trigger</label>
+                      <input value={triggerDraft} onChange={(ev) => setTriggerDraft(ev.target.value)} />
                     </div>
                     <button className="btn btn-dark btn-sm" onClick={() => saveTitle(e._id)}>
                       Save
@@ -422,83 +494,48 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                   </div>
                 ) : (
                   <>
-                    <div className="ab-card-head">
-                      <div className="ab-title-block">
-                        <div className="ab-badges">
-                          {cxEnabled && ceEnabled && (
-                            <span className={`pill ${e.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
-                              {e.product === "colleague_experience" ? "Colleague" : "Customer"}
-                            </span>
-                          )}
-                          <span className={`pill ${e.status === "implemented" ? "pill-green" : e.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
-                            {STATUS_LABELS[e.status] ?? e.status}
-                          </span>
-                          {delta && (
-                            <span className={`pill ${delta.startsWith("+") ? "pill-green" : "pill-red"}`}>
-                              {delta.startsWith("+") ? "Improved " : "Declined "}
-                              {delta}
-                            </span>
-                          )}
-                        </div>
-                        <div className="ab-title">{e.title}</div>
-                        <div className="ab-meta-row">
-                          <span>
-                            Owner: <b>{ownerLabel(e.ownerId)}</b>
-                          </span>
-                          <span>
-                            Status:{" "}
-                            {readOnly ? (
-                              STATUS_LABELS[e.status] ?? e.status
-                            ) : (
-                              <select
-                                value={e.status}
-                                onChange={(ev) => updateStatus(e._id, ev.target.value)}
-                                style={{ marginLeft: 4 }}
-                              >
-                                <option value="planned">Planned</option>
-                                <option value="in_progress">In progress</option>
-                                <option value="implemented">Implemented</option>
-                              </select>
-                            )}
-                          </span>
-                        </div>
-                        {e.trigger && (
-                          <>
-                            <div className={`ab-desc${triggerExpanded ? " expanded" : ""}`}>
-                              <b>Trigger:</b> {e.trigger}
-                            </div>
-                            {triggerIsLong && (
-                              <span
-                                className="ab-show-more"
-                                onClick={() => setExpandedTriggerFor(triggerExpanded ? null : e._id)}
-                              >
-                                {triggerExpanded ? "Show less" : "Show more"}
-                              </span>
-                            )}
-                          </>
+                    <div className="ab-meta-row" style={{ marginBottom: 10 }}>
+                      <span>
+                        Owner: <b>{ownerLabel(e.ownerId)}</b>
+                      </span>
+                      <span>
+                        Status:{" "}
+                        {readOnly ? (
+                          STATUS_LABELS[e.status] ?? e.status
+                        ) : (
+                          <select value={e.status} onChange={(ev) => updateStatus(e._id, ev.target.value)} style={{ marginLeft: 4 }}>
+                            <option value="planned">Planned</option>
+                            <option value="in_progress">In progress</option>
+                            <option value="implemented">Implemented</option>
+                          </select>
                         )}
-                        <div className="ab-callout">
-                          <b>Outcome:</b>{" "}
-                          {e.outcomeBefore !== null && e.outcomeAfter !== null
-                            ? `${e.outcomeMetricDescription || "Score"} ${e.outcomeBefore} → ${e.outcomeAfter} (${delta})`
-                            : e.outcomeMetricDescription
-                              ? `Measuring: ${e.outcomeMetricDescription}`
-                              : "not measured yet"}
-                          {e.outcomeBefore !== null && e.outcomeAfter !== null && e.outcomeLowConfidence && (
-                            <span
-                              className="pill pill-gray"
-                              style={{ marginLeft: 6, fontSize: 10 }}
-                              title={`Built from a small sample — ${e.outcomeSampleSizeBefore ?? 0} response(s) before, ${e.outcomeSampleSizeAfter ?? 0} after. Treat this verdict as low-confidence.`}
-                            >
-                              low sample
-                            </span>
-                          )}
-                        </div>
+                      </span>
+                    </div>
+                    {e.trigger && (
+                      <div className="ab-desc" style={{ marginBottom: 10 }}>
+                        <b>Trigger:</b> {e.trigger}
                       </div>
+                    )}
+                    <div className="ab-callout">
+                      <b>Outcome:</b>{" "}
+                      {e.outcomeBefore !== null && e.outcomeAfter !== null
+                        ? `${e.outcomeMetricDescription || "Score"} ${e.outcomeBefore} → ${e.outcomeAfter} (${delta})`
+                        : e.outcomeMetricDescription
+                          ? `Measuring: ${e.outcomeMetricDescription}`
+                          : "not measured yet"}
+                      {e.outcomeBefore !== null && e.outcomeAfter !== null && e.outcomeLowConfidence && (
+                        <span
+                          className="pill pill-gray"
+                          style={{ marginLeft: 6, fontSize: 10 }}
+                          title={`Built from a small sample — ${e.outcomeSampleSizeBefore ?? 0} response(s) before, ${e.outcomeSampleSizeAfter ?? 0} after. Treat this verdict as low-confidence.`}
+                        >
+                          low sample
+                        </span>
+                      )}
                     </div>
 
                     {!readOnly && (
-                      <div className="action-links">
+                      <div className="action-links" style={{ marginTop: 12 }}>
                         <button type="button" className="btn btn-sm action-btn" onClick={() => startEditTitle(e)}>
                           ✎ Edit
                         </button>
@@ -518,7 +555,14 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                             Close the loop →
                           </a>
                         )}
-                        <button type="button" className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
+                        <button
+                          type="button"
+                          className="icon-btn btn-danger"
+                          onClick={() => {
+                            removeEntry(e._id);
+                            setOpenId(null);
+                          }}
+                        >
                           🗑
                         </button>
                       </div>
@@ -623,16 +667,15 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                         </details>
                       </div>
                     )}
+                    <div style={{ marginTop: 18 }}>
+                      <NotesThread notes={e.notes} draft={noteDraft} onDraftChange={setNoteDraft} onSubmit={() => addNote(e._id)} submitting={addingNote} />
+                    </div>
                   </>
                 )}
               </div>
             );
-          })}
-          {visibleEntries.length === 0 && (
-            <div className="ab-empty">{entries.length === 0 ? "No decisions logged yet." : "No decisions with this status."}</div>
-          )}
-        </div>
-      )}
+          })()}
+      </DetailDrawer>
     </div>
   );
 }
