@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Types } from "mongoose";
 import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForBusiness, getEnabledProducts, hasProduct } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, checkBranchPermission } from "@/lib/ownerAuth";
 
 /** Feeds AI-assisted Action Board triage (spec Section 16): the AI picks
  * the category, this mapping says who the item should go to. `categories`
@@ -62,6 +62,9 @@ export async function PATCH(request: Request) {
 export async function PUT(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await checkBranchPermission(session.business, "categoryOwners"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages Category Owners centrally" }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const categoryId = typeof body?.categoryId === "string" ? body.categoryId : "";
@@ -93,6 +96,9 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await checkBranchPermission(session.business, "categoryOwners"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages Category Owners centrally" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const categoryId = searchParams.get("categoryId") ?? "";

@@ -2,10 +2,12 @@ import {
   Business,
   ParentOrganization,
   teamMemberCanAccess,
+  branchPermissionAllowed,
   type IBusiness,
   type IParentOrganization,
   type TeamMemberTier,
   type TeamPageKey,
+  type BranchDelegatablePermission,
 } from "@oodelscore/shared";
 import { getCurrentUser } from "./session";
 import type { HydratedDocument } from "mongoose";
@@ -66,6 +68,23 @@ export async function requireBusinessOwner(options: OwnerAuthOptions = {}): Prom
   }
 
   return null;
+}
+
+/**
+ * Whether a business session may act on its own in one of the areas a
+ * parent org can choose to delegate down (Feedback Points viewing/requests,
+ * Category Owners overrides, CX Goals, Alert Rules) — false for a branch
+ * whose org has kept that area centralized. Always true for a standalone
+ * business or the actual top account of a group, which is who'd be doing
+ * the delegating in the first place.
+ */
+export async function checkBranchPermission(
+  business: HydratedDocument<IBusiness>,
+  permission: BranchDelegatablePermission
+): Promise<boolean> {
+  if (!business.parentOrgId) return true;
+  const org = await ParentOrganization.findById(business.parentOrgId).select("branchPermissions");
+  return branchPermissionAllowed(true, org?.branchPermissions, permission);
 }
 
 /**

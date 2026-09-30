@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, CxGoal, CX_GOAL_STATUSES } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, checkBranchPermission } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await checkBranchPermission(session.business, "cxGoals"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages CX Goals centrally" }, { status: 403 });
+  }
 
   await connectToDatabase();
   const { id } = await params;
@@ -26,6 +29,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await checkBranchPermission(session.business, "cxGoals"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages CX Goals centrally" }, { status: 403 });
+  }
 
   await connectToDatabase();
   const { id } = await params;

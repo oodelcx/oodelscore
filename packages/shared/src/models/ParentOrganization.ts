@@ -17,6 +17,30 @@ import { PRODUCTS, type Product } from "./products";
 export const BILLING_MODES = ["group_pays", "branch_pays"] as const;
 export type BillingMode = (typeof BILLING_MODES)[number];
 
+// Things a branch can either be trusted to run itself, or the org can keep
+// centralized at group level. Every flag defaults true so an existing org's
+// branches keep behaving exactly as they did before this existed — the org
+// owner opts INTO locking something down, nothing opts them in automatically.
+export const BRANCH_DELEGATABLE_PERMISSIONS = ["feedbackPoints", "categoryOwners", "cxGoals", "alertRules"] as const;
+export type BranchDelegatablePermission = (typeof BRANCH_DELEGATABLE_PERMISSIONS)[number];
+
+export interface IBranchPermissions {
+  feedbackPoints: boolean; // true: branch can view its own points + request new ones from Admin (never create them directly, that's always Admin-only). false: nav item hidden, branch sees nothing under Setup for this.
+  categoryOwners: boolean; // true: branch can set its own category->owner overrides for local staff. false: branch always uses the group's default mapping, no override UI.
+  cxGoals: boolean; // true: branch can set its own CX goals independent of the group's. false: branch has no goals of its own, only sees the group's (read-only) if the group has any that apply to it.
+  alertRules: boolean; // true: branch can set its own scope:"business" alert rules, in addition to inheriting the group's cascaded rules (read-only) as always. false: branch only sees the inherited group rules, cannot add its own.
+}
+
+const BranchPermissionsSchema = new Schema<IBranchPermissions>(
+  {
+    feedbackPoints: { type: Boolean, default: true },
+    categoryOwners: { type: Boolean, default: true },
+    cxGoals: { type: Boolean, default: true },
+    alertRules: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
+
 export interface IParentOrganization {
   name: string;
   contactName: string;
@@ -67,6 +91,9 @@ export interface IParentOrganization {
   // ADMIN-EDITABLE ONLY. Same per-account override as Business.paymentGateEnabled
   // — null follows the platform default, true/false forces the gate for this org.
   paymentGateEnabled: boolean | null;
+  // GROUP-OWNER-EDITABLE. Whether each of these is delegated down to
+  // branches or kept centralized at this org. See IBranchPermissions above.
+  branchPermissions: IBranchPermissions;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -94,6 +121,10 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     enabledProducts: { type: [String], enum: PRODUCTS, default: null },
     sensitiveRoutingContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     paymentGateEnabled: { type: Boolean, default: null },
+    branchPermissions: {
+      type: BranchPermissionsSchema,
+      default: () => ({ feedbackPoints: true, categoryOwners: true, cxGoals: true, alertRules: true }),
+    },
   },
   { timestamps: true }
 );

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, User, FeedbackPointRequest, sendTemplatedEmail } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, checkBranchPermission } from "@/lib/ownerAuth";
 
 /**
  * A business can't create its own feedback points (Admin/account-manager
@@ -14,6 +14,9 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 export async function POST(request: Request) {
   const session = await requireBusinessOwner({ requirePage: "feedbackPoints" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await checkBranchPermission(session.business, "feedbackPoints"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages Feedback Points centrally" }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const note = typeof body?.note === "string" ? body.note.trim() : "";

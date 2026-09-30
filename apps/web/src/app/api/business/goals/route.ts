@@ -10,7 +10,7 @@ import {
   type CxGoalMetric,
   type Product,
 } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, checkBranchPermission } from "@/lib/ownerAuth";
 
 const PRODUCT_SET: readonly string[] = PRODUCTS;
 
@@ -22,6 +22,7 @@ const PRODUCT_SET: readonly string[] = PRODUCTS;
 export async function GET(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  const canManage = await checkBranchPermission(session.business, "cxGoals");
 
   const { searchParams } = new URL(request.url);
   const productParam = searchParams.get("product");
@@ -38,12 +39,18 @@ export async function GET(request: Request) {
     })
   );
 
-  return NextResponse.json({ status: "ok", goals: enriched });
+  // canManage: false means the parent org keeps this centralized for this
+  // branch — existing goals stay visible (read-only) so nothing already set
+  // up silently vanishes, but the UI hides add/edit/delete.
+  return NextResponse.json({ status: "ok", goals: enriched, canManage });
 }
 
 export async function POST(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await checkBranchPermission(session.business, "cxGoals"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages CX Goals centrally" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

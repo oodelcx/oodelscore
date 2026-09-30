@@ -84,6 +84,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   // branch or team member only once it's configured.
   const canEditBusinessValue = !isBusinessTeamMember && !isBranch;
   const showBusinessValue = canEditBusinessValue || businessValueInputsComplete(business.businessValueInputs);
+  // A parent org can delegate Feedback Points/Category Owners/CX Goals/Alert
+  // Rules down to its branches, or keep them centralized — its call, per
+  // branch permission (see ParentOrganization.branchPermissions). A
+  // standalone business or the top account of a group is never restricted.
+  const branchPerms = parentOrg?.branchPermissions ?? { feedbackPoints: true, categoryOwners: true, cxGoals: true, alertRules: true };
+  const showFeedbackPointsNav = !isBranch || branchPerms.feedbackPoints;
+  const showCategoryOwnersNav = !isBranch || branchPerms.categoryOwners;
   // See group/layout.tsx for the same reasoning: "CX Pulse" is one nav
   // entry that points at whichever product's maturity page you're viewing,
   // never two identically-labeled entries at once.
@@ -122,13 +129,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 label="Setup"
                 hrefs={["/business/feedback-points", "/business/category-owners", "/business/roster"]}
               >
-                {teamMemberCanAccess(user, "feedbackPoints") && (
+                {teamMemberCanAccess(user, "feedbackPoints") && showFeedbackPointsNav && (
                   <a href="/business/feedback-points">
                     <NavIcon name="feedback-points" />
                     Feedback Points
                   </a>
                 )}
-                {!isBusinessTeamMember && (
+                {!isBusinessTeamMember && showCategoryOwnersNav && (
                   <a href="/business/category-owners">
                     <NavIcon name="category-owners" />
                     Category Owners
