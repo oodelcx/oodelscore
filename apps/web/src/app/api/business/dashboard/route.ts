@@ -119,6 +119,7 @@ export async function GET() {
     cesLowEffortPercent: overall.cesLowEffortPercent,
     starCount: overall.starCount,
     npsCount: overall.npsCount,
+    csatCount: overall.csatCount,
     cesCount: overall.cesCount,
     conversionRate,
     totalScans,

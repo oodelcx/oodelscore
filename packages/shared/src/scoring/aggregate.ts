@@ -32,6 +32,7 @@ export interface BusinessMetrics {
   cesLowEffortPercent: number | null; // null when there are no ces_1_5 answers in range
   starCount: number;
   npsCount: number;
+  csatCount: number; // answers to the CSAT-flagged question specifically — not the same as starCount, which is every star_1_5 answer
   cesCount: number;
 }
 
@@ -98,6 +99,7 @@ export async function computeBusinessMetrics(
     cesLowEffortPercent: cesCount === 0 ? null : Math.round((cesLowEffortCount / cesCount) * 1000) / 10,
     starCount,
     npsCount: npsAnswers.length,
+    csatCount: csatAnsweredCount,
     cesCount,
   };
 }
