@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, Response, Category, FeedbackPoint, Event, hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import type { FilterQuery } from "mongoose";
 import type { IResponse } from "@oodelscore/shared";
 
@@ -69,18 +70,23 @@ export async function GET(request: Request) {
 
   await connectToDatabase();
   const businessId = session.business._id;
+  // A dual-product business's Analytics must respect the active product
+  // tab — without this, CX and CE responses/categories/feedback points were
+  // pooled together regardless of which tab was open. See the identical
+  // fix on the Group Analytics route.
+  const product = await resolveViewProduct(session.business);
   const now = new Date();
   const to = toParam ? new Date(`${toParam}T23:59:59.999Z`) : now;
   const from = fromParam ? new Date(`${fromParam}T00:00:00.000Z`) : new Date(now.getTime() - TREND_DAYS * 24 * 60 * 60 * 1000);
 
-  const filter: FilterQuery<IResponse> = { businessId, submittedAt: { $gte: from, $lte: to } };
+  const filter: FilterQuery<IResponse> = { businessId, product, submittedAt: { $gte: from, $lte: to } };
   if (feedbackPointId) filter.feedbackPointId = feedbackPointId;
   if (eventId) filter.eventId = eventId;
 
   const [responses, categories, feedbackPoints, events] = await Promise.all([
     Response.find(filter),
-    Category.find(),
-    FeedbackPoint.find({ businessId }).select("name eventId scans").sort({ createdAt: 1 }),
+    Category.find({ product }),
+    FeedbackPoint.find({ businessId, product }).select("name eventId scans").sort({ createdAt: 1 }),
     Event.find({ businessId }).sort({ createdAt: -1 }),
   ]);
   const trend = trendFromResponses(responses, from, to);
@@ -158,6 +164,7 @@ export async function GET(request: Request) {
   if (events.length > 0) {
     const eventResponses = await Response.find({
       businessId,
+      product,
       submittedAt: { $gte: from, $lte: to },
       eventId: { $ne: null },
     }).select("eventId answers");

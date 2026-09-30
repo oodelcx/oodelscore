@@ -11,7 +11,7 @@ interface FeedbackPointRow {
 }
 interface BranchDetail {
   business: { name: string; region: string; billingAssignment: string };
-  metrics: { responseCount: number; starAverage: number | null; npsScore: number | null };
+  metrics: { responseCount: number; starAverage: number | null; npsScore: number | null; csatPercent: number | null; cesAverage: number | null };
   openActionItems: { _id: string; title: string; status: string; overdue: boolean }[];
   cxPulse: { level: number; compositeScore: number } | null;
   feedbackPoints: FeedbackPointRow[];
@@ -63,6 +63,17 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
           <div className="metric-val" style={{ fontSize: 18 }}>
             {data.business.billingAssignment === "group_pays" ? "Group" : "Branch"}
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-2" style={{ marginBottom: 20 }}>
+        <div className="card">
+          <div className="metric-label">CSAT</div>
+          <div className="metric-val">{data.metrics.csatPercent !== null ? `${data.metrics.csatPercent}%` : "—"}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">CES</div>
+          <div className="metric-val">{data.metrics.cesAverage !== null ? `${data.metrics.cesAverage}/5` : "—"}</div>
         </div>
       </div>
 

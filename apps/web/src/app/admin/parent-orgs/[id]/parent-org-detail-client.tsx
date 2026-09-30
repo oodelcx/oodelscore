@@ -380,6 +380,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     region: string;
     starAverage: number | null;
     npsScore: number | null;
+    csatPercent: number | null;
+    cesAverage: number | null;
     responseCount: number;
     weekChangePercent: number | null;
   }
@@ -388,6 +390,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     totalResponses: number;
     starAverage: number | null;
     npsScore: number | null;
+    csatPercent: number | null;
+    cesAverage: number | null;
     comparisons: { week: Comparison; month: Comparison; quarter: Comparison; year: Comparison };
     trend: TrendPoint[];
     distribution: { highPercent: number; midPercent: number; lowPercent: number };
@@ -1033,6 +1037,17 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
 
               <div className="grid grid-2" style={{ marginBottom: 20 }}>
                 <div className="card">
+                  <div className="metric-label">CSAT (network)</div>
+                  <div className="metric-val">{performance.csatPercent !== null ? `${performance.csatPercent}%` : "—"}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">CES (network)</div>
+                  <div className="metric-val">{performance.cesAverage !== null ? `${performance.cesAverage}/5` : "—"}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-2" style={{ marginBottom: 20 }}>
+                <div className="card">
                   <div className="metric-label">Open action items (network)</div>
                   <div className="metric-val">{performance.actionBoard.openCount}</div>
                 </div>
@@ -1101,6 +1116,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                     <th>Region</th>
                     <th>Average score</th>
                     <th>NPS</th>
+                    <th>CSAT</th>
+                    <th>CES</th>
                     <th>Responses</th>
                     <th>7d trend</th>
                     <th></th>
@@ -1113,6 +1130,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                       <td>{b.region || "—"}</td>
                       <td>{b.starAverage !== null ? `${b.starAverage}/5` : "—"}</td>
                       <td>{b.npsScore !== null ? formatSigned(b.npsScore) : "—"}</td>
+                      <td>{b.csatPercent !== null ? `${b.csatPercent}%` : "—"}</td>
+                      <td>{b.cesAverage !== null ? `${b.cesAverage}/5` : "—"}</td>
                       <td>{b.responseCount}</td>
                       <td>
                         {b.weekChangePercent === null ? (
@@ -1132,7 +1151,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                   ))}
                   {performance.businesses.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="subtitle">
+                      <td colSpan={9} className="subtitle">
                         No businesses in this organization yet.
                       </td>
                     </tr>
