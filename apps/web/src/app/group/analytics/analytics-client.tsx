@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
 import { QuestionTrendCard } from "@/components/question-trend-card";
 import { ScoreDriversCard } from "@/components/score-drivers-card";
+import { ReportHero, ReportKpiGrid, ReportBarList, ReportThemeList, starTone } from "@/components/report-widgets";
 
 interface AnalyticsData {
   trend: { date: string; starAverage: number | null }[];
@@ -12,6 +13,42 @@ interface AnalyticsData {
   ces: { average: number | null; lowEffortPercent: number | null; sampleSize: number };
   categoryBreakdown: { name: string; average: number }[];
   commentTags: { word: string; count: number; negative: boolean }[];
+}
+
+interface ReportBranchRow {
+  businessId: string;
+  name: string;
+  region: string;
+  starAverage: number | null;
+  npsScore: number | null;
+  responseCount: number;
+  confidence: "strong" | "directional" | "insufficient";
+}
+interface ReportRegionRow {
+  region: string;
+  businessCount: number;
+  starAverage: number | null;
+  npsScore: number | null;
+}
+interface ReportThemeRow {
+  theme: string;
+  frequency: number;
+  sentimentBreakdown: { positive: number; neutral: number; negative: number };
+}
+interface ReportData {
+  status: string;
+  product: "customer_experience" | "colleague_experience";
+  orgName: string;
+  period: { from: string; to: string };
+  branches: ReportBranchRow[];
+  regions: ReportRegionRow[];
+  themes: ReportThemeRow[];
+  activity: { casesResolved: number; initiativesCompleted: number; customersRespondedTo: number };
+  colleagueExperience: { branches: ReportBranchRow[]; casesResolved: number } | null;
+}
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
 const CATEGORY_COLORS = ["#639922", "#7F77DD", "#EF9F27", "#E24B4A", "#5DCAA5", "#185FA5"];
@@ -48,8 +85,17 @@ function trendSvgPoints(trend: { starAverage: number | null }[]): string {
 }
 
 export default function GroupAnalyticsClient({ tooltips }: { tooltips: Record<string, string> }) {
+  const [view, setView] = useState<"explore" | "report">("explore");
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const today = new Date();
+  const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const [reportFrom, setReportFrom] = useState(isoDate(monthAgo));
+  const [reportTo, setReportTo] = useState(isoDate(today));
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [reportForbidden, setReportForbidden] = useState(false);
 
   useEffect(() => {
     fetch("/api/group/analytics")
@@ -57,6 +103,20 @@ export default function GroupAnalyticsClient({ tooltips }: { tooltips: Record<st
       .then(setData)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    setReportLoading(true);
+    fetch(`/api/group/reports?from=${reportFrom}&to=${reportTo}`)
+      .then((res) => res.json())
+      .then((d: ReportData) => {
+        if (d.status !== "ok") {
+          setReportForbidden(true);
+          return;
+        }
+        setReportData(d);
+      })
+      .finally(() => setReportLoading(false));
+  }, [reportFrom, reportTo]);
 
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load analytics.</p>;
@@ -82,14 +142,156 @@ export default function GroupAnalyticsClient({ tooltips }: { tooltips: Record<st
   }
 
   return (
-    <div>
-      <div className="page-head">
+    <div className={view === "report" ? "report-print-area" : undefined}>
+      <div className="page-head" data-no-print>
         <div>
           <h1>Analytics</h1>
-          <p className="subtitle" style={{ margin: 0 }}>Deep dive into your network&apos;s feedback data.</p>
+          <p className="subtitle" style={{ margin: 0 }}>
+            {view === "explore" ? "Deep dive into your network's feedback data." : "A printable network summary for this window."}
+          </p>
         </div>
-        <button className="btn" onClick={exportCsv}>⬇ Export CSV</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {!reportForbidden && (
+            <div className="segmented" style={{ display: "inline-flex", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+              <button
+                className="btn"
+                style={{
+                  border: "none",
+                  borderRadius: 0,
+                  background: view === "explore" ? "var(--accent)" : "transparent",
+                  color: view === "explore" ? "#fff" : undefined,
+                }}
+                onClick={() => setView("explore")}
+              >
+                Explore
+              </button>
+              <button
+                className="btn"
+                style={{
+                  border: "none",
+                  borderRadius: 0,
+                  background: view === "report" ? "var(--accent)" : "transparent",
+                  color: view === "report" ? "#fff" : undefined,
+                }}
+                onClick={() => setView("report")}
+              >
+                Report
+              </button>
+            </div>
+          )}
+          {view === "explore" ? (
+            <button className="btn" onClick={exportCsv}>⬇ Export CSV</button>
+          ) : (
+            <>
+              <a className="btn" href={`/api/group/reports/export?from=${reportFrom}&to=${reportTo}`}>
+                ⬇ Export CSV
+              </a>
+              <button className="btn btn-dark" onClick={() => window.print()}>
+                🖨 Print / Save as PDF
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {view === "report" ? (
+        <>
+          <div className="filters" data-no-print>
+            <input type="date" value={reportFrom} onChange={(e) => setReportFrom(e.target.value)} />
+            <input type="date" value={reportTo} onChange={(e) => setReportTo(e.target.value)} />
+          </div>
+
+          {reportLoading && !reportData && <p className="subtitle">Loading…</p>}
+          {reportData && (
+            <>
+              <ReportHero
+                title={reportData.orgName}
+                badge={
+                  reportData.product === "colleague_experience" ? (
+                    <span className="pill pill-blue" style={{ marginLeft: 4 }}>
+                      Colleague Experience
+                    </span>
+                  ) : undefined
+                }
+                subtitle={`${new Date(reportData.period.from).toLocaleDateString()} – ${new Date(reportData.period.to).toLocaleDateString()} · ${reportData.branches.length} branches`}
+              />
+
+              <div className="rpt-section">
+                <div className="section-title">Activity this period</div>
+                <ReportKpiGrid
+                  items={[
+                    { label: "Cases resolved", value: String(reportData.activity.casesResolved), icon: "✓" },
+                    { label: "Customers personally responded to", value: String(reportData.activity.customersRespondedTo), icon: "✉" },
+                    { label: "Initiatives completed", value: String(reportData.activity.initiativesCompleted), icon: "🚀" },
+                  ]}
+                />
+              </div>
+
+              <ReportBarList
+                title="By region"
+                emptyText="No region data for this period."
+                rows={reportData.regions.map((r) => ({
+                  key: r.region,
+                  label: r.region,
+                  sublabel: `${r.businessCount} branch${r.businessCount === 1 ? "" : "es"}`,
+                  value: r.starAverage,
+                  max: 5,
+                  displayValue: r.starAverage !== null ? `${r.starAverage}/5` : "—",
+                  tone: starTone(r.starAverage),
+                }))}
+              />
+
+              <ReportBarList
+                title="By branch"
+                emptyText="No branch data for this period."
+                rows={reportData.branches.map((b) => ({
+                  key: b.businessId,
+                  label: b.name,
+                  sublabel: `${b.region} · ${b.responseCount} resp.${b.confidence === "insufficient" ? " (low sample)" : ""}`,
+                  value: b.starAverage,
+                  max: 5,
+                  displayValue: b.starAverage !== null ? `${b.starAverage}/5` : "—",
+                  tone: starTone(b.starAverage),
+                }))}
+              />
+
+              <ReportThemeList
+                emptyText="No themes detected for this period."
+                rows={reportData.themes.map((t) => ({
+                  theme: t.theme,
+                  frequency: t.frequency,
+                  positive: t.sentimentBreakdown.positive,
+                  neutral: t.sentimentBreakdown.neutral,
+                  negative: t.sentimentBreakdown.negative,
+                }))}
+              />
+
+              {reportData.colleagueExperience && (
+                <>
+                  <div className="section-title" style={{ marginTop: 4 }}>
+                    Colleague Experience
+                  </div>
+                  <ReportKpiGrid items={[{ label: "Cases resolved", value: String(reportData.colleagueExperience.casesResolved), icon: "✓" }]} />
+                  <ReportBarList
+                    title="By branch"
+                    emptyText="No Colleague-Experience-enabled branches yet."
+                    rows={reportData.colleagueExperience.branches.map((b) => ({
+                      key: b.businessId,
+                      label: b.name,
+                      sublabel: `${b.region} · ${b.responseCount} resp.${b.confidence === "insufficient" ? " (low sample)" : ""}`,
+                      value: b.starAverage,
+                      max: 5,
+                      displayValue: b.starAverage !== null ? `${b.starAverage}/5` : "—",
+                      tone: starTone(b.starAverage),
+                    }))}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </>
+      ) : (
+        <>
 
       <QuestionTrendCard questionsApi="/api/group/analytics/questions" trendApi="/api/group/analytics/question-trend" />
 
@@ -204,6 +406,8 @@ export default function GroupAnalyticsClient({ tooltips }: { tooltips: Record<st
           themeTooltip={tooltips["theme-intelligence"]}
         />
       </div>
+        </>
+      )}
     </div>
   );
 }
