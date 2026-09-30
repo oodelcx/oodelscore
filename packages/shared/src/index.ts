@@ -55,6 +55,7 @@ export * from "./escalation/engine";
 export * from "./billing/gate";
 export * from "./features/flags";
 export * from "./features/teamPermissions";
+export * from "./features/branchPermissions";
 export * from "./patterns/recurringIssues";
 export * from "./ce/rosterTokens";
 export * from "./ce/lifecycleTriggers";

@@ -57,6 +57,7 @@ export function CxGoalsCard({
 }) {
   const METRIC_LABELS = metricLabels(product);
   const [goals, setGoals] = useState<GoalRow[] | null>(null);
+  const [canManage, setCanManage] = useState(true);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [label, setLabel] = useState("");
@@ -77,7 +78,10 @@ export function CxGoalsCard({
   function load() {
     fetch(`${apiPath}?product=${product}`)
       .then((res) => res.json())
-      .then((d) => setGoals(d.goals ?? []));
+      .then((d) => {
+        setGoals(d.goals ?? []);
+        setCanManage(d.canManage ?? true);
+      });
   }
 
   useEffect(() => {
@@ -173,12 +177,20 @@ export function CxGoalsCard({
             Targets for management to work toward, tracked automatically.
           </p>
         </div>
-        <button className="btn btn-sm" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? "Cancel" : "+ New goal"}
-        </button>
+        {canManage && (
+          <button className="btn btn-sm" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Cancel" : "+ New goal"}
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {!canManage && (
+        <p className="subtitle" style={{ marginTop: -4, marginBottom: 12 }}>
+          Your parent organization sets goals centrally — these are shown read-only.
+        </p>
+      )}
+
+      {showForm && canManage && (
         <div style={{ marginBottom: 16, padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8 }}>
           <div className="field-row">
             <div className="field">
@@ -231,7 +243,7 @@ export function CxGoalsCard({
       {goals !== null &&
         goals.map((g) => (
           <div key={g._id} style={{ marginBottom: 14 }}>
-            {editingId === g._id ? (
+            {editingId === g._id && canManage ? (
               <div style={{ padding: 12, background: "var(--bg-2, #f7f7f5)", borderRadius: 8, marginBottom: 4 }}>
                 <div className="field-row">
                   <div className="field">
@@ -285,12 +297,16 @@ export function CxGoalsCard({
                       <span className={`pill ${g.onTrack ? "pill-green" : "pill-amber"}`}>{g.onTrack ? "On track" : "Behind pace"}</span>
                     )}
                     {g.status !== "active" && <span className="pill">{g.status}</span>}
-                    <span className="icon-btn" onClick={() => startEdit(g)} title="Edit goal">
-                      ✎
-                    </span>
-                    <span className="icon-btn btn-danger" onClick={() => removeGoal(g._id)}>
-                      🗑
-                    </span>
+                    {canManage && (
+                      <>
+                        <span className="icon-btn" onClick={() => startEdit(g)} title="Edit goal">
+                          ✎
+                        </span>
+                        <span className="icon-btn btn-danger" onClick={() => removeGoal(g._id)}>
+                          🗑
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="bar-track">

@@ -13,6 +13,7 @@ import {
   hasProduct,
   primaryProductFor,
   teamMemberCanAccess,
+  businessValueInputsComplete,
 } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import { BillingLockedScreen } from "@/components/billing-locked-screen";
@@ -76,6 +77,20 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   // Customer Experience tab.
   const showCx = !bothProductsEnabled || viewProduct === "customer_experience";
   const showCe = !bothProductsEnabled || viewProduct === "colleague_experience";
+  // Business Value doesn't apply the same way to every account (a school
+  // run by a local authority has no "cost to acquire a customer"), so
+  // nobody but the top account should see the menu until it's actually
+  // set up — the owner always sees it (to be the one who sets it up), a
+  // branch or team member only once it's configured.
+  const canEditBusinessValue = !isBusinessTeamMember && !isBranch;
+  const showBusinessValue = canEditBusinessValue || businessValueInputsComplete(business.businessValueInputs);
+  // A parent org can delegate Feedback Points/Category Owners/CX Goals/Alert
+  // Rules down to its branches, or keep them centralized — its call, per
+  // branch permission (see ParentOrganization.branchPermissions). A
+  // standalone business or the top account of a group is never restricted.
+  const branchPerms = parentOrg?.branchPermissions ?? { feedbackPoints: true, categoryOwners: true, cxGoals: true, alertRules: true };
+  const showFeedbackPointsNav = !isBranch || branchPerms.feedbackPoints;
+  const showCategoryOwnersNav = !isBranch || branchPerms.categoryOwners;
   // See group/layout.tsx for the same reasoning: "CX Pulse" is one nav
   // entry that points at whichever product's maturity page you're viewing,
   // never two identically-labeled entries at once.
@@ -114,13 +129,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 label="Setup"
                 hrefs={["/business/feedback-points", "/business/category-owners", "/business/roster"]}
               >
-                {teamMemberCanAccess(user, "feedbackPoints") && (
+                {teamMemberCanAccess(user, "feedbackPoints") && showFeedbackPointsNav && (
                   <a href="/business/feedback-points">
                     <NavIcon name="feedback-points" />
                     Feedback Points
                   </a>
                 )}
-                {!isBusinessTeamMember && (
+                {!isBusinessTeamMember && showCategoryOwnersNav && (
                   <a href="/business/category-owners">
                     <NavIcon name="category-owners" />
                     Category Owners
@@ -194,7 +209,9 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                       Reports
                     </a>
                   )}
-                {hasFeature(business.enabledFeatures, "businessValue") && teamMemberCanAccess(user, "businessValue") && (
+                {hasFeature(business.enabledFeatures, "businessValue") &&
+                  teamMemberCanAccess(user, "businessValue") &&
+                  showBusinessValue && (
                   <a href="/business/business-value">
                     <NavIcon name="business-value" />
                     Business Value

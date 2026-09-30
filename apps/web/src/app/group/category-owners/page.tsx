@@ -16,6 +16,18 @@ interface TeamRow {
   userId: string;
   label: string;
 }
+interface BranchPermissions {
+  feedbackPoints: boolean;
+  categoryOwners: boolean;
+  cxGoals: boolean;
+  alertRules: boolean;
+}
+const BRANCH_PERMISSION_LABELS: Record<keyof BranchPermissions, { label: string; description: string }> = {
+  feedbackPoints: { label: "Feedback Points", description: "A branch can view its own feedback points and request changes from Admin." },
+  categoryOwners: { label: "Category Owners", description: "A branch can override your default category-owner mapping for its own local staff." },
+  cxGoals: { label: "CX Goals", description: "A branch can set its own CX goals, independent of yours." },
+  alertRules: { label: "Alert Rules", description: "A branch can add its own alert rules, on top of the ones you cascade down to it." },
+};
 
 export default function GroupCategoryOwnersPage() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
@@ -25,6 +37,8 @@ export default function GroupCategoryOwnersPage() {
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
   const [repeatDrafts, setRepeatDrafts] = useState<Record<string, { count: string; days: string }>>({});
   const [savingRepeatFor, setSavingRepeatFor] = useState<string | null>(null);
+  const [branchPerms, setBranchPerms] = useState<BranchPermissions | null>(null);
+  const [savingPerm, setSavingPerm] = useState<keyof BranchPermissions | null>(null);
 
   function load() {
     setLoading(true);
@@ -46,9 +60,24 @@ export default function GroupCategoryOwnersPage() {
         setLoading(false);
       }
     );
+    fetch("/api/group/branch-permissions")
+      .then((r) => r.json())
+      .then((d) => setBranchPerms(d.branchPermissions ?? null));
   }
 
   useEffect(load, []);
+
+  async function toggleBranchPermission(key: keyof BranchPermissions, value: boolean) {
+    setSavingPerm(key);
+    const res = await fetch("/api/group/branch-permissions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: value }),
+    });
+    const data = await res.json().catch(() => null);
+    setSavingPerm(null);
+    if (res.ok) setBranchPerms(data.branchPermissions ?? null);
+  }
 
   async function setOwner(categoryId: string, defaultOwnerId: string) {
     setSavingCategoryId(categoryId);
@@ -93,6 +122,37 @@ export default function GroupCategoryOwnersPage() {
             When an Alert Rule fires, the AI picks the category — this says who the resulting case goes to.
           </p>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3 style={{ marginTop: 0 }}>Branch permissions</h3>
+        <p className="card-sub" style={{ margin: "0 0 12px" }}>
+          Decide whether your branches manage each of these themselves, or you keep them centralized. Turning one
+          off doesn&rsquo;t delete anything a branch already set up — it just hides self-service and stops new
+          changes, and everything falls back to what you set for the org.
+        </p>
+        {branchPerms === null && <p className="subtitle">Loading…</p>}
+        {branchPerms !== null && (
+          <div style={{ display: "grid", gap: 10 }}>
+            {(Object.keys(BRANCH_PERMISSION_LABELS) as (keyof BranchPermissions)[]).map((key) => (
+              <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={branchPerms[key]}
+                  disabled={savingPerm === key}
+                  onChange={(e) => toggleBranchPermission(key, e.target.checked)}
+                  style={{ marginTop: 3 }}
+                />
+                <span>
+                  <b>{BRANCH_PERMISSION_LABELS[key].label}</b>
+                  <span className="subtitle" style={{ display: "block", margin: 0 }}>
+                    {BRANCH_PERMISSION_LABELS[key].description}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="callout" style={{ marginBottom: 12 }}>

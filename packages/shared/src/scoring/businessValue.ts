@@ -25,6 +25,19 @@ export interface BusinessValueImpact {
   currencySymbol: string;
 }
 
+/**
+ * Cheap, synchronous version of the `inputsComplete` check above — no
+ * Response query, just "has the top account actually entered its three
+ * required figures yet." Used to gate nav/page visibility for anyone who
+ * isn't the top account (a branch, a team member): Business Value doesn't
+ * apply to every account the same way (a school run by a local authority
+ * has no "cost to acquire a customer"), so nobody but the top account
+ * should even see the menu until that account has deliberately set it up.
+ */
+export function businessValueInputsComplete(inputs: Pick<IBusinessValueInputs, "avgTransactionValue" | "visitsPerYear" | "acquisitionCost">): boolean {
+  return inputs.avgTransactionValue !== null && inputs.visitsPerYear !== null && inputs.acquisitionCost !== null;
+}
+
 export async function computeBusinessValueImpact(
   businessId: Types.ObjectId | string,
   from: Date,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, FeedbackPoint, QuestionTemplate, Event, buildFeedbackPointFromTemplate, type IDemographicConfig } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, checkBranchPermission } from "@/lib/ownerAuth";
 
 /**
  * Mostly view-only for the Business portal (per the mockup): a business
@@ -30,6 +30,9 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 export async function GET() {
   const session = await requireBusinessOwner({ requirePage: "feedbackPoints" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await checkBranchPermission(session.business, "feedbackPoints"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages Feedback Points centrally" }, { status: 403 });
+  }
 
   await connectToDatabase();
   const points = await FeedbackPoint.find({ businessId: session.business._id }).sort({ createdAt: 1 });

@@ -799,6 +799,82 @@ table.clean.striped tbody tr:nth-child(even) td {
 .playbook-card .ab-card-head {
   gap: 12px;
 }
+/* Raw Feedback's master-detail layout — replaces a single-column card feed
+   capped at 820px (which left the right half of a wide screen empty) with
+   a compact scrollable list on the left and a full-width detail panel on
+   the right, the same shape as an email/ticket inbox. */
+.rf-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.rf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.rf-row {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.rf-row:hover {
+  border-color: var(--border-strong, var(--border));
+}
+.rf-row.active {
+  border-color: var(--navy);
+  border-left-color: var(--navy);
+  box-shadow: 0 1px 3px rgba(16, 24, 32, 0.08);
+}
+.rf-row-score {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.rf-row-meta {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin-top: 2px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rf-row-snippet {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rf-detail {
+  min-width: 0;
+}
+.rf-detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  color: var(--text-3);
+  font-size: 13.5px;
+  border: 1.5px dashed var(--border-strong, var(--border));
+  border-radius: 12px;
+}
+@media (max-width: 900px) {
+  .rf-layout {
+    grid-template-columns: 1fr;
+  }
+  .rf-list {
+    max-height: 420px;
+  }
+}
 .playbook-icon {
   width: 36px;
   height: 36px;

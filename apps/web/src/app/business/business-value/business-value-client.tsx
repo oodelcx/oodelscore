@@ -106,95 +106,88 @@ export default function BusinessValueClient() {
         </div>
       </div>
 
-      {!impact.inputsComplete && (
+      {!impact.inputsComplete && canEdit && (
         <div className="callout-amber" style={{ marginBottom: 20 }}>
           Fill in the fields below to see a computed £/$ figure — until then, only the at-risk response count is
           shown.
         </div>
       )}
 
-      <div className="card" style={{ maxWidth: 560 }}>
-        <h3>Your figures</h3>
-        <p className="card-sub" style={{ margin: "0 0 12px" }}>
-          Entered once, reused every time this page recomputes. Nothing here connects to your actual finance
-          systems — these are your own estimates.
-        </p>
-
-        {!canEdit && (
-          <div className="callout-amber" style={{ marginBottom: 12 }}>
-            These figures are read-only for this login. Only the account owner can set them — if this is a branch,
-            your parent organization sets them centrally from its own Business Value page.
-          </div>
-        )}
-
-        <div className="field-row">
-          <div className="field">
-            <label>Currency symbol</label>
-            <input
-              type="text"
-              value={inputs.currencySymbol}
-              onChange={(e) => setInputs({ ...inputs, currencySymbol: e.target.value })}
-              style={{ maxWidth: 80 }}
-              disabled={!canEdit}
-            />
-          </div>
+      {!canEdit && (
+        <div className="callout" style={{ marginBottom: 20 }}>
+          These figures are set centrally — only the account owner (your parent organization's owner, for a branch)
+          enters them. This page shows the resulting numbers, read-only.
         </div>
-        <div className="field-row">
-          <div className="field">
-            <label>Average transaction value</label>
-            <input
-              type="number"
-              value={inputs.avgTransactionValue ?? ""}
-              onChange={(e) => setInputs({ ...inputs, avgTransactionValue: num(e.target.value) })}
-              placeholder="e.g. 25"
-              disabled={!canEdit}
-            />
-          </div>
-          <div className="field">
-            <label>Visits per customer per year</label>
-            <input
-              type="number"
-              value={inputs.visitsPerYear ?? ""}
-              onChange={(e) => setInputs({ ...inputs, visitsPerYear: num(e.target.value) })}
-              placeholder="e.g. 12"
-              disabled={!canEdit}
-            />
-          </div>
-        </div>
-        <div className="field-row">
-          <div className="field">
-            <label>Cost to acquire a replacement customer</label>
-            <input
-              type="number"
-              value={inputs.acquisitionCost ?? ""}
-              onChange={(e) => setInputs({ ...inputs, acquisitionCost: num(e.target.value) })}
-              placeholder="e.g. 40"
-              disabled={!canEdit}
-            />
-          </div>
-          <div className="field">
-            <label>At-risk star rating (at or below)</label>
-            <select
-              value={inputs.atRiskStarThreshold}
-              onChange={(e) => setInputs({ ...inputs, atRiskStarThreshold: Number(e.target.value) })}
-              disabled={!canEdit}
-            >
-              <option value={1}>1 star</option>
-              <option value={2}>2 stars or fewer</option>
-              <option value={3}>3 stars or fewer</option>
-            </select>
-          </div>
-        </div>
+      )}
 
-        {canEdit && (
-          <>
-            <button className="btn btn-dark btn-sm" disabled={saving} onClick={save}>
-              {saving ? "Saving…" : "Save"}
-            </button>
-            {saved && <span style={{ marginLeft: 10, fontSize: 12.5, color: "var(--text-2)" }}>Saved.</span>}
-          </>
-        )}
-      </div>
+      {canEdit && (
+        <div className="card" style={{ maxWidth: 560 }}>
+          <h3>Your figures</h3>
+          <p className="card-sub" style={{ margin: "0 0 12px" }}>
+            Entered once, reused every time this page recomputes. Nothing here connects to your actual finance
+            systems — these are your own estimates.
+          </p>
+
+          <div className="field-row">
+            <div className="field">
+              <label>Currency symbol</label>
+              <input
+                type="text"
+                value={inputs.currencySymbol}
+                onChange={(e) => setInputs({ ...inputs, currencySymbol: e.target.value })}
+                style={{ maxWidth: 80 }}
+              />
+            </div>
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>Average transaction value</label>
+              <input
+                type="number"
+                value={inputs.avgTransactionValue ?? ""}
+                onChange={(e) => setInputs({ ...inputs, avgTransactionValue: num(e.target.value) })}
+                placeholder="e.g. 25"
+              />
+            </div>
+            <div className="field">
+              <label>Visits per customer per year</label>
+              <input
+                type="number"
+                value={inputs.visitsPerYear ?? ""}
+                onChange={(e) => setInputs({ ...inputs, visitsPerYear: num(e.target.value) })}
+                placeholder="e.g. 12"
+              />
+            </div>
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>Cost to acquire a replacement customer</label>
+              <input
+                type="number"
+                value={inputs.acquisitionCost ?? ""}
+                onChange={(e) => setInputs({ ...inputs, acquisitionCost: num(e.target.value) })}
+                placeholder="e.g. 40"
+              />
+            </div>
+            <div className="field">
+              <label>At-risk star rating (at or below)</label>
+              <select
+                value={inputs.atRiskStarThreshold}
+                onChange={(e) => setInputs({ ...inputs, atRiskStarThreshold: Number(e.target.value) })}
+              >
+                <option value={1}>1 star</option>
+                <option value={2}>2 stars or fewer</option>
+                <option value={3}>3 stars or fewer</option>
+              </select>
+            </div>
+          </div>
+
+          <button className="btn btn-dark btn-sm" disabled={saving} onClick={save}>
+            {saving ? "Saving…" : "Save"}
+          </button>
+          {saved && <span style={{ marginLeft: 10, fontSize: 12.5, color: "var(--text-2)" }}>Saved.</span>}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, AlertRule, hasFeature } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, checkBranchPermission } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -9,6 +9,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
     return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
+  }
+  if (!(await checkBranchPermission(session.business, "alertRules"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages Alert Rules centrally" }, { status: 403 });
   }
 
   await connectToDatabase();
@@ -34,6 +37,9 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
     return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
+  }
+  if (!(await checkBranchPermission(session.business, "alertRules"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages Alert Rules centrally" }, { status: 403 });
   }
 
   await connectToDatabase();

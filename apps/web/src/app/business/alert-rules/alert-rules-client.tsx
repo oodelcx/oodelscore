@@ -25,6 +25,7 @@ const RULE_TYPE_LABELS: Record<string, string> = {
 export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Record<string, string> }) {
   const [ownRules, setOwnRules] = useState<RuleRow[]>([]);
   const [inheritedRules, setInheritedRules] = useState<RuleRow[]>([]);
+  const [canManage, setCanManage] = useState(true);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState("star_average");
   const [threshold, setThreshold] = useState("");
@@ -48,6 +49,7 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
       .then((data) => {
         setOwnRules(data.ownRules ?? []);
         setInheritedRules(data.inheritedRules ?? []);
+        setCanManage(data.canManage ?? true);
       })
       .finally(() => setLoading(false));
   }
@@ -150,6 +152,14 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
         </div>
       </div>
 
+      {!canManage && (
+        <div className="callout" style={{ marginBottom: 20 }}>
+          Your parent organization manages your own alert rules centrally — you still inherit and see any rules
+          it's cascaded down to you below.
+        </div>
+      )}
+
+      {canManage && (
       <div className="card" data-tour="alert-new-rule">
         <h3>New rule</h3>
         <div className="field-row">
@@ -195,9 +205,10 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
           {creating ? "Creating…" : "+ Create rule"}
         </button>
       </div>
+      )}
 
       {loading && <p className="subtitle">Loading…</p>}
-      {!loading && (
+      {!loading && (canManage || ownRules.length > 0) && (
         <>
           <h3 className="section-label" style={{ marginTop: 0 }}>Your rules</h3>
           <table className="clean" data-tour="alert-rules-table">
@@ -208,12 +219,12 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
                 <th>Channel</th>
                 <th>Activity</th>
                 <th>Active</th>
-                <th></th>
+                {canManage && <th></th>}
               </tr>
             </thead>
             <tbody>
               {ownRules.map((r) =>
-                editingId === r._id ? (
+                editingId === r._id && canManage ? (
                   <tr key={r._id}>
                     <td colSpan={cxEnabled && ceEnabled ? 6 : 5}>
                       <div className="field-row" style={{ alignItems: "flex-end" }}>
@@ -263,17 +274,19 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
                     <td>
                       <span className={`pill ${r.active ? "pill-green" : "pill-gray"}`}>{r.active ? "On" : "Off"}</span>
                     </td>
-                    <td style={{ textAlign: "right" }}>
-                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startEdit(r)}>
-                        Edit
-                      </button>
-                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleActive(r)}>
-                        {r.active ? "Pause" : "Resume"}
-                      </button>
-                      <button className="icon-btn btn-danger" onClick={() => removeRule(r._id)}>
-                        🗑
-                      </button>
-                    </td>
+                    {canManage && (
+                      <td style={{ textAlign: "right" }}>
+                        <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startEdit(r)}>
+                          Edit
+                        </button>
+                        <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => toggleActive(r)}>
+                          {r.active ? "Pause" : "Resume"}
+                        </button>
+                        <button className="icon-btn btn-danger" onClick={() => removeRule(r._id)}>
+                          🗑
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               )}
@@ -286,33 +299,33 @@ export default function BusinessAlertRulesClient({ tooltips }: { tooltips: Recor
               )}
             </tbody>
           </table>
+        </>
+      )}
 
-          {inheritedRules.length > 0 && (
-            <>
-              <h3 className="section-label">
-                Inherited from your organization (read-only)
-                <InfoTip text={tooltips["inherited-rules"]} />
-              </h3>
-              <table className="clean">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Metric</th>
-                    <th>Threshold</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {inheritedRules.map((r) => (
-                    <tr key={r._id}>
-                      <td>{RULE_TYPE_LABELS[r.ruleType] ?? r.ruleType}</td>
-                      <td>{METRIC_LABELS[r.metric] ?? r.metric}</td>
-                      <td>{r.threshold ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          )}
+      {!loading && inheritedRules.length > 0 && (
+        <>
+          <h3 className="section-label">
+            Inherited from your organization (read-only)
+            <InfoTip text={tooltips["inherited-rules"]} />
+          </h3>
+          <table className="clean">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Metric</th>
+                <th>Threshold</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inheritedRules.map((r) => (
+                <tr key={r._id}>
+                  <td>{RULE_TYPE_LABELS[r.ruleType] ?? r.ruleType}</td>
+                  <td>{METRIC_LABELS[r.metric] ?? r.metric}</td>
+                  <td>{r.threshold ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </>
       )}
     </div>

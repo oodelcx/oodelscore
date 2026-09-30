@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, AlertRule, AlertActivity, ALERT_RULE_TYPES, hasFeature, hasProduct } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, checkBranchPermission } from "@/lib/ownerAuth";
 
 /**
  * Spec Section 4: a Business owner can edit their own business-scope rules,
@@ -34,7 +34,8 @@ export async function GET() {
     });
   }
 
-  return NextResponse.json({ status: "ok", ownRules: ownWithActivity, inheritedRules: inherited });
+  const canManage = await checkBranchPermission(session.business, "alertRules");
+  return NextResponse.json({ status: "ok", ownRules: ownWithActivity, inheritedRules: inherited, canManage });
 }
 
 export async function POST(request: Request) {
@@ -42,6 +43,9 @@ export async function POST(request: Request) {
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!hasFeature(session.business.enabledFeatures, "alertRules")) {
     return NextResponse.json({ status: "error", message: "Alert Rules is not enabled for this account" }, { status: 403 });
+  }
+  if (!(await checkBranchPermission(session.business, "alertRules"))) {
+    return NextResponse.json({ status: "error", message: "Your parent organization manages Alert Rules centrally" }, { status: 403 });
   }
 
   await connectToDatabase();
