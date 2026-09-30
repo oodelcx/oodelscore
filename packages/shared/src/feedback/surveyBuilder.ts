@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import type { Types } from "mongoose";
-import { FeedbackPoint } from "../models/FeedbackPoint";
+import { FeedbackPoint, DELIVERY_MODES, type IDemographicOverride, type DeliveryMode } from "../models/FeedbackPoint";
+import { DEMOGRAPHIC_MODES } from "../models/Business";
 import { QUESTION_TYPES, type IQuestion, type QuestionType } from "../models/QuestionTemplate";
 import { getEnabledProducts } from "../models/products";
 import type { Product } from "../models/products";
@@ -100,6 +101,28 @@ export async function buildFeedbackPointFromTemplate(params: {
     responseQuota = Math.floor(quota);
   }
 
+  const deliveryMode: DeliveryMode =
+    typeof b?.deliveryMode === "string" && (DELIVERY_MODES as readonly string[]).includes(b.deliveryMode) ? (b.deliveryMode as DeliveryMode) : "both";
+
+  // Optional — a point that doesn't send this keeps demographicOverride
+  // null, meaning "use the business default," exactly as before this field
+  // was exposed in the builder.
+  let demographicOverride: IDemographicOverride | null = null;
+  const rawDemo = b?.demographicOverride as Record<string, unknown> | null | undefined;
+  if (rawDemo && typeof rawDemo === "object") {
+    const field = (key: string): IDemographicOverride[keyof IDemographicOverride] => {
+      const v = rawDemo[key];
+      return typeof v === "string" && (DEMOGRAPHIC_MODES as readonly string[]).includes(v) ? (v as IDemographicOverride[keyof IDemographicOverride]) : "off";
+    };
+    demographicOverride = {
+      name: field("name"),
+      email: field("email"),
+      phone: field("phone"),
+      ageGroup: field("ageGroup"),
+      gender: field("gender"),
+    };
+  }
+
   const feedbackPoint = await FeedbackPoint.create({
     businessId,
     product,
@@ -108,6 +131,8 @@ export async function buildFeedbackPointFromTemplate(params: {
     qrToken: randomBytes(16).toString("hex"),
     customQuestions,
     responseQuota,
+    deliveryMode,
+    demographicOverride,
   });
 
   return { status: "ok", feedbackPoint };

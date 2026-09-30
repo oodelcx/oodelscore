@@ -19,6 +19,7 @@ interface FeedbackPointRow {
   active: boolean;
   responseQuota: number | null;
   product?: "customer_experience" | "colleague_experience";
+  deliveryMode?: "qr" | "link" | "both";
 }
 
 /**
@@ -88,6 +89,8 @@ export default function GroupFeedbackPointsClient() {
           product: payload.product,
           responseQuota: payload.responseQuota,
           questions: payload.questions,
+          deliveryMode: payload.deliveryMode,
+          demographicOverride: payload.demographicOverride,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -178,9 +181,15 @@ export default function GroupFeedbackPointsClient() {
                   <div>{p.scans} scans</div>
                   {p.responseQuota !== null && <div>quota {p.responseQuota}</div>}
                 </div>
-                <button className="btn btn-sm" style={{ width: "100%" }} onClick={() => setQrPoint(p)}>
-                  View QR
-                </button>
+                {p.deliveryMode !== "link" ? (
+                  <button className="btn btn-sm" style={{ width: "100%" }} onClick={() => setQrPoint(p)}>
+                    View QR
+                  </button>
+                ) : (
+                  <p className="subtitle" style={{ margin: 0 }}>
+                    Link-only — no QR/poster for this one.
+                  </p>
+                )}
               </div>
             ))}
           </div>

@@ -25,6 +25,16 @@ export type DistributionMode = (typeof DISTRIBUTION_MODES)[number];
 export const PULSE_CADENCES = ["weekly", "monthly"] as const;
 export type PulseCadence = (typeof PULSE_CADENCES)[number];
 
+// How this point is meant to be distributed — purely a UI hint, never
+// enforced at the submit route (the same token always works as both a
+// scanned QR and a shared URL). "qr" hides link-sharing copy and shows the
+// poster/QR tools; "link" hides the poster/QR tools and the scan-pattern
+// heatmap (which would otherwise read as all-zero for a point nobody ever
+// scans); "both" (the default, and the only behavior that existed before
+// this field) shows everything.
+export const DELIVERY_MODES = ["qr", "link", "both"] as const;
+export type DeliveryMode = (typeof DELIVERY_MODES)[number];
+
 export interface IDemographicOverride {
   name: DemographicMode;
   email: DemographicMode;
@@ -97,6 +107,9 @@ export interface IFeedbackPoint {
   // received this many responses, same "don't have to remember to turn
   // it off" reasoning as startsAt/endsAt above. null = unlimited.
   responseQuota: number | null;
+  // See DELIVERY_MODES above. Defaults to "both" so every point created
+  // before this field existed keeps behaving exactly as it always has.
+  deliveryMode: DeliveryMode;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -148,6 +161,7 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     selectedQuestionIds: { type: [Schema.Types.ObjectId], default: null },
     customQuestions: { type: [CustomQuestionSchema], default: null },
     responseQuota: { type: Number, default: null },
+    deliveryMode: { type: String, enum: DELIVERY_MODES, default: "both" },
   },
   { timestamps: true }
 );
