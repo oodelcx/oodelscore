@@ -1,5 +1,6 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { PRODUCTS, type Product } from "./products";
+import { NoteEntrySchema, type INoteEntry } from "./common";
 
 export const DECISION_STATUSES = ["planned", "in_progress", "implemented"] as const;
 export type DecisionStatus = (typeof DECISION_STATUSES)[number];
@@ -48,6 +49,8 @@ export interface IDecisionLogEntry {
   outcomeSampleSizeBefore: number | null;
   outcomeSampleSizeAfter: number | null;
   outcomeLowConfidence: boolean;
+  // Same append-only commentary thread as ImprovementInitiative.notes.
+  notes: INoteEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +77,7 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
     outcomeSampleSizeBefore: { type: Number, default: null },
     outcomeSampleSizeAfter: { type: Number, default: null },
     outcomeLowConfidence: { type: Boolean, default: false },
+    notes: { type: [NoteEntrySchema], default: [] },
   },
   { timestamps: true }
 );

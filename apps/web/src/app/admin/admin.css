@@ -1499,3 +1499,64 @@ input[type="number"] {
 html.mobile-nav-open {
   overflow: hidden;
 }
+
+/* Detail drawer — a record's full detail slides in from the right over a
+   dimmed backdrop, used by summary-card grids (Improvement Initiatives,
+   Decision Log) instead of expanding a card in place or navigating away. */
+.detail-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 23, 26, 0.35);
+  z-index: 600;
+  display: flex;
+  justify-content: flex-end;
+}
+.detail-drawer {
+  width: min(480px, 100vw);
+  height: 100%;
+  background: var(--bg, #fff);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  animation: detail-drawer-in 0.18s ease-out;
+}
+@keyframes detail-drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.detail-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border, #e6e5e1);
+  flex-shrink: 0;
+}
+.detail-drawer-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.detail-drawer-body {
+  padding: 18px 20px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+.summary-card {
+  border: 1px solid var(--border, #e6e5e1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.summary-card:hover {
+  border-color: var(--accent, #0f6e56);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}

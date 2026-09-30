@@ -33,6 +33,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   else if ("ownerId" in (body ?? {}) && body.ownerId === null) initiative.ownerId = null;
   if (Array.isArray(body?.linkedActionIds)) initiative.linkedActionIds = body.linkedActionIds;
   if (Array.isArray(body?.affectedBusinessIds)) initiative.affectedBusinessIds = body.affectedBusinessIds;
+  if (typeof body?.addNote === "string" && body.addNote.trim()) {
+    initiative.notes.push({ text: body.addNote.trim(), authorLabel: session.user.email || "Team member", createdAt: new Date() });
+  }
   await initiative.save();
 
   return NextResponse.json({ status: "ok", initiative });
