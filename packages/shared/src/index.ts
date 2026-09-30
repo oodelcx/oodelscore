@@ -65,3 +65,4 @@ export * from "./ce/closingLoop";
 export * from "./compass/questionBank";
 export * from "./compass/scoring";
 export * from "./compass/industryContent";
+export * from "./compass/assessmentService";

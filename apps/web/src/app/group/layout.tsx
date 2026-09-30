@@ -92,12 +92,18 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               <NavSection
                 storageKey="group-organisation"
                 label="Organisation"
-                hrefs={["/group", "/group/command-center", "/group/branches", "/group/compare"]}
+                hrefs={["/group", "/group/command-center", "/group/branches", "/group/compare", "/group/compass"]}
               >
                 <a href="/group">
                   <NavIcon name="overview" />
                   Overview
                 </a>
+                {hasFeature(org.enabledFeatures, "compass") && teamMemberCanAccess(user, "compass") && (
+                  <a href="/group/compass">
+                    <NavIcon name="compass" />
+                    OodelCX Compass
+                  </a>
+                )}
                 {commandCenterEnabled && (
                   <a href="/group/command-center">
                     <NavIcon name="command-center" />
