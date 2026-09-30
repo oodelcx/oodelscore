@@ -64,6 +64,7 @@ export async function POST(request: Request) {
   const entry = await DecisionLogEntry.create({
     businessId: session.business._id,
     product,
+    linkedInitiativeId: typeof body?.linkedInitiativeId === "string" ? body.linkedInitiativeId : null,
     title,
     trigger: typeof body?.trigger === "string" ? body.trigger : "",
     linkedActionIds: Array.isArray(body?.linkedActionIds) ? body.linkedActionIds : [],

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface UpdateRow {
   _id: string;
@@ -11,6 +12,7 @@ interface UpdateRow {
   sentAt: string | null;
   recipientCount: number;
   createdAt: string;
+  linkedDecisionId: string | null;
 }
 
 /**
@@ -21,6 +23,15 @@ interface UpdateRow {
  * picks which branches an update covers.
  */
 export default function ClosingLoopClient({ apiPath }: { apiPath: string }) {
+  return (
+    <Suspense fallback={<p className="subtitle">Loading…</p>}>
+      <ClosingLoopInner apiPath={apiPath} />
+    </Suspense>
+  );
+}
+
+function ClosingLoopInner({ apiPath }: { apiPath: string }) {
+  const searchParams = useSearchParams();
   const [updates, setUpdates] = useState<UpdateRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -28,6 +39,7 @@ export default function ClosingLoopClient({ apiPath }: { apiPath: string }) {
   const [titleDraft, setTitleDraft] = useState("");
   const [newHeard, setNewHeard] = useState("");
   const [newDoing, setNewDoing] = useState("");
+  const [linkedDecisionId, setLinkedDecisionId] = useState<string | null>(null);
   const [heardDrafts, setHeardDrafts] = useState<Record<string, string>>({});
   const [doingDrafts, setDoingDrafts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
@@ -56,13 +68,34 @@ export default function ClosingLoopClient({ apiPath }: { apiPath: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiPath]);
 
+  // Pre-fill "New update" when arriving from a Decision Log entry's "Close
+  // the loop" button, e.g. ?new=1&title=...&whatWeHeard=...&linkedDecisionId=...
+  useEffect(() => {
+    if (searchParams?.get("new") !== "1") return;
+    const qTitle = searchParams.get("title");
+    const qHeard = searchParams.get("whatWeHeard");
+    const qDoing = searchParams.get("whatWereDoing");
+    const qLinkedDecisionId = searchParams.get("linkedDecisionId");
+    if (qTitle) setTitleDraft(qTitle);
+    if (qHeard) setNewHeard(qHeard);
+    if (qDoing) setNewDoing(qDoing);
+    if (qLinkedDecisionId) setLinkedDecisionId(qLinkedDecisionId);
+    setShowForm(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function createDraft() {
     if (!titleDraft.trim()) return;
     setCreating(true);
     const res = await fetch(apiPath, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: titleDraft.trim(), whatWeHeard: newHeard.trim(), whatWereDoing: newDoing.trim() }),
+      body: JSON.stringify({
+        title: titleDraft.trim(),
+        whatWeHeard: newHeard.trim(),
+        whatWereDoing: newDoing.trim(),
+        linkedDecisionId,
+      }),
     });
     const data = await res.json().catch(() => null);
     setCreating(false);
@@ -73,6 +106,7 @@ export default function ClosingLoopClient({ apiPath }: { apiPath: string }) {
     setTitleDraft("");
     setNewHeard("");
     setNewDoing("");
+    setLinkedDecisionId(null);
     setShowForm(false);
     load();
   }
@@ -142,8 +176,9 @@ export default function ClosingLoopClient({ apiPath }: { apiPath: string }) {
         <div className="card" style={{ marginBottom: 20 }}>
           <h3>New update</h3>
           <p className="card-sub" style={{ marginTop: -4, marginBottom: 12 }}>
-            Fill in all three fields, then either save it as a draft to finish later or send it straight to your
-            roster.
+            {linkedDecisionId
+              ? "Pre-filled from a Decision Log entry — this update will link back to that decision."
+              : "Fill in all three fields, then either save it as a draft to finish later or send it straight to your roster."}
           </p>
           <div className="field" style={{ maxWidth: 480 }}>
             <label>Title</label>

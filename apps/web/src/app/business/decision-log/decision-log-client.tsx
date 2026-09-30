@@ -22,6 +22,7 @@ interface EntryRow {
   outcomeSampleSizeAfter: number | null;
   outcomeLowConfidence: boolean;
   ownerId: string | null;
+  linkedInitiativeId: string | null;
 }
 
 interface CategoryOption {
@@ -83,6 +84,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
   const [implementationDate, setImplementationDate] = useState("");
   const [outcomeMetricDescription, setOutcomeMetricDescription] = useState("");
   const [linkedCaseId, setLinkedCaseId] = useState<string | null>(null);
+  const [linkedInitiativeId, setLinkedInitiativeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [measuringId, setMeasuringId] = useState<string | null>(null);
@@ -147,9 +149,11 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     const qTitle = searchParams.get("title");
     const qTrigger = searchParams.get("trigger");
     const qLinkedCaseId = searchParams.get("linkedCaseId");
+    const qLinkedInitiativeId = searchParams.get("linkedInitiativeId");
     if (qTitle) setTitle(qTitle);
     if (qTrigger) setTrigger(qTrigger);
     if (qLinkedCaseId) setLinkedCaseId(qLinkedCaseId);
+    if (qLinkedInitiativeId) setLinkedInitiativeId(qLinkedInitiativeId);
     setShowForm(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -168,6 +172,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
         implementationDate: implementationDate || null,
         outcomeMetricDescription,
         linkedActionIds: linkedCaseId ? [linkedCaseId] : [],
+        linkedInitiativeId,
         product,
       }),
     });
@@ -183,6 +188,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
     setImplementationDate("");
     setOutcomeMetricDescription("");
     setLinkedCaseId(null);
+    setLinkedInitiativeId(null);
     setShowForm(false);
     load();
   }
@@ -311,6 +317,9 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
         <div className="card" style={{ marginBottom: 18 }}>
           <h3>New entry</h3>
           {linkedCaseId && <p className="card-sub">Pre-filled from a Case Management playbook — this entry will link back to that case.</p>}
+          {linkedInitiativeId && (
+            <p className="card-sub">Pre-filled from an Improvement Initiative's "Log outcome" — this entry will link back to it.</p>
+          )}
           <div className="field-row">
             <div className="field">
               <label>Title</label>
@@ -500,6 +509,15 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                         >
                           📏 Measure outcome
                         </button>
+                        {e.outcomeBefore !== null && e.outcomeAfter !== null && e.product === "colleague_experience" && (
+                          <a
+                            className="btn btn-sm action-btn"
+                            href={`/business/closing-the-loop?new=1&title=${encodeURIComponent(e.title)}&whatWeHeard=${encodeURIComponent(e.trigger)}&whatWereDoing=${encodeURIComponent(`${e.title} — measured outcome: ${e.outcomeMetricDescription || "score"} moved from ${e.outcomeBefore} to ${e.outcomeAfter}.`)}&linkedDecisionId=${e._id}`}
+                            title="Post a &quot;you said, we did&quot; update to your Colleague Experience roster"
+                          >
+                            Close the loop →
+                          </a>
+                        )}
                         <button type="button" className="icon-btn btn-danger" onClick={() => removeEntry(e._id)}>
                           🗑
                         </button>
