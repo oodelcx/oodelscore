@@ -181,7 +181,7 @@ export default function FeedbackPointsClient() {
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {!isBranch && (
+          {!loading && !isBranch && (
             <button className="btn btn-dark" onClick={openBuilder}>
               + Build a survey
             </button>
@@ -193,22 +193,24 @@ export default function FeedbackPointsClient() {
         </div>
       </div>
 
-      <div className="callout">
-        {isBranch ? (
-          <>
-            Your parent organization builds and manages this branch's surveys centrally, so every branch stays
-            consistent — your Group owner does this from their own Feedback Points page. For anything else, request
-            a change below — your account manager actions those within one business day.
-          </>
-        ) : (
-          <>
-            Build your own feedback point above — write your own questions, pick a type for each (star rating, NPS,
-            multiple choice, and more), and optionally start from one of OodelCX's ready-made templates as an
-            editable first draft. For anything else, request a change below — your account manager actions those
-            within one business day.
-          </>
-        )}
-      </div>
+      {!loading && (
+        <div className="callout">
+          {isBranch ? (
+            <>
+              Your parent organization builds and manages this branch's surveys centrally, so every branch stays
+              consistent — your Group owner does this from their own Feedback Points page. For anything else, request
+              a change below — your account manager actions those within one business day.
+            </>
+          ) : (
+            <>
+              Build your own feedback point above — write your own questions, pick a type for each (star rating, NPS,
+              multiple choice, and more), and optionally start from one of OodelCX's ready-made templates as an
+              editable first draft. For anything else, request a change below — your account manager actions those
+              within one business day.
+            </>
+          )}
+        </div>
+      )}
       {requestSent && <div className="callout">Your request has been sent — your account manager will be in touch.</div>}
 
       {builderOpen && (

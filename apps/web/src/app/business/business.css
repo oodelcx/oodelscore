@@ -691,6 +691,15 @@ table.clean.striped tbody tr:nth-child(even) td {
   flex: 1;
   overflow-y: auto;
   padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.pb-slideout-body textarea {
+  width: 100%;
+  min-height: 160px;
+  flex: 1;
+  resize: vertical;
+  box-sizing: border-box;
 }
 .pb-slideout-footer {
   flex-shrink: 0;
