@@ -13,6 +13,7 @@ import {
   hasProduct,
   primaryProductFor,
   teamMemberCanAccess,
+  businessValueInputsComplete,
 } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import { BillingLockedScreen } from "@/components/billing-locked-screen";
@@ -76,6 +77,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   // Customer Experience tab.
   const showCx = !bothProductsEnabled || viewProduct === "customer_experience";
   const showCe = !bothProductsEnabled || viewProduct === "colleague_experience";
+  // Business Value doesn't apply the same way to every account (a school
+  // run by a local authority has no "cost to acquire a customer"), so
+  // nobody but the top account should see the menu until it's actually
+  // set up — the owner always sees it (to be the one who sets it up), a
+  // branch or team member only once it's configured.
+  const canEditBusinessValue = !isBusinessTeamMember && !isBranch;
+  const showBusinessValue = canEditBusinessValue || businessValueInputsComplete(business.businessValueInputs);
   // See group/layout.tsx for the same reasoning: "CX Pulse" is one nav
   // entry that points at whichever product's maturity page you're viewing,
   // never two identically-labeled entries at once.
@@ -194,7 +202,9 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                       Reports
                     </a>
                   )}
-                {hasFeature(business.enabledFeatures, "businessValue") && teamMemberCanAccess(user, "businessValue") && (
+                {hasFeature(business.enabledFeatures, "businessValue") &&
+                  teamMemberCanAccess(user, "businessValue") &&
+                  showBusinessValue && (
                   <a href="/business/business-value">
                     <NavIcon name="business-value" />
                     Business Value
