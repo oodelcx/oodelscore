@@ -315,6 +315,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   "/business/team-members",
                   "/business/support",
                   "/business/billing",
+                  "/business/escalation",
                   "/business/playbooks",
                   "/business/security",
                 ]}
@@ -335,6 +336,12 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   <a href="/business/billing">
                     <NavIcon name="billing" />
                     Billing
+                  </a>
+                )}
+                {!isBusinessTeamMember && !isBranch && (
+                  <a href="/business/escalation">
+                    <NavIcon name="escalation" />
+                    Escalation hierarchy
                   </a>
                 )}
                 {hasFeature(business.enabledFeatures, "playbooks") && teamMemberCanAccess(user, "playbooks") && (

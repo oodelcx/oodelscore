@@ -15,6 +15,7 @@ import {
   CaseEventLogEntry,
   resolveQuestionTextByQuestionId,
   getEscalationConfig,
+  resolveEscalationAssignee,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { attachPlaybookRunsToItems } from "@/lib/caseStats";
@@ -54,7 +55,21 @@ export async function GET(_request: Request, { params }: RouteParams) {
     escalationLevels: [],
     escalationSlaHours: null,
   });
-  const topLevel = escalationConfig.levels.length > 0 ? Math.max(...escalationConfig.levels.map((l) => l.level)) : null;
+  const levels = escalationConfig.levels.slice().sort((a, b) => a.level - b.level);
+  const topLevel = levels.length > 0 ? Math.max(...levels.map((l) => l.level)) : null;
+  // See the business route's identical comment — this resolves WHO a click
+  // would hand the case to, so the UI never escalates blind.
+  const currentIndex = levels.findIndex((l) => l.level === item.currentEscalationLevel);
+  const nextLevelConfig = currentIndex === -1 ? levels[0] : levels[currentIndex + 1];
+  const prevLevelConfig = currentIndex <= 0 ? null : levels[currentIndex - 1];
+  const [nextAssigneeId, prevAssigneeId] = await Promise.all([
+    nextLevelConfig ? resolveEscalationAssignee(item.businessId.toString(), nextLevelConfig.level) : null,
+    prevLevelConfig ? resolveEscalationAssignee(item.businessId.toString(), prevLevelConfig.level) : null,
+  ]);
+  const [nextAssignee, prevAssignee] = await Promise.all([
+    nextAssigneeId ? User.findById(nextAssigneeId).select("email") : null,
+    prevAssigneeId ? User.findById(prevAssigneeId).select("email") : null,
+  ]);
 
   const [itemWithRun] = await attachPlaybookRunsToItems([item], playbooks);
 
@@ -98,6 +113,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
       topLevel,
       canEscalate: topLevel !== null && item.currentEscalationLevel < topLevel,
       canDeEscalate: item.currentEscalationLevel > 1,
+      nextLevel: nextLevelConfig
+        ? { level: nextLevelConfig.level, label: nextLevelConfig.label, assigneeEmail: nextAssignee?.email ?? null }
+        : null,
+      prevLevel: prevLevelConfig
+        ? { level: prevLevelConfig.level, label: prevLevelConfig.label, assigneeEmail: prevAssignee?.email ?? null }
+        : null,
     },
     businessName: business?.name ?? null,
     recurringFlag,
