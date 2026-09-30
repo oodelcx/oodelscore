@@ -58,7 +58,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loggingFor, setLoggingFor] = useState<string | null>(null);
   const [actionTitle, setActionTitle] = useState("");
   const [actionSubmitting, setActionSubmitting] = useState(false);
@@ -75,11 +75,13 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
     fetch(`/api/business/responses?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
-        setResponses(data.responses ?? []);
+        const list: ResponseRow[] = data.responses ?? [];
+        setResponses(list);
         setFeedbackPoints(data.feedbackPoints ?? []);
         setTotalPages(data.totalPages ?? 1);
         setTotal(data.total ?? 0);
         setStats(data.stats ?? null);
+        setSelectedId((current) => (current && list.some((r) => r._id === current) ? current : (list[0]?._id ?? null)));
       })
       .finally(() => setLoading(false));
   }
@@ -216,81 +218,104 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}
-      <div className="content-narrow">
-      {!loading && (
-        <div className="ab-list">
-          {responses.map((r, index) => {
-            const star = starValue(r);
-            const text = comment(r);
-            const isFirst = index === 0;
-            return (
-              <div className="card ab-card" data-tour={isFirst ? "rf-first-card" : undefined} key={r._id}>
-                <div className="ab-card-head">
-                  <div className="ab-title-block">
-                    <div className="ab-badges">
-                      {r.flagged && <span className="pill pill-red">Flagged</span>}
-                      {r.demographics.ageGroup && <span className="pill pill-gray">{r.demographics.ageGroup}</span>}
-                      {!text && <span className="pill pill-gray">No comment left</span>}
-                    </div>
-                    <div className="ab-title" style={{ fontSize: 20, color: scoreColor(star) }}>
-                      {star !== null ? `${"★".repeat(Math.round(star))}${"☆".repeat(5 - Math.round(star))} ${star.toFixed(1)}/5` : "No rating"}
-                    </div>
-                    <div className="ab-meta-row">
-                      <span className="pill pill-blue">{r.feedbackPointName}</span>
-                      <span>{new Date(r.submittedAt).toLocaleString()}</span>
-                      {r.respondentEmail && <span>{r.respondentEmail}</span>}
+      {!loading && responses.length === 0 && <div className="ab-empty">No feedback matches this filter.</div>}
+
+      {!loading && responses.length > 0 && (
+        <div className="rf-layout">
+          <div className="rf-list">
+            {responses.map((r, index) => {
+              const star = starValue(r);
+              const text = comment(r);
+              return (
+                <div
+                  key={r._id}
+                  className={`rf-row${selectedId === r._id ? " active" : ""}`}
+                  data-tour={index === 0 ? "rf-first-card" : undefined}
+                  onClick={() => setSelectedId(r._id)}
+                >
+                  <div className="rf-row-score" style={{ color: scoreColor(star) }}>
+                    {star !== null ? `${star.toFixed(1)}★` : "No rating"}
+                    {r.flagged && <span style={{ marginLeft: 6 }}>🚩</span>}
+                  </div>
+                  <div className="rf-row-meta">
+                    <span>{r.feedbackPointName}</span>
+                    <span>·</span>
+                    <span>{new Date(r.submittedAt).toLocaleDateString()}</span>
+                  </div>
+                  {text && <div className="rf-row-snippet">&quot;{text}&quot;</div>}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rf-detail">
+            {(() => {
+              const r = responses.find((row) => row._id === selectedId);
+              if (!r) return <div className="rf-detail-empty">Select a response on the left to see the full detail.</div>;
+              const star = starValue(r);
+              const text = comment(r);
+              const isFirst = responses[0]?._id === r._id;
+              return (
+                <div className="card ab-card">
+                  <div className="ab-card-head">
+                    <div className="ab-title-block">
+                      <div className="ab-badges">
+                        {r.flagged && <span className="pill pill-red">Flagged</span>}
+                        {r.demographics.ageGroup && <span className="pill pill-gray">{r.demographics.ageGroup}</span>}
+                        {!text && <span className="pill pill-gray">No comment left</span>}
+                      </div>
+                      <div className="ab-title" style={{ fontSize: 20, color: scoreColor(star) }}>
+                        {star !== null ? `${"★".repeat(Math.round(star))}${"☆".repeat(5 - Math.round(star))} ${star.toFixed(1)}/5` : "No rating"}
+                      </div>
+                      <div className="ab-meta-row">
+                        <span className="pill pill-blue">{r.feedbackPointName}</span>
+                        <span>{new Date(r.submittedAt).toLocaleString()}</span>
+                        {r.respondentEmail && <span>{r.respondentEmail}</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {text && <div className="fb-comment">&quot;{text}&quot;</div>}
+                  {text && <div className="fb-comment">&quot;{text}&quot;</div>}
 
-                <div className="action-links">
-                  <button type="button" className="btn btn-sm action-btn" onClick={() => toggleFlag(r)}>
-                    {r.flagged ? "Unflag" : "Flag"}
-                  </button>
-                  <InfoTip text={tooltips["flag"]} />
-                  {loggedIds.has(r._id) ? (
-                    <span style={{ color: "var(--accent)", fontSize: "11.5px" }}>✓ Action logged</span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn-sm action-btn"
-                      data-tour={isFirst ? "rf-first-log-action" : undefined}
-                      onClick={() => startLogAction(r)}
-                    >
-                      Log action taken
+                  <div className="action-links">
+                    <button type="button" className="btn btn-sm action-btn" onClick={() => toggleFlag(r)}>
+                      {r.flagged ? "Unflag" : "Flag"}
                     </button>
-                  )}
-                  <InfoTip text={tooltips["log-action"]} />
-                  <button
-                    type="button"
-                    className={`btn btn-sm action-btn${expanded === r._id ? " active" : ""}`}
-                    onClick={() => setExpanded(expanded === r._id ? null : r._id)}
-                  >
-                    {expanded === r._id ? "Hide breakdown" : "View full breakdown"}
-                  </button>
-                </div>
-
-                {loggingFor === r._id && (
-                  <div className="ab-panel">
-                    <div className="field" style={{ margin: 0 }}>
-                      <label>Case title</label>
-                      <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} autoFocus />
-                    </div>
-                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                      <button className="btn btn-dark btn-sm" disabled={actionSubmitting} onClick={() => submitLogAction(r)}>
-                        {actionSubmitting ? "Logging…" : "Add to Case Management"}
+                    <InfoTip text={tooltips["flag"]} />
+                    {loggedIds.has(r._id) ? (
+                      <span style={{ color: "var(--accent)", fontSize: "11.5px" }}>✓ Action logged</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-sm action-btn"
+                        data-tour={isFirst ? "rf-first-log-action" : undefined}
+                        onClick={() => startLogAction(r)}
+                      >
+                        Log action taken
                       </button>
-                      <button className="btn btn-sm" onClick={() => setLoggingFor(null)}>
-                        Cancel
-                      </button>
-                    </div>
+                    )}
+                    <InfoTip text={tooltips["log-action"]} />
                   </div>
-                )}
 
-                {expanded === r._id && (
-                  <div className="ab-panel">
+                  {loggingFor === r._id && (
+                    <div className="ab-panel">
+                      <div className="field" style={{ margin: 0 }}>
+                        <label>Case title</label>
+                        <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} autoFocus />
+                      </div>
+                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                        <button className="btn btn-dark btn-sm" disabled={actionSubmitting} onClick={() => submitLogAction(r)}>
+                          {actionSubmitting ? "Logging…" : "Add to Case Management"}
+                        </button>
+                        <button className="btn btn-sm" onClick={() => setLoggingFor(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="ab-panel" style={{ marginTop: 14 }}>
+                    <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>Full breakdown</h3>
                     <table className="clean">
                       <tbody>
                         {r.answers.map((a, i) => (
@@ -302,11 +327,10 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
-            );
-          })}
-          {responses.length === 0 && <div className="ab-empty">No feedback matches this filter.</div>}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
@@ -323,7 +347,6 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
           </button>
         </div>
       )}
-      </div>
     </div>
   );
 }
