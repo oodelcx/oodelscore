@@ -12,6 +12,12 @@ interface MappingRow {
   defaultOwnerId: string;
   repeatThresholdCount: number | null;
   repeatWindowDays: number | null;
+  escalateAfterDays: number | null;
+  escalateToLevel: number | null;
+}
+interface EscalationLevelRow {
+  level: number;
+  label: string;
 }
 interface TeamRow {
   userId: string;
@@ -40,6 +46,9 @@ export default function GroupCategoryOwnersPage() {
   const [savingRepeatFor, setSavingRepeatFor] = useState<string | null>(null);
   const [branchPerms, setBranchPerms] = useState<BranchPermissions | null>(null);
   const [savingPerm, setSavingPerm] = useState<keyof BranchPermissions | null>(null);
+  const [escalationLevels, setEscalationLevels] = useState<EscalationLevelRow[]>([]);
+  const [escalateDrafts, setEscalateDrafts] = useState<Record<string, { days: string; level: string }>>({});
+  const [savingEscalateFor, setSavingEscalateFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -48,15 +57,22 @@ export default function GroupCategoryOwnersPage() {
         setCategories(data.categories ?? []);
         const byCategory: Record<string, MappingRow> = {};
         const drafts: Record<string, { count: string; days: string }> = {};
+        const escalateDraftsNext: Record<string, { days: string; level: string }> = {};
         for (const m of data.mappings ?? []) {
           byCategory[m.categoryId] = m;
           drafts[m.categoryId] = {
             count: m.repeatThresholdCount != null ? String(m.repeatThresholdCount) : "",
             days: m.repeatWindowDays != null ? String(m.repeatWindowDays) : "",
           };
+          escalateDraftsNext[m.categoryId] = {
+            days: m.escalateAfterDays != null ? String(m.escalateAfterDays) : "",
+            level: m.escalateToLevel != null ? String(m.escalateToLevel) : "",
+          };
         }
         setMappings(byCategory);
         setRepeatDrafts(drafts);
+        setEscalateDrafts(escalateDraftsNext);
+        setEscalationLevels(data.escalationLevels ?? []);
         setTeam(teamData.team ?? []);
         setLoading(false);
       }
@@ -111,6 +127,25 @@ export default function GroupCategoryOwnersPage() {
       }),
     });
     setSavingRepeatFor(null);
+    load();
+  }
+
+  async function saveEscalateOverride(categoryId: string) {
+    const ownerId = mappings[categoryId]?.defaultOwnerId;
+    if (!ownerId) return;
+    const draft = escalateDrafts[categoryId] ?? { days: "", level: "" };
+    setSavingEscalateFor(categoryId);
+    await fetch("/api/group/category-owners", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        categoryId,
+        defaultOwnerId: ownerId,
+        escalateAfterDays: draft.days.trim() ? Number(draft.days) : null,
+        escalateToLevel: draft.level.trim() ? Number(draft.level) : null,
+      }),
+    });
+    setSavingEscalateFor(null);
     load();
   }
 
@@ -170,6 +205,12 @@ export default function GroupCategoryOwnersPage() {
         — a repeat within a single branch is that branch&rsquo;s own setting on its Category Owners page. Leave blank
         to turn detection off for that category.
       </div>
+      <div className="callout">
+        &quot;Escalate if unresolved&quot; is independent of your region-based escalation config (see the Escalation
+        page): it&rsquo;s a category-specific override — if a case in this category sits unresolved for this many
+        days, it jumps straight to the chosen level, regardless of what region it&rsquo;s in. Leave blank for a
+        category that should just follow your normal escalation chain.
+      </div>
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
@@ -179,6 +220,7 @@ export default function GroupCategoryOwnersPage() {
               <th>Category</th>
               <th>Default owner</th>
               <th>Flag as recurring after</th>
+              <th>Escalate if unresolved</th>
             </tr>
           </thead>
           <tbody>
@@ -249,11 +291,50 @@ export default function GroupCategoryOwnersPage() {
                     <span className="subtitle">Set an owner first</span>
                   )}
                 </td>
+                <td>
+                  {mappings[c._id]?.defaultOwnerId ? (
+                    <div className="field-row" style={{ alignItems: "flex-end", gap: 6 }}>
+                      <div className="field" style={{ margin: 0, width: 60 }}>
+                        <label style={{ fontSize: 11 }}>Days</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="off"
+                          value={escalateDrafts[c._id]?.days ?? ""}
+                          onChange={(e) =>
+                            setEscalateDrafts((d) => ({ ...d, [c._id]: { ...(d[c._id] ?? { days: "", level: "" }), days: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <div className="field" style={{ margin: 0, width: 130 }}>
+                        <label style={{ fontSize: 11 }}>Escalate to</label>
+                        <select
+                          value={escalateDrafts[c._id]?.level ?? ""}
+                          onChange={(e) =>
+                            setEscalateDrafts((d) => ({ ...d, [c._id]: { ...(d[c._id] ?? { days: "", level: "" }), level: e.target.value } }))
+                          }
+                        >
+                          <option value="">—</option>
+                          {escalationLevels.map((l) => (
+                            <option key={l.level} value={l.level}>
+                              Level {l.level} — {l.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button className="btn btn-sm" disabled={savingEscalateFor === c._id} onClick={() => saveEscalateOverride(c._id)}>
+                        {savingEscalateFor === c._id ? "…" : "Save"}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="subtitle">Set an owner first</span>
+                  )}
+                </td>
               </tr>
             ))}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={3} className="subtitle">
+                <td colSpan={4} className="subtitle">
                   No categories yet.
                 </td>
               </tr>

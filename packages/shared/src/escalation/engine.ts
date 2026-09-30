@@ -3,9 +3,30 @@ import { Business, type IBusiness } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { EscalationAssignment } from "../models/EscalationAssignment";
 import { ActionBoardItem, type IActionBoardItem } from "../models/ActionBoardItem";
+import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
 import { User } from "../models/User";
 import { sendTemplatedEmail } from "../email/resend";
 import type { IEscalationLevel } from "../models/common";
+
+/**
+ * A category can opt into its own escalation threshold (set on Category
+ * Owners, independent of the region-based EscalationAssignment system) —
+ * "if a case in this category sits unresolved past N days, jump it
+ * straight to level X," for a category whose severity warrants a
+ * different path than the account's default SLA. Returns null when the
+ * item has no category or the category never opted in, in which case the
+ * caller falls back to the normal account-wide SLA sweep.
+ */
+async function getCategoryEscalationOverride(
+  item: Pick<IActionBoardItem, "businessId" | "parentOrgId" | "categoryId">
+): Promise<{ afterDays: number; toLevel: number } | null> {
+  if (!item.categoryId) return null;
+  const mapping = item.parentOrgId
+    ? await CategoryOwnerMapping.findOne({ ownerScope: "parentOrg", ownerScopeId: item.parentOrgId, categoryId: item.categoryId })
+    : await CategoryOwnerMapping.findOne({ ownerScope: "business", ownerScopeId: item.businessId, categoryId: item.categoryId });
+  if (!mapping || mapping.escalateAfterDays === null || mapping.escalateToLevel === null) return null;
+  return { afterDays: mapping.escalateAfterDays, toLevel: mapping.escalateToLevel };
+}
 
 export class EscalationError extends Error {}
 
@@ -214,12 +235,40 @@ export async function autoEscalateOverdueCases(): Promise<{ escalated: number; s
         continue;
       }
       const config = await getEscalationConfig(business);
+      const levelStarted = item.levelEnteredAt ?? item.createdAt;
+      const hoursSince = (Date.now() - new Date(levelStarted).getTime()) / (1000 * 60 * 60);
+
+      // A category-specific override takes priority over the account-wide
+      // SLA sweep: if this case's category opted into its own threshold and
+      // it's overdue, jump straight to that category's configured level
+      // (one escalateActionBoardItem call per rung, since escalationHistory
+      // needs an entry for each level actually passed through) rather than
+      // advancing only one level the way the default SLA sweep does.
+      const categoryOverride = await getCategoryEscalationOverride(item);
+      if (categoryOverride && hoursSince >= categoryOverride.afterDays * 24) {
+        let movedAny = false;
+        while (item.currentEscalationLevel < categoryOverride.toLevel) {
+          try {
+            await escalateActionBoardItem(item, {
+              note: `Auto-escalated: this category is configured to escalate to level ${categoryOverride.toLevel} after ${categoryOverride.afterDays} day(s) unresolved.`,
+              auto: true,
+            });
+            movedAny = true;
+          } catch (err) {
+            if (err instanceof EscalationError) break;
+            throw err;
+          }
+        }
+        if (movedAny) {
+          escalated++;
+          continue;
+        }
+      }
+
       if (!config.slaHours) {
         skipped++;
         continue;
       }
-      const levelStarted = item.levelEnteredAt ?? item.createdAt;
-      const hoursSince = (Date.now() - new Date(levelStarted).getTime()) / (1000 * 60 * 60);
       if (hoursSince < config.slaHours) {
         skipped++;
         continue;

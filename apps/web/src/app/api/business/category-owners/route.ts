@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Types } from "mongoose";
-import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForBusiness, getEnabledProducts, hasProduct } from "@oodelscore/shared";
+import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForBusiness, getEnabledProducts, hasProduct, getEscalationConfig } from "@oodelscore/shared";
 import { requireBusinessOwner, checkBranchPermission } from "@/lib/ownerAuth";
 
 /** Feeds AI-assisted Action Board triage (spec Section 16): the AI picks
@@ -17,10 +17,11 @@ export async function GET() {
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const [inUseIds, mappings, allCategories] = await Promise.all([
+  const [inUseIds, mappings, allCategories, escalationConfig] = await Promise.all([
     getCategoriesInUseForBusiness(session.business._id),
     CategoryOwnerMapping.find({ ownerScope: "business", ownerScopeId: session.business._id }),
     Category.find({ product: { $in: getEnabledProducts(session.business) } }).sort({ name: 1 }).select("name product"),
+    getEscalationConfig(session.business),
   ]);
   const categories = inUseIds.size
     ? await Category.find({ _id: { $in: [...inUseIds] } }).sort({ name: 1 })
@@ -33,6 +34,7 @@ export async function GET() {
     mappings,
     ceEnabled: hasProduct(session.business, "colleague_experience"),
     sensitiveRoutingContactId: session.business.sensitiveRoutingContactId,
+    escalationLevels: escalationConfig.levels,
   });
 }
 
@@ -76,6 +78,10 @@ export async function PUT(request: Request) {
     body?.repeatThresholdCount === null || typeof body?.repeatThresholdCount === "number" ? body.repeatThresholdCount : undefined;
   const repeatWindowDays =
     body?.repeatWindowDays === null || typeof body?.repeatWindowDays === "number" ? body.repeatWindowDays : undefined;
+  const escalateAfterDays =
+    body?.escalateAfterDays === null || typeof body?.escalateAfterDays === "number" ? body.escalateAfterDays : undefined;
+  const escalateToLevel =
+    body?.escalateToLevel === null || typeof body?.escalateToLevel === "number" ? body.escalateToLevel : undefined;
 
   await connectToDatabase();
   const mapping = await CategoryOwnerMapping.findOneAndUpdate(
@@ -85,6 +91,8 @@ export async function PUT(request: Request) {
         defaultOwnerId,
         ...(repeatThresholdCount !== undefined ? { repeatThresholdCount } : {}),
         ...(repeatWindowDays !== undefined ? { repeatWindowDays } : {}),
+        ...(escalateAfterDays !== undefined ? { escalateAfterDays } : {}),
+        ...(escalateToLevel !== undefined ? { escalateToLevel } : {}),
       },
     },
     { upsert: true, new: true }
