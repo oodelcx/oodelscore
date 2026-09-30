@@ -6,6 +6,7 @@ import {
   Business,
   ParentOrganization,
   QuestionTemplate,
+  Response,
   ScanToken,
   dedupCookieName,
   checkRateLimit,
@@ -13,6 +14,7 @@ import {
   logApiRouteError,
   isFeedbackPointOpen,
   effectiveDemographicConfig,
+  effectiveQuestions,
 } from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
@@ -71,6 +73,16 @@ async function handleGet(request: NextRequest, qrToken: string) {
     return NextResponse.json({ status: "error", message: "No survey is configured for this link yet" }, { status: 404 });
   }
 
+  // Business-side survey builder's response quota — auto-closes the point
+  // once reached, same "no need to remember to turn it off" reasoning as
+  // startsAt/endsAt in isFeedbackPointOpen above.
+  if (feedbackPoint.responseQuota) {
+    const responseCount = await Response.countDocuments({ feedbackPointId: feedbackPoint._id });
+    if (responseCount >= feedbackPoint.responseQuota) {
+      return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+    }
+  }
+
   // Fire-and-forget: powers the conversion-rate metric (responses / scans).
   // Not awaited on the response — a slow scan counter shouldn't delay the form.
   FeedbackPoint.updateOne({ _id: feedbackPoint._id }, { $inc: { scans: 1 } }).catch((err) =>
@@ -95,7 +107,7 @@ async function handleGet(request: NextRequest, qrToken: string) {
     groupTag: groupTag ? `Part of ${groupTag}` : null,
     formLayout,
     demographicConfig,
-    questions: template.questions.map((q, index) => ({
+    questions: effectiveQuestions(feedbackPoint, template).map((q, index) => ({
       index,
       text: q.text,
       type: q.type,
