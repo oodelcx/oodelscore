@@ -73,6 +73,18 @@ export interface IFeedbackPoint {
   // Independent of eventId — a plain year-round QR code just leaves both null.
   startsAt: Date | null;
   endsAt: Date | null;
+  // Business-side survey builder (PRODUCT-ROADMAP.md Phase 6): a business
+  // composes a point's survey from an Admin-authored QuestionTemplate's
+  // already-existing questions — which ones, and in what order — without
+  // ever touching the template itself (that stays Admin-only, same as
+  // questionTemplateId/questionTemplateOverride). null = use the full
+  // template as-is, in its own order (every point created before this
+  // field existed, and any Admin-created point that doesn't set it).
+  selectedQuestionIds: Types.ObjectId[] | null;
+  // Business-side survey builder: auto-closes this point once it has
+  // received this many responses, same "don't have to remember to turn
+  // it off" reasoning as startsAt/endsAt above. null = unlimited.
+  responseQuota: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -107,6 +119,8 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     active: { type: Boolean, default: true },
     startsAt: { type: Date, default: null },
     endsAt: { type: Date, default: null },
+    selectedQuestionIds: { type: [Schema.Types.ObjectId], default: null },
+    responseQuota: { type: Number, default: null },
   },
   { timestamps: true }
 );
@@ -128,6 +142,25 @@ export function isFeedbackPointOpen(point: Pick<IFeedbackPoint, "active" | "star
   if (point.startsAt && now < point.startsAt) return false;
   if (point.endsAt && now > point.endsAt) return false;
   return true;
+}
+
+/**
+ * The survey a feedback point actually renders/validates — the parent
+ * template's questions, filtered and reordered by selectedQuestionIds when
+ * the business-side survey builder (PRODUCT-ROADMAP.md Phase 6) set one, or
+ * the full template as-is otherwise. Both the public GET (render) and
+ * submit (validate + persist) routes must derive their question list from
+ * this one function, the same discipline effectiveDemographicConfig below
+ * already establishes, so the two routes can never disagree about which
+ * question a given index refers to.
+ */
+export function effectiveQuestions<Q extends { _id?: Types.ObjectId }>(
+  point: Pick<IFeedbackPoint, "selectedQuestionIds">,
+  template: { questions: Q[] }
+): Q[] {
+  if (!point.selectedQuestionIds || point.selectedQuestionIds.length === 0) return template.questions;
+  const byId = new Map(template.questions.map((q) => [q._id?.toString(), q]));
+  return point.selectedQuestionIds.map((id) => byId.get(id.toString())).filter((q): q is Q => !!q);
 }
 
 /**

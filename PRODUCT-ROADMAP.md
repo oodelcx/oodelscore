@@ -14,7 +14,7 @@ Each phase ships the same way: a feature branch off `main`, `npm run typecheck` 
 | 3 | De-escalation | Done |
 | 4 | Closing the loop (CX + EX halves) | Done |
 | 5 | Business Value / £/$ module | Done — one open design question, not a bug, see §3 below |
-| 6 | Business-side survey builder | **In progress** |
+| 6 | Business-side survey builder | Done |
 | 7 | OodelCX Compass (7a–7d) | **Not started** — unblocked now that naming is locked |
 | 8 | Everything marked "later" | **Not started** |
 
@@ -94,11 +94,18 @@ Append-only event log, a reason field, a computed "current level." Self-containe
 
 Same four fields for every customer (one calculation engine for everybody); the *values* typed into them are entirely business-specific. **Check the shipped `IBusinessValueInputs` shape** (`packages/shared/src/models/Business.ts`) against this exact field list — it currently has `avgTransactionValue`, `visitsPerYear`, `acquisitionCost`, `atRiskStarThreshold`, `currencySymbol`. `atRiskStarThreshold` is a numeric proxy for field 4 above ("at risk" = a star answer at or below this threshold) — confirm this reads as "manually defined, star-based" per the agreed design, or whether it should be a broader/more explicit "at risk" definition (e.g. also NPS-detractor-based, per the example given: "an NPS detractor score").
 
-## Phase 6 — Business-side survey builder — IN PROGRESS
+## Phase 6 — Business-side survey builder — DONE
 
-"Business-built surveys, from templates + quota" — templated, not fully freeform (start from existing templates, apply a quota mechanism). Deliberately isolated because it means loosening a rule that's currently hard and server-enforced ("survey/question configuration are Admin-only... reject writes... even if present in the request body" — CLAUDE.md's Working agreement).
+"Business-built surveys, from templates + quota" — templated, not fully freeform.
 
-**How this stays true to that rule rather than loosening it:** a business does not get to author new questions, edit question text, or touch categories — that stays exactly as Admin-only as it is today, server-enforced the same way. What a business gets is the ability to **compose** a `FeedbackPoint`'s survey from the Admin-authored `QuestionTemplate` library it's licensed to use — pick a base template, choose which of its already-existing questions to include/exclude/reorder, and set a response quota (a target number of responses, after which the point auto-closes — reusing `startsAt`/`endsAt`-style auto-close already built for Events). The underlying `QuestionTemplate.questions` array itself, and its content, remains untouched and Admin-only. This is a new `FeedbackPoint`-level field (a subset/ordering of the parent template's question ids, plus a quota number), not a loosening of `BUSINESS_ADMIN_ONLY_FIELDS` — `questionTemplateId`/`questionTemplateOverride` writes stay rejected from Business/Group API calls exactly as they are now.
+**What actually changed, and what stayed Admin-only:** before this phase, a business had zero ability to create or edit a `FeedbackPoint` at all — confirmed by reading the code, not assumed — every point was Admin-created, and `FeedbackPointRequest`'s own comment said so explicitly ("businesses can't create these themselves"). This phase adds real self-service creation (confirmed with the product owner as immediate/live, not routed through Admin approval first), but narrowly: a business picks an Admin-authored `QuestionTemplate` already available to its product(s), chooses which of that template's *existing* questions to include and in what order, sets an optional response quota, and names/describes the point. It never gets to write new question text, categories, or touch the template itself — that's enforced by construction (the create route never accepts those fields), not by a rejected-field check layered on top.
+
+**Shipped:**
+- `FeedbackPoint.selectedQuestionIds` (ordered subset of the parent template's question ids; `null` = full template, unaffected for every pre-existing point) and `FeedbackPoint.responseQuota` (auto-closes once reached, reusing the `startsAt`/`endsAt` auto-close pattern already built for Events).
+- `effectiveQuestions()` — the one function both the public GET (render) and submit (validate + persist) routes now derive their question list from, so the two routes can never disagree about what index N refers to.
+- `GET /api/business/feedback-points/templates` — read-only list of templates available to the business's product(s).
+- `POST /api/business/feedback-points` — the actual create path, enforcing the existing `maxFeedbackPoints` seat limit the same way the Admin creation route already does.
+- A "+ Build a survey" flow on the Business Feedback Points page: template picker → checkbox+reorder question list → quota → create.
 
 ## Phase 7 — OodelCX Compass (7a–7d) — NOT STARTED, unblocked
 
