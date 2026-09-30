@@ -70,7 +70,13 @@ function LadderTrack({
   return (
     <div style={{ display: "flex", gap: 4 }}>
       {LADDER_LABELS.map((label, i) => {
-        const filled = value !== null && i <= value;
+        // Cumulative fill shows "how far up the ladder" the selection sits
+        // (same convention as a star rating), but a passed rung and the
+        // actually-selected rung must never look the same state — otherwise
+        // picking "Ad hoc" reads as if "Absent" got selected too. Only the
+        // selected rung gets the solid color + checkmark; passed rungs get a
+        // light tint outline so the two states are visually unambiguous.
+        const passed = value !== null && i < value;
         const isSelected = value === i;
         return (
           <button
@@ -83,9 +89,9 @@ function LadderTrack({
               flex: 1,
               padding: "8px 4px",
               borderRadius: 6,
-              border: isSelected ? `2px solid ${LADDER_COLORS[i]}` : "1px solid var(--border)",
-              background: filled ? LADDER_COLORS[i] : "var(--bg)",
-              color: filled ? "#fff" : "var(--text-3)",
+              border: isSelected ? `2px solid ${LADDER_COLORS[i]}` : passed ? `1px solid ${LADDER_COLORS[i]}` : "1px solid var(--border)",
+              background: isSelected ? LADDER_COLORS[i] : passed ? `${LADDER_COLORS[i]}22` : "var(--bg)",
+              color: isSelected ? "#fff" : passed ? LADDER_COLORS[i] : "var(--text-3)",
               fontSize: 10.5,
               fontWeight: isSelected ? 700 : 500,
               cursor: interactive && !disabled ? "pointer" : "default",
@@ -93,7 +99,7 @@ function LadderTrack({
               lineHeight: 1.3,
             }}
           >
-            {label}
+            {isSelected ? `✓ ${label}` : label}
           </button>
         );
       })}

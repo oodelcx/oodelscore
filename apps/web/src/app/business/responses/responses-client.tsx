@@ -68,10 +68,14 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
   const [ready, setReady] = useState(false);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   function load() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), filter, sort, product });
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     fetch(`/api/business/responses?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
@@ -90,7 +94,13 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
     if (!ready) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, page, filter, sort, product]);
+  }, [ready, page, filter, sort, product, from, to]);
+
+  function changeDateRange(nextFrom: string, nextTo: string) {
+    setFrom(nextFrom);
+    setTo(nextTo);
+    setPage(1);
+  }
 
   // Account-scoped enabled products must be known BEFORE the first data
   // fetch — otherwise a Colleague-Experience-only business always starts by
@@ -211,7 +221,14 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
             {fp.name}
           </div>
         ))}
-        <select style={{ marginLeft: "auto" }} value={sort} onChange={(e) => changeSort(e.target.value as SortId)}>
+        <input type="date" style={{ marginLeft: "auto" }} value={from} onChange={(e) => changeDateRange(e.target.value, to)} />
+        <input type="date" value={to} onChange={(e) => changeDateRange(from, e.target.value)} />
+        {(from || to) && (
+          <button type="button" className="btn btn-sm" onClick={() => changeDateRange("", "")}>
+            Clear dates
+          </button>
+        )}
+        <select value={sort} onChange={(e) => changeSort(e.target.value as SortId)}>
           <option value="newest">Newest first</option>
           <option value="lowest">Lowest score first</option>
         </select>

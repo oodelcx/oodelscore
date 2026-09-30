@@ -30,6 +30,7 @@ interface FeedbackPointRow {
   effectiveFormLayout: "single_page" | "one_per_screen";
   isLayoutOverridden: boolean;
   eventName: string | null;
+  deliveryMode?: "qr" | "link" | "both";
 }
 
 const LAYOUT_LABELS: Record<string, string> = {
@@ -105,6 +106,8 @@ export default function FeedbackPointsClient() {
           product: payload.product,
           responseQuota: payload.responseQuota,
           questions: payload.questions,
+          deliveryMode: payload.deliveryMode,
+          demographicOverride: payload.demographicOverride,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -318,13 +321,20 @@ export default function FeedbackPointsClient() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <button className="btn" data-tour={isFirst ? "fp-first-qr" : undefined} style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
-                    View QR
-                  </button>
+                  {p.deliveryMode !== "link" && (
+                    <button className="btn" data-tour={isFirst ? "fp-first-qr" : undefined} style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
+                      View QR
+                    </button>
+                  )}
                   <button className="btn" style={{ flex: 1 }} onClick={openRequest}>
                     Request changes
                   </button>
                 </div>
+                {p.deliveryMode === "link" && (
+                  <p className="subtitle" style={{ marginTop: 8, marginBottom: 0 }}>
+                    Link-only — share <code>{typeof window !== "undefined" ? window.location.origin : ""}/feedback/{p.qrToken}</code>, no QR/poster for this one.
+                  </p>
+                )}
               </div>
             );
           })}

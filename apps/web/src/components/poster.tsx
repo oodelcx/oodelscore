@@ -19,7 +19,9 @@ export function Poster({ businessName, feedbackPointName, qrToken }: PosterProps
         <p className="poster-point">{feedbackPointName}</p>
         <img src={`/api/qr/${qrToken}`} alt={`QR code for ${feedbackPointName}`} className="poster-qr" width={320} height={320} />
         <p className="poster-instructions">Scan with your phone camera to share your feedback</p>
-        <div className="poster-footer">Powered by OodelCX</div>
+        <div className="poster-footer">
+          Powered by <img src="/oodelcx-logo-dark.webp" alt="OodelCX" className="poster-footer-logo" />
+        </div>
       </div>
     </div>
   );

@@ -98,12 +98,37 @@ function blankQuestion(type: QuestionType): AuthoredQuestion {
   };
 }
 
+export type DemographicMode = "off" | "optional" | "mandatory";
+export interface DemographicOverridePayload {
+  name: DemographicMode;
+  email: DemographicMode;
+  phone: DemographicMode;
+  ageGroup: DemographicMode;
+  gender: DemographicMode;
+}
+export type DeliveryMode = "qr" | "link" | "both";
+
+const DEMOGRAPHIC_FIELDS: { key: keyof DemographicOverridePayload; label: string }[] = [
+  { key: "name", label: "Name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "ageGroup", label: "Age bracket" },
+  { key: "gender", label: "Gender" },
+];
+const DEMOGRAPHIC_MODE_OPTIONS: { value: DemographicMode; label: string }[] = [
+  { value: "off", label: "Don't ask" },
+  { value: "optional", label: "Optional" },
+  { value: "mandatory", label: "Required" },
+];
+
 export interface SurveyBuilderPayload {
   name: string;
   description: string;
   product: "customer_experience" | "colleague_experience";
   responseQuota: number | null;
   questions: { text: string; type: QuestionType; required: boolean; options: string[]; categoryId: string | null; isCsatQuestion: boolean }[];
+  deliveryMode: DeliveryMode;
+  demographicOverride: DemographicOverridePayload | null;
 }
 
 interface SurveyBuilderPanelProps {
@@ -153,6 +178,15 @@ export function SurveyBuilderPanel({
     lockedProduct ?? (cxEnabled ? "customer_experience" : "colleague_experience")
   );
   const [quota, setQuota] = useState("");
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("both");
+  const [customizeDemographics, setCustomizeDemographics] = useState(false);
+  const [demographics, setDemographics] = useState<DemographicOverridePayload>({
+    name: "off",
+    email: "off",
+    phone: "off",
+    ageGroup: "off",
+    gender: "off",
+  });
   const [questions, setQuestions] = useState<AuthoredQuestion[]>([]);
   const [templates, setTemplates] = useState<TemplateOption[] | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -281,6 +315,8 @@ export function SurveyBuilderPanel({
         categoryId: q.categoryId || null,
         isCsatQuestion: q.isCsatQuestion,
       })),
+      deliveryMode,
+      demographicOverride: customizeDemographics ? demographics : null,
     });
   }
 
@@ -310,6 +346,40 @@ export function SurveyBuilderPanel({
           <label>Response quota (optional)</label>
           <input type="number" min={1} value={quota} onChange={(e) => setQuota(e.target.value)} placeholder="Unlimited" />
         </div>
+        <div className="field" style={{ maxWidth: 220 }}>
+          <label>How will this be shared?</label>
+          <select value={deliveryMode} onChange={(e) => setDeliveryMode(e.target.value as DeliveryMode)}>
+            <option value="both">Printed QR + shareable link</option>
+            <option value="qr">Printed QR only</option>
+            <option value="link">Link only (email/SMS, no QR)</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="field" style={{ marginBottom: 16 }}>
+        <label className="field-check" style={{ margin: 0 }}>
+          <input type="checkbox" checked={customizeDemographics} onChange={(e) => setCustomizeDemographics(e.target.checked)} />
+          <span>Customize respondent details for this survey (otherwise it uses the account default)</span>
+        </label>
+        {customizeDemographics && (
+          <div className="qb-demographics" style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+            {DEMOGRAPHIC_FIELDS.map((f) => (
+              <div className="field" key={f.key}>
+                <label>{f.label}</label>
+                <select
+                  value={demographics[f.key]}
+                  onChange={(e) => setDemographics((d) => ({ ...d, [f.key]: e.target.value as DemographicMode }))}
+                >
+                  {DEMOGRAPHIC_MODE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="qb-layout">

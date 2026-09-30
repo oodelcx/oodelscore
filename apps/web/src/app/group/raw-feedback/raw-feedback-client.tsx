@@ -60,6 +60,8 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
   const [branchId, setBranchId] = useState("");
   const [forbidden, setForbidden] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   // Account-scoped enabled products must be known BEFORE the first data
   // fetch — otherwise a Colleague-Experience-only account always starts by
@@ -89,6 +91,8 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
       product,
     });
     if (branchId) params.set("businessId", branchId);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     fetch(`/api/group/raw-feedback?${params.toString()}`)
       .then(async (res) => ({ ok: res.ok, data: await res.json() }))
       .then(({ ok, data }) => {
@@ -108,10 +112,16 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         });
       })
       .finally(() => setLoading(false));
-  }, [ready, page, negativeOnly, product, branchId]);
+  }, [ready, page, negativeOnly, product, branchId, from, to]);
 
   function setFilter(negative: boolean) {
     setNegativeOnly(negative);
+    setPage(1);
+  }
+
+  function changeDateRange(nextFrom: string, nextTo: string) {
+    setFrom(nextFrom);
+    setTo(nextTo);
     setPage(1);
   }
 
@@ -176,8 +186,20 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
             Negative only
           </div>
           <InfoTip text={tooltips["negative-only"]} />
+          <input
+            type="date"
+            style={{ marginLeft: branches.length > 0 ? undefined : "auto" }}
+            value={from}
+            onChange={(e) => changeDateRange(e.target.value, to)}
+          />
+          <input type="date" value={to} onChange={(e) => changeDateRange(from, e.target.value)} />
+          {(from || to) && (
+            <button type="button" className="btn btn-sm" onClick={() => changeDateRange("", "")}>
+              Clear dates
+            </button>
+          )}
           {branches.length > 0 && (
-            <select value={branchId} onChange={(e) => changeBranch(e.target.value)} style={{ marginLeft: "auto" }}>
+            <select value={branchId} onChange={(e) => changeBranch(e.target.value)}>
               <option value="">All branches</option>
               {branches.map((b) => (
                 <option key={b._id} value={b._id}>

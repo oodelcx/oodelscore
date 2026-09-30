@@ -15,7 +15,7 @@ const MAX_LIMIT = 100;
  * current page in the client would desync the page count and hide matches
  * that happen to fall outside the fetched slice.
  */
-function buildMatch(businessId: unknown, filter: string | null, product: string): Record<string, unknown> {
+function buildMatch(businessId: unknown, filter: string | null, product: string, from: Date | null, to: Date | null): Record<string, unknown> {
   const match: Record<string, unknown> = { businessId, product };
   if (filter === "negative") {
     match.answers = { $elemMatch: { type: "star_1_5", value: { $lte: 2 } } };
@@ -23,6 +23,15 @@ function buildMatch(businessId: unknown, filter: string | null, product: string)
     match.answers = { $elemMatch: { type: "open_text", value: { $regex: /\S/ } } };
   } else if (filter && filter !== "all" && mongoose.isValidObjectId(filter)) {
     match.feedbackPointId = new mongoose.Types.ObjectId(filter);
+  }
+  // No default window — Raw Feedback's real use case is often "find this
+  // one old complaint," which a default 30-day cutoff actively works
+  // against. Omitted from/to means "all time," same as before this filter existed.
+  if (from || to) {
+    const submittedAt: Record<string, Date> = {};
+    if (from) submittedAt.$gte = from;
+    if (to) submittedAt.$lte = to;
+    match.submittedAt = submittedAt;
   }
   return match;
 }
@@ -39,9 +48,13 @@ export async function GET(request: Request) {
   const productParam = searchParams.get("product");
   const product: Product = productParam && PRODUCT_SET.includes(productParam) ? (productParam as Product) : "customer_experience";
   const skip = (page - 1) * limit;
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+  const from = fromParam ? new Date(fromParam) : null;
+  const to = toParam ? new Date(toParam) : null;
 
   await connectToDatabase();
-  const match = buildMatch(session.business._id, filter, product);
+  const match = buildMatch(session.business._id, filter, product, from && !Number.isNaN(from.getTime()) ? from : null, to && !Number.isNaN(to.getTime()) ? to : null);
 
   const [total, rows, feedbackPoints, stats] = await Promise.all([
     Response.countDocuments(match),
