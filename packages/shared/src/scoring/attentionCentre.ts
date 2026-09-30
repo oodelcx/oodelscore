@@ -62,7 +62,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ALERT_WINDOW_DAYS = 3;
 const SENSITIVE_STALE_HOURS = 48;
-const AWAITING_REPLY_WINDOW_DAYS = 14;
 const NEGATIVE_STAR_THRESHOLD = 2;
 const PLAYBOOK_STALL_DAYS = 7;
 const DECISION_REVIEW_WINDOW_DAYS = 14;
@@ -209,12 +208,20 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
   // in the first place (anonymity floor), so there's nothing to reply to —
   // see ClosingLoopUpdate's own comment for that product's broadcast-only
   // mechanism instead.
-  const awaitingReplyWindowStart = new Date(now.getTime() - AWAITING_REPLY_WINDOW_DAYS * DAY_MS);
+  //
+  // Deliberately no creation-date window here (QA-flagged bug, product
+  // decision confirmed): this tracks "still unreplied," which by
+  // definition never resolves itself with time — a case sitting unreplied
+  // for 40 days is MORE overdue than one at 5, not something that should
+  // silently drop off the list once it crosses an arbitrary cutoff. It
+  // only ever leaves this list the same two ways every other queue empties
+  // — someone sends the reply (customerNotifiedAt gets set) or the case is
+  // otherwise resolved.
   const candidateCases = await ActionBoardItem.find({
     businessId: { $in: businessIds },
     product: "customer_experience",
+    status: { $ne: "resolved" },
     customerNotifiedAt: null,
-    createdAt: { $gte: awaitingReplyWindowStart },
     sourceResponseIds: { $ne: [] },
   }).select("title businessId ownerId createdAt sourceResponseIds sensitive");
 

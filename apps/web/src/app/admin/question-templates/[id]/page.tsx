@@ -36,17 +36,29 @@ function QuestionPreview({ q }: { q: QuestionRow }) {
         </div>
       )}
       {q.type === "nps_0_10" && (
-        <div className="nps-preview">
-          {Array.from({ length: 11 }, (_, n) => (
-            <span key={n}>{n}</span>
-          ))}
+        <div>
+          <div className="nps-preview">
+            {Array.from({ length: 11 }, (_, n) => (
+              <span key={n}>{n}</span>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>
+            <span>Not likely</span>
+            <span>Very likely</span>
+          </div>
         </div>
       )}
       {q.type === "ces_1_5" && (
-        <div className="nps-preview" style={{ maxWidth: 220 }}>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <span key={n}>{n}</span>
-          ))}
+        <div>
+          <div className="nps-preview" style={{ maxWidth: 220 }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <span key={n}>{n}</span>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-3)", marginTop: 2, maxWidth: 220 }}>
+            <span>Very easy</span>
+            <span>Very difficult</span>
+          </div>
         </div>
       )}
       {q.type === "yes_no" && (

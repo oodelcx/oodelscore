@@ -128,6 +128,7 @@ async function computeOwnerMetrics(businessIds: Types.ObjectId[], from: Date, to
   const cesResults = perBusiness.filter((r) => r.cesAverage !== null);
   const starCount = perBusiness.reduce((sum, r) => sum + r.starCount, 0);
   const npsCount = perBusiness.reduce((sum, r) => sum + r.npsCount, 0);
+  const csatCount = perBusiness.reduce((sum, r) => sum + r.csatCount, 0);
   const cesCount = perBusiness.reduce((sum, r) => sum + r.cesCount, 0);
 
   const [casesResolved, casesStillOpenOverdue] = await Promise.all([
@@ -158,6 +159,7 @@ async function computeOwnerMetrics(businessIds: Types.ObjectId[], from: Date, to
         : Math.round((cesResults.reduce((s, r) => s + (r.cesLowEffortPercent as number), 0) / cesResults.length) * 10) / 10,
     starCount,
     npsCount,
+    csatCount,
     cesCount,
     casesResolved,
     casesStillOpenOverdue,
