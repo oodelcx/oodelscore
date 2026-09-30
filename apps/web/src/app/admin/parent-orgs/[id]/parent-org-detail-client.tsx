@@ -47,7 +47,7 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "insights", label: "Insights", description: "AI-generated feedback insight reports." },
   { key: "analytics", label: "Analytics", description: "Trend, tag, and driver analytics dashboards." },
   { key: "alertRules", label: "Alert Rules", description: "Configurable score/volume alert thresholds and notifications." },
-  { key: "reports", label: "Reports", description: "Downloadable period reports (PDF/export)." },
+  { key: "reports", label: "Reports", description: "The Report tab inside Analytics — printable period scorecard (PDF/export)." },
   { key: "improvementInitiatives", label: "Improvement Initiatives", description: "Structured improvement-initiative tracking." },
   { key: "decisionLog", label: "Decision Log", description: "Decision log with before/after outcome measurement." },
   { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },

@@ -172,7 +172,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   "/business/analytics",
                   "/business/alert-rules",
                   "/business/alerts",
-                  "/business/reports",
                   "/business/business-value",
                 ]}
               >
@@ -206,15 +205,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                     Alerts
                   </a>
                 )}
-                {hasProduct(business, "customer_experience") &&
-                  showCx &&
-                  hasFeature(business.enabledFeatures, "reports") &&
-                  teamMemberCanAccess(user, "reports") && (
-                    <a href="/business/reports">
-                      <NavIcon name="reports" />
-                      Reports
-                    </a>
-                  )}
                 {hasFeature(business.enabledFeatures, "businessValue") &&
                   teamMemberCanAccess(user, "businessValue") &&
                   showBusinessValue && (
