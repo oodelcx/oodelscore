@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { QrModal } from "@/components/qr-modal";
 import { InfoTip } from "@/components/info-tip";
 import { useTooltips } from "@/lib/useTooltips";
@@ -21,6 +21,7 @@ interface FeedbackPointRow {
   qrToken: string;
   scans: number;
   active: boolean;
+  product?: "customer_experience" | "colleague_experience";
   hasNps: boolean;
   hasComments: boolean;
   demographics: DemographicConfig;
@@ -84,6 +85,7 @@ export default function FeedbackPointsClient() {
   const [builderError, setBuilderError] = useState<string | null>(null);
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
+  const [viewProduct, setViewProduct] = useState<"customer_experience" | "colleague_experience" | null>(null);
 
   function openBuilder() {
     setBuilderError(null);
@@ -139,6 +141,7 @@ export default function FeedbackPointsClient() {
         const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
         setCxEnabled(products.includes("customer_experience"));
         setCeEnabled(products.includes("colleague_experience"));
+        setViewProduct(d.viewProduct ?? null);
       });
   }, []);
 
@@ -221,6 +224,7 @@ export default function FeedbackPointsClient() {
             categoriesApiPath="/api/business/category-owners"
             cxEnabled={cxEnabled}
             ceEnabled={ceEnabled}
+            lockedProduct={viewProduct}
             submitting={builderSubmitting}
             error={builderError}
             onCancel={() => setBuilderOpen(false)}
@@ -266,12 +270,19 @@ export default function FeedbackPointsClient() {
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="grid grid-2">
-          {points.map((p, index) => {
+          {points
+            .filter((p) => !viewProduct || !p.product || p.product === viewProduct)
+            .map((p, index) => {
             const responses = responseCounts[p._id] ?? 0;
             const conversion = p.scans > 0 ? Math.round((responses / p.scans) * 100) : null;
             const isFirst = index === 0;
             return (
-              <div className="card" data-tour={isFirst ? "fp-first-card" : undefined} key={p._id}>
+              <div
+                className="fp-card"
+                data-tour={isFirst ? "fp-first-card" : undefined}
+                key={p._id}
+                style={{ "--fp-accent": p.active ? "var(--accent)" : "var(--text-3)" } as CSSProperties}
+              >
                 <h3>{p.name}</h3>
                 <p className="card-sub">{p.description || "—"}</p>
                 <div style={{ display: "flex", gap: 18, fontSize: 13, color: "var(--text-2)", marginBottom: 12 }}>
@@ -317,7 +328,9 @@ export default function FeedbackPointsClient() {
               </div>
             );
           })}
-          {points.length === 0 && <p className="subtitle">No feedback points yet — request one above.</p>}
+          {points.filter((p) => !viewProduct || !p.product || p.product === viewProduct).length === 0 && (
+            <p className="subtitle">No feedback points yet — request one above.</p>
+          )}
         </div>
       )}
 

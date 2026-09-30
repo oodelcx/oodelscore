@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { QrModal } from "@/components/qr-modal";
 import { SurveyBuilderPanel, type SurveyBuilderPayload } from "@/components/survey-builder";
 
@@ -18,6 +18,7 @@ interface FeedbackPointRow {
   scans: number;
   active: boolean;
   responseQuota: number | null;
+  product?: "customer_experience" | "colleague_experience";
 }
 
 /**
@@ -35,6 +36,7 @@ export default function GroupFeedbackPointsClient() {
   const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
+  const [viewProduct, setViewProduct] = useState<"customer_experience" | "colleague_experience" | null>(null);
 
   const [builderOpen, setBuilderOpen] = useState(false);
   const [businessId, setBusinessId] = useState("");
@@ -58,6 +60,7 @@ export default function GroupFeedbackPointsClient() {
         const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
         setCxEnabled(products.includes("customer_experience"));
         setCeEnabled(products.includes("colleague_experience"));
+        setViewProduct(d.viewProduct ?? null);
       });
   }, []);
 
@@ -137,6 +140,7 @@ export default function GroupFeedbackPointsClient() {
             categoriesApiPath="/api/group/category-owners"
             cxEnabled={cxEnabled}
             ceEnabled={ceEnabled}
+            lockedProduct={viewProduct}
             submitting={builderSubmitting}
             error={builderError}
             onCancel={() => setBuilderOpen(false)}
@@ -145,26 +149,43 @@ export default function GroupFeedbackPointsClient() {
         </div>
       )}
 
-      {points.length === 0 ? (
-        <p className="subtitle">No feedback points yet — build one above.</p>
-      ) : (
-        <div className="grid grid-2">
-          {points.map((p) => (
-            <div className="card" key={p._id}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <h3 style={{ margin: 0 }}>{p.name}</h3>
-                <span className={`pill ${p.active ? "pill-accent" : "pill-gray"}`}>{p.active ? "Active" : "Inactive"}</span>
+      {(() => {
+        const visiblePoints = points.filter((p) => !viewProduct || !p.product || p.product === viewProduct);
+        if (visiblePoints.length === 0) {
+          return <p className="subtitle">No feedback points yet — build one above.</p>;
+        }
+        return (
+          <div className="grid grid-2">
+            {visiblePoints.map((p) => (
+              <div
+                className="fp-card"
+                key={p._id}
+                style={{ "--fp-accent": p.active ? "var(--accent)" : "var(--text-3)" } as CSSProperties}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <h3 style={{ margin: 0 }}>{p.name}</h3>
+                  <span className={`pill ${p.active ? "pill-accent" : "pill-gray"}`}>{p.active ? "Active" : "Inactive"}</span>
+                </div>
+                <span className="pill pill-blue" style={{ marginTop: 6, display: "inline-block" }}>
+                  {p.businessName}
+                </span>
+                {p.description && (
+                  <p className="card-sub" style={{ marginTop: 8 }}>
+                    {p.description}
+                  </p>
+                )}
+                <div style={{ display: "flex", gap: 18, fontSize: 13, color: "var(--text-2)", margin: "10px 0 14px" }}>
+                  <div>{p.scans} scans</div>
+                  {p.responseQuota !== null && <div>quota {p.responseQuota}</div>}
+                </div>
+                <button className="btn btn-sm" style={{ width: "100%" }} onClick={() => setQrPoint(p)}>
+                  View QR
+                </button>
               </div>
-              <p className="card-sub">{p.businessName}</p>
-              {p.description && <p className="card-sub">{p.description}</p>}
-              <div style={{ fontSize: 13, color: "var(--text-2)", marginBottom: 10 }}>{p.scans} scans</div>
-              <button className="btn btn-sm" onClick={() => setQrPoint(p)}>
-                View QR
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
 
       {qrPoint && (
         <QrModal
