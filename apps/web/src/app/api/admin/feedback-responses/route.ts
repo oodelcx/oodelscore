@@ -21,7 +21,13 @@ import { requireStaffSession } from "@/lib/adminAuth";
 export async function GET(request: Request) {
   const session = await requireStaffSession();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
-  const permission = session.role.permissions.businesses;
+  // Raw customer feedback is gated by its own permission key (OBS9),
+  // deliberately decoupled from `businesses.view` — a role that manages
+  // business records shouldn't automatically also see every customer's raw
+  // comments, and vice versa. Falls back to `businesses` for any role saved
+  // before this key existed, so existing access isn't silently revoked
+  // until someone explicitly reconfigures it in Roles & Permissions.
+  const permission = session.role.permissions.feedbackResponses ?? session.role.permissions.businesses;
   if (!permission.view) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
