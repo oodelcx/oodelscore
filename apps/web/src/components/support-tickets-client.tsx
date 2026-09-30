@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 interface Ticket {
   _id: string;
-  category: "billing" | "bug" | "access" | "other";
+  category: "billing" | "bug" | "access" | "feedback_point_request" | "other";
   subject: string;
   body: string;
   status: "open" | "in_progress" | "resolved";
@@ -16,8 +16,16 @@ const CATEGORY_LABELS: Record<Ticket["category"], string> = {
   billing: "Billing question",
   bug: "Something's broken",
   access: "Access / login issue",
+  feedback_point_request: "Feedback point request",
   other: "Other",
 };
+// Feedback point requests are submitted from the Feedback Points page's own
+// "Request a feedback point" flow, not from this generic form — so it's
+// left out of the picker even though existing tickets in that category
+// still render correctly in the table below.
+const SELECTABLE_CATEGORIES = (Object.keys(CATEGORY_LABELS) as Ticket["category"][]).filter(
+  (c) => c !== "feedback_point_request"
+);
 const STATUS_LABELS: Record<Ticket["status"], string> = {
   open: "Open",
   in_progress: "In progress",
@@ -95,7 +103,7 @@ export default function SupportTicketsClient({ apiBase }: { apiBase: string }) {
           <div className="field">
             <label>Category</label>
             <select value={category} onChange={(e) => setCategory(e.target.value as Ticket["category"])}>
-              {(Object.keys(CATEGORY_LABELS) as Ticket["category"][]).map((c) => (
+              {SELECTABLE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {CATEGORY_LABELS[c]}
                 </option>

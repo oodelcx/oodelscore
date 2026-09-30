@@ -8,7 +8,7 @@ interface Ticket {
   ownerId: string;
   ownerName: string;
   submittedByEmail: string;
-  category: "billing" | "bug" | "access" | "other";
+  category: "billing" | "bug" | "access" | "feedback_point_request" | "other";
   subject: string;
   body: string;
   status: "open" | "in_progress" | "resolved";
@@ -20,6 +20,7 @@ const CATEGORY_LABELS: Record<Ticket["category"], string> = {
   billing: "Billing question",
   bug: "Something's broken",
   access: "Access / login issue",
+  feedback_point_request: "Feedback point request",
   other: "Other",
 };
 const STATUS_LABELS: Record<Ticket["status"], string> = {
@@ -136,6 +137,13 @@ export default function SupportQueuePage() {
                           <br />
                           {t.body}
                         </p>
+                        {t.category === "feedback_point_request" && t.ownerType === "business" && (
+                          <p>
+                            <a className="btn btn-sm" href={`/admin/businesses/${t.ownerId}?tab=feedback-points`}>
+                              Build this business&rsquo;s feedback point →
+                            </a>
+                          </p>
+                        )}
                         <div className="field-row">
                           <div className="field">
                             <label>Status</label>

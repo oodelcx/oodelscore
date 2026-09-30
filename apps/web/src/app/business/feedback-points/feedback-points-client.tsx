@@ -157,10 +157,14 @@ export default function FeedbackPointsClient() {
     setRequestSubmitting(true);
     setRequestError(null);
     try {
-      const res = await fetch("/api/business/feedback-points/request", {
+      const res = await fetch("/api/business/support-tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: requestNote.trim() }),
+        body: JSON.stringify({
+          category: "feedback_point_request",
+          subject: "Feedback point request",
+          body: requestNote.trim() || "(no note given)",
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.status !== "ok") {

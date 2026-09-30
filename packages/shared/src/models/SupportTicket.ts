@@ -1,7 +1,7 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { BILLING_OWNER_TYPES, type BillingOwnerType } from "./BillingSubscription";
 
-export const SUPPORT_TICKET_CATEGORIES = ["billing", "bug", "access", "other"] as const;
+export const SUPPORT_TICKET_CATEGORIES = ["billing", "bug", "access", "feedback_point_request", "other"] as const;
 export type SupportTicketCategory = (typeof SUPPORT_TICKET_CATEGORIES)[number];
 
 export const SUPPORT_TICKET_STATUSES = ["open", "in_progress", "resolved"] as const;

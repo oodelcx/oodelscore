@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, SupportTicket, SUPPORT_TICKET_CATEGORIES, sendTemplatedEmail } from "@oodelscore/shared";
+import { connectToDatabase, SupportTicket, SUPPORT_TICKET_CATEGORIES, sendTemplatedEmail, User } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 const CATEGORY_SET: readonly string[] = SUPPORT_TICKET_CATEGORIES;
@@ -45,16 +45,34 @@ export async function POST(request: Request) {
     body: ticketBody,
   });
 
-  const notifyTo = process.env.SUPPORT_QUEUE_NOTIFY_EMAIL ?? process.env.CONTACT_FORM_NOTIFY_EMAIL ?? "hello@oodelscore.com";
   const appUrl = process.env.APP_URL ?? "";
-  await sendTemplatedEmail("support_ticket_created", notifyTo, {
-    account_name: session.business.name,
-    submitter_email: session.user.email,
-    category,
-    subject,
-    body: ticketBody,
-    ticket_link: appUrl ? `${appUrl}/admin/support-queue` : "/admin/support-queue",
-  }).catch((err) => console.error("[support-tickets] notification email failed", err));
+  if (category === "feedback_point_request") {
+    // A feedback point request has always routed to this business's own
+    // account manager first (they know the account/survey history), falling
+    // back to the generic admin inbox only when none is assigned — unlike
+    // every other ticket category, which always goes to the flat support
+    // queue inbox.
+    let notifyTo = process.env.ADMIN_NOTIFICATION_EMAIL ?? "hello@oodelscore.com";
+    if (session.business.accountManagerId) {
+      const manager = await User.findById(session.business.accountManagerId);
+      if (manager?.email) notifyTo = manager.email;
+    }
+    await sendTemplatedEmail("feedback_point_request", notifyTo, {
+      business_name: session.business.name,
+      requester_email: session.user.email,
+      note: ticketBody,
+    }).catch((err) => console.error("[support-tickets] feedback_point_request notification failed", err));
+  } else {
+    const notifyTo = process.env.SUPPORT_QUEUE_NOTIFY_EMAIL ?? process.env.CONTACT_FORM_NOTIFY_EMAIL ?? "hello@oodelscore.com";
+    await sendTemplatedEmail("support_ticket_created", notifyTo, {
+      account_name: session.business.name,
+      submitter_email: session.user.email,
+      category,
+      subject,
+      body: ticketBody,
+      ticket_link: appUrl ? `${appUrl}/admin/support-queue` : "/admin/support-queue",
+    }).catch((err) => console.error("[support-tickets] notification email failed", err));
+  }
 
   return NextResponse.json({ status: "ok", ticket }, { status: 201 });
 }
