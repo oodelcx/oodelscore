@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 interface CategoryRow {
   _id: string;
   name: string;
+  product?: "customer_experience" | "colleague_experience";
 }
 interface MappingRow {
   categoryId: string;
@@ -183,7 +184,18 @@ export default function GroupCategoryOwnersPage() {
           <tbody>
             {categories.map((c, index) => (
               <tr key={c._id}>
-                <td>{c.name}</td>
+                <td>
+                  {c.name}
+                  {/* This list covers every enabled product's categories at once (an org-wide
+                      mapping, not scoped to whichever tab is active) — the badge is what keeps a
+                      Customer Experience category from reading as unlabeled next to a Colleague
+                      Experience one. */}
+                  {c.product && (
+                    <span className={`pill ${c.product === "colleague_experience" ? "pill-blue" : ""}`} style={{ marginLeft: 8, fontSize: 10.5 }}>
+                      {c.product === "colleague_experience" ? "Colleague" : "Customer"}
+                    </span>
+                  )}
+                </td>
                 <td data-tour={index === 0 ? "cat-owners-first-select" : undefined}>
                   <select
                     value={mappings[c._id]?.defaultOwnerId ?? ""}

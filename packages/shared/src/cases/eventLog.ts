@@ -45,6 +45,7 @@ const KIND_LABEL: Record<CaseEventKind, (from: string | null, to: string | null)
   priority_changed: (from, to) => `Priority changed${from ? ` from ${from}` : ""} to ${to ?? ""}`,
   owner_changed: (_from, to) => (to ? `Reassigned to ${to}` : "Unassigned"),
   customer_notified: () => "Customer notified — reply sent",
+  comment_added: () => "Comment added",
 };
 
 /**

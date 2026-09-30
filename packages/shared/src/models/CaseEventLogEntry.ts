@@ -12,7 +12,7 @@ import mongoose, { Schema, model, type Model, type Types } from "mongoose";
  * covers the gap those two don't: a case's status/priority/owner had no
  * record of WHEN or BY WHOM it changed, only its current value.
  */
-export const CASE_EVENT_KINDS = ["status_changed", "priority_changed", "owner_changed", "customer_notified"] as const;
+export const CASE_EVENT_KINDS = ["status_changed", "priority_changed", "owner_changed", "customer_notified", "comment_added"] as const;
 export type CaseEventKind = (typeof CASE_EVENT_KINDS)[number];
 
 export interface ICaseEventLogEntry {

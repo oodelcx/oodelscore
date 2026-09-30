@@ -489,6 +489,8 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     totalResponses: number;
     starAverage: number | null;
     npsScore: number | null;
+    csatPercent: number | null;
+    cesAverage: number | null;
     comparisons: { week: Comparison; month: Comparison; quarter: Comparison; year: Comparison };
     trend: TrendPoint[];
     distribution: { highPercent: number; midPercent: number; lowPercent: number };
@@ -1271,6 +1273,17 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                   <div className="metric-val" style={{ fontSize: 18 }}>
                     {performance.cxPulseLevel ? `Level ${performance.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[performance.cxPulseLevel]}` : "Not yet scored"}
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-2" style={{ marginBottom: 20 }}>
+                <div className="card">
+                  <div className="metric-label">CSAT</div>
+                  <div className="metric-val">{performance.csatPercent !== null ? `${performance.csatPercent}%` : "—"}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">CES</div>
+                  <div className="metric-val">{performance.cesAverage !== null ? `${performance.cesAverage}/5` : "—"}</div>
                 </div>
               </div>
 

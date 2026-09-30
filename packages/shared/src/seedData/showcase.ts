@@ -1087,6 +1087,12 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       targetValue: params.measured ? params.measured.after + 0.2 : 4.2,
       startedAt: params.flagStatus === "dismissed" ? null : daysAgo(Math.min(...params.comments.map((c) => c.daysAgoCreated))),
       completedAt: params.measured ? daysAgo(2) : null,
+      // Backdated the same way ActionBoardItem.create() above is (QA Major
+      // #6a) — Mongoose otherwise defaults this to "now" on insert, which
+      // meant a freshly-reseeded "planned" initiative could never be older
+      // than attentionCentre.ts's 14-day INITIATIVE_STALL_DAYS threshold and
+      // so could never actually surface an initiative_not_started item.
+      createdAt: daysAgo(Math.max(...params.comments.map((c) => c.daysAgoCreated))),
     });
     result.improvementInitiatives++;
 

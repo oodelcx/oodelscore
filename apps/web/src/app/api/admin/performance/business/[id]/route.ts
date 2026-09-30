@@ -64,6 +64,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     totalResponses: overall.responseCount,
     starAverage: overall.starAverage,
     npsScore: overall.npsScore,
+    csatPercent: overall.csatPercent,
+    cesAverage: overall.cesAverage,
     comparisons,
     trend,
     distribution,
