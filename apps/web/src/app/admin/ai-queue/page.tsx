@@ -6,6 +6,7 @@ interface ReportRow {
   _id: string;
   ownerName: string;
   ownerType: string;
+  product: "customer_experience" | "colleague_experience";
   period: string;
   periodStart: string;
   periodEnd: string;
@@ -133,6 +134,7 @@ export default function AiInsightsQueuePage() {
             <div className="page-head" style={{ marginBottom: 10 }}>
               <div className="btn-group">
                 <span className="pill pill-purple">{r.ownerName}</span>
+                <span className="pill pill-blue">{r.product === "colleague_experience" ? "Colleague" : "Customer"}</span>
                 <span
                   className={`pill ${r.status === "approved" ? "pill-green" : r.status === "rejected" ? "pill-red" : "pill-amber"}`}
                 >
