@@ -6,13 +6,13 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
  * Mostly view-only for the Business portal (per the mockup): a business
  * sees its feedback points and can request Admin-side changes it can't
  * make itself (see .../request). The one thing it CAN do itself, as of
- * PRODUCT-ROADMAP.md Phase 6, is create a new point via POST below — but
- * only by composing from an Admin-authored QuestionTemplate's own already-
- * existing questions, never by writing new question text/categories.
- * Everything Admin-only about a feedback point (which template a business
- * defaults to, formLayoutOverride, demographicOverride, event linkage)
- * stays exactly as Admin-only as it's always been — see the admin creation
- * path at /api/admin/businesses/[id]/feedback-points for that route.
+ * PRODUCT-ROADMAP.md Phase 6, is create a new point via POST below — a
+ * real survey builder: any question text, any QUESTION_TYPES, optionally
+ * starting from a copy of an Admin template as a first draft. Everything
+ * else Admin-only about a feedback point (formLayoutOverride,
+ * demographicOverride, event linkage) stays exactly as Admin-only as it's
+ * always been — see the admin creation path at
+ * /api/admin/businesses/[id]/feedback-points for that route.
  *
  * Self-service building is standalone-business-only. A branch never gets
  * this itself — the product owner's explicit call was "don't give survey
@@ -49,9 +49,11 @@ export async function GET() {
   const templatesById = new Map(templates.map((t) => [t._id.toString(), t]));
 
   const feedbackPoints = points.map((p) => {
+    const hasCustomQuestions = !!p.customQuestions && p.customQuestions.length > 0;
     const templateId = (p.questionTemplateOverride ?? session.business.questionTemplateId)?.toString() ?? null;
-    const template = templateId ? templatesById.get(templateId) : null;
-    const types = new Set(template?.questions.map((q) => q.type) ?? []);
+    const template = !hasCustomQuestions && templateId ? templatesById.get(templateId) : null;
+    const questions = hasCustomQuestions ? p.customQuestions! : (template?.questions ?? []);
+    const types = new Set(questions.map((q) => q.type));
     const demographics: IDemographicConfig = p.demographicOverride ?? session.business.demographicConfig;
 
     return {
@@ -65,7 +67,7 @@ export async function GET() {
       // each point can override the template/layout independently), so
       // the Feedback Points page shows the effective value per point
       // instead of a separate settings screen.
-      templateName: template?.name ?? "No template configured",
+      templateName: hasCustomQuestions ? "Custom survey" : (template?.name ?? "No template configured"),
       isTemplateOverridden: !!p.questionTemplateOverride,
       effectiveFormLayout: p.formLayoutOverride ?? "single_page",
       isLayoutOverridden: !!p.formLayoutOverride,
@@ -77,14 +79,11 @@ export async function GET() {
 
 /**
  * The business-side survey builder's create path — standalone businesses
- * only (see this file's top comment). Deliberately narrow even for those:
- * name/description are the business's own to set, but the survey itself is
- * always composed FROM an Admin-authored template already available to
- * this business's product(s) — a chosen subset of that template's own
- * question ids, in whatever order the business picked. There is no field
- * here for question text, type, or category: those stay Admin-only,
- * enforced by construction (this route never accepts them) rather than by
- * a rejected-field check.
+ * only (see this file's top comment). name/description/product are the
+ * business's own to set, and so is every question: real text, any of the
+ * QUESTION_TYPES, its own options/required/category — validated and
+ * normalized by buildFeedbackPointFromTemplate, which also enforces the
+ * account's plan cap and enabled products.
  */
 export async function POST(request: Request) {
   const session = await requireBusinessOwner({ requirePage: "feedbackPoints" });

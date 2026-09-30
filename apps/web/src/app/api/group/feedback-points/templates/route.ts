@@ -18,7 +18,14 @@ export async function GET() {
       _id: t._id,
       name: t.name,
       product: t.product,
-      questions: t.questions.map((q) => ({ _id: q._id, text: q.text, type: q.type, required: q.required })),
+      questions: t.questions.map((q) => ({
+        _id: q._id,
+        text: q.text,
+        type: q.type,
+        required: q.required,
+        options: q.options,
+        categoryId: q.categoryId,
+      })),
     })),
   });
 }

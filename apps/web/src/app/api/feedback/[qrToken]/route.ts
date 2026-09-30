@@ -67,9 +67,13 @@ async function handleGet(request: NextRequest, qrToken: string) {
     });
   }
 
+  // A point built through the real survey builder carries its own fully
+  // authored question set and needs no template at all — see
+  // effectiveQuestions()'s own doc comment for the full priority order.
+  const hasCustomQuestions = !!feedbackPoint.customQuestions && feedbackPoint.customQuestions.length > 0;
   const templateId = feedbackPoint.questionTemplateOverride ?? business.questionTemplateId;
-  const template = templateId ? await QuestionTemplate.findById(templateId) : null;
-  if (!template) {
+  const template = !hasCustomQuestions && templateId ? await QuestionTemplate.findById(templateId) : null;
+  if (!hasCustomQuestions && !template) {
     return NextResponse.json({ status: "error", message: "No survey is configured for this link yet" }, { status: 404 });
   }
 
@@ -107,7 +111,7 @@ async function handleGet(request: NextRequest, qrToken: string) {
     groupTag: groupTag ? `Part of ${groupTag}` : null,
     formLayout,
     demographicConfig,
-    questions: effectiveQuestions(feedbackPoint, template).map((q, index) => ({
+    questions: effectiveQuestions(feedbackPoint, template ?? { questions: [] }).map((q, index) => ({
       index,
       text: q.text,
       type: q.type,

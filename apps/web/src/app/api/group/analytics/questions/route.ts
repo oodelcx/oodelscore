@@ -17,22 +17,20 @@ export async function GET() {
   await connectToDatabase();
   const businesses = await Business.find({ parentOrgId: session.org._id }).select("_id questionTemplateId");
   const businessIds = businesses.map((b) => b._id);
-  const overrideIds = await FeedbackPoint.find({ businessId: { $in: businessIds }, questionTemplateOverride: { $ne: null } }).distinct(
-    "questionTemplateOverride"
-  );
+  const points = await FeedbackPoint.find({ businessId: { $in: businessIds } }).select("questionTemplateOverride customQuestions");
+  const overrideIds = points.map((p) => p.questionTemplateOverride).filter((id): id is NonNullable<typeof id> => !!id);
   const templateIds = [...businesses.map((b) => b.questionTemplateId), ...overrideIds].filter((id): id is NonNullable<typeof id> => !!id);
   const templates = await QuestionTemplate.find({ _id: { $in: templateIds } });
 
   const questions: { _id: string; text: string; type: string; categoryId: string | null }[] = [];
   const seen = new Set<string>();
-  for (const template of templates) {
-    for (const q of template.questions) {
-      if (!q._id || !NUMERIC_QUESTION_TYPES.includes(q.type)) continue;
-      const key = q._id.toString();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      questions.push({ _id: key, text: q.text, type: q.type, categoryId: q.categoryId?.toString() ?? null });
-    }
+  const allQuestions = [...templates.flatMap((t) => t.questions), ...points.flatMap((p) => p.customQuestions ?? [])];
+  for (const q of allQuestions) {
+    if (!q._id || !NUMERIC_QUESTION_TYPES.includes(q.type)) continue;
+    const key = q._id.toString();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    questions.push({ _id: key, text: q.text, type: q.type, categoryId: q.categoryId?.toString() ?? null });
   }
 
   return NextResponse.json({ status: "ok", questions });

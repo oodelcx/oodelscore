@@ -56,6 +56,12 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   const isGated = billingStatus !== "active" && !isBillingRoute;
   const bothProductsEnabled = hasProduct(org, "customer_experience") && hasProduct(org, "colleague_experience");
   const viewProduct = bothProductsEnabled ? await resolveViewProduct(org) : null;
+  // Single-product-only nav items (Insights/Analytics/Reports are CX-only;
+  // Closing the Loop is CE-only) must also respect which tab is actually
+  // active on a dual-product account — see business/layout.tsx's identical
+  // comment for the bug this fixes.
+  const showCx = !bothProductsEnabled || viewProduct === "customer_experience";
+  const showCe = !bothProductsEnabled || viewProduct === "colleague_experience";
   // Which product "CX Pulse" in the nav should point at — the two pages
   // (the CX maturity ladder and its Colleague Experience analogue) share
   // the one label per the branding rule (CX means whichever product you're
@@ -135,6 +141,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 ]}
               >
                 {hasProduct(org, "customer_experience") &&
+                  showCx &&
                   hasFeature(org.enabledFeatures, "insights") &&
                   teamMemberCanAccess(user, "insights") && (
                     <a href="/group/insights">
@@ -143,6 +150,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     </a>
                   )}
                 {hasProduct(org, "customer_experience") &&
+                  showCx &&
                   hasFeature(org.enabledFeatures, "analytics") &&
                   teamMemberCanAccess(user, "analytics") && (
                     <a href="/group/analytics">
@@ -163,6 +171,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   </a>
                 )}
                 {hasProduct(org, "customer_experience") &&
+                  showCx &&
                   hasFeature(org.enabledFeatures, "reports") &&
                   teamMemberCanAccess(user, "reports") && (
                     <a href="/group/reports">
@@ -214,6 +223,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   </a>
                 )}
                 {hasProduct(org, "colleague_experience") &&
+                  showCe &&
                   hasFeature(org.enabledFeatures, "closingLoop") &&
                   teamMemberCanAccess(user, "closingLoop") && (
                     <a href="/group/closing-the-loop">

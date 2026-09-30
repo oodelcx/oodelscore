@@ -8,9 +8,9 @@ import { requireParentOrgOwner } from "@/lib/ownerAuth";
  * survey building to branches, else every branch ends up with its own
  * survey" — so this is the one place a new point gets built for any branch
  * in the org, keeping the org's surveys consistent instead of drifting
- * branch by branch. Same composition rule as the standalone-business
- * route: pick an Admin-authored template, choose which of its existing
- * questions to include, set a quota — never write new question content.
+ * branch by branch. Same real question-authoring builder as the
+ * standalone-business route: any text, any QUESTION_TYPES, optionally
+ * seeded from a copy of an Admin template, set a quota.
  */
 export async function GET() {
   const session = await requireParentOrgOwner({ requirePage: "feedbackPoints" });

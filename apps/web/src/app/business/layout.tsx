@@ -68,6 +68,14 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const isGated = billingStatus !== "active" && !isBillingRoute;
   const bothProductsEnabled = hasProduct(business, "customer_experience") && hasProduct(business, "colleague_experience");
   const viewProduct = bothProductsEnabled ? await resolveViewProduct(business) : null;
+  // Single-product-only nav items (Roster is CE-only; Insights/Analytics/
+  // Reports/Closing the Loop are CX- or CE-only) must also respect which
+  // tab is actually active on a dual-product account — hasProduct() alone
+  // only says the account has that product at all, so without this a
+  // Colleague-only page like Roster kept showing while viewing the
+  // Customer Experience tab.
+  const showCx = !bothProductsEnabled || viewProduct === "customer_experience";
+  const showCe = !bothProductsEnabled || viewProduct === "colleague_experience";
   // See group/layout.tsx for the same reasoning: "CX Pulse" is one nav
   // entry that points at whichever product's maturity page you're viewing,
   // never two identically-labeled entries at once.
@@ -118,7 +126,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                     Category Owners
                   </a>
                 )}
-                {hasProduct(business, "colleague_experience") && teamMemberCanAccess(user, "colleagueRoster") && (
+                {hasProduct(business, "colleague_experience") && showCe && teamMemberCanAccess(user, "colleagueRoster") && (
                   <a href="/business/roster">
                     <NavIcon name="roster" />
                     Roster
@@ -148,6 +156,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 ]}
               >
                 {hasProduct(business, "customer_experience") &&
+                  showCx &&
                   hasFeature(business.enabledFeatures, "insights") &&
                   teamMemberCanAccess(user, "insights") && (
                     <a href="/business/insights">
@@ -156,6 +165,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                     </a>
                   )}
                 {hasProduct(business, "customer_experience") &&
+                  showCx &&
                   hasFeature(business.enabledFeatures, "analytics") &&
                   teamMemberCanAccess(user, "analytics") && (
                     <a href="/business/analytics">
@@ -176,6 +186,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   </a>
                 )}
                 {hasProduct(business, "customer_experience") &&
+                  showCx &&
                   hasFeature(business.enabledFeatures, "reports") &&
                   teamMemberCanAccess(user, "reports") && (
                     <a href="/business/reports">
@@ -228,6 +239,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   </a>
                 )}
                 {hasProduct(business, "colleague_experience") &&
+                  showCe &&
                   hasFeature(business.enabledFeatures, "closingLoop") &&
                   teamMemberCanAccess(user, "closingLoop") && (
                     <a href="/business/closing-the-loop">

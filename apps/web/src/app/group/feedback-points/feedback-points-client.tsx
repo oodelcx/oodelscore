@@ -2,19 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { QrModal } from "@/components/qr-modal";
+import { SurveyBuilderPanel, type SurveyBuilderPayload } from "@/components/survey-builder";
 
-interface TemplateQuestion {
-  _id: string;
-  text: string;
-  type: string;
-  required: boolean;
-}
-interface TemplateOption {
-  _id: string;
-  name: string;
-  product: string;
-  questions: TemplateQuestion[];
-}
 interface BranchOption {
   _id: string;
   name: string;
@@ -38,25 +27,19 @@ interface FeedbackPointRow {
  * capability themselves (see the business route's own comment): the org
  * owner builds here, on behalf of whichever branch needs a new point, so
  * surveys stay consistent across the network instead of drifting branch by
- * branch.
+ * branch. Same real question-authoring builder as the Business portal.
  */
 export default function GroupFeedbackPointsClient() {
   const [points, setPoints] = useState<FeedbackPointRow[] | null>(null);
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
 
   const [builderOpen, setBuilderOpen] = useState(false);
   const [businessId, setBusinessId] = useState("");
-  const [templates, setTemplates] = useState<TemplateOption[] | null>(null);
-  const [templateId, setTemplateId] = useState("");
-  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
-  const [builderName, setBuilderName] = useState("");
-  const [builderDescription, setBuilderDescription] = useState("");
-  const [builderQuota, setBuilderQuota] = useState("");
   const [builderSubmitting, setBuilderSubmitting] = useState(false);
   const [builderError, setBuilderError] = useState<string | null>(null);
-
-  const selectedTemplate = templates?.find((t) => t._id === templateId) ?? null;
 
   function load() {
     fetch("/api/group/feedback-points")
@@ -67,59 +50,27 @@ export default function GroupFeedbackPointsClient() {
       });
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.org?.enabledProducts ?? ["customer_experience"];
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
+      });
+  }, []);
 
   function openBuilder() {
     setBuilderError(null);
     setBuilderOpen(true);
     if (branches.length > 0 && !businessId) setBusinessId(branches[0]._id);
-    if (!templates) {
-      fetch("/api/group/feedback-points/templates")
-        .then((r) => r.json())
-        .then((d) => {
-          const list: TemplateOption[] = d.templates ?? [];
-          setTemplates(list);
-          if (list.length > 0) {
-            setTemplateId(list[0]._id);
-            setSelectedQuestionIds(list[0].questions.map((q) => q._id));
-          }
-        });
-    }
   }
 
-  function chooseTemplate(id: string) {
-    setTemplateId(id);
-    const t = templates?.find((tt) => tt._id === id);
-    setSelectedQuestionIds(t ? t.questions.map((q) => q._id) : []);
-  }
-
-  function toggleQuestion(id: string) {
-    setSelectedQuestionIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
-  }
-
-  function moveQuestion(id: string, dir: -1 | 1) {
-    setSelectedQuestionIds((ids) => {
-      const index = ids.indexOf(id);
-      const target = index + dir;
-      if (index === -1 || target < 0 || target >= ids.length) return ids;
-      const copy = [...ids];
-      [copy[index], copy[target]] = [copy[target], copy[index]];
-      return copy;
-    });
-  }
-
-  async function submitBuilder() {
+  async function submitBuilder(payload: SurveyBuilderPayload) {
     setBuilderError(null);
     if (!businessId) {
       setBuilderError("Pick a branch");
-      return;
-    }
-    if (!builderName.trim()) {
-      setBuilderError("Name is required");
-      return;
-    }
-    if (selectedQuestionIds.length === 0) {
-      setBuilderError("Pick at least one question");
       return;
     }
     setBuilderSubmitting(true);
@@ -129,11 +80,11 @@ export default function GroupFeedbackPointsClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           businessId,
-          name: builderName.trim(),
-          description: builderDescription.trim(),
-          templateId,
-          selectedQuestionIds,
-          responseQuota: builderQuota.trim() ? Number(builderQuota) : null,
+          name: payload.name,
+          description: payload.description,
+          product: payload.product,
+          responseQuota: payload.responseQuota,
+          questions: payload.questions,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -141,9 +92,6 @@ export default function GroupFeedbackPointsClient() {
         throw new Error(data.message || "Couldn't create this feedback point. Please try again.");
       }
       setBuilderOpen(false);
-      setBuilderName("");
-      setBuilderDescription("");
-      setBuilderQuota("");
       load();
     } catch (err) {
       setBuilderError(err instanceof Error ? err.message : "Couldn't create this feedback point. Please try again.");
@@ -174,7 +122,7 @@ export default function GroupFeedbackPointsClient() {
       {builderOpen && (
         <div className="card" style={{ marginBottom: 18 }}>
           <h3>Build a survey</h3>
-          <div className="field" style={{ maxWidth: 420 }}>
+          <div className="field" style={{ maxWidth: 420, marginBottom: 8 }}>
             <label>Branch</label>
             <select value={businessId} onChange={(e) => setBusinessId(e.target.value)}>
               {branches.map((b) => (
@@ -184,95 +132,16 @@ export default function GroupFeedbackPointsClient() {
               ))}
             </select>
           </div>
-          {templates === null && <p className="subtitle">Loading templates…</p>}
-          {templates !== null && templates.length === 0 && (
-            <p className="subtitle">No survey templates are available on your account yet.</p>
-          )}
-          {templates !== null && templates.length > 0 && (
-            <>
-              <div className="field" style={{ maxWidth: 420 }}>
-                <label>Name</label>
-                <input
-                  type="text"
-                  value={builderName}
-                  onChange={(e) => setBuilderName(e.target.value)}
-                  placeholder="e.g. Front Desk QR"
-                />
-              </div>
-              <div className="field" style={{ maxWidth: 420 }}>
-                <label>Description (optional)</label>
-                <input type="text" value={builderDescription} onChange={(e) => setBuilderDescription(e.target.value)} />
-              </div>
-              <div className="field" style={{ maxWidth: 420 }}>
-                <label>Template</label>
-                <select value={templateId} onChange={(e) => chooseTemplate(e.target.value)}>
-                  {templates.map((t) => (
-                    <option key={t._id} value={t._id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedTemplate && (
-                <div className="field" style={{ maxWidth: 480 }}>
-                  <label>Questions — check the ones to ask, reorder with the arrows</label>
-                  {selectedTemplate.questions.map((q) => {
-                    const checked = selectedQuestionIds.includes(q._id);
-                    const orderIndex = selectedQuestionIds.indexOf(q._id);
-                    return (
-                      <div
-                        key={q._id}
-                        style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}
-                      >
-                        <input type="checkbox" checked={checked} onChange={() => toggleQuestion(q._id)} />
-                        <span style={{ flex: 1, fontSize: 13 }}>
-                          {q.text}
-                          {q.required && <span style={{ color: "var(--red)" }}> *</span>}
-                        </span>
-                        {checked && (
-                          <>
-                            <button className="icon-btn btn-sm" onClick={() => moveQuestion(q._id, -1)} disabled={orderIndex === 0}>
-                              ↑
-                            </button>
-                            <button
-                              className="icon-btn btn-sm"
-                              onClick={() => moveQuestion(q._id, 1)}
-                              disabled={orderIndex === selectedQuestionIds.length - 1}
-                            >
-                              ↓
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="field" style={{ maxWidth: 260 }}>
-                <label>Response quota (optional)</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={builderQuota}
-                  onChange={(e) => setBuilderQuota(e.target.value)}
-                  placeholder="Leave blank for unlimited"
-                />
-                <div className="field-hint">This point auto-closes once it collects this many responses.</div>
-              </div>
-
-              {builderError && <p className="error-text">{builderError}</p>}
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="btn btn-dark" onClick={submitBuilder} disabled={builderSubmitting}>
-                  {builderSubmitting ? "Creating…" : "Create feedback point"}
-                </button>
-                <button className="btn" onClick={() => setBuilderOpen(false)} disabled={builderSubmitting}>
-                  Cancel
-                </button>
-              </div>
-            </>
-          )}
+          <SurveyBuilderPanel
+            templatesApiPath="/api/group/feedback-points/templates"
+            categoriesApiPath="/api/group/category-owners"
+            cxEnabled={cxEnabled}
+            ceEnabled={ceEnabled}
+            submitting={builderSubmitting}
+            error={builderError}
+            onCancel={() => setBuilderOpen(false)}
+            onSubmit={submitBuilder}
+          />
         </div>
       )}
 

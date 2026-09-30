@@ -1,17 +1,52 @@
 import { randomBytes } from "crypto";
 import type { Types } from "mongoose";
 import { FeedbackPoint } from "../models/FeedbackPoint";
-import { QuestionTemplate } from "../models/QuestionTemplate";
+import { QUESTION_TYPES, type IQuestion, type QuestionType } from "../models/QuestionTemplate";
 import { getEnabledProducts } from "../models/products";
 import type { Product } from "../models/products";
+
+const CHOICE_TYPES: readonly QuestionType[] = ["multiple_choice", "multi_select", "dropdown"];
+
+/**
+ * Validates and normalizes one authored question from the survey builder's
+ * request body — real authoring, not a fixed checklist: a business writes
+ * its own question text and picks any of the QUESTION_TYPES, optionally
+ * starting from a copy of an Admin template's question as a first draft
+ * (see the builder UI), but from the moment it's submitted here it's the
+ * feedback point's own question, never a link back to the template.
+ */
+function parseQuestion(raw: unknown): IQuestion | { error: string } {
+  const q = raw as Record<string, unknown> | null;
+  const text = typeof q?.text === "string" ? q.text.trim() : "";
+  if (!text) return { error: "Every question needs its own text" };
+
+  const type = typeof q?.type === "string" ? (q.type as QuestionType) : null;
+  if (!type || !QUESTION_TYPES.includes(type)) return { error: `"${text}" needs a question type` };
+
+  const options = Array.isArray(q?.options) ? (q!.options as unknown[]).filter((o): o is string => typeof o === "string" && !!o.trim()) : [];
+  if (CHOICE_TYPES.includes(type) && options.length < 2) {
+    return { error: `"${text}" needs at least two answer options` };
+  }
+
+  return {
+    text,
+    type,
+    categoryId: typeof q?.categoryId === "string" && q.categoryId ? (q.categoryId as unknown as IQuestion["categoryId"]) : null,
+    required: !!q?.required,
+    options: CHOICE_TYPES.includes(type) ? options : [],
+    isCsatQuestion: !!q?.isCsatQuestion,
+  };
+}
 
 /**
  * The business-side survey builder's actual create logic (PRODUCT-ROADMAP.md
  * Phase 6), shared between the standalone-business route and the Group
  * (parent org) route — a branch under a parent org never gets this itself
  * (see each route's own comment for why), but the validation is identical
- * either way: compose from an Admin-authored QuestionTemplate's own
- * already-existing questions, never write new question text/categories.
+ * either way. Builds a feedback point from a fully authored `questions`
+ * array (any text, any QUESTION_TYPES, options for choice types) — a
+ * template, when the client-side builder started from one, only ever
+ * seeded the initial draft; nothing here reads or writes a QuestionTemplate.
  */
 export async function buildFeedbackPointFromTemplate(params: {
   businessId: Types.ObjectId;
@@ -30,21 +65,30 @@ export async function buildFeedbackPointFromTemplate(params: {
   const name = typeof b?.name === "string" ? b.name.trim() : "";
   if (!name) return { status: "error", message: "Name is required" };
 
-  const templateId = typeof b?.templateId === "string" ? b.templateId : "";
-  if (!templateId) return { status: "error", message: "Pick a survey template to build from" };
-
-  const template = await QuestionTemplate.findById(templateId);
-  if (!template || !getEnabledProducts({ enabledProducts: params.enabledProducts }).includes(template.product)) {
-    return { status: "error", message: "That template isn't available on this account" };
+  const product: Product = typeof b?.product === "string" && ["customer_experience", "colleague_experience"].includes(b.product)
+    ? (b.product as Product)
+    : "customer_experience";
+  if (!getEnabledProducts({ enabledProducts: params.enabledProducts }).includes(product)) {
+    return { status: "error", message: "That product isn't available on this account" };
   }
 
-  const templateQuestionIds = new Set(template.questions.map((q) => q._id?.toString()).filter((x): x is string => !!x));
-  const requestedIds: string[] = Array.isArray(b?.selectedQuestionIds)
-    ? (b!.selectedQuestionIds as unknown[]).filter((id): id is string => typeof id === "string")
-    : [];
-  const selectedQuestionIds = requestedIds.filter((id) => templateQuestionIds.has(id));
-  if (selectedQuestionIds.length === 0) {
-    return { status: "error", message: "Pick at least one question from the template" };
+  const rawQuestions = Array.isArray(b?.questions) ? b!.questions : [];
+  if (rawQuestions.length === 0) return { status: "error", message: "Add at least one question" };
+
+  const customQuestions: IQuestion[] = [];
+  for (const raw of rawQuestions) {
+    const parsed = parseQuestion(raw);
+    if ("error" in parsed) return { status: "error", message: parsed.error };
+    customQuestions.push(parsed);
+  }
+  // isCsatQuestion mirrors QuestionTemplate's own "at most one per set"
+  // rule — enforced server-side here too, not just left to the builder UI.
+  let seenCsat = false;
+  for (const q of customQuestions) {
+    if (q.isCsatQuestion) {
+      if (seenCsat) q.isCsatQuestion = false;
+      seenCsat = true;
+    }
   }
 
   let responseQuota: number | null = null;
@@ -58,12 +102,11 @@ export async function buildFeedbackPointFromTemplate(params: {
 
   const feedbackPoint = await FeedbackPoint.create({
     businessId,
-    product: template.product,
+    product,
     name,
     description: typeof b?.description === "string" ? b.description.trim() : "",
     qrToken: randomBytes(16).toString("hex"),
-    questionTemplateOverride: template._id,
-    selectedQuestionIds,
+    customQuestions,
     responseQuota,
   });
 
