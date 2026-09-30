@@ -28,6 +28,7 @@ export default function BusinessValueClient() {
   const [inputs, setInputs] = useState<Inputs | null>(null);
   const [impact, setImpact] = useState<Impact | null>(null);
   const [windowDays, setWindowDays] = useState(30);
+  const [canEdit, setCanEdit] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -40,6 +41,7 @@ export default function BusinessValueClient() {
         setInputs(d.inputs);
         setImpact(d.impact);
         setWindowDays(d.windowDays);
+        setCanEdit(!!d.canEdit);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"));
   }
@@ -118,6 +120,13 @@ export default function BusinessValueClient() {
           systems — these are your own estimates.
         </p>
 
+        {!canEdit && (
+          <div className="callout-amber" style={{ marginBottom: 12 }}>
+            These figures are read-only for this login. Only the account owner can set them — if this is a branch,
+            your parent organization sets them centrally from its own Business Value page.
+          </div>
+        )}
+
         <div className="field-row">
           <div className="field">
             <label>Currency symbol</label>
@@ -126,6 +135,7 @@ export default function BusinessValueClient() {
               value={inputs.currencySymbol}
               onChange={(e) => setInputs({ ...inputs, currencySymbol: e.target.value })}
               style={{ maxWidth: 80 }}
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -137,6 +147,7 @@ export default function BusinessValueClient() {
               value={inputs.avgTransactionValue ?? ""}
               onChange={(e) => setInputs({ ...inputs, avgTransactionValue: num(e.target.value) })}
               placeholder="e.g. 25"
+              disabled={!canEdit}
             />
           </div>
           <div className="field">
@@ -146,6 +157,7 @@ export default function BusinessValueClient() {
               value={inputs.visitsPerYear ?? ""}
               onChange={(e) => setInputs({ ...inputs, visitsPerYear: num(e.target.value) })}
               placeholder="e.g. 12"
+              disabled={!canEdit}
             />
           </div>
         </div>
@@ -157,6 +169,7 @@ export default function BusinessValueClient() {
               value={inputs.acquisitionCost ?? ""}
               onChange={(e) => setInputs({ ...inputs, acquisitionCost: num(e.target.value) })}
               placeholder="e.g. 40"
+              disabled={!canEdit}
             />
           </div>
           <div className="field">
@@ -164,6 +177,7 @@ export default function BusinessValueClient() {
             <select
               value={inputs.atRiskStarThreshold}
               onChange={(e) => setInputs({ ...inputs, atRiskStarThreshold: Number(e.target.value) })}
+              disabled={!canEdit}
             >
               <option value={1}>1 star</option>
               <option value={2}>2 stars or fewer</option>
@@ -172,10 +186,14 @@ export default function BusinessValueClient() {
           </div>
         </div>
 
-        <button className="btn btn-dark btn-sm" disabled={saving} onClick={save}>
-          {saving ? "Saving…" : "Save"}
-        </button>
-        {saved && <span style={{ marginLeft: 10, fontSize: 12.5, color: "var(--text-2)" }}>Saved.</span>}
+        {canEdit && (
+          <>
+            <button className="btn btn-dark btn-sm" disabled={saving} onClick={save}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+            {saved && <span style={{ marginLeft: 10, fontSize: 12.5, color: "var(--text-2)" }}>Saved.</span>}
+          </>
+        )}
       </div>
     </div>
   );

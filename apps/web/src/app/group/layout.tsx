@@ -107,7 +107,13 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   Compare branches
                 </a>
               </NavSection>
-              <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback"]}>
+              <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback", "/group/feedback-points"]}>
+                {teamMemberCanAccess(user, "feedbackPoints") && (
+                  <a href="/group/feedback-points">
+                    <NavIcon name="feedback-points" />
+                    Feedback Points
+                  </a>
+                )}
                 {teamMemberCanAccess(user, "rawFeedback") && (
                   <a href="/group/raw-feedback">
                     <NavIcon name="raw-feedback" />

@@ -81,6 +81,7 @@ function configBadges(p: FeedbackPointRow) {
 export default function FeedbackPointsClient() {
   const tooltips = useTooltips("feedback-points");
   const [points, setPoints] = useState<FeedbackPointRow[]>([]);
+  const [isBranch, setIsBranch] = useState(false);
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [requestSent, setRequestSent] = useState(false);
@@ -186,6 +187,7 @@ export default function FeedbackPointsClient() {
       fetch("/api/business/responses").then((r) => r.json()),
     ]).then(([pointsData, responsesData]) => {
       setPoints(pointsData.feedbackPoints ?? []);
+      setIsBranch(!!pointsData.isBranch);
       const counts: Record<string, number> = {};
       for (const r of responsesData.responses ?? []) {
         counts[r.feedbackPointId] = (counts[r.feedbackPointId] ?? 0) + 1;
@@ -234,9 +236,11 @@ export default function FeedbackPointsClient() {
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button className="btn btn-dark" onClick={openBuilder}>
-            + Build a survey
-          </button>
+          {!isBranch && (
+            <button className="btn btn-dark" onClick={openBuilder}>
+              + Build a survey
+            </button>
+          )}
           <button className="btn" data-tour="fp-request-button" onClick={openRequest}>
             + Request new feedback point
           </button>
@@ -245,11 +249,22 @@ export default function FeedbackPointsClient() {
       </div>
 
       <div className="callout">
-        Build your own feedback point above by picking a survey template and choosing which of its questions to
-        include — the template's question wording and categories are set by OodelCX, but you decide which of them to
-        ask and how many responses to collect. For anything else (a brand-new template, a different question type,
-        edits to existing wording), request a change below — your account manager actions those within one business
-        day.
+        {isBranch ? (
+          <>
+            Your parent organization builds and manages this branch's surveys centrally, so every branch stays
+            consistent — your Group owner does this from their own Feedback Points page. For anything else (a
+            brand-new template, a different question type, edits to existing wording), request a change below —
+            your account manager actions those within one business day.
+          </>
+        ) : (
+          <>
+            Build your own feedback point above by picking a survey template and choosing which of its questions to
+            include — the template's question wording and categories are set by OodelCX, but you decide which of
+            them to ask and how many responses to collect. For anything else (a brand-new template, a different
+            question type, edits to existing wording), request a change below — your account manager actions those
+            within one business day.
+          </>
+        )}
       </div>
       {requestSent && <div className="callout">Your request has been sent — your account manager will be in touch.</div>}
 
