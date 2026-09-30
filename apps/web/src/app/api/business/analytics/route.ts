@@ -214,6 +214,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     status: "ok",
+    product,
     feedbackPoints: feedbackPoints.map((p) => ({ _id: p._id.toString(), name: p.name, eventId: p.eventId ? p.eventId.toString() : null })),
     events: events.map((e) => ({ _id: e._id.toString(), name: e.name, seriesKey: e.seriesKey })),
     eventBreakdown,

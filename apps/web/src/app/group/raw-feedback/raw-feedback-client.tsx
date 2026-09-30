@@ -58,6 +58,8 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
   const [ready, setReady] = useState(false);
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [branchId, setBranchId] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [forbidden, setForbidden] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -89,6 +91,8 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
       product,
     });
     if (branchId) params.set("businessId", branchId);
+    if (fromDate) params.set("from", fromDate);
+    if (toDate) params.set("to", toDate);
     fetch(`/api/group/raw-feedback?${params.toString()}`)
       .then(async (res) => ({ ok: res.ok, data: await res.json() }))
       .then(({ ok, data }) => {
@@ -108,7 +112,7 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         });
       })
       .finally(() => setLoading(false));
-  }, [ready, page, negativeOnly, product, branchId]);
+  }, [ready, page, negativeOnly, product, branchId, fromDate, toDate]);
 
   function setFilter(negative: boolean) {
     setNegativeOnly(negative);
@@ -122,6 +126,16 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
 
   function changeBranch(id: string) {
     setBranchId(id);
+    setPage(1);
+  }
+
+  function changeFromDate(value: string) {
+    setFromDate(value);
+    setPage(1);
+  }
+
+  function changeToDate(value: string) {
+    setToDate(value);
     setPage(1);
   }
 
@@ -176,16 +190,46 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
             Negative only
           </div>
           <InfoTip text={tooltips["negative-only"]} />
-          {branches.length > 0 && (
-            <select value={branchId} onChange={(e) => changeBranch(e.target.value)} style={{ marginLeft: "auto" }}>
-              <option value="">All branches</option>
-              {branches.map((b) => (
-                <option key={b._id} value={b._id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          )}
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              type="date"
+              value={fromDate}
+              max={toDate || undefined}
+              onChange={(e) => changeFromDate(e.target.value)}
+              aria-label="From date"
+            />
+            <span className="subtitle" style={{ margin: 0 }}>
+              to
+            </span>
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate || undefined}
+              onChange={(e) => changeToDate(e.target.value)}
+              aria-label="To date"
+            />
+            {(fromDate || toDate) && (
+              <button
+                className="btn btn-sm"
+                onClick={() => {
+                  changeFromDate("");
+                  changeToDate("");
+                }}
+              >
+                Clear
+              </button>
+            )}
+            {branches.length > 0 && (
+              <select value={branchId} onChange={(e) => changeBranch(e.target.value)}>
+                <option value="">All branches</option>
+                {branches.map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
       )}
 

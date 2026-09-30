@@ -6,6 +6,7 @@ import { QuestionTrendCard } from "@/components/question-trend-card";
 import { ScoreDriversCard } from "@/components/score-drivers-card";
 
 interface AnalyticsData {
+  product: "customer_experience" | "colleague_experience";
   feedbackPoints: { _id: string; name: string; eventId: string | null }[];
   events: { _id: string; name: string; seriesKey: string }[];
   eventBreakdown: {
@@ -280,7 +281,7 @@ export default function AnalyticsClient({ tooltips }: { tooltips: Record<string,
         </div>
         <div className="card">
           <h3>
-            CES — Customer Effort
+            CES — {data.product === "colleague_experience" ? "Colleague Effort" : "Customer Effort"}
             <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy'). Low effort is the good outcome, opposite of star/NPS/CSAT." />
             <LowSamplePill sampleSize={data.ces.sampleSize} />
           </h3>
