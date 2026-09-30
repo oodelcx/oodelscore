@@ -85,6 +85,7 @@ export const BUSINESS_ACCESS_CONFIG: PortalAccessConfig = {
     ["/business/support", "support"],
     ["/business/playbooks", "playbooks"],
     ["/business/cases", "caseManagement"],
+    ["/business/compass", "compass"],
   ],
 };
 
@@ -110,5 +111,6 @@ export const GROUP_ACCESS_CONFIG: PortalAccessConfig = {
     ["/group/playbooks", "playbooks"],
     ["/group/support", "support"],
     ["/group/cases", "caseManagement"],
+    ["/group/compass", "compass"],
   ],
 };

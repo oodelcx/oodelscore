@@ -122,6 +122,12 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   <NavIcon name="dashboard" />
                   Dashboard
                 </a>
+                {hasFeature(business.enabledFeatures, "compass") && teamMemberCanAccess(user, "compass") && (
+                  <a href="/business/compass">
+                    <NavIcon name="compass" />
+                    OodelCX Compass
+                  </a>
+                )}
               </nav>
 
               <NavSection

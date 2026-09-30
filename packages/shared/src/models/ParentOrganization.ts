@@ -43,6 +43,7 @@ const BranchPermissionsSchema = new Schema<IBranchPermissions>(
 
 export interface IParentOrganization {
   name: string;
+  industry: string; // controlled vocabulary -> industries collection, same convention as Business.industry — used to pick this org's OodelCX Compass example wording
   contactName: string;
   contactEmail: string;
   contactPhone: string;
@@ -101,6 +102,7 @@ export interface IParentOrganization {
 const ParentOrganizationSchema = new Schema<IParentOrganization>(
   {
     name: { type: String, required: true, trim: true },
+    industry: { type: String, default: "" },
     contactName: { type: String, default: "" },
     contactEmail: { type: String, default: "" },
     contactPhone: { type: String, default: "" },

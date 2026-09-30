@@ -50,6 +50,7 @@ const PATHS: Record<string, string> = {
   "attention-centre": "M8.5 2.5v3|M8.5 2.5a5.5 5.5 0 015.5 5.5c0 3-1 4.3-2 5.3H5c-1-1-2-2.3-2-5.3a5.5 5.5 0 015.5-5.5z|M6.5 15h4",
   "closing-loop": "M8.5 14.5a6 6 0 100-12 6 6 0 000 12z|M6 8.5l1.8 1.8L11.5 6.5",
   "business-value": "M8.5 2v13|M11.5 4.8c0-1-1-1.8-3-1.8s-3.3 1-3.3 2.3c0 1.4 1.3 1.9 3.3 2.3s3.3 1 3.3 2.4c0 1.3-1.3 2.3-3.3 2.3s-3-.8-3-1.8",
+  compass: "M8.5 14.5a6 6 0 100-12 6 6 0 000 12z|M11 6l-1.5 4-4 1.5 1.5-4z",
 };
 
 export function NavIcon({ name }: { name: string }) {

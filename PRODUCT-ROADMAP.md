@@ -167,13 +167,29 @@ Six dimensions. Four are asked once regardless of which product(s) an account ha
 
 **Length:** a single-product customer answers ~28–32 questions total (the shared ~12, plus one flavor of Hearing/Ownership). A dual-product customer answers both flavors of Hearing and Ownership, landing ~36–40. Describe the length as "25–40 questions," not a fixed number — it scales with which products the account actually uses.
 
+### Scoring — confirmed by the product owner
+
+- **Ladder scale**: every question is answered on a fixed 4-point scale, never free text or yes/no — **0 Absent · 1 Ad hoc · 2 Defined · 3 Embedded** — so answers are machine-scorable and comparable across every account.
+- **Gate, not average**: a dimension's score is the **MIN of its own questions' scores** (the weakest answer gates the whole dimension — a business can't claim "Hearing" maturity from collecting feedback well while never reviewing it). The overall stage is the **MIN across all six dimension scores** — one completely absent dimension caps the whole account at Emerging even if the rest are strong.
+- **Established threshold**: an account needs a score of **≥2 on every one of the six ANCHOR dimensions** to be labeled Established. Anything below 2 on even one dimension keeps it at Emerging.
+- **Compass Index (trend only)**: a separate 0–100 weighted average across dimension scores, shown alongside the Established/Emerging stage for quarter-over-quarter tracking — never substitutes for the gate, and is always shown next to the stage so it can't be read as contradicting it (e.g. "Index 61 · Emerging — capped by Authority").
+
+### Industry-specific wording — confirmed by the product owner
+
+Every account answers the **same** six ANCHOR dimensions, the same question count (scaled only by which products it has, per the rule above), the same ladder scale, and the same gate-based scoring — this is what keeps accounts comparable to each other and to their own history over time. What's industry-specific is only the **wording inside each question** — the concrete examples/evidence prompts, not the mechanism or the scoring.
+
+- A small `IndustryContentPack` (keyed to the existing `Industry` collection — `Business.industry`/`ParentOrganization`'s own industry field already exist, nothing new to collect) supplies short example strings per industry: `numbersOutcomeExamples`, `hearingChannelExamples`, `ownershipRoleExamples`, `rhythmTriggerExample` — interpolated into the locked question text above via template variables.
+- **Launch industries** (all 7 currently in the seed/showcase data — write a real content pack for each before Compass ships): Banking, Education, Restaurant, Healthcare, Aviation, Telecommunications, Community Development & Training.
+- **Fallback**: any account whose industry has no authored pack yet (Admin can add new industry names at any time) falls back to a neutral default pack — never blocks the assessment, never shows an unfilled template variable.
+- The REACH recommendation engine (Phase 7d) reuses the same content pack for its "Recognize" text, so a gap reads in industry-appropriate language too.
+
 ### REACH — the recommendation engine's five principles
 
 Each Compass finding's recommendation (Phase 7d) is built around one or more of: **R**ecognize (name the gap in plain language), **E**levate (make it visible to whoever owns it), **A**lign (tie it to a goal/objective already in the system — e.g. a CX Goal), **C**onnect (deep-link into the actual feature that closes the gap — "Set up Category Owners →"), **H**abituate (turn the fix into a recurring habit/cadence, not a one-off — e.g. a Playbook trigger or a CX Pulse re-check).
 
 ### Sub-phases
 
-- **7a** — data model + the gate-based scoring engine, backend only, fully testable before any screen exists. Unblocked now that ANCHOR/REACH are locked; the exact gate thresholds (how a dimension's answers combine into a score, how dimension scores combine into an Established/Emerging stage) still need the product owner's numbers before 7a can be finished — the *mechanism* (gates, not a raw average) is agreed, the *thresholds* are not yet.
+- **7a** — data model (including `IndustryContentPack`) + the gate-based scoring engine (per the Scoring section above), backend only, fully testable before any screen exists. **Fully unblocked** — thresholds confirmed by the product owner, nothing left open.
 - **7b** — the assessment-taking flow (the ladder-question UI)
 - **7c** — the results page (Established/Emerging stage, ANCHOR bands, evidence text)
 - **7d** — the recommendation engine (REACH, above) + deep links into the rest of the product (e.g. "Set up Category Owners →," "Configure Escalation Rules →" — these must point at features already in their final shape, which is why Compass is sequenced after CSAT/CES and Attention Centre)
