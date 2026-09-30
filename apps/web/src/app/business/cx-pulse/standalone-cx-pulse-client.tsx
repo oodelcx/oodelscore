@@ -22,12 +22,14 @@ interface OwnData {
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — see group/maturity/maturity-client.tsx for why
+// these differ from the schema field names.
 const DIMENSION_LABELS: { key: keyof Dimensions; label: string }[] = [
-  { key: "awareness", label: "Awareness" },
-  { key: "response", label: "Response" },
-  { key: "ownership", label: "Ownership" },
-  { key: "culture", label: "Culture" },
-  { key: "outcome", label: "Outcome" },
+  { key: "awareness", label: "Signal" },
+  { key: "response", label: "Speed" },
+  { key: "ownership", label: "Accountability" },
+  { key: "culture", label: "Buy-in" },
+  { key: "outcome", label: "Impact" },
 ];
 
 function trendPath(history: ScoreDoc[]): string | null {
