@@ -98,6 +98,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    product,
     trend,
     npsBreakdown: { promoters, passives, detractors, sampleSize: npsAnswers.length },
     csat: {

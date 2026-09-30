@@ -18,6 +18,8 @@ export async function GET(request: Request) {
   const productParam = searchParams.get("product");
   const product: Product = productParam && PRODUCT_SET.includes(productParam) ? (productParam as Product) : "customer_experience";
   const branchId = searchParams.get("businessId");
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
   const skip = (page - 1) * limit;
 
   await connectToDatabase();
@@ -34,6 +36,12 @@ export async function GET(request: Request) {
   const match: Record<string, unknown> = { businessId: { $in: scopedBusinessIds }, product };
   if (filter === "negative") {
     match.answers = { $elemMatch: { type: "star_1_5", value: { $lte: 2 } } };
+  }
+  if (fromParam || toParam) {
+    const submittedAt: Record<string, Date> = {};
+    if (fromParam) submittedAt.$gte = new Date(`${fromParam}T00:00:00.000Z`);
+    if (toParam) submittedAt.$lte = new Date(`${toParam}T23:59:59.999Z`);
+    match.submittedAt = submittedAt;
   }
 
   const [total, responses, stats] = await Promise.all([

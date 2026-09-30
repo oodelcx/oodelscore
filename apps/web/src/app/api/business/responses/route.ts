@@ -15,7 +15,13 @@ const MAX_LIMIT = 100;
  * current page in the client would desync the page count and hide matches
  * that happen to fall outside the fetched slice.
  */
-function buildMatch(businessId: unknown, filter: string | null, product: string): Record<string, unknown> {
+function buildMatch(
+  businessId: unknown,
+  filter: string | null,
+  product: string,
+  from: string | null,
+  to: string | null
+): Record<string, unknown> {
   const match: Record<string, unknown> = { businessId, product };
   if (filter === "negative") {
     match.answers = { $elemMatch: { type: "star_1_5", value: { $lte: 2 } } };
@@ -23,6 +29,12 @@ function buildMatch(businessId: unknown, filter: string | null, product: string)
     match.answers = { $elemMatch: { type: "open_text", value: { $regex: /\S/ } } };
   } else if (filter && filter !== "all" && mongoose.isValidObjectId(filter)) {
     match.feedbackPointId = new mongoose.Types.ObjectId(filter);
+  }
+  if (from || to) {
+    const submittedAt: Record<string, Date> = {};
+    if (from) submittedAt.$gte = new Date(`${from}T00:00:00.000Z`);
+    if (to) submittedAt.$lte = new Date(`${to}T23:59:59.999Z`);
+    match.submittedAt = submittedAt;
   }
   return match;
 }
@@ -38,10 +50,12 @@ export async function GET(request: Request) {
   const sort = searchParams.get("sort") === "lowest" ? "lowest" : "newest";
   const productParam = searchParams.get("product");
   const product: Product = productParam && PRODUCT_SET.includes(productParam) ? (productParam as Product) : "customer_experience";
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
   const skip = (page - 1) * limit;
 
   await connectToDatabase();
-  const match = buildMatch(session.business._id, filter, product);
+  const match = buildMatch(session.business._id, filter, product, from, to);
 
   const [total, rows, feedbackPoints, stats] = await Promise.all([
     Response.countDocuments(match),

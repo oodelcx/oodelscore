@@ -68,10 +68,14 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
   const [ready, setReady] = useState(false);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   function load() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), filter, sort, product });
+    if (fromDate) params.set("from", fromDate);
+    if (toDate) params.set("to", toDate);
     fetch(`/api/business/responses?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
@@ -90,7 +94,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
     if (!ready) return;
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, page, filter, sort, product]);
+  }, [ready, page, filter, sort, product, fromDate, toDate]);
 
   // Account-scoped enabled products must be known BEFORE the first data
   // fetch — otherwise a Colleague-Experience-only business always starts by
@@ -123,6 +127,16 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
 
   function changeSort(s: SortId) {
     setSort(s);
+    setPage(1);
+  }
+
+  function changeFromDate(value: string) {
+    setFromDate(value);
+    setPage(1);
+  }
+
+  function changeToDate(value: string) {
+    setToDate(value);
     setPage(1);
   }
 
@@ -211,10 +225,28 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
             {fp.name}
           </div>
         ))}
-        <select style={{ marginLeft: "auto" }} value={sort} onChange={(e) => changeSort(e.target.value as SortId)}>
-          <option value="newest">Newest first</option>
-          <option value="lowest">Lowest score first</option>
-        </select>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <input type="date" value={fromDate} max={toDate || undefined} onChange={(e) => changeFromDate(e.target.value)} aria-label="From date" />
+          <span className="subtitle" style={{ margin: 0 }}>
+            to
+          </span>
+          <input type="date" value={toDate} min={fromDate || undefined} onChange={(e) => changeToDate(e.target.value)} aria-label="To date" />
+          {(fromDate || toDate) && (
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                changeFromDate("");
+                changeToDate("");
+              }}
+            >
+              Clear
+            </button>
+          )}
+          <select value={sort} onChange={(e) => changeSort(e.target.value as SortId)}>
+            <option value="newest">Newest first</option>
+            <option value="lowest">Lowest score first</option>
+          </select>
+        </div>
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}
