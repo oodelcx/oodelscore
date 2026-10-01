@@ -25,13 +25,6 @@ export interface IRolePermissions {
   questionTemplates: ICrudPermission;
   emailAndSiteContent: ICrudPermission;
   aiInsightsQueue: IScopedCrudPermission;
-  /**
-   * Raw customer feedback responses (Admin's "Feedback Responses" page) —
-   * deliberately its own key rather than riding on `businesses.view`, so a
-   * role can manage business records without automatically also seeing
-   * every customer's raw comments, and vice versa (OBS9).
-   */
-  feedbackResponses: IScopedCrudPermission;
 }
 
 export interface IRole {
@@ -71,11 +64,6 @@ const RolePermissionsSchema = new Schema<IRolePermissions>(
     questionTemplates: { type: CrudPermissionSchema, required: true },
     emailAndSiteContent: { type: CrudPermissionSchema, required: true },
     aiInsightsQueue: { type: ScopedCrudPermissionSchema, required: true },
-    feedbackResponses: {
-      type: ScopedCrudPermissionSchema,
-      required: true,
-      default: () => ({ view: false, edit: false, delete: false, scope: "assigned" }),
-    },
   },
   { _id: false }
 );
