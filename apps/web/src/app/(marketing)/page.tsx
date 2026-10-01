@@ -14,6 +14,23 @@ interface LoopStage {
   title: string;
   body: string;
 }
+
+// The 5 C's, in order — tops up a shorter stored loopStages array (a
+// SiteContent doc saved before the 5C rename shipped, still holding only 4
+// stages) so the live page always renders all five, without depending on
+// an Admin re-save to fix a doc that already existed in the database.
+const DEFAULT_LOOP_STAGES: LoopStage[] = [
+  { label: "Capture", title: "Collect", body: "A QR scan, a short survey, no app or login." },
+  { label: "Clarify", title: "Make sense of it", body: "Themes, root causes, and drivers surfaced automatically." },
+  { label: "Claim", title: "Own it", body: "An owned case in Case Management, not a comment nobody reads." },
+  { label: "Close", title: "Follow through", body: "Reply to the person who raised it and log the decision that fixed it." },
+  { label: "Confirm", title: "Know if it worked", body: "CX Pulse tracks whether the loop is actually closing." },
+];
+
+function withDefaultLoopStages(stages: LoopStage[]): LoopStage[] {
+  if (stages.length >= DEFAULT_LOOP_STAGES.length) return stages;
+  return [...stages, ...DEFAULT_LOOP_STAGES.slice(stages.length)];
+}
 interface CxLevel {
   level: string;
   name: string;
@@ -90,7 +107,7 @@ function StageFragment({ stage }: { stage: string }) {
 export default async function MarketingHomePage() {
   const [menu, home] = await Promise.all([getSiteContent("menu"), getSiteContent("home")]);
   const f = home.fields;
-  const loopStages = parseJsonArray<LoopStage>(f.loopStages);
+  const loopStages = withDefaultLoopStages(parseJsonArray<LoopStage>(f.loopStages));
   const steps = parseJsonArray<NarrativeStep>(f.narrativeSteps);
   const levels = parseJsonArray<CxLevel>(f.cxPulseLevels);
   const whyItems = parseJsonArray<TitleBodyItem>(f.whyItems);

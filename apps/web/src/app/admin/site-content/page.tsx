@@ -431,6 +431,23 @@ interface CxLevel {
   desc: string;
 }
 
+// The 5 C's, in order — used to top up a shorter stored loopStages array
+// (e.g. one saved before the 5C rename shipped, still holding 4 items) so
+// the editor always has all five slots to fill in, with no missing-stage
+// dead end and no separate migration step required.
+const DEFAULT_LOOP_STAGES: NarrativeStep[] = [
+  { label: "Capture", title: "Collect", body: "A QR scan, a short survey, no app or login." },
+  { label: "Clarify", title: "Make sense of it", body: "Themes, root causes, and drivers surfaced automatically." },
+  { label: "Claim", title: "Own it", body: "An owned case in Case Management, not a comment nobody reads." },
+  { label: "Close", title: "Follow through", body: "Reply to the person who raised it and log the decision that fixed it." },
+  { label: "Confirm", title: "Know if it worked", body: "CX Pulse tracks whether the loop is actually closing." },
+];
+
+function withDefaultLoopStages(stages: NarrativeStep[]): NarrativeStep[] {
+  if (stages.length >= DEFAULT_LOOP_STAGES.length) return stages;
+  return [...stages, ...DEFAULT_LOOP_STAGES.slice(stages.length)];
+}
+
 function HomePanel({
   content,
   onFieldChange,
@@ -441,7 +458,19 @@ function HomePanel({
   const steps = parseJsonArray<NarrativeStep>(content.fields.narrativeSteps);
   const levels = parseJsonArray<CxLevel>(content.fields.cxPulseLevels);
   const whyItems = parseJsonArray<TitleBodyItem>(content.fields.whyItems);
-  const loopStages = parseJsonArray<NarrativeStep>(content.fields.loopStages);
+  const storedLoopStages = parseJsonArray<NarrativeStep>(content.fields.loopStages);
+  const loopStages = withDefaultLoopStages(storedLoopStages);
+
+  // Self-heals a doc saved before the 5C rename shipped (still holding only
+  // 4 stages) the moment this page loads — pushes the padded array into
+  // state so "Save" writes back all 5 even if the admin never touches a
+  // field, instead of leaving a stage permanently un-addable through the UI.
+  useEffect(() => {
+    if (storedLoopStages.length < DEFAULT_LOOP_STAGES.length) {
+      onFieldChange("home", "loopStages", JSON.stringify(loopStages));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storedLoopStages.length]);
 
   return (
     <>
@@ -758,6 +787,19 @@ interface Plan {
   features: string[];
 }
 
+const DEFAULT_LOOP_STRIP_ITEMS: { label: string; body: string }[] = [
+  { label: "Capture", body: "Unlimited QR feedback points and responses" },
+  { label: "Clarify", body: "Themes and root causes surfaced automatically" },
+  { label: "Claim", body: "Case Management and owned cases included" },
+  { label: "Close", body: "Decision Log, Closing the Loop, and Playbooks included" },
+  { label: "Confirm", body: "A maturity score on every plan tier" },
+];
+
+function withDefaultLoopStripItems(items: { label: string; body: string }[]): { label: string; body: string }[] {
+  if (items.length >= DEFAULT_LOOP_STRIP_ITEMS.length) return items;
+  return [...items, ...DEFAULT_LOOP_STRIP_ITEMS.slice(items.length)];
+}
+
 function PricingPanel({
   content,
   onFieldChange,
@@ -766,6 +808,15 @@ function PricingPanel({
   onFieldChange: (page: string, key: string, value: string) => void;
 }) {
   const plans = parseJsonArray<Plan>(content.fields.plans);
+  const storedLoopStripItems = parseJsonArray<{ label: string; body: string }>(content.fields.loopStripItems);
+
+  // Same self-heal as the home loop stages — see that panel's comment.
+  useEffect(() => {
+    if (storedLoopStripItems.length > 0 && storedLoopStripItems.length < DEFAULT_LOOP_STRIP_ITEMS.length) {
+      onFieldChange("pricing", "loopStripItems", JSON.stringify(withDefaultLoopStripItems(storedLoopStripItems)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storedLoopStripItems.length]);
 
   function updatePlan(i: number, patch: Partial<Plan>) {
     const next = [...plans];
@@ -799,7 +850,7 @@ function PricingPanel({
           onChange={(v) => onFieldChange("pricing", "loopStripHeadline", v)}
         />
         {(() => {
-          const items = parseJsonArray<{ label: string; body: string }>(content.fields.loopStripItems);
+          const items = withDefaultLoopStripItems(storedLoopStripItems);
           return items.map((item, i) => (
             <div className="qrow" key={i}>
               <div className="qrow-top">
