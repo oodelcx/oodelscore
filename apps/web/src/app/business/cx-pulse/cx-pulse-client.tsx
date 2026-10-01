@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
+import { PulseSelfAssessmentCard } from "@/components/pulse-self-assessment-card";
 
 interface Dimensions {
   awareness: number;
@@ -134,6 +135,8 @@ export default function BranchCxPulseClient({ tooltips }: { tooltips: Record<str
           ))}
         </div>
       </div>
+
+      <PulseSelfAssessmentCard apiPath="/api/business/cx-pulse/self-assessment" title="Quarterly self-assessment" />
 
       <div className="section-title">Other branches in {data.region ?? "your region"}</div>
       <div className="card">

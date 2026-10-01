@@ -5,7 +5,7 @@ import { CxPulseFramework, CX_PULSE_FRAMEWORK_SINGLETON_KEY } from "../models/Cx
 import { SYSTEM_ROLES } from "./roles";
 import { SEED_EMAIL_TEMPLATES } from "./emailTemplates";
 import { SEED_SITE_CONTENT } from "./siteContent";
-import { DEFAULT_CX_PULSE_WEIGHTS, DEFAULT_CX_PULSE_QUESTIONS } from "./cxPulseFramework";
+import { DEFAULT_CX_PULSE_WEIGHTS, DEFAULT_CX_PULSE_QUESTIONS, DEFAULT_CE_SELF_ASSESSMENT_QUESTIONS } from "./cxPulseFramework";
 
 export interface PlatformDefaultsSeedResult {
   roles: string[];
@@ -39,6 +39,7 @@ export async function seedPlatformDefaults(): Promise<PlatformDefaultsSeedResult
         singletonKey: CX_PULSE_FRAMEWORK_SINGLETON_KEY,
         weights: DEFAULT_CX_PULSE_WEIGHTS,
         pulseQuestions: DEFAULT_CX_PULSE_QUESTIONS,
+        ceSelfAssessmentQuestions: DEFAULT_CE_SELF_ASSESSMENT_QUESTIONS,
       },
     },
     { upsert: true }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
+import { PulseSelfAssessmentCard } from "@/components/pulse-self-assessment-card";
 
 interface Dimensions {
   awareness: number;
@@ -223,6 +224,8 @@ export default function MaturityClient({ tooltips }: { tooltips: Record<string, 
               </div>
             </div>
           </div>
+
+          <PulseSelfAssessmentCard apiPath="/api/group/cx-pulse/self-assessment" title="Quarterly self-assessment" />
         </>
       )}
     </div>
