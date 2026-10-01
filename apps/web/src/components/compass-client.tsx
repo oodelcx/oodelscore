@@ -38,6 +38,14 @@ interface CompassResultView {
   completedAt: string;
 }
 
+interface CompassHistoryEntry {
+  overallScore: 0 | 1 | 2 | 3;
+  stage: "established" | "emerging";
+  index: number;
+  completedAt: string;
+  archivedAt: string;
+}
+
 interface CompassView {
   assessmentStatus: "draft" | "completed";
   industry: string;
@@ -45,6 +53,9 @@ interface CompassView {
   answeredCount: number;
   totalCount: number;
   result: CompassResultView | null;
+  dueForReassessment: boolean;
+  reassessmentDueAt: string | null;
+  history: CompassHistoryEntry[];
 }
 
 function groupByDimension(questions: CompassQuestionView[]): [string, CompassQuestionView[]][] {
@@ -176,7 +187,14 @@ export function CompassClient({ apiPath }: { apiPath: string }) {
       </p>
 
       {view.assessmentStatus === "completed" && view.result ? (
-        <CompassResultsView result={view.result} onRestart={restart} restarting={restarting} />
+        <CompassResultsView
+          result={view.result}
+          onRestart={restart}
+          restarting={restarting}
+          dueForReassessment={view.dueForReassessment}
+          reassessmentDueAt={view.reassessmentDueAt}
+          history={view.history}
+        />
       ) : (
         <CompassQuestionsView
           view={view}
@@ -199,13 +217,26 @@ function CompassResultsView({
   result,
   onRestart,
   restarting,
+  dueForReassessment,
+  reassessmentDueAt,
+  history,
 }: {
   result: CompassResultView;
   onRestart: () => void;
   restarting: boolean;
+  dueForReassessment: boolean;
+  reassessmentDueAt: string | null;
+  history: CompassHistoryEntry[];
 }) {
   return (
     <div>
+      {dueForReassessment && (
+        <div className="callout" style={{ background: "var(--amber-bg)", borderColor: "var(--amber)", marginBottom: 16 }}>
+          <b>Due for reassessment</b> — it&rsquo;s been a while since this account&rsquo;s last completed Compass
+          assessment{reassessmentDueAt ? ` (due ${new Date(reassessmentDueAt).toLocaleDateString()})` : ""}. Retake it
+          below to see if anything&rsquo;s changed.
+        </div>
+      )}
       <div
         className="card"
         style={{
@@ -291,6 +322,30 @@ function CompassResultsView({
           );
         })}
       </div>
+
+      {history.length > 0 && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <h3 style={{ marginTop: 0 }}>Previous assessments</h3>
+          <table className="clean">
+            <thead>
+              <tr>
+                <th>Completed</th>
+                <th>Stage</th>
+                <th>Index</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h) => (
+                <tr key={h.completedAt}>
+                  <td>{new Date(h.completedAt).toLocaleDateString()}</td>
+                  <td>{stageLabel(h.stage)}</td>
+                  <td>{h.index} / 100</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

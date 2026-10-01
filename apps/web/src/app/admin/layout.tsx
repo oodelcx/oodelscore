@@ -149,6 +149,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               <NavIcon name="pulse" />
               CX Pulse
             </a>
+            <a href="/admin/compass-content">
+              <NavIcon name="pulse" />
+              Compass Content
+            </a>
             <a href="/admin/sector-benchmarks">
               <NavIcon name="pulse" />
               Sector Benchmarks

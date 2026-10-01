@@ -23,7 +23,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const update: Record<string, boolean> = {};
+  const update: Record<string, boolean | number | null> = {};
   if (body?.toursEnabled !== undefined) {
     if (typeof body.toursEnabled !== "boolean") {
       return NextResponse.json({ status: "error", message: "toursEnabled must be a boolean" }, { status: 400 });
@@ -35,6 +35,12 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ status: "error", message: "paymentGateEnabled must be a boolean" }, { status: 400 });
     }
     update.paymentGateEnabled = body.paymentGateEnabled;
+  }
+  if (body?.compassReassessmentCadenceDays !== undefined) {
+    if (body.compassReassessmentCadenceDays !== null && typeof body.compassReassessmentCadenceDays !== "number") {
+      return NextResponse.json({ status: "error", message: "compassReassessmentCadenceDays must be a number or null" }, { status: 400 });
+    }
+    update.compassReassessmentCadenceDays = body.compassReassessmentCadenceDays;
   }
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ status: "error", message: "Nothing to update" }, { status: 400 });
