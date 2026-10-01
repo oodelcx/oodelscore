@@ -126,10 +126,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
           <div className="nav-group-label">Oversight</div>
           <nav className="admin-nav">
-            <a href="/admin/feedback-responses">
-              <NavIcon name="feedback-responses" />
-              Feedback Responses
-            </a>
             <a href="/admin/ai-queue" style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
                 <NavIcon name="ai-queue" />

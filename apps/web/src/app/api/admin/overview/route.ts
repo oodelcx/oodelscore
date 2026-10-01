@@ -7,8 +7,7 @@ import {
   BillingSubscription,
   AiInsightReport,
   AlertRule,
-  Response,
-  FeedbackPointRequest,
+  SupportTicket,
   expireStaleInvites,
   findBillingIntegrityIssues,
 } from "@oodelscore/shared";
@@ -70,25 +69,14 @@ export async function GET() {
     accountType: { $in: ["business", "parent_org"] },
   }).select("accountType parentId");
 
-  // Needs attention: responses affected by the NPS/star legacy bug (mixed
-  // answer types on one submission — see feedback-responses route).
-  const mixedTypeCount = await Response.countDocuments({
-    $and: [{ "answers.type": "star_1_5" }, { "answers.type": "nps_0_10" }],
-  });
-
   // Needs attention: businesses asking for a new/changed feedback point —
   // they can't create these themselves, so this is the only signal Admin
-  // gets short of checking email.
-  let pendingFeedbackRequestIds: unknown[] = [];
-  if (role.permissions.businesses.view) {
-    const requestBusinessFilter =
-      role.permissions.businesses.scope === "assigned" ? { accountManagerId: user._id } : {};
-    const scopedBusinessIds = await Business.find(requestBusinessFilter).distinct("_id");
-    pendingFeedbackRequestIds = await FeedbackPointRequest.find({
-      status: "pending",
-      businessId: { $in: scopedBusinessIds },
-    }).distinct("_id");
-  }
+  // gets short of checking email. Submitted as a Support Ticket in the
+  // "feedback_point_request" category (folded in per OBS8).
+  const pendingFeedbackRequestIds = await SupportTicket.find({
+    category: "feedback_point_request",
+    status: { $ne: "resolved" },
+  }).distinct("_id");
 
   // Needs attention: alert-rule recipients shared across more than one owner.
   const alertRules = await AlertRule.find().select("ownerId recipients");
@@ -151,15 +139,7 @@ export async function GET() {
       label: `${pendingFeedbackRequestIds.length} request(s)`,
       issue: "Business asking for a new or changed feedback point",
       severity: "amber",
-      href: "/admin/feedback-requests",
-    });
-  }
-  if (mixedTypeCount > 0) {
-    needsAttention.push({
-      label: "Feedback Responses",
-      issue: `${mixedTypeCount} response(s) mix NPS with star ratings — legacy scoring-bug audit`,
-      severity: "red",
-      href: "/admin/feedback-responses",
+      href: "/admin/support-queue",
     });
   }
   if (suspiciousRecipientCount > 0) {
