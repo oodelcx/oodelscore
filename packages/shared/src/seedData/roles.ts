@@ -11,6 +11,7 @@ const adminPermissions: IRolePermissions = {
   questionTemplates: { view: true, edit: true, delete: true },
   emailAndSiteContent: { view: true, edit: true, delete: true },
   aiInsightsQueue: { view: true, edit: true, delete: true, scope: "all" },
+  feedbackResponses: { view: true, edit: false, delete: false, scope: "all" },
 };
 
 const accountManagerPermissions: IRolePermissions = {
@@ -21,6 +22,7 @@ const accountManagerPermissions: IRolePermissions = {
   questionTemplates: { view: true, edit: false, delete: false },
   emailAndSiteContent: { ...noAccess },
   aiInsightsQueue: { view: true, edit: true, delete: false, scope: "assigned" },
+  feedbackResponses: { view: true, edit: false, delete: false, scope: "assigned" },
 };
 
 // Finance gets full financial visibility with no access to feedback data,
@@ -37,6 +39,7 @@ const financePermissions: IRolePermissions = {
   questionTemplates: { ...noAccess },
   emailAndSiteContent: { ...noAccess },
   aiInsightsQueue: { ...noScopedAccess },
+  feedbackResponses: { ...noScopedAccess },
 };
 
 export const SYSTEM_ROLES = [
