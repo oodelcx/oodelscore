@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { QrModal } from "@/components/qr-modal";
 import { SurveyBuilderPanel, type SurveyBuilderPayload } from "@/components/survey-builder";
+import { FeedbackPointExpiry } from "@/components/feedback-point-expiry";
 
 interface BranchOption {
   _id: string;
@@ -20,6 +21,7 @@ interface FeedbackPointRow {
   responseQuota: number | null;
   product?: "customer_experience" | "colleague_experience";
   deliveryMode?: "qr" | "link" | "both";
+  endsAt: string | null;
 }
 
 /**
@@ -181,6 +183,13 @@ export default function GroupFeedbackPointsClient() {
                   <div>{p.scans} scans</div>
                   {p.responseQuota !== null && <div>quota {p.responseQuota}</div>}
                 </div>
+                <FeedbackPointExpiry
+                  apiPath={`/api/group/feedback-points/${p._id}`}
+                  endsAt={p.endsAt}
+                  onUpdated={(endsAt) =>
+                    setPoints((prev) => (prev ? prev.map((pt) => (pt._id === p._id ? { ...pt, endsAt } : pt)) : prev))
+                  }
+                />
                 {p.deliveryMode !== "link" ? (
                   <button className="btn btn-sm" style={{ width: "100%" }} onClick={() => setQrPoint(p)}>
                     View QR

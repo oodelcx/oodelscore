@@ -441,6 +441,7 @@ function HomePanel({
   const steps = parseJsonArray<NarrativeStep>(content.fields.narrativeSteps);
   const levels = parseJsonArray<CxLevel>(content.fields.cxPulseLevels);
   const whyItems = parseJsonArray<TitleBodyItem>(content.fields.whyItems);
+  const loopStages = parseJsonArray<NarrativeStep>(content.fields.loopStages);
 
   return (
     <>
@@ -488,6 +489,59 @@ function HomePanel({
           onChange={(v) => onFieldChange("home", "heroCarouselIntervalSeconds", v)}
           placeholder="3"
         />
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3>The 5C loop strip</h3>
+        <p className="card-sub">The five boxes under the hero — Capture, Clarify, Claim, Close, Confirm.</p>
+        <Field
+          label="Eyebrow label"
+          value={content.fields.loopEyebrow}
+          onChange={(v) => onFieldChange("home", "loopEyebrow", v)}
+          placeholder="The 5C Framework"
+        />
+        <Field
+          label="Loop headline"
+          value={content.fields.loopHeadline}
+          onChange={(v) => onFieldChange("home", "loopHeadline", v)}
+        />
+        {loopStages.map((stage, i) => (
+          <div className="qrow" key={i}>
+            <div className="qrow-top">
+              <input
+                type="text"
+                style={{ width: 110, fontWeight: 600 }}
+                value={stage.label}
+                onChange={(e) => {
+                  const next = [...loopStages];
+                  next[i] = { ...next[i], label: e.target.value };
+                  onFieldChange("home", "loopStages", JSON.stringify(next));
+                }}
+              />
+              <input
+                type="text"
+                style={{ flex: 1 }}
+                value={stage.title}
+                onChange={(e) => {
+                  const next = [...loopStages];
+                  next[i] = { ...next[i], title: e.target.value };
+                  onFieldChange("home", "loopStages", JSON.stringify(next));
+                }}
+              />
+            </div>
+            <AutoTextarea
+              value={stage.body}
+              onChange={(e) => {
+                const next = [...loopStages];
+                next[i] = { ...next[i], body: e.target.value };
+                onFieldChange("home", "loopStages", JSON.stringify(next));
+              }}
+            />
+          </div>
+        ))}
+        <p className="field-hint" style={{ marginTop: 4 }}>
+          Stage count is fixed at five to match the 5C framework — edit the wording, not how many there are.
+        </p>
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>

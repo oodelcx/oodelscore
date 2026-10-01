@@ -1632,43 +1632,72 @@
 .mkt .loop-hero .built-for {
   margin-bottom: 0;
 }
+.mkt .loop-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--signal);
+  margin: 0 0 14px;
+}
 .mkt .loop-stages {
-  margin-top: 64px;
+  margin-top: 18px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
   align-items: stretch;
   position: relative;
 }
-@media (max-width: 900px) {
+/* Tablet: 5 equal cards no longer fit without squeezing, so the row scrolls
+   horizontally instead of wrapping into an uneven 4-then-1 (or 3-then-2)
+   second line — a deliberate swipe affordance, not an accident. */
+@media (max-width: 1000px) and (min-width: 561px) {
+  .mkt .loop-stages {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding: 4px 4px 10px;
+    margin-left: -4px;
+    margin-right: -4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mkt .loop-stages > .reveal {
+    flex: 0 0 230px;
+    scroll-snap-align: start;
+  }
+}
+@media (max-width: 560px) {
   .mkt .loop-stages {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 16px;
   }
 }
 .mkt .loop-stages > .reveal {
   position: relative;
-  padding: 0 18px;
 }
 .mkt .loop-stage {
   text-align: left;
+  height: 100%;
 }
 .mkt .loop-stages > .reveal:not(:last-child)::after {
   content: "›";
   position: absolute;
-  top: 22px;
-  right: -4px;
+  top: 18px;
+  right: -11px;
   color: var(--text-3);
-  font-size: 20px;
+  font-size: 18px;
+  z-index: 1;
 }
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .mkt .loop-stages > .reveal:not(:last-child)::after {
     content: none;
   }
 }
 .mkt .loop-stage-label {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--signal);
   text-transform: uppercase;
@@ -1679,8 +1708,9 @@
   background: var(--paper-alt);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 20px 18px;
-  min-height: 168px;
+  padding: 18px 16px;
+  min-height: 190px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1733,6 +1763,27 @@
   height: 6px;
   border-radius: 50%;
   background: var(--amber);
+  flex-shrink: 0;
+}
+.mkt .loop-frag-close {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.mkt .loop-frag-close .check {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--signal);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
   flex-shrink: 0;
 }
 .mkt .loop-frag-chip {
@@ -2108,12 +2159,17 @@
 }
 .mkt .loop-strip-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .mkt .loop-strip-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .mkt .loop-strip-row {
+    grid-template-columns: 1fr;
   }
 }
 .mkt .loop-strip-item {
