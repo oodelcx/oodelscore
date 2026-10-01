@@ -155,7 +155,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 )}
               </NavSection>
 
-              <NavSection storageKey="business-listen" label="Listen" hrefs={["/business/responses"]}>
+              <NavSection storageKey="business-capture" label="Capture" hrefs={["/business/responses"]}>
                 {teamMemberCanAccess(user, "rawFeedback") && (
                   <a href="/business/responses">
                     <NavIcon name="raw-feedback" />
@@ -165,8 +165,8 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               </NavSection>
 
               <NavSection
-                storageKey="business-understand"
-                label="Understand"
+                storageKey="business-clarify"
+                label="Clarify"
                 hrefs={[
                   "/business/insights",
                   "/business/analytics",
@@ -216,15 +216,9 @@ export default async function BusinessLayout({ children }: { children: ReactNode
               </NavSection>
 
               <NavSection
-                storageKey="business-act"
-                label="Act"
-                hrefs={[
-                  "/business/attention-centre",
-                  "/business/cases",
-                  "/business/improvement-initiatives",
-                  "/business/decision-log",
-                  "/business/closing-the-loop",
-                ]}
+                storageKey="business-claim"
+                label="Claim"
+                hrefs={["/business/attention-centre", "/business/cases"]}
               >
                 {teamMemberCanAccess(user, "attentionCentre") && (
                   <a href="/business/attention-centre">
@@ -238,6 +232,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                     Case Management
                   </a>
                 )}
+              </NavSection>
+
+              <NavSection
+                storageKey="business-close"
+                label="Close"
+                hrefs={["/business/improvement-initiatives", "/business/decision-log", "/business/closing-the-loop"]}
+              >
                 {hasFeature(business.enabledFeatures, "improvementInitiatives") &&
                   teamMemberCanAccess(user, "improvementInitiatives") && (
                     <a href="/business/improvement-initiatives">
@@ -276,8 +277,8 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 if (!showCxPulse && !showCorrelation) return null;
                 return (
                   <NavSection
-                    storageKey="business-measure"
-                    label="Measure"
+                    storageKey="business-confirm"
+                    label="Confirm"
                     defaultOpen={false}
                     hrefs={[cxPulseHref, "/business/cx-ex-correlation"]}
                   >

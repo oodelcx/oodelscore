@@ -119,7 +119,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   Compare branches
                 </a>
               </NavSection>
-              <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback", "/group/feedback-points"]}>
+              <NavSection storageKey="group-capture" label="Capture" hrefs={["/group/raw-feedback", "/group/feedback-points"]}>
                 {teamMemberCanAccess(user, "feedbackPoints") && (
                   <a href="/group/feedback-points">
                     <NavIcon name="feedback-points" />
@@ -135,8 +135,8 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               </NavSection>
 
               <NavSection
-                storageKey="group-understand"
-                label="Understand"
+                storageKey="group-clarify"
+                label="Clarify"
                 hrefs={[
                   "/group/insights",
                   "/group/analytics",
@@ -183,15 +183,9 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 )}
               </NavSection>
               <NavSection
-                storageKey="group-act"
-                label="Act"
-                hrefs={[
-                  "/group/attention-centre",
-                  "/group/cases",
-                  "/group/improvement-initiatives",
-                  "/group/decision-log",
-                  "/group/closing-the-loop",
-                ]}
+                storageKey="group-claim"
+                label="Claim"
+                hrefs={["/group/attention-centre", "/group/cases"]}
               >
                 {teamMemberCanAccess(user, "attentionCentre") && (
                   <a href="/group/attention-centre">
@@ -205,6 +199,13 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     Case Management
                   </a>
                 )}
+              </NavSection>
+
+              <NavSection
+                storageKey="group-close"
+                label="Close"
+                hrefs={["/group/improvement-initiatives", "/group/decision-log", "/group/closing-the-loop"]}
+              >
                 {hasFeature(org.enabledFeatures, "improvementInitiatives") &&
                   teamMemberCanAccess(user, "improvementInitiatives") && (
                     <a href="/group/improvement-initiatives">
@@ -244,8 +245,8 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 if (!showCxPulse && !showCorrelation) return null;
                 return (
                   <NavSection
-                    storageKey="group-measure"
-                    label="Measure"
+                    storageKey="group-confirm"
+                    label="Confirm"
                     defaultOpen={false}
                     hrefs={[cxPulseHref, "/group/cx-ex-correlation"]}
                   >

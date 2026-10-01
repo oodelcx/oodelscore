@@ -491,7 +491,7 @@ function HomePanel({
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Narrative — Listen / Act / Measure</h3>
+        <h3>Narrative — Capture / Claim / Confirm</h3>
         <div className="field-row">
           <Field
             label="Section headline"
@@ -738,7 +738,7 @@ function PricingPanel({
       </div>
       <div className="card" style={{ marginBottom: 20 }}>
         <h3>&ldquo;What you get&rdquo; strip</h3>
-        <p className="card-sub">Shown above the plan cards, ties the plans back to the Listen → Understand → Act → Measure loop.</p>
+        <p className="card-sub">Shown above the plan cards, ties the plans back to the Capture → Clarify → Claim → Close → Confirm loop.</p>
         <Field
           label="Strip headline"
           value={content.fields.loopStripHeadline}
