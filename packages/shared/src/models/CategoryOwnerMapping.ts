@@ -21,6 +21,16 @@ export interface ICategoryOwnerMapping {
   // this scope — an account has to opt in, it's never on by default.
   repeatThresholdCount: number | null;
   repeatWindowDays: number | null;
+  // Optional category-specific escalation override, independent of the
+  // region-based EscalationAssignment system: "if a case in this category
+  // sits unresolved past escalateAfterDays, jump it straight to level
+  // escalateToLevel" — for when a category's own severity warrants a
+  // different (usually higher, sometimes faster) escalation path than
+  // whatever region/level the case would otherwise follow. Both null =
+  // this category doesn't opt into a category-specific override; the
+  // case just follows the normal region-based escalation config.
+  escalateAfterDays: number | null;
+  escalateToLevel: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +43,8 @@ const CategoryOwnerMappingSchema = new Schema<ICategoryOwnerMapping>(
     defaultOwnerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     repeatThresholdCount: { type: Number, default: null },
     repeatWindowDays: { type: Number, default: null },
+    escalateAfterDays: { type: Number, default: null },
+    escalateToLevel: { type: Number, default: null },
   },
   { timestamps: true }
 );
