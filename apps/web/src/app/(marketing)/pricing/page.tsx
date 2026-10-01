@@ -19,6 +19,22 @@ interface LoopStripItem {
   body: string;
 }
 
+// Same self-heal as the homepage's loop boxes — tops up a stored
+// loopStripItems array saved before the 5C rename shipped (still holding 4
+// items) so this always renders all five without depending on a re-save.
+const DEFAULT_LOOP_STRIP_ITEMS: LoopStripItem[] = [
+  { label: "Capture", body: "Unlimited QR feedback points and responses" },
+  { label: "Clarify", body: "Themes and root causes surfaced automatically" },
+  { label: "Claim", body: "Case Management and owned cases included" },
+  { label: "Close", body: "Decision Log, Closing the Loop, and Playbooks included" },
+  { label: "Confirm", body: "A maturity score on every plan tier" },
+];
+
+function withDefaultLoopStripItems(items: LoopStripItem[]): LoopStripItem[] {
+  if (items.length >= DEFAULT_LOOP_STRIP_ITEMS.length) return items;
+  return [...items, ...DEFAULT_LOOP_STRIP_ITEMS.slice(items.length)];
+}
+
 // Otherwise Next statically prerenders this at build time and a Site
 // Content edit would never show up without a redeploy.
 export const revalidate = 60;
@@ -39,7 +55,7 @@ export default async function PricingPage() {
   if (menu.navItems.find((n) => n.key === "pricing")?.visible === false) notFound();
   const f = pricing.fields;
   const plans = parseJsonArray<Plan>(f.plans);
-  const loopItems = parseJsonArray<LoopStripItem>(f.loopStripItems);
+  const loopItems = withDefaultLoopStripItems(parseJsonArray<LoopStripItem>(f.loopStripItems));
   // Untagged plans (a doc saved before per-product pricing existed) default
   // to Customer Experience — same convention every other product-tagged
   // model in this codebase uses.
