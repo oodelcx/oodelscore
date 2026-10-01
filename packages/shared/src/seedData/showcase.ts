@@ -2258,11 +2258,12 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     "Fairly confident.",
   ];
   await CxPulsePulseResponse.findOneAndUpdate(
-    { ownerType: "parentOrg", ownerId: meridian.org._id, quarter: currentQuarterLabel() },
+    { ownerType: "parentOrg", ownerId: meridian.org._id, product: "customer_experience", quarter: currentQuarterLabel() },
     {
       $set: {
         ownerType: "parentOrg",
         ownerId: meridian.org._id,
+        product: "customer_experience",
         quarter: currentQuarterLabel(),
         answers: DEFAULT_CX_PULSE_QUESTIONS.map((question, i) => ({ question, answer: pulseAnswerValues[i] ?? "" })),
       },
@@ -2270,11 +2271,12 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     { upsert: true }
   );
   await CxPulsePulseResponse.findOneAndUpdate(
-    { ownerType: "parentOrg", ownerId: stAugustine.org._id, quarter: currentQuarterLabel() },
+    { ownerType: "parentOrg", ownerId: stAugustine.org._id, product: "customer_experience", quarter: currentQuarterLabel() },
     {
       $set: {
         ownerType: "parentOrg",
         ownerId: stAugustine.org._id,
+        product: "customer_experience",
         quarter: currentQuarterLabel(),
         answers: DEFAULT_CX_PULSE_QUESTIONS.map((question, i) => ({ question, answer: pulseAnswerValues[i] ?? "" })),
       },

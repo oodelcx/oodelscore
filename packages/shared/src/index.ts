@@ -42,6 +42,7 @@ export * from "./ai/themeSentiment";
 export * from "./ai/rootCause";
 export * from "./ai/insightsGeneration";
 export * from "./cxpulse/compute";
+export * from "./cxpulse/selfAssessment";
 export * from "./cxpulse/portfolio";
 export * from "./qr/generate";
 export * from "./feedback/dedup";
