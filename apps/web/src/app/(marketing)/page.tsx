@@ -44,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // the same visual primitives as hero-visual.tsx (labeled example data,
 // never presented as a live customer), not illustrations or fake photos.
 function StageFragment({ stage }: { stage: string }) {
-  if (stage === "Listen") {
+  if (stage === "Capture") {
     return (
       <div className="loop-frag-bubble">
         &ldquo;Wait time was a bit long today&rdquo;
@@ -52,7 +52,7 @@ function StageFragment({ stage }: { stage: string }) {
       </div>
     );
   }
-  if (stage === "Understand") {
+  if (stage === "Clarify") {
     return (
       <div className="loop-frag-tags">
         <span className="loop-frag-tag">Wait time · 14</span>
@@ -61,12 +61,20 @@ function StageFragment({ stage }: { stage: string }) {
       </div>
     );
   }
-  if (stage === "Act") {
+  if (stage === "Claim") {
     return (
       <div className="loop-frag-action">
         <span className="dot" />
         <span style={{ flex: 1 }}>Wait time flagged — Downtown</span>
         <span style={{ color: "var(--text-3)" }}>Sam · Fri</span>
+      </div>
+    );
+  }
+  if (stage === "Close") {
+    return (
+      <div className="loop-frag-close">
+        <span className="check">✓</span>
+        <span style={{ flex: 1 }}>Reply sent to customer</span>
       </div>
     );
   }
@@ -105,6 +113,7 @@ export default async function MarketingHomePage() {
             <b>Built for</b> {f.heroBuiltForLine}
           </div>
 
+          {f.loopEyebrow && <p className="loop-eyebrow" style={{ marginTop: 56 }}>{f.loopEyebrow}</p>}
           <div className="loop-stages">
             {loopStages.map((stage, i) => (
               <Reveal key={stage.label} delay={i * 90}>

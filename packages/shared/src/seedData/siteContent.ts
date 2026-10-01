@@ -48,6 +48,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         "OodelCX turns every QR scan — from a customer or a colleague — into tracked, owned work, not another number on a dashboard nobody opens. Built for one location or a thousand.",
       metaDescription:
         "OodelCX turns customer and colleague feedback into tracked, owned work — QR-code surveys, AI Insights reports, and Case Management built for one location or a thousand.",
+      loopEyebrow: "The 5C Framework",
       loopHeadline: "Capture. Clarify. Claim. Close. Confirm.",
       loopStages: JSON.stringify([
         { label: "Capture", title: "Collect", body: "A QR scan, a short survey, no app or login." },

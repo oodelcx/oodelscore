@@ -5,6 +5,7 @@ import { QrModal } from "@/components/qr-modal";
 import { InfoTip } from "@/components/info-tip";
 import { useTooltips } from "@/lib/useTooltips";
 import { SurveyBuilderPanel, type SurveyBuilderPayload } from "@/components/survey-builder";
+import { FeedbackPointExpiry } from "@/components/feedback-point-expiry";
 
 interface DemographicConfig {
   name: string;
@@ -31,6 +32,7 @@ interface FeedbackPointRow {
   isLayoutOverridden: boolean;
   eventName: string | null;
   deliveryMode?: "qr" | "link" | "both";
+  endsAt: string | null;
 }
 
 const LAYOUT_LABELS: Record<string, string> = {
@@ -324,6 +326,13 @@ export default function FeedbackPointsClient() {
                     {p.isLayoutOverridden && " (custom for this point)"}
                   </div>
                 </div>
+                {!isBranch && (
+                  <FeedbackPointExpiry
+                    apiPath={`/api/business/feedback-points/${p._id}`}
+                    endsAt={p.endsAt}
+                    onUpdated={(endsAt) => setPoints((prev) => prev.map((pt) => (pt._id === p._id ? { ...pt, endsAt } : pt)))}
+                  />
+                )}
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                   {p.deliveryMode !== "link" && (
                     <button className="btn" data-tour={isFirst ? "fp-first-qr" : undefined} style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
