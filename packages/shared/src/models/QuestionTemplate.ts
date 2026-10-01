@@ -11,6 +11,10 @@ export const QUESTION_TYPES = [
   "multi_select",
   "slider",
   "dropdown",
+  // Customer Effort Score — 1 (very easy) to 5 (very difficult). Inverted:
+  // a LOW value is the good outcome, opposite of star_1_5/nps_0_10. Scoring
+  // in scoring/goals.ts must never average this together with star_1_5.
+  "ces_1_5",
 ] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
@@ -26,6 +30,13 @@ export interface IQuestion {
   categoryId: Types.ObjectId | null;
   required: boolean;
   options: string[]; // for multiple_choice / multi_select / dropdown
+  // Marks this as "the" CSAT question for this template — CSAT is reported
+  // (top-2-box %) only from answers to whichever star_1_5 question carries
+  // this flag, never blended across every star_1_5 question in the
+  // template. At most one question per template should carry this; the
+  // Question Template editor enforces that by unchecking any previous one
+  // when a new one is checked. Meaningless on a non-star_1_5 question.
+  isCsatQuestion?: boolean;
 }
 
 export interface IQuestionTemplate {
@@ -50,6 +61,7 @@ const QuestionSchema = new Schema<IQuestion>({
   categoryId: { type: Schema.Types.ObjectId, ref: "Category", default: null },
   required: { type: Boolean, default: false },
   options: { type: [String], default: [] },
+  isCsatQuestion: { type: Boolean, default: false },
 });
 
 const QuestionTemplateSchema = new Schema<IQuestionTemplate>(

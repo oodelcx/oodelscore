@@ -42,6 +42,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     entry.affectedBusinessIds = body.affectedBusinessIds;
   }
   if (Array.isArray(body?.linkedActionIds)) entry.linkedActionIds = body.linkedActionIds;
+  if (typeof body?.addNote === "string" && body.addNote.trim()) {
+    entry.notes.push({ text: body.addNote.trim(), authorLabel: session.user.email || "Team member", createdAt: new Date() });
+  }
   await entry.save();
 
   return NextResponse.json({ status: "ok", entry });

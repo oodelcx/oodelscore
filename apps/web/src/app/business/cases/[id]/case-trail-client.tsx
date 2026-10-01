@@ -10,6 +10,13 @@ interface EscalationHistoryRow {
   at: string;
   userEmail: string | null;
 }
+interface TimelineRow {
+  kind: string;
+  label: string;
+  actorLabel: string;
+  note: string;
+  at: string;
+}
 interface CommentRow {
   _id: string;
   authorLabel: string;
@@ -17,6 +24,7 @@ interface CommentRow {
   createdAt: string;
 }
 interface AnswerRow {
+  questionId: string;
   type: string;
   value: unknown;
 }
@@ -39,6 +47,19 @@ interface RecurringFlagSummary {
   categoryName: string | null;
   caseCount: number;
   branchCount: number;
+}
+interface EscalationLevelPreview {
+  level: number;
+  label: string;
+  assigneeEmail: string | null;
+}
+interface EscalationInfo {
+  levelsConfigured: number;
+  topLevel: number | null;
+  canEscalate: boolean;
+  canDeEscalate: boolean;
+  nextLevel: EscalationLevelPreview | null;
+  prevLevel: EscalationLevelPreview | null;
 }
 interface CaseDetail {
   _id: string;
@@ -75,12 +96,23 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
   const [recurringFlag, setRecurringFlag] = useState<RecurringFlagSummary | null>(null);
   const [sourceResponses, setSourceResponses] = useState<ResponseRow[]>([]);
   const [comments, setComments] = useState<CommentRow[]>([]);
+  const [timeline, setTimeline] = useState<TimelineRow[]>([]);
+  const [questionTextById, setQuestionTextById] = useState<Record<string, string>>({});
+  const [escalation, setEscalation] = useState<EscalationInfo>({
+    levelsConfigured: 0,
+    topLevel: null,
+    canEscalate: false,
+    canDeEscalate: false,
+    nextLevel: null,
+    prevLevel: null,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [posting, setPosting] = useState(false);
   const [escalating, setEscalating] = useState(false);
   const [escalationNote, setEscalationNote] = useState("");
+  const [deEscalating, setDeEscalating] = useState(false);
   const [resolutionDraft, setResolutionDraft] = useState("");
   const [resolving, setResolving] = useState(false);
   const [customerMessage, setCustomerMessage] = useState("");
@@ -97,6 +129,11 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
         setRecurringFlag(data.recurringFlag ?? null);
         setSourceResponses(data.sourceResponses ?? []);
         setComments(data.comments ?? []);
+        setTimeline(data.timeline ?? []);
+        setQuestionTextById(data.questionTextById ?? {});
+        setEscalation(
+          data.escalation ?? { levelsConfigured: 0, topLevel: null, canEscalate: false, canDeEscalate: false, nextLevel: null, prevLevel: null }
+        );
         setResolutionDraft(data.item.resolutionNote ?? "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -132,6 +169,23 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
     setEscalating(false);
     if (!res.ok) {
       alert(data?.message ?? "Failed to escalate");
+      return;
+    }
+    setEscalationNote("");
+    load();
+  }
+
+  async function deEscalate() {
+    setDeEscalating(true);
+    const res = await fetch(`/api/business/action-board/${caseId}/de-escalate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: escalationNote.trim() }),
+    });
+    const data = await res.json().catch(() => null);
+    setDeEscalating(false);
+    if (!res.ok) {
+      alert(data?.message ?? "Failed to de-escalate");
       return;
     }
     setEscalationNote("");
@@ -227,8 +281,8 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
               <tbody>
                 {r.answers.map((a, i) => (
                   <tr key={i}>
-                    <td>{a.type}</td>
-                    <td style={{ textAlign: "right" }}>{String(a.value)}</td>
+                    <td>{questionTextById[a.questionId] ?? a.type}</td>
+                    <td style={{ textAlign: "right" }}>{Array.isArray(a.value) ? a.value.join(", ") : String(a.value)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -248,28 +302,68 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3>Escalation trail</h3>
-        {item.escalationHistory.length === 0 ? (
-          <p className="subtitle">Still at level 1 — hasn't been escalated.</p>
+        <h3>Case timeline</h3>
+        <p className="card-sub" style={{ margin: "0 0 8px" }}>
+          Every status, priority, owner, and escalation change this case has been through, in order — append-only,
+          never edited after the fact.
+        </p>
+        {timeline.length === 0 ? (
+          <p className="subtitle">No changes recorded yet — still exactly as it was created.</p>
         ) : (
           <ul style={{ paddingLeft: 18 }}>
-            {item.escalationHistory.map((h, i) => (
+            {timeline.map((t, i) => (
               <li key={i} style={{ marginBottom: 6, fontSize: 13 }}>
-                Level {h.level} ({h.userEmail ?? "unassigned"}) → escalated{h.note ? `: ${h.note}` : ""} —{" "}
-                {new Date(h.at).toLocaleString()}
+                {t.label} — <span style={{ color: "var(--text-2)" }}>{t.actorLabel}</span>
+                {t.note ? `: ${t.note}` : ""} <span style={{ color: "var(--text-3)" }}>({new Date(t.at).toLocaleString()})</span>
               </li>
             ))}
           </ul>
         )}
         {item.status !== "resolved" && (
           <div style={{ marginTop: 10 }}>
-            <div className="field" style={{ maxWidth: 480 }}>
-              <label>Escalation note (optional)</label>
-              <textarea value={escalationNote} onChange={(e) => setEscalationNote(e.target.value)} />
-            </div>
-            <button className="btn btn-sm" disabled={escalating} onClick={escalate}>
-              {escalating ? "Escalating…" : "↑ Escalate to next level"}
-            </button>
+            {escalation.levelsConfigured <= 1 ? (
+              <p className="subtitle" style={{ margin: 0 }}>
+                No escalation chain is configured for this account beyond the owner — there is nowhere to escalate
+                to or de-escalate from yet. An Admin can add further levels under Accounts → Escalation Workflow.
+              </p>
+            ) : (
+              <>
+                {escalation.canEscalate && escalation.nextLevel && (
+                  <p className="subtitle" style={{ margin: "0 0 8px" }}>
+                    {escalation.nextLevel.assigneeEmail ? (
+                      <>
+                        Escalating sends this to <b>{escalation.nextLevel.assigneeEmail}</b> ({escalation.nextLevel.label}).
+                      </>
+                    ) : (
+                      <span className="error-text">
+                        No one is assigned to {escalation.nextLevel.label} yet — escalating will move the level but won&apos;t
+                        notify anyone until an Admin fills it in.
+                      </span>
+                    )}
+                  </p>
+                )}
+                <div className="field" style={{ maxWidth: 480 }}>
+                  <label>Note (optional)</label>
+                  <textarea value={escalationNote} onChange={(e) => setEscalationNote(e.target.value)} />
+                </div>
+                <div className="btn-group">
+                  <button className="btn btn-sm" disabled={escalating || !escalation.canEscalate} onClick={escalate}>
+                    {escalating
+                      ? "Escalating…"
+                      : escalation.canEscalate
+                        ? `↑ Escalate to ${escalation.nextLevel?.label ?? "next level"}`
+                        : "↑ Already at the top level"}
+                  </button>
+                  {escalation.canDeEscalate && (
+                    <button className="btn btn-sm" disabled={deEscalating} onClick={deEscalate}>
+                      {deEscalating
+                        ? "De-escalating…"
+                        : `↓ De-escalate to ${escalation.prevLevel?.label ?? "previous level"}${escalation.prevLevel?.assigneeEmail ? ` (${escalation.prevLevel.assigneeEmail})` : ""}`}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

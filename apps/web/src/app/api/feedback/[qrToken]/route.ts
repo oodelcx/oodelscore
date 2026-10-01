@@ -6,6 +6,7 @@ import {
   Business,
   ParentOrganization,
   QuestionTemplate,
+  Response,
   ScanToken,
   dedupCookieName,
   checkRateLimit,
@@ -13,6 +14,7 @@ import {
   logApiRouteError,
   isFeedbackPointOpen,
   effectiveDemographicConfig,
+  effectiveQuestions,
 } from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
@@ -65,10 +67,24 @@ async function handleGet(request: NextRequest, qrToken: string) {
     });
   }
 
+  // A point built through the real survey builder carries its own fully
+  // authored question set and needs no template at all — see
+  // effectiveQuestions()'s own doc comment for the full priority order.
+  const hasCustomQuestions = !!feedbackPoint.customQuestions && feedbackPoint.customQuestions.length > 0;
   const templateId = feedbackPoint.questionTemplateOverride ?? business.questionTemplateId;
-  const template = templateId ? await QuestionTemplate.findById(templateId) : null;
-  if (!template) {
+  const template = !hasCustomQuestions && templateId ? await QuestionTemplate.findById(templateId) : null;
+  if (!hasCustomQuestions && !template) {
     return NextResponse.json({ status: "error", message: "No survey is configured for this link yet" }, { status: 404 });
+  }
+
+  // Business-side survey builder's response quota — auto-closes the point
+  // once reached, same "no need to remember to turn it off" reasoning as
+  // startsAt/endsAt in isFeedbackPointOpen above.
+  if (feedbackPoint.responseQuota) {
+    const responseCount = await Response.countDocuments({ feedbackPointId: feedbackPoint._id });
+    if (responseCount >= feedbackPoint.responseQuota) {
+      return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+    }
   }
 
   // Fire-and-forget: powers the conversion-rate metric (responses / scans).
@@ -95,7 +111,7 @@ async function handleGet(request: NextRequest, qrToken: string) {
     groupTag: groupTag ? `Part of ${groupTag}` : null,
     formLayout,
     demographicConfig,
-    questions: template.questions.map((q, index) => ({
+    questions: effectiveQuestions(feedbackPoint, template ?? { questions: [] }).map((q, index) => ({
       index,
       text: q.text,
       type: q.type,

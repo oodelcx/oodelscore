@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CxGoalsCard } from "@/components/cx-goals-card";
+import { PulseSelfAssessmentCard } from "@/components/pulse-self-assessment-card";
 
 interface ExPulseScore {
   period: string;
@@ -289,6 +290,8 @@ export default function BusinessExPulseClient() {
               )}
             </div>
           )}
+
+          <PulseSelfAssessmentCard apiPath="/api/business/ex-pulse/self-assessment" title="Quarterly self-assessment" />
 
           {history.length > 1 && (
             <div className="callout">

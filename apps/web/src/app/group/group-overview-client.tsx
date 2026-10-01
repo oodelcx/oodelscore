@@ -94,6 +94,10 @@ interface OverviewData {
   branchCount: number;
   networkAverage: number | null;
   networkNps: number | null;
+  networkCsat: number | null;
+  networkCsatSampleSize: number;
+  networkCesLowEffort: number | null;
+  networkCesSampleSize: number;
   cxPulseLevel: number | null;
   cxPulseHoldingBack: HoldingBackDimension[];
   comparisons: Comparisons;
@@ -106,12 +110,14 @@ interface OverviewData {
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — see group/maturity/maturity-client.tsx for why
+// these differ from the schema field names.
 const DIMENSION_LABELS: Record<HoldingBackDimension["dimension"], string> = {
-  awareness: "Awareness",
-  response: "Response",
-  ownership: "Ownership",
-  culture: "Culture",
-  outcome: "Outcome",
+  awareness: "Signal",
+  response: "Speed",
+  ownership: "Accountability",
+  culture: "Buy-in",
+  outcome: "Impact",
 };
 
 /** CX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /group/maturity. */
@@ -280,6 +286,24 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
             <InfoTip text={tooltips["network-nps"]} />
           </div>
           <div className="metric-val">{data.networkNps !== null ? formatSigned(data.networkNps) : "—"}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            Network CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5, weighted across branches by their response count." />
+          </div>
+          <div className="metric-val">{data.networkCsat !== null ? `${data.networkCsat}%` : "—"}</div>
+          <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
+            {data.networkCsatSampleSize} response{data.networkCsatSampleSize === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            Network CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 (low effort = good), weighted across branches by their response count." />
+          </div>
+          <div className="metric-val">{data.networkCesLowEffort !== null ? `${data.networkCesLowEffort}%` : "—"}</div>
+          <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
+            {data.networkCesSampleSize} response{data.networkCesSampleSize === 1 ? "" : "s"}
+          </p>
         </div>
         <div className="card">
           <div className="metric-label">

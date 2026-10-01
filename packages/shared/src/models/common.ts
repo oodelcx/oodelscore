@@ -97,12 +97,15 @@ export const PricingTermsSchema = new Schema<IPricingTerms>(
 );
 
 /**
- * One rung of an org's own escalation chain — ADMIN-EDITABLE ONLY, configured
- * once per Business or ParentOrganization (branches inherit the org's the
- * same way ragThresholds does). `level` is an ordinal (1 = the branch's own
- * owner, always), `label` is whatever the organisation calls that rung
- * ("Cluster Manager", "Area Manager", "President") — never a hardcoded job
- * title, so the same mechanism fits any customer's real hierarchy.
+ * One rung of an org's own escalation chain, configured once per Business or
+ * ParentOrganization (branches inherit the org's the same way ragThresholds
+ * does). Editable both by Admin (Accounts -> Escalation Workflow) and
+ * self-service by the org's own owner (the Group head for a ParentOrg, or a
+ * standalone Business's own owner) via /group/escalation or
+ * /business/escalation. `level` is an ordinal (1 = the branch's own owner,
+ * always), `label` is whatever the organisation calls that rung ("Cluster
+ * Manager", "Area Manager", "President") — never a hardcoded job title, so
+ * the same mechanism fits any customer's real hierarchy.
  */
 export interface IEscalationLevel {
   level: number;
@@ -113,6 +116,28 @@ export const EscalationLevelSchema = new Schema<IEscalationLevel>(
   {
     level: { type: Number, required: true },
     label: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
+/**
+ * A single append-only note on a record (Improvement Initiative, Decision
+ * Log entry, etc.) — a running commentary thread, not a field anyone
+ * edits in place. `authorLabel` is captured at write time (not a live
+ * ref lookup) so a note still reads sensibly after its author leaves the
+ * team or is deleted.
+ */
+export interface INoteEntry {
+  text: string;
+  authorLabel: string;
+  createdAt: Date;
+}
+
+export const NoteEntrySchema = new Schema<INoteEntry>(
+  {
+    text: { type: String, required: true, trim: true },
+    authorLabel: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
   },
   { _id: false }
 );

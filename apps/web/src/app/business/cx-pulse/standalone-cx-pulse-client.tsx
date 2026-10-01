@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
+import { PulseSelfAssessmentCard } from "@/components/pulse-self-assessment-card";
 
 interface Dimensions {
   awareness: number;
@@ -22,12 +23,14 @@ interface OwnData {
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — see group/maturity/maturity-client.tsx for why
+// these differ from the schema field names.
 const DIMENSION_LABELS: { key: keyof Dimensions; label: string }[] = [
-  { key: "awareness", label: "Awareness" },
-  { key: "response", label: "Response" },
-  { key: "ownership", label: "Ownership" },
-  { key: "culture", label: "Culture" },
-  { key: "outcome", label: "Outcome" },
+  { key: "awareness", label: "Signal" },
+  { key: "response", label: "Speed" },
+  { key: "ownership", label: "Accountability" },
+  { key: "culture", label: "Buy-in" },
+  { key: "outcome", label: "Impact" },
 ];
 
 function trendPath(history: ScoreDoc[]): string | null {
@@ -88,7 +91,7 @@ export default function StandaloneCxPulseClient({ tooltips }: { tooltips: Record
         By dimension
         <InfoTip text={tooltips["dimensions"]} />
       </div>
-      <div className="card">
+      <div className="card" style={{ marginBottom: 20 }}>
         <div className="bars">
           {DIMENSION_LABELS.map((d) => (
             <div key={d.key} className="bar-row">
@@ -101,6 +104,8 @@ export default function StandaloneCxPulseClient({ tooltips }: { tooltips: Record
           ))}
         </div>
       </div>
+
+      <PulseSelfAssessmentCard apiPath="/api/business/cx-pulse/self-assessment" title="Quarterly self-assessment" />
     </div>
   );
 }

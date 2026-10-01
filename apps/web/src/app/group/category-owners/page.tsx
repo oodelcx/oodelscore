@@ -5,17 +5,36 @@ import { useEffect, useState } from "react";
 interface CategoryRow {
   _id: string;
   name: string;
+  product?: "customer_experience" | "colleague_experience";
 }
 interface MappingRow {
   categoryId: string;
   defaultOwnerId: string;
   repeatThresholdCount: number | null;
   repeatWindowDays: number | null;
+  escalateAfterDays: number | null;
+  escalateToLevel: number | null;
+}
+interface EscalationLevelRow {
+  level: number;
+  label: string;
 }
 interface TeamRow {
   userId: string;
   label: string;
 }
+interface BranchPermissions {
+  feedbackPoints: boolean;
+  categoryOwners: boolean;
+  cxGoals: boolean;
+  alertRules: boolean;
+}
+const BRANCH_PERMISSION_LABELS: Record<keyof BranchPermissions, { label: string; description: string }> = {
+  feedbackPoints: { label: "Feedback Points", description: "A branch can view its own feedback points and request changes from Admin." },
+  categoryOwners: { label: "Category Owners", description: "A branch can override your default category-owner mapping for its own local staff." },
+  cxGoals: { label: "CX Goals", description: "A branch can set its own CX goals, independent of yours." },
+  alertRules: { label: "Alert Rules", description: "A branch can add its own alert rules, on top of the ones you cascade down to it." },
+};
 
 export default function GroupCategoryOwnersPage() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
@@ -25,6 +44,11 @@ export default function GroupCategoryOwnersPage() {
   const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
   const [repeatDrafts, setRepeatDrafts] = useState<Record<string, { count: string; days: string }>>({});
   const [savingRepeatFor, setSavingRepeatFor] = useState<string | null>(null);
+  const [branchPerms, setBranchPerms] = useState<BranchPermissions | null>(null);
+  const [savingPerm, setSavingPerm] = useState<keyof BranchPermissions | null>(null);
+  const [escalationLevels, setEscalationLevels] = useState<EscalationLevelRow[]>([]);
+  const [escalateDrafts, setEscalateDrafts] = useState<Record<string, { days: string; level: string }>>({});
+  const [savingEscalateFor, setSavingEscalateFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -33,22 +57,44 @@ export default function GroupCategoryOwnersPage() {
         setCategories(data.categories ?? []);
         const byCategory: Record<string, MappingRow> = {};
         const drafts: Record<string, { count: string; days: string }> = {};
+        const escalateDraftsNext: Record<string, { days: string; level: string }> = {};
         for (const m of data.mappings ?? []) {
           byCategory[m.categoryId] = m;
           drafts[m.categoryId] = {
             count: m.repeatThresholdCount != null ? String(m.repeatThresholdCount) : "",
             days: m.repeatWindowDays != null ? String(m.repeatWindowDays) : "",
           };
+          escalateDraftsNext[m.categoryId] = {
+            days: m.escalateAfterDays != null ? String(m.escalateAfterDays) : "",
+            level: m.escalateToLevel != null ? String(m.escalateToLevel) : "",
+          };
         }
         setMappings(byCategory);
         setRepeatDrafts(drafts);
+        setEscalateDrafts(escalateDraftsNext);
+        setEscalationLevels(data.escalationLevels ?? []);
         setTeam(teamData.team ?? []);
         setLoading(false);
       }
     );
+    fetch("/api/group/branch-permissions")
+      .then((r) => r.json())
+      .then((d) => setBranchPerms(d.branchPermissions ?? null));
   }
 
   useEffect(load, []);
+
+  async function toggleBranchPermission(key: keyof BranchPermissions, value: boolean) {
+    setSavingPerm(key);
+    const res = await fetch("/api/group/branch-permissions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: value }),
+    });
+    const data = await res.json().catch(() => null);
+    setSavingPerm(null);
+    if (res.ok) setBranchPerms(data.branchPermissions ?? null);
+  }
 
   async function setOwner(categoryId: string, defaultOwnerId: string) {
     setSavingCategoryId(categoryId);
@@ -84,6 +130,25 @@ export default function GroupCategoryOwnersPage() {
     load();
   }
 
+  async function saveEscalateOverride(categoryId: string) {
+    const ownerId = mappings[categoryId]?.defaultOwnerId;
+    if (!ownerId) return;
+    const draft = escalateDrafts[categoryId] ?? { days: "", level: "" };
+    setSavingEscalateFor(categoryId);
+    await fetch("/api/group/category-owners", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        categoryId,
+        defaultOwnerId: ownerId,
+        escalateAfterDays: draft.days.trim() ? Number(draft.days) : null,
+        escalateToLevel: draft.level.trim() ? Number(draft.level) : null,
+      }),
+    });
+    setSavingEscalateFor(null);
+    load();
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -93,6 +158,37 @@ export default function GroupCategoryOwnersPage() {
             When an Alert Rule fires, the AI picks the category — this says who the resulting case goes to.
           </p>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <h3 style={{ marginTop: 0 }}>Branch permissions</h3>
+        <p className="card-sub" style={{ margin: "0 0 12px" }}>
+          Decide whether your branches manage each of these themselves, or you keep them centralized. Turning one
+          off doesn&rsquo;t delete anything a branch already set up — it just hides self-service and stops new
+          changes, and everything falls back to what you set for the org.
+        </p>
+        {branchPerms === null && <p className="subtitle">Loading…</p>}
+        {branchPerms !== null && (
+          <div style={{ display: "grid", gap: 10 }}>
+            {(Object.keys(BRANCH_PERMISSION_LABELS) as (keyof BranchPermissions)[]).map((key) => (
+              <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={branchPerms[key]}
+                  disabled={savingPerm === key}
+                  onChange={(e) => toggleBranchPermission(key, e.target.checked)}
+                  style={{ marginTop: 3 }}
+                />
+                <span>
+                  <b>{BRANCH_PERMISSION_LABELS[key].label}</b>
+                  <span className="subtitle" style={{ display: "block", margin: 0 }}>
+                    {BRANCH_PERMISSION_LABELS[key].description}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="callout" style={{ marginBottom: 12 }}>
@@ -109,6 +205,12 @@ export default function GroupCategoryOwnersPage() {
         — a repeat within a single branch is that branch&rsquo;s own setting on its Category Owners page. Leave blank
         to turn detection off for that category.
       </div>
+      <div className="callout">
+        &quot;Escalate if unresolved&quot; is independent of your region-based escalation config (see the Escalation
+        page): it&rsquo;s a category-specific override — if a case in this category sits unresolved for this many
+        days, it jumps straight to the chosen level, regardless of what region it&rsquo;s in. Leave blank for a
+        category that should just follow your normal escalation chain.
+      </div>
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
@@ -118,12 +220,24 @@ export default function GroupCategoryOwnersPage() {
               <th>Category</th>
               <th>Default owner</th>
               <th>Flag as recurring after</th>
+              <th>Escalate if unresolved</th>
             </tr>
           </thead>
           <tbody>
             {categories.map((c, index) => (
               <tr key={c._id}>
-                <td>{c.name}</td>
+                <td>
+                  {c.name}
+                  {/* This list covers every enabled product's categories at once (an org-wide
+                      mapping, not scoped to whichever tab is active) — the badge is what keeps a
+                      Customer Experience category from reading as unlabeled next to a Colleague
+                      Experience one. */}
+                  {c.product && (
+                    <span className={`pill ${c.product === "colleague_experience" ? "pill-blue" : ""}`} style={{ marginLeft: 8, fontSize: 10.5 }}>
+                      {c.product === "colleague_experience" ? "Colleague" : "Customer"}
+                    </span>
+                  )}
+                </td>
                 <td data-tour={index === 0 ? "cat-owners-first-select" : undefined}>
                   <select
                     value={mappings[c._id]?.defaultOwnerId ?? ""}
@@ -177,11 +291,50 @@ export default function GroupCategoryOwnersPage() {
                     <span className="subtitle">Set an owner first</span>
                   )}
                 </td>
+                <td>
+                  {mappings[c._id]?.defaultOwnerId ? (
+                    <div className="field-row" style={{ alignItems: "flex-end", gap: 6 }}>
+                      <div className="field" style={{ margin: 0, width: 60 }}>
+                        <label style={{ fontSize: 11 }}>Days</label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="off"
+                          value={escalateDrafts[c._id]?.days ?? ""}
+                          onChange={(e) =>
+                            setEscalateDrafts((d) => ({ ...d, [c._id]: { ...(d[c._id] ?? { days: "", level: "" }), days: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <div className="field" style={{ margin: 0, width: 130 }}>
+                        <label style={{ fontSize: 11 }}>Escalate to</label>
+                        <select
+                          value={escalateDrafts[c._id]?.level ?? ""}
+                          onChange={(e) =>
+                            setEscalateDrafts((d) => ({ ...d, [c._id]: { ...(d[c._id] ?? { days: "", level: "" }), level: e.target.value } }))
+                          }
+                        >
+                          <option value="">—</option>
+                          {escalationLevels.map((l) => (
+                            <option key={l.level} value={l.level}>
+                              Level {l.level} — {l.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button className="btn btn-sm" disabled={savingEscalateFor === c._id} onClick={() => saveEscalateOverride(c._id)}>
+                        {savingEscalateFor === c._id ? "…" : "Save"}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="subtitle">Set an owner first</span>
+                  )}
+                </td>
               </tr>
             ))}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={3} className="subtitle">
+                <td colSpan={4} className="subtitle">
                   No categories yet.
                 </td>
               </tr>

@@ -25,6 +25,8 @@ export interface BusinessSummary {
   billingAssignment: string;
   starAverage: number | null;
   npsScore: number | null;
+  csatPercent: number | null;
+  cesLowEffortPercent: number | null;
   responseCount: number;
   confidence: BenchmarkConfidence;
 }
@@ -53,6 +55,8 @@ export async function computeNetworkSummaries(
         billingAssignment: b.billingAssignment,
         starAverage: metrics.starAverage,
         npsScore: metrics.npsScore,
+        csatPercent: metrics.csatPercent,
+        cesLowEffortPercent: metrics.cesLowEffortPercent,
         responseCount: metrics.responseCount,
         confidence: confidenceForSampleSize(metrics.responseCount),
       };

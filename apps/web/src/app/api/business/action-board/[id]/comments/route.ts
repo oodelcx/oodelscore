@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ActionBoardItem, ActionItemComment, User, sendTemplatedEmail } from "@oodelscore/shared";
+import { connectToDatabase, ActionBoardItem, ActionItemComment, User, sendTemplatedEmail, logCaseEvent } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -50,6 +50,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     authorId: session.user._id,
     authorLabel: authorLabel(session.user),
     body: text,
+  });
+
+  await logCaseEvent({
+    actionBoardItemId: item._id,
+    businessId: item.businessId,
+    kind: "comment_added",
+    fromValue: null,
+    toValue: null,
+    actorUserId: session.user._id,
+    actorLabel: authorLabel(session.user),
+    note: text,
   });
 
   if (item.ownerId && item.ownerId.toString() !== session.user._id.toString()) {

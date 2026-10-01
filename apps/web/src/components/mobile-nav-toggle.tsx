@@ -3,19 +3,18 @@
 import { useEffect, useState } from "react";
 
 /**
- * Small client-side island for the off-canvas mobile sidebar (Admin,
- * Business, Group portals — see admin.css's ".admin-sidebar" rules and the
- * `@media (max-width: 900px)` block added alongside this component).
+ * Client-side island for the always-off-canvas drawer nav (Admin, Business,
+ * Group portals — see admin.css's ".admin-sidebar"/".mobile-topbar" rules).
  *
  * The three portal layouts are server components (they do `await
  * getCurrentUser()`, DB lookups, etc.), so this owns only the interactive
- * bit: a hamburger button in a slim sticky top bar, plus the open/closed
+ * bit: a hamburger button in the permanent top bar, plus the open/closed
  * state. It doesn't hold a ref to the `<aside className="admin-sidebar">`
  * element — that's rendered by the (server) layout elsewhere in the tree —
  * so instead of DOM refs it toggles a class on `<html>`
- * (`mobile-nav-open`), and admin.css's off-canvas rules key off
- * `html.mobile-nav-open .admin-sidebar` / `html.mobile-nav-open
- * .mobile-nav-backdrop`. This mirrors the slide-in/backdrop/close-on-click-
+ * (`mobile-nav-open`), and admin.css's drawer rules key off
+ * `html.mobile-nav-open .admin-sidebar` / that same class showing
+ * `.mobile-nav-backdrop`. This mirrors the slide-in/backdrop/close-on-click-
  * outside interaction already built for the Case Management side panel
  * (see playbook-run-panel-slideout.tsx + the `.pb-slideout*` rules in
  * business.css), just without needing a shared parent to manage the state
@@ -57,6 +56,7 @@ export default function MobileNavToggle({ label }: { label: string }) {
           <span className="mobile-nav-btn-bar" />
           <span className="mobile-nav-btn-bar" />
         </button>
+        <img className="mobile-topbar-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
         <span className="mobile-topbar-label">{label}</span>
       </div>
       {open && <div className="mobile-nav-backdrop" onClick={() => setOpen(false)} />}

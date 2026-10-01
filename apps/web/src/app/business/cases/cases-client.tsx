@@ -6,6 +6,7 @@ import Link from "next/link";
 import { InfoTip } from "@/components/info-tip";
 import { OwnerBadge } from "@/components/owner-badge";
 import { PlaybookRunPanelSlideout } from "@/components/playbook-run-panel-slideout";
+import { CaseSidePanel } from "@/components/case-side-panel";
 import { useTooltips } from "@/lib/useTooltips";
 
 interface PlaybookRunSummary {
@@ -49,6 +50,13 @@ interface ItemRow {
 interface TeamRow {
   userId: string;
   label: string;
+}
+interface RecurringFlagRow {
+  _id: string;
+  categoryName: string;
+  count: number;
+  windowDays: number;
+  actionable: boolean;
 }
 interface PlaybookRow {
   _id: string;
@@ -150,6 +158,29 @@ export default function BusinessCasesClient() {
   const [page, setPage] = useState(1);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
   const [ceEnabled, setCeEnabled] = useState(false);
+  const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
+  const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
+
+  function loadFlags() {
+    fetch("/api/business/recurring-issues")
+      .then((r) => r.json())
+      .then((d) => setFlags(d.flags ?? []))
+      .catch(() => setFlags([]));
+  }
+
+  async function convertFlag(id: string) {
+    setConvertingFlagId(id);
+    await fetch(`/api/business/recurring-issues/${id}/convert`, { method: "POST" });
+    setConvertingFlagId(null);
+    loadFlags();
+  }
+
+  async function dismissFlag(id: string) {
+    setConvertingFlagId(id);
+    await fetch(`/api/business/recurring-issues/${id}/dismiss`, { method: "POST" });
+    setConvertingFlagId(null);
+    loadFlags();
+  }
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
@@ -187,6 +218,7 @@ export default function BusinessCasesClient() {
   }
 
   useEffect(load, []);
+  useEffect(loadFlags, []);
 
   useEffect(() => {
     fetch("/api/business/me")
@@ -377,6 +409,38 @@ export default function BusinessCasesClient() {
           )}
         </div>
       </div>
+
+      {!isLimited && flags.length > 0 && (
+        <div className="card" style={{ marginBottom: 18, borderColor: "var(--amber, #E0A100)" }}>
+          <h3 style={{ margin: "0 0 4px" }}>Recurring patterns in these cases</h3>
+          <p className="card-sub" style={{ margin: "0 0 10px" }}>
+            The same category keeps coming up here — the system noticed the pattern automatically. Turn it into a
+            tracked Improvement Initiative, or dismiss it if it&rsquo;s not worth one right now.
+          </p>
+          {flags.map((f) => (
+            <div
+              key={f._id}
+              className="field-row"
+              style={{ alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--border)" }}
+            >
+              <div>
+                <b>{f.categoryName}</b> — {f.count} cases in the last {f.windowDays} days
+                {!f.actionable && <span className="subtitle"> · handled by your parent organization</span>}
+              </div>
+              {f.actionable && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn btn-sm btn-dark" disabled={convertingFlagId === f._id} onClick={() => convertFlag(f._id)}>
+                    {convertingFlagId === f._id ? "…" : "Create initiative from this"}
+                  </button>
+                  <button className="btn btn-sm" disabled={convertingFlagId === f._id} onClick={() => dismissFlag(f._id)}>
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {!isLimited && (
         <div className="grid grid-5 kpi-strip" data-tour="cases-kpi-strip" style={{ marginBottom: 20 }}>
@@ -635,7 +699,7 @@ export default function BusinessCasesClient() {
                         className={`case-action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
                         onClick={() => toggleComments(item._id)}
                       >
-                        💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
+                        💬 Comments{commentsByItem[item._id]?.length ? ` (${commentsByItem[item._id].length})` : ""}
                       </button>
                       {isBranch && !isLimited && (
                         <button
@@ -644,7 +708,7 @@ export default function BusinessCasesClient() {
                           disabled={escalating === item._id}
                           onClick={() => (item.escalatedToOrg ? unEscalate(item._id) : startEscalate(item._id))}
                         >
-                          {item.escalatedToOrg ? "↩ Un-escalate" : `↗ Escalate to ${orgName ?? "org"}`}
+                          {item.escalatedToOrg ? "↓ De-escalate" : `↗ Escalate to ${orgName ?? "org"}`}
                         </button>
                       )}
                       {!isLimited && item.status !== "resolved" && (
@@ -661,62 +725,6 @@ export default function BusinessCasesClient() {
                     </div>
                     {!isLimited && <OwnerBadge label={team.find((t) => t.userId === item.ownerId)?.label ?? null} tip={tooltips["owner"]} />}
                   </div>
-
-                  {expandedCommentsFor === item._id && (
-                    <div className="ab-panel">
-                      {item.escalationHistory && item.escalationHistory.length > 0 && (
-                        <ul style={{ margin: "0 0 10px", paddingLeft: 0, listStyle: "none" }}>
-                          {item.escalationHistory.map((h, i) => (
-                            <li key={i} style={{ marginBottom: 6, fontSize: "12.5px", color: "var(--text-3)" }}>
-                              ↑ Level {h.level} → escalated{h.note ? `: ${h.note}` : ""} —{" "}
-                              {new Date(h.at).toLocaleString()}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {(commentsByItem[item._id] ?? []).length === 0 ? (
-                        <p className="subtitle" style={{ margin: "0 0 8px" }}>
-                          No comments yet — start the trail below.
-                        </p>
-                      ) : (
-                        <ul style={{ margin: "0 0 8px", paddingLeft: 0, listStyle: "none" }}>
-                          {(commentsByItem[item._id] ?? []).map((c) => (
-                            <li key={c._id} style={{ marginBottom: 8, fontSize: "12.5px" }}>
-                              <b>{c.authorLabel}</b> <span style={{ color: "var(--text-3)" }}>{new Date(c.createdAt).toLocaleString()}</span>
-                              <div style={{ color: "var(--text-2)" }}>{c.body}</div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="field-row" style={{ alignItems: "flex-end" }}>
-                        <div className="field" style={{ margin: 0, flex: 1 }}>
-                          <textarea
-                            placeholder="Add a note for whoever's on this item…"
-                            value={commentDraft}
-                            onChange={(e) => setCommentDraft(e.target.value)}
-                          />
-                        </div>
-                        <button className="btn btn-sm btn-dark" disabled={postingComment || !commentDraft.trim()} onClick={() => postComment(item._id)}>
-                          {postingComment ? "Posting…" : "Post"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {escalatingId === item._id && (
-                    <div className="ab-panel">
-                      <div className="field" style={{ margin: 0 }}>
-                        <label>Escalating notifies {orgName ?? "your parent org"} — what do they need to know?</label>
-                        <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
-                      </div>
-                      <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
-                        {escalating === item._id ? "Escalating…" : "Send escalation"}
-                      </button>{" "}
-                      <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
-                        Cancel
-                      </button>
-                    </div>
-                  )}
 
                   {resolvingId === item._id && (
                     <div className="ab-panel">
@@ -763,6 +771,86 @@ export default function BusinessCasesClient() {
           </button>
         </div>
       )}
+
+      {expandedCommentsFor &&
+        (() => {
+          const item = items.find((i) => i._id === expandedCommentsFor);
+          if (!item) return null;
+          return (
+            <CaseSidePanel
+              title={`Comments — ${item.title}`}
+              onClose={() => setExpandedCommentsFor(null)}
+              footer={
+                <button
+                  className="btn btn-sm btn-dark"
+                  style={{ width: "100%" }}
+                  disabled={postingComment || !commentDraft.trim()}
+                  onClick={() => postComment(item._id)}
+                >
+                  {postingComment ? "Posting…" : "Post comment"}
+                </button>
+              }
+            >
+              {item.escalationHistory && item.escalationHistory.length > 0 && (
+                <ul style={{ margin: "0 0 14px", paddingLeft: 0, listStyle: "none" }}>
+                  {item.escalationHistory.map((h, i) => (
+                    <li key={i} style={{ marginBottom: 6, fontSize: "12.5px", color: "var(--text-3)" }}>
+                      ↑ Level {h.level} → escalated{h.note ? `: ${h.note}` : ""} — {new Date(h.at).toLocaleString()}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {(commentsByItem[item._id] ?? []).length === 0 ? (
+                <p className="subtitle" style={{ margin: "0 0 8px" }}>
+                  No comments yet — start the trail below.
+                </p>
+              ) : (
+                <ul style={{ margin: "0 0 8px", paddingLeft: 0, listStyle: "none" }}>
+                  {(commentsByItem[item._id] ?? []).map((c) => (
+                    <li key={c._id} style={{ marginBottom: 10, fontSize: "12.5px" }}>
+                      <b>{c.authorLabel}</b> <span style={{ color: "var(--text-3)" }}>{new Date(c.createdAt).toLocaleString()}</span>
+                      <div style={{ color: "var(--text-2)" }}>{c.body}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="field" style={{ margin: "12px 0 0" }}>
+                <textarea
+                  placeholder="Add a note for whoever's on this item…"
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                />
+              </div>
+            </CaseSidePanel>
+          );
+        })()}
+
+      {escalatingId &&
+        (() => {
+          const item = items.find((i) => i._id === escalatingId);
+          if (!item) return null;
+          return (
+            <CaseSidePanel
+              title={`Escalate — ${item.title}`}
+              onClose={() => setEscalatingId(null)}
+              footer={
+                <>
+                  <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
+                    {escalating === item._id ? "Escalating…" : "Send escalation"}
+                  </button>
+                  <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
+                    Cancel
+                  </button>
+                </>
+              }
+            >
+              <p className="subtitle" style={{ marginTop: 0 }}>
+                Escalating notifies {orgName ?? "your parent org"} — what do they need to know?
+              </p>
+              <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
+            </CaseSidePanel>
+          );
+        })()}
 
       {openRunFor && (
         <PlaybookRunPanelSlideout

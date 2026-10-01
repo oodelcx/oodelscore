@@ -125,20 +125,17 @@ async function cultureScore(
     playbookRate = flaggedCount > 0 ? Math.min(100, Math.round((totalUsage / flaggedCount) * 100)) : totalUsage > 0 ? 100 : 0;
   }
 
-  // The quarterly self-assessment (CxPulsePulseResponse) is Customer
-  // Experience's own questionnaire — Colleague Experience has no equivalent
-  // yet, so its culture score is playbook adoption alone rather than a
-  // blend. Revisit if/when a CE-specific self-assessment is built.
-  let selfAssessmentScore = 0;
-  if (product === "customer_experience") {
-    const ownerType: BillingOwnerType = parentOrgId ? "parentOrg" : "business";
-    const ownerId = parentOrgId ?? businessIds[0];
-    const selfAssessment = ownerId ? await CxPulsePulseResponse.findOne({ ownerType, ownerId, quarter }) : null;
-    selfAssessmentScore = selfAssessment && selfAssessment.answers.length > 0 ? 100 : 0;
-  }
+  // The quarterly self-assessment (CxPulsePulseResponse) now has its own
+  // question set per product (framework.pulseQuestions for Customer
+  // Experience, framework.ceSelfAssessmentQuestions for Colleague
+  // Experience — see cxpulse/selfAssessment.ts) — both blend into Culture
+  // the same way.
+  const ownerType: BillingOwnerType = parentOrgId ? "parentOrg" : "business";
+  const ownerId = parentOrgId ?? businessIds[0];
+  const selfAssessment = ownerId ? await CxPulsePulseResponse.findOne({ ownerType, ownerId, product, quarter }) : null;
+  const selfAssessmentScore = selfAssessment && selfAssessment.answers.length > 0 ? 100 : 0;
 
   if (playbookRate === null) return selfAssessmentScore;
-  if (product !== "customer_experience") return playbookRate;
   return Math.round((playbookRate + selfAssessmentScore) / 2);
 }
 

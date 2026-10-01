@@ -59,6 +59,9 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [branchId, setBranchId] = useState("");
   const [forbidden, setForbidden] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   // Account-scoped enabled products must be known BEFORE the first data
   // fetch — otherwise a Colleague-Experience-only account always starts by
@@ -88,6 +91,8 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
       product,
     });
     if (branchId) params.set("businessId", branchId);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     fetch(`/api/group/raw-feedback?${params.toString()}`)
       .then(async (res) => ({ ok: res.ok, data: await res.json() }))
       .then(({ ok, data }) => {
@@ -100,12 +105,23 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
         setTotal(data.total ?? 0);
         setStats(data.stats ?? null);
         setBranches(data.businesses ?? []);
+        const list: ResponseRow[] = data.responses ?? [];
+        setSelectedId((prev) => {
+          if (prev && list.some((r) => r._id === prev)) return prev;
+          return list.length > 0 ? list[0]._id : null;
+        });
       })
       .finally(() => setLoading(false));
-  }, [ready, page, negativeOnly, product, branchId]);
+  }, [ready, page, negativeOnly, product, branchId, from, to]);
 
   function setFilter(negative: boolean) {
     setNegativeOnly(negative);
+    setPage(1);
+  }
+
+  function changeDateRange(nextFrom: string, nextTo: string) {
+    setFrom(nextFrom);
+    setTo(nextTo);
     setPage(1);
   }
 
@@ -170,8 +186,20 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
             Negative only
           </div>
           <InfoTip text={tooltips["negative-only"]} />
+          <input
+            type="date"
+            style={{ marginLeft: branches.length > 0 ? undefined : "auto" }}
+            value={from}
+            onChange={(e) => changeDateRange(e.target.value, to)}
+          />
+          <input type="date" value={to} onChange={(e) => changeDateRange(from, e.target.value)} />
+          {(from || to) && (
+            <button type="button" className="btn btn-sm" onClick={() => changeDateRange("", "")}>
+              Clear dates
+            </button>
+          )}
           {branches.length > 0 && (
-            <select value={branchId} onChange={(e) => changeBranch(e.target.value)} style={{ marginLeft: "auto" }}>
+            <select value={branchId} onChange={(e) => changeBranch(e.target.value)}>
               <option value="">All branches</option>
               {branches.map((b) => (
                 <option key={b._id} value={b._id}>
@@ -184,35 +212,63 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
       )}
 
       {!forbidden && loading && <p className="subtitle">Loading…</p>}
-      <div className="content-narrow">
+
       {!forbidden && !loading && (
-        <div className="ab-list">
-          {responses.map((r) => {
-            const star = starValue(r);
-            const text = comment(r);
-            return (
-              <div className="card ab-card" key={r._id}>
-                <div className="ab-card-head">
-                  <div className="ab-title-block">
-                    <div className="ab-badges">
-                      {r.flagged && <span className="pill pill-red">Flagged</span>}
-                      {r.flagged && <InfoTip text={tooltips["flagged"]} />}
-                      {!text && <span className="pill pill-gray">No comment left</span>}
-                    </div>
-                    <div className="ab-title" style={{ fontSize: 20, color: scoreColor(star) }}>
-                      {star !== null ? `${"★".repeat(Math.round(star))}${"☆".repeat(5 - Math.round(star))} ${star.toFixed(1)}/5` : "No rating"}
-                    </div>
-                    <div className="ab-meta-row">
-                      <span className="pill pill-blue">{r.businessName}</span>
-                      <span>{new Date(r.submittedAt).toLocaleString()}</span>
+        <div className="rf-layout">
+          <div className="rf-list">
+            {responses.map((r) => {
+              const star = starValue(r);
+              const text = comment(r);
+              return (
+                <div
+                  key={r._id}
+                  className={`rf-row ${r._id === selectedId ? "active" : ""}`}
+                  onClick={() => setSelectedId(r._id)}
+                >
+                  <div className="rf-row-score" style={{ color: scoreColor(star) }}>
+                    {star !== null ? `${star.toFixed(1)}★` : "—"}
+                    {r.flagged && " 🚩"}
+                  </div>
+                  <div className="rf-row-meta">
+                    <span className="pill pill-blue">{r.businessName}</span>
+                    <span>{new Date(r.submittedAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="rf-row-snippet">{text ?? "No comment left"}</div>
+                </div>
+              );
+            })}
+            {responses.length === 0 && <div className="ab-empty">No feedback matches this filter.</div>}
+          </div>
+
+          <div className="rf-detail">
+            {(() => {
+              const r = responses.find((x) => x._id === selectedId);
+              if (!r) return <div className="rf-detail-empty">Select a response to see the full detail.</div>;
+              const star = starValue(r);
+              const text = comment(r);
+              return (
+                <div className="card ab-card">
+                  <div className="ab-card-head">
+                    <div className="ab-title-block">
+                      <div className="ab-badges">
+                        {r.flagged && <span className="pill pill-red">Flagged</span>}
+                        {r.flagged && <InfoTip text={tooltips["flagged"]} />}
+                        {!text && <span className="pill pill-gray">No comment left</span>}
+                      </div>
+                      <div className="ab-title" style={{ fontSize: 22, color: scoreColor(star) }}>
+                        {star !== null ? `${"★".repeat(Math.round(star))}${"☆".repeat(5 - Math.round(star))} ${star.toFixed(1)}/5` : "No rating"}
+                      </div>
+                      <div className="ab-meta-row">
+                        <span className="pill pill-blue">{r.businessName}</span>
+                        <span>{new Date(r.submittedAt).toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
+                  {text && <div className="fb-comment">&quot;{text}&quot;</div>}
                 </div>
-                {text && <div className="fb-comment">&quot;{text}&quot;</div>}
-              </div>
-            );
-          })}
-          {responses.length === 0 && <div className="ab-empty">No feedback matches this filter.</div>}
+              );
+            })()}
+          </div>
         </div>
       )}
 
@@ -229,7 +285,6 @@ export default function GroupRawFeedbackClient({ tooltips }: { tooltips: Record<
           </button>
         </div>
       )}
-      </div>
     </div>
   );
 }

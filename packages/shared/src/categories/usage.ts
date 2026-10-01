@@ -25,6 +25,18 @@ async function categoryIdsByTemplateId(templateIds: string[]): Promise<Map<strin
   return map;
 }
 
+/** Category ids used by a flat list of authored questions (customQuestions) — the survey-builder path, which has no template at all. */
+function categoryIdsFromQuestions(questions: { categoryId?: Types.ObjectId | null }[]): Set<string> {
+  const cats = new Set<string>();
+  for (const q of questions) if (q.categoryId) cats.add(q.categoryId.toString());
+  return cats;
+}
+
+/** Category ids used by any feedback point's own authored question set (customQuestions). */
+function categoryIdsFromCustomQuestions(feedbackPoints: { customQuestions?: { categoryId?: Types.ObjectId | null }[] | null }[]): Set<string> {
+  return categoryIdsFromQuestions(feedbackPoints.flatMap((fp) => fp.customQuestions ?? []));
+}
+
 function effectiveTemplateIdsForBusiness(
   business: { questionTemplateId?: Types.ObjectId | null },
   feedbackPointOverrides: (Types.ObjectId | null | undefined)[]
@@ -40,15 +52,15 @@ export async function getCategoriesInUseForBusiness(businessId: Types.ObjectId |
   const business = await Business.findById(businessId).select("questionTemplateId");
   if (!business) return new Set();
 
-  const feedbackPoints = await FeedbackPoint.find({ businessId }).select("questionTemplateOverride");
+  const feedbackPoints = await FeedbackPoint.find({ businessId }).select("questionTemplateOverride customQuestions");
   const templateIds = effectiveTemplateIdsForBusiness(
     business,
     feedbackPoints.map((fp) => fp.questionTemplateOverride)
   );
-  if (templateIds.size === 0) return new Set();
+  const result = categoryIdsFromCustomQuestions(feedbackPoints);
+  if (templateIds.size === 0) return result;
 
   const catsByTemplate = await categoryIdsByTemplateId([...templateIds]);
-  const result = new Set<string>();
   for (const cats of catsByTemplate.values()) for (const c of cats) result.add(c);
   return result;
 }
@@ -60,7 +72,7 @@ export async function getCategoriesInUseForParentOrg(parentOrgId: Types.ObjectId
 
   const businessIds = businesses.map((b) => b._id);
   const feedbackPoints = await FeedbackPoint.find({ businessId: { $in: businessIds } }).select(
-    "businessId questionTemplateOverride"
+    "businessId questionTemplateOverride customQuestions"
   );
   const overridesByBusiness = new Map<string, Types.ObjectId[]>();
   for (const fp of feedbackPoints) {
@@ -76,10 +88,10 @@ export async function getCategoriesInUseForParentOrg(parentOrgId: Types.ObjectId
     const ids = effectiveTemplateIdsForBusiness(b, overridesByBusiness.get(b._id.toString()) ?? []);
     for (const id of ids) allTemplateIds.add(id);
   }
-  if (allTemplateIds.size === 0) return new Set();
+  const result = categoryIdsFromCustomQuestions(feedbackPoints);
+  if (allTemplateIds.size === 0) return result;
 
   const catsByTemplate = await categoryIdsByTemplateId([...allTemplateIds]);
-  const result = new Set<string>();
   for (const cats of catsByTemplate.values()) for (const c of cats) result.add(c);
   return result;
 }
@@ -98,15 +110,22 @@ export interface CategoryUsageEntry {
  */
 export async function getCategoryUsageMap(): Promise<Record<string, CategoryUsageEntry[]>> {
   const businesses = await Business.find().select("name questionTemplateId parentOrgId");
-  const feedbackPoints = await FeedbackPoint.find().select("businessId questionTemplateOverride");
+  const feedbackPoints = await FeedbackPoint.find().select("businessId questionTemplateOverride customQuestions");
 
   const overridesByBusiness = new Map<string, Types.ObjectId[]>();
+  const customQuestionsByBusiness = new Map<string, { categoryId?: Types.ObjectId | null }[]>();
   for (const fp of feedbackPoints) {
-    if (!fp.questionTemplateOverride) continue;
     const key = fp.businessId.toString();
-    const list = overridesByBusiness.get(key) ?? [];
-    list.push(fp.questionTemplateOverride);
-    overridesByBusiness.set(key, list);
+    if (fp.questionTemplateOverride) {
+      const list = overridesByBusiness.get(key) ?? [];
+      list.push(fp.questionTemplateOverride);
+      overridesByBusiness.set(key, list);
+    }
+    if (fp.customQuestions && fp.customQuestions.length > 0) {
+      const list = customQuestionsByBusiness.get(key) ?? [];
+      list.push(...fp.customQuestions);
+      customQuestionsByBusiness.set(key, list);
+    }
   }
 
   const allTemplateIds = new Set<string>();
@@ -121,7 +140,7 @@ export async function getCategoryUsageMap(): Promise<Record<string, CategoryUsag
   const usage: Record<string, CategoryUsageEntry[]> = {};
   for (const business of businesses) {
     const templateIds = effectiveTemplateIdsForBusiness(business, overridesByBusiness.get(business._id.toString()) ?? []);
-    const categoryIds = new Set<string>();
+    const categoryIds = categoryIdsFromQuestions(customQuestionsByBusiness.get(business._id.toString()) ?? []);
     for (const tid of templateIds) for (const c of catsByTemplate.get(tid) ?? []) categoryIds.add(c);
 
     const parentOrgId = business.parentOrgId?.toString() ?? null;

@@ -691,6 +691,15 @@ table.clean.striped tbody tr:nth-child(even) td {
   flex: 1;
   overflow-y: auto;
   padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.pb-slideout-body textarea {
+  width: 100%;
+  min-height: 160px;
+  flex: 1;
+  resize: vertical;
+  box-sizing: border-box;
 }
 .pb-slideout-footer {
   flex-shrink: 0;
@@ -799,6 +808,82 @@ table.clean.striped tbody tr:nth-child(even) td {
 .playbook-card .ab-card-head {
   gap: 12px;
 }
+/* Raw Feedback's master-detail layout — replaces a single-column card feed
+   capped at 820px (which left the right half of a wide screen empty) with
+   a compact scrollable list on the left and a full-width detail panel on
+   the right, the same shape as an email/ticket inbox. */
+.rf-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.rf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.rf-row {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.rf-row:hover {
+  border-color: var(--border-strong, var(--border));
+}
+.rf-row.active {
+  border-color: var(--navy);
+  border-left-color: var(--navy);
+  box-shadow: 0 1px 3px rgba(16, 24, 32, 0.08);
+}
+.rf-row-score {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.rf-row-meta {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin-top: 2px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rf-row-snippet {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rf-detail {
+  min-width: 0;
+}
+.rf-detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  color: var(--text-3);
+  font-size: 13.5px;
+  border: 1.5px dashed var(--border-strong, var(--border));
+  border-radius: 12px;
+}
+@media (max-width: 900px) {
+  .rf-layout {
+    grid-template-columns: 1fr;
+  }
+  .rf-list {
+    max-height: 420px;
+  }
+}
 .playbook-icon {
   width: 36px;
   height: 36px;
@@ -809,4 +894,330 @@ table.clean.striped tbody tr:nth-child(even) td {
   font-size: 17px;
   background: var(--accent-bg);
   flex-shrink: 0;
+}
+
+/* Survey builder (question-type palette + canvas) — see survey-builder.tsx.
+   Each question type carries its own accent color (--qb-color, set inline
+   per-instance) so the palette and the questions on the canvas read as a
+   coherent, colorful system instead of a flat list of identical rows. */
+.qb {
+  display: flex;
+  flex-direction: column;
+}
+.qb-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+  margin-top: 12px;
+}
+@media (max-width: 720px) {
+  .qb-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.qb-palette-heading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.qb-type-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  margin-bottom: 5px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--qb-color, var(--accent));
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
+}
+.qb-type-chip:hover {
+  background: color-mix(in srgb, var(--qb-color, var(--accent)) 10%, var(--card));
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+.qb-type-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--qb-color, var(--accent)) 16%, transparent);
+  color: var(--qb-color, var(--accent));
+  font-size: 12px;
+}
+.qb-template-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  background: var(--card);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.qb-template-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.qb-canvas {
+  border: 1.5px dashed var(--border-strong, var(--border));
+  border-radius: 14px;
+  padding: 18px;
+  min-height: 220px;
+  background: linear-gradient(180deg, var(--bg-2, #f5f6f8) 0%, var(--bg, #f5f6f8) 100%);
+}
+.qb-canvas-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 180px;
+  color: var(--text-3);
+  text-align: center;
+}
+.qb-question-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--qb-color, var(--accent));
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.qb-type-select {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--qb-color, var(--accent));
+  color: var(--qb-color, var(--accent));
+  background: color-mix(in srgb, var(--qb-color, var(--accent)) 10%, var(--card));
+  max-width: 220px;
+}
+.qb-add-another {
+  width: 100%;
+  padding: 12px;
+  border: 1.5px dashed var(--border-strong, var(--border));
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.qb-add-another:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+/* Feedback point cards (Business + Group listings) — a colored top edge
+   (--fp-accent, set inline per-card: accent when active, muted when not)
+   turns a flat grid of white cards into something scannable at a glance. */
+.fp-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.15s ease, transform 0.1s ease;
+}
+.fp-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 12px 12px 0 0;
+  background: var(--fp-accent, var(--accent));
+}
+.fp-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+/* Reports page (Business + Group) — see report-widgets.tsx. Colored KPI
+   tiles, scored horizontal bar rows (not just a table of numbers), and
+   stacked sentiment bars for themes. --rpt-good/warn/bad/neutral reuse the
+   existing semantic palette so the report matches the rest of the app. */
+:root {
+  --rpt-good: var(--green);
+  --rpt-warn: var(--amber);
+  --rpt-bad: var(--red);
+  --rpt-neutral: var(--text-3);
+}
+.rpt-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent-bg) 0%, var(--card) 65%);
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.rpt-hero-title h2 {
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rpt-section {
+  margin-bottom: 24px;
+}
+.rpt-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.rpt-kpi {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--rpt-tone, var(--accent));
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.rpt-kpi-icon {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+.rpt-kpi-label {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+.rpt-kpi-val {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.rpt-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rpt-bar-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 64px;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .rpt-bar-row {
+    grid-template-columns: 110px 1fr 54px;
+  }
+}
+.rpt-bar-row-label {
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rpt-bar-row-sublabel {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.rpt-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-2, #eef0f3);
+  overflow: hidden;
+}
+.rpt-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.rpt-bar-value {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.rpt-theme-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.rpt-theme-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.rpt-theme-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.rpt-sentiment-track {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-2, #eef0f3);
+  margin-bottom: 8px;
+}
+.rpt-sentiment-seg {
+  height: 100%;
+}
+.rpt-sentiment-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.rpt-sentiment-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.rpt-sentiment-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+@media print {
+  .rpt-hero {
+    background: none;
+    border: 1px solid #ccc;
+  }
+}
+.qb-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 12px 4px;
+  background: linear-gradient(180deg, transparent 0%, var(--card) 30%);
+  border-top: 1px solid var(--border);
 }

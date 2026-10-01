@@ -7,6 +7,7 @@
  * only, regardless of this list.
  */
 export const TEAM_RESTRICTABLE_PAGES = [
+  { key: "attentionCentre", label: "Attention Centre" },
   { key: "caseManagement", label: "Case Management" },
   { key: "rawFeedback", label: "Raw Feedback" },
   { key: "feedbackPoints", label: "Feedback Points" },
@@ -17,12 +18,15 @@ export const TEAM_RESTRICTABLE_PAGES = [
   { key: "reports", label: "Reports" },
   { key: "improvementInitiatives", label: "Improvement Initiatives" },
   { key: "decisionLog", label: "Decision Log" },
+  { key: "closingLoop", label: "Closing the Loop" },
+  { key: "businessValue", label: "Business Value" },
   { key: "cxPulse", label: "CX Pulse" },
   { key: "playbooks", label: "Playbook Library" },
   { key: "support", label: "Support" },
   { key: "colleagueRoster", label: "Colleague Roster" },
   { key: "exPulse", label: "EX Pulse" },
   { key: "cxExCorrelation", label: "CX ↔ EX Correlation" },
+  { key: "compass", label: "OodelCX Compass" },
 ] as const;
 
 export type TeamPageKey = (typeof TEAM_RESTRICTABLE_PAGES)[number]["key"];

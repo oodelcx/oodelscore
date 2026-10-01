@@ -605,7 +605,7 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "dimensions",
         label: "Dimensions",
-        text: "CX Pulse is built from five dimensions: Awareness (is feedback being collected and seen), Response (is it acted on quickly), Ownership (are actions assigned to a named person), Culture (is feedback part of how decisions get made), and Outcome (do actions measurably move the score).",
+        text: "CX Pulse is built from five dimensions: Signal (is feedback being collected and seen), Speed (is it acted on quickly), Accountability (are actions assigned to a named person), Buy-in (is feedback part of how decisions get made), and Impact (do actions measurably move the score).",
       },
       {
         key: "checklist",
@@ -626,7 +626,7 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       {
         key: "dimensions",
         label: "Dimensions",
-        text: "CX Pulse is built from five dimensions: Awareness (is feedback being collected and seen), Response (is it acted on quickly), Ownership (are actions assigned to a named person), Culture (is feedback part of how decisions get made), and Outcome (do actions measurably move the score).",
+        text: "CX Pulse is built from five dimensions: Signal (is feedback being collected and seen), Speed (is it acted on quickly), Accountability (are actions assigned to a named person), Buy-in (is feedback part of how decisions get made), and Impact (do actions measurably move the score).",
       },
     ],
   },

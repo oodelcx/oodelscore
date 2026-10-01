@@ -1,24 +1,28 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForParentOrg } from "@oodelscore/shared";
+import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForParentOrg, getEnabledProducts } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 /** Feeds AI-assisted Action Board triage (spec Section 16): the AI picks
- * the category, this mapping says who the item should go to. Only shows
- * categories actually in use across the org's branches' real surveys. */
+ * the category, this mapping says who the item should go to. `categories`
+ * only shows ones actually in use across the org's branches' real surveys.
+ * `allCategories` (product-scoped, not usage-filtered) is for the survey
+ * builder, which needs the full pickable list — see the identical comment
+ * on the business route. */
 export async function GET() {
   const session = await requireParentOrgOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const [inUseIds, mappings] = await Promise.all([
+  const [inUseIds, mappings, allCategories] = await Promise.all([
     getCategoriesInUseForParentOrg(session.org._id),
     CategoryOwnerMapping.find({ ownerScope: "parentOrg", ownerScopeId: session.org._id }),
+    Category.find({ product: { $in: getEnabledProducts(session.org) } }).sort({ name: 1 }).select("name product"),
   ]);
   const categories = inUseIds.size
     ? await Category.find({ _id: { $in: [...inUseIds] } }).sort({ name: 1 })
     : [];
 
-  return NextResponse.json({ status: "ok", categories, mappings });
+  return NextResponse.json({ status: "ok", categories, allCategories, mappings, escalationLevels: session.org.escalationLevels });
 }
 
 export async function PUT(request: Request) {
@@ -38,6 +42,10 @@ export async function PUT(request: Request) {
     body?.repeatThresholdCount === null || typeof body?.repeatThresholdCount === "number" ? body.repeatThresholdCount : undefined;
   const repeatWindowDays =
     body?.repeatWindowDays === null || typeof body?.repeatWindowDays === "number" ? body.repeatWindowDays : undefined;
+  const escalateAfterDays =
+    body?.escalateAfterDays === null || typeof body?.escalateAfterDays === "number" ? body.escalateAfterDays : undefined;
+  const escalateToLevel =
+    body?.escalateToLevel === null || typeof body?.escalateToLevel === "number" ? body.escalateToLevel : undefined;
 
   await connectToDatabase();
   const mapping = await CategoryOwnerMapping.findOneAndUpdate(
@@ -47,6 +55,8 @@ export async function PUT(request: Request) {
         defaultOwnerId,
         ...(repeatThresholdCount !== undefined ? { repeatThresholdCount } : {}),
         ...(repeatWindowDays !== undefined ? { repeatWindowDays } : {}),
+        ...(escalateAfterDays !== undefined ? { escalateAfterDays } : {}),
+        ...(escalateToLevel !== undefined ? { escalateToLevel } : {}),
       },
     },
     { upsert: true, new: true }

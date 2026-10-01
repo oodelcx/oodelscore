@@ -49,6 +49,9 @@ export async function PATCH(request: Request) {
       $set: {
         weights,
         pulseQuestions: Array.isArray(body?.pulseQuestions) ? body.pulseQuestions.filter((q: unknown) => typeof q === "string") : [],
+        ceSelfAssessmentQuestions: Array.isArray(body?.ceSelfAssessmentQuestions)
+          ? body.ceSelfAssessmentQuestions.filter((q: unknown) => typeof q === "string")
+          : [],
         ...(levelDescriptions ? { levelDescriptions } : {}),
       },
     },

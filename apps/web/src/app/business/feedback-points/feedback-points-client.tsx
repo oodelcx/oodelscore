@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { QrModal } from "@/components/qr-modal";
 import { InfoTip } from "@/components/info-tip";
 import { useTooltips } from "@/lib/useTooltips";
+import { SurveyBuilderPanel, type SurveyBuilderPayload } from "@/components/survey-builder";
+import { FeedbackPointExpiry } from "@/components/feedback-point-expiry";
 
 interface DemographicConfig {
   name: string;
@@ -20,6 +22,7 @@ interface FeedbackPointRow {
   qrToken: string;
   scans: number;
   active: boolean;
+  product?: "customer_experience" | "colleague_experience";
   hasNps: boolean;
   hasComments: boolean;
   demographics: DemographicConfig;
@@ -28,6 +31,8 @@ interface FeedbackPointRow {
   effectiveFormLayout: "single_page" | "one_per_screen";
   isLayoutOverridden: boolean;
   eventName: string | null;
+  deliveryMode?: "qr" | "link" | "both";
+  endsAt: string | null;
 }
 
 const LAYOUT_LABELS: Record<string, string> = {
@@ -68,6 +73,7 @@ function configBadges(p: FeedbackPointRow) {
 export default function FeedbackPointsClient() {
   const tooltips = useTooltips("feedback-points");
   const [points, setPoints] = useState<FeedbackPointRow[]>([]);
+  const [isBranch, setIsBranch] = useState(false);
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [requestSent, setRequestSent] = useState(false);
@@ -77,12 +83,56 @@ export default function FeedbackPointsClient() {
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
 
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [builderSubmitting, setBuilderSubmitting] = useState(false);
+  const [builderError, setBuilderError] = useState<string | null>(null);
+  const [cxEnabled, setCxEnabled] = useState(true);
+  const [ceEnabled, setCeEnabled] = useState(false);
+  const [viewProduct, setViewProduct] = useState<"customer_experience" | "colleague_experience" | null>(null);
+
+  function openBuilder() {
+    setBuilderError(null);
+    setBuilderOpen(true);
+  }
+
+  async function submitBuilder(payload: SurveyBuilderPayload) {
+    setBuilderError(null);
+    setBuilderSubmitting(true);
+    try {
+      const res = await fetch("/api/business/feedback-points", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: payload.name,
+          description: payload.description,
+          product: payload.product,
+          responseQuota: payload.responseQuota,
+          questions: payload.questions,
+          deliveryMode: payload.deliveryMode,
+          demographicOverride: payload.demographicOverride,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.status !== "ok") {
+        throw new Error(data.message || "Couldn't create this feedback point. Please try again.");
+      }
+      setBuilderOpen(false);
+      const pointsRes = await fetch("/api/business/feedback-points").then((r) => r.json());
+      setPoints(pointsRes.feedbackPoints ?? []);
+    } catch (err) {
+      setBuilderError(err instanceof Error ? err.message : "Couldn't create this feedback point. Please try again.");
+    } finally {
+      setBuilderSubmitting(false);
+    }
+  }
+
   useEffect(() => {
     Promise.all([
       fetch("/api/business/feedback-points").then((r) => r.json()),
       fetch("/api/business/responses").then((r) => r.json()),
     ]).then(([pointsData, responsesData]) => {
       setPoints(pointsData.feedbackPoints ?? []);
+      setIsBranch(!!pointsData.isBranch);
       const counts: Record<string, number> = {};
       for (const r of responsesData.responses ?? []) {
         counts[r.feedbackPointId] = (counts[r.feedbackPointId] ?? 0) + 1;
@@ -90,6 +140,14 @@ export default function FeedbackPointsClient() {
       setResponseCounts(counts);
       setLoading(false);
     });
+    fetch("/api/business/me")
+      .then((r) => r.json())
+      .then((d) => {
+        const products: string[] = d.business?.enabledProducts ?? ["customer_experience"];
+        setCxEnabled(products.includes("customer_experience"));
+        setCeEnabled(products.includes("colleague_experience"));
+        setViewProduct(d.viewProduct ?? null);
+      });
   }, []);
 
   function openRequest() {
@@ -101,10 +159,14 @@ export default function FeedbackPointsClient() {
     setRequestSubmitting(true);
     setRequestError(null);
     try {
-      const res = await fetch("/api/business/feedback-points/request", {
+      const res = await fetch("/api/business/support-tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: requestNote.trim() }),
+        body: JSON.stringify({
+          category: "feedback_point_request",
+          subject: "Feedback point request",
+          body: requestNote.trim() || "(no note given)",
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.status !== "ok") {
@@ -130,19 +192,56 @@ export default function FeedbackPointsClient() {
             View your QR codes and what each one asks customers.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <button className="btn btn-dark" data-tour="fp-request-button" onClick={openRequest}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {!loading && !isBranch && (
+            <button className="btn btn-dark" onClick={openBuilder}>
+              + Build a survey
+            </button>
+          )}
+          <button className="btn" data-tour="fp-request-button" onClick={openRequest}>
             + Request new feedback point
           </button>
           <InfoTip text={tooltips["request-feedback-point"]} />
         </div>
       </div>
 
-      <div className="callout">
-        New feedback points and question changes are set up by your OodelCX account manager to keep every survey
-        error-free. Requests are usually actioned within one business day.
-      </div>
+      {!loading && (
+        <div className="callout">
+          {isBranch ? (
+            <>
+              Your parent organization builds and manages this branch's surveys centrally, so every branch stays
+              consistent — your Group owner does this from their own Feedback Points page. For anything else, request
+              a change below — your account manager actions those within one business day.
+            </>
+          ) : (
+            <>
+              Build your own feedback point above — write your own questions, pick a type for each (star rating, NPS,
+              multiple choice, and more), and optionally start from one of OodelCX's ready-made templates as an
+              editable first draft. For anything else, request a change below — your account manager actions those
+              within one business day.
+            </>
+          )}
+        </div>
+      )}
       {requestSent && <div className="callout">Your request has been sent — your account manager will be in touch.</div>}
+
+      {builderOpen && (
+        <div className="card" style={{ marginBottom: 18 }}>
+          <h3>Build a survey</h3>
+          <SurveyBuilderPanel
+            templatesApiPath="/api/business/feedback-points/templates"
+            categoriesApiPath="/api/business/category-owners"
+            cxEnabled={cxEnabled}
+            ceEnabled={ceEnabled}
+            lockedProduct={viewProduct}
+            submitting={builderSubmitting}
+            error={builderError}
+            onCancel={() => setBuilderOpen(false)}
+            onSubmit={submitBuilder}
+          />
+        </div>
+      )}
+
       {requestOpen && (
         <div className="card" style={{ marginBottom: 18 }}>
           <h3>
@@ -180,12 +279,19 @@ export default function FeedbackPointsClient() {
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
         <div className="grid grid-2">
-          {points.map((p, index) => {
+          {points
+            .filter((p) => !viewProduct || !p.product || p.product === viewProduct)
+            .map((p, index) => {
             const responses = responseCounts[p._id] ?? 0;
             const conversion = p.scans > 0 ? Math.round((responses / p.scans) * 100) : null;
             const isFirst = index === 0;
             return (
-              <div className="card" data-tour={isFirst ? "fp-first-card" : undefined} key={p._id}>
+              <div
+                className="fp-card"
+                data-tour={isFirst ? "fp-first-card" : undefined}
+                key={p._id}
+                style={{ "--fp-accent": p.active ? "var(--accent)" : "var(--text-3)" } as CSSProperties}
+              >
                 <h3>{p.name}</h3>
                 <p className="card-sub">{p.description || "—"}</p>
                 <div style={{ display: "flex", gap: 18, fontSize: 13, color: "var(--text-2)", marginBottom: 12 }}>
@@ -220,18 +326,34 @@ export default function FeedbackPointsClient() {
                     {p.isLayoutOverridden && " (custom for this point)"}
                   </div>
                 </div>
+                {!isBranch && (
+                  <FeedbackPointExpiry
+                    apiPath={`/api/business/feedback-points/${p._id}`}
+                    endsAt={p.endsAt}
+                    onUpdated={(endsAt) => setPoints((prev) => prev.map((pt) => (pt._id === p._id ? { ...pt, endsAt } : pt)))}
+                  />
+                )}
                 <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <button className="btn" data-tour={isFirst ? "fp-first-qr" : undefined} style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
-                    View QR
-                  </button>
+                  {p.deliveryMode !== "link" && (
+                    <button className="btn" data-tour={isFirst ? "fp-first-qr" : undefined} style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
+                      View QR
+                    </button>
+                  )}
                   <button className="btn" style={{ flex: 1 }} onClick={openRequest}>
                     Request changes
                   </button>
                 </div>
+                {p.deliveryMode === "link" && (
+                  <p className="subtitle" style={{ marginTop: 8, marginBottom: 0 }}>
+                    Link-only — share <code>{typeof window !== "undefined" ? window.location.origin : ""}/feedback/{p.qrToken}</code>, no QR/poster for this one.
+                  </p>
+                )}
               </div>
             );
           })}
-          {points.length === 0 && <p className="subtitle">No feedback points yet — request one above.</p>}
+          {points.filter((p) => !viewProduct || !p.product || p.product === viewProduct).length === 0 && (
+            <p className="subtitle">No feedback points yet — request one above.</p>
+          )}
         </div>
       )}
 

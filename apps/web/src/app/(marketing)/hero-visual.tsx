@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 // Three explicitly-labeled sample cards, auto-rotating — no real business,
 // no attributed quote or review, just illustrative numbers. Each slide
 // shows a different real part of the product (multi-branch oversight, the
-// Listen/Act/Measure loop, and an Action Board item) instead of a single
+// Capture/Claim/Confirm loop, and an Action Board item) instead of a single
 // static score, since a lone number undersold what the platform does.
 
 const SLIDE_COUNT = 3;
@@ -80,19 +80,19 @@ function SlideLoop() {
       <div className="hv-loop">
         <div className="hv-loop-stage">
           <div className="hv-loop-icon">★</div>
-          <div className="hv-loop-label">Listen</div>
+          <div className="hv-loop-label">Capture</div>
           <div className="hv-loop-sub">141 responses</div>
         </div>
         <div className="hv-loop-arrow">›</div>
         <div className="hv-loop-stage">
           <div className="hv-loop-icon">✓</div>
-          <div className="hv-loop-label">Act</div>
+          <div className="hv-loop-label">Claim</div>
           <div className="hv-loop-sub">6 resolved</div>
         </div>
         <div className="hv-loop-arrow">›</div>
         <div className="hv-loop-stage">
           <div className="hv-loop-icon">◎</div>
-          <div className="hv-loop-label">Measure</div>
+          <div className="hv-loop-label">Confirm</div>
           <div className="hv-loop-sub">Level 4</div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { PRODUCTS, type Product } from "./products";
+import { NoteEntrySchema, type INoteEntry } from "./common";
 
 export const INITIATIVE_STATUSES = ["planned", "in_progress", "completed"] as const;
 export type InitiativeStatus = (typeof INITIATIVE_STATUSES)[number];
@@ -32,6 +33,10 @@ export interface IImprovementInitiative {
   targetValue: number | null;
   startedAt: Date | null;
   completedAt: Date | null;
+  // A running commentary thread on this initiative — owners note why a
+  // decision is taking shape, what was tried, what didn't work. Append-only
+  // from the UI; nothing here is ever edited or removed in place.
+  notes: INoteEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +57,7 @@ const ImprovementInitiativeSchema = new Schema<IImprovementInitiative>(
     targetValue: { type: Number, default: null },
     startedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
+    notes: { type: [NoteEntrySchema], default: [] },
   },
   { timestamps: true }
 );

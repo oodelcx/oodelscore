@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, Response, Category, FeedbackPoint, Event, hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import type { FilterQuery } from "mongoose";
 import type { IResponse } from "@oodelscore/shared";
 
@@ -69,24 +70,34 @@ export async function GET(request: Request) {
 
   await connectToDatabase();
   const businessId = session.business._id;
+  // A dual-product business's Analytics must respect the active product
+  // tab — without this, CX and CE responses/categories/feedback points were
+  // pooled together regardless of which tab was open. See the identical
+  // fix on the Group Analytics route.
+  const product = await resolveViewProduct(session.business);
   const now = new Date();
   const to = toParam ? new Date(`${toParam}T23:59:59.999Z`) : now;
   const from = fromParam ? new Date(`${fromParam}T00:00:00.000Z`) : new Date(now.getTime() - TREND_DAYS * 24 * 60 * 60 * 1000);
 
-  const filter: FilterQuery<IResponse> = { businessId, submittedAt: { $gte: from, $lte: to } };
+  const filter: FilterQuery<IResponse> = { businessId, product, submittedAt: { $gte: from, $lte: to } };
   if (feedbackPointId) filter.feedbackPointId = feedbackPointId;
   if (eventId) filter.eventId = eventId;
 
   const [responses, categories, feedbackPoints, events] = await Promise.all([
     Response.find(filter),
-    Category.find(),
-    FeedbackPoint.find({ businessId }).select("name eventId scans").sort({ createdAt: 1 }),
+    Category.find({ product }),
+    FeedbackPoint.find({ businessId, product }).select("name eventId scans").sort({ createdAt: 1 }),
     Event.find({ businessId }).sort({ createdAt: -1 }),
   ]);
   const trend = trendFromResponses(responses, from, to);
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));
 
   const npsAnswers: number[] = [];
+  let csatSatisfied = 0;
+  let csatTotal = 0;
+  let cesSum = 0;
+  let cesLowEffort = 0;
+  let cesTotal = 0;
   const categoryTotals = new Map<string, { sum: number; count: number }>();
   const comments: string[] = [];
   const ageGroups = new Map<string, number>();
@@ -104,6 +115,15 @@ export async function GET(request: Request) {
 
     for (const answer of response.answers) {
       if (answer.type === "nps_0_10" && typeof answer.value === "number") npsAnswers.push(answer.value);
+      if (answer.type === "star_1_5" && typeof answer.value === "number") {
+        csatTotal += 1;
+        if (answer.value >= 4) csatSatisfied += 1;
+      }
+      if (answer.type === "ces_1_5" && typeof answer.value === "number") {
+        cesTotal += 1;
+        cesSum += answer.value;
+        if (answer.value <= 2) cesLowEffort += 1;
+      }
       if (answer.type === "star_1_5" && typeof answer.value === "number" && answer.categoryId) {
         const key = answer.categoryId.toString();
         const entry = categoryTotals.get(key) ?? { sum: 0, count: 0 };
@@ -144,6 +164,7 @@ export async function GET(request: Request) {
   if (events.length > 0) {
     const eventResponses = await Response.find({
       businessId,
+      product,
       submittedAt: { $gte: from, $lte: to },
       eventId: { $ne: null },
     }).select("eventId answers");
@@ -203,7 +224,16 @@ export async function GET(request: Request) {
       to: to.toISOString().slice(0, 10),
     },
     trend,
-    npsBreakdown: { promoters, passives, detractors },
+    npsBreakdown: { promoters, passives, detractors, sampleSize: npsAnswers.length },
+    csat: {
+      percent: csatTotal === 0 ? null : Math.round((csatSatisfied / csatTotal) * 1000) / 10,
+      sampleSize: csatTotal,
+    },
+    ces: {
+      average: cesTotal === 0 ? null : Math.round((cesSum / cesTotal) * 100) / 100,
+      lowEffortPercent: cesTotal === 0 ? null : Math.round((cesLowEffort / cesTotal) * 1000) / 10,
+      sampleSize: cesTotal,
+    },
     categoryBreakdown,
     commentTags: extractTags(comments),
     demographics: {

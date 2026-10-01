@@ -54,11 +54,12 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "insights", label: "Insights", description: "AI-generated feedback insight reports." },
   { key: "analytics", label: "Analytics", description: "Trend, tag, and driver analytics dashboards." },
   { key: "alertRules", label: "Alert Rules", description: "Configurable score/volume alert thresholds and notifications." },
-  { key: "reports", label: "Reports", description: "Downloadable period reports (PDF/export)." },
+  { key: "reports", label: "Reports", description: "The Report tab inside Analytics — printable period scorecard (PDF/export)." },
   { key: "improvementInitiatives", label: "Improvement Initiatives", description: "Structured improvement-initiative tracking." },
   { key: "decisionLog", label: "Decision Log", description: "Decision log with before/after outcome measurement." },
   { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
+  { key: "compass", label: "OodelCX Compass", description: "ANCHOR six-dimension maturity diagnostic assessment." },
 ];
 
 // Keep in sync with packages/shared/src/features/teamPermissions.ts — same
@@ -76,6 +77,7 @@ const TEAM_RESTRICTABLE_PAGES: { key: string; label: string }[] = [
   { key: "cxPulse", label: "CX Pulse" },
   { key: "playbooks", label: "Playbook Library" },
   { key: "support", label: "Support" },
+  { key: "compass", label: "OodelCX Compass" },
 ];
 const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);
 
@@ -487,6 +489,8 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     totalResponses: number;
     starAverage: number | null;
     npsScore: number | null;
+    csatPercent: number | null;
+    cesAverage: number | null;
     comparisons: { week: Comparison; month: Comparison; quarter: Comparison; year: Comparison };
     trend: TrendPoint[];
     distribution: { highPercent: number; midPercent: number; lowPercent: number };
@@ -1269,6 +1273,17 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                   <div className="metric-val" style={{ fontSize: 18 }}>
                     {performance.cxPulseLevel ? `Level ${performance.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[performance.cxPulseLevel]}` : "Not yet scored"}
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-2" style={{ marginBottom: 20 }}>
+                <div className="card">
+                  <div className="metric-label">CSAT</div>
+                  <div className="metric-val">{performance.csatPercent !== null ? `${performance.csatPercent}%` : "—"}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">CES</div>
+                  <div className="metric-val">{performance.cesAverage !== null ? `${performance.cesAverage}/5` : "—"}</div>
                 </div>
               </div>
 

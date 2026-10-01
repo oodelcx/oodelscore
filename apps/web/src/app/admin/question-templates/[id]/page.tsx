@@ -7,6 +7,7 @@ import Link from "next/link";
 const QUESTION_TYPES = [
   ["star_1_5", "Star Rating (1–5)"],
   ["nps_0_10", "NPS (0–10)"],
+  ["ces_1_5", "Effort (CES, 1–5)"],
   ["open_text", "Open-ended / Free text"],
   ["yes_no", "Yes / No"],
   ["emoji_scale", "Emoji / Smiley scale"],
@@ -35,10 +36,29 @@ function QuestionPreview({ q }: { q: QuestionRow }) {
         </div>
       )}
       {q.type === "nps_0_10" && (
-        <div className="nps-preview">
-          {Array.from({ length: 11 }, (_, n) => (
-            <span key={n}>{n}</span>
-          ))}
+        <div>
+          <div className="nps-preview">
+            {Array.from({ length: 11 }, (_, n) => (
+              <span key={n}>{n}</span>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>
+            <span>Not likely</span>
+            <span>Very likely</span>
+          </div>
+        </div>
+      )}
+      {q.type === "ces_1_5" && (
+        <div>
+          <div className="nps-preview" style={{ maxWidth: 220 }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <span key={n}>{n}</span>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-3)", marginTop: 2, maxWidth: 220 }}>
+            <span>Very easy</span>
+            <span>Very difficult</span>
+          </div>
         </div>
       )}
       {q.type === "yes_no" && (
@@ -77,6 +97,7 @@ interface QuestionRow {
   categoryId: string;
   required: boolean;
   options: string[];
+  isCsatQuestion: boolean;
 }
 
 const EMPTY_QUESTION: QuestionRow = {
@@ -85,6 +106,7 @@ const EMPTY_QUESTION: QuestionRow = {
   categoryId: "",
   required: false,
   options: [],
+  isCsatQuestion: false,
 };
 
 export default function QuestionTemplateBuilderPage() {
@@ -126,6 +148,7 @@ export default function QuestionTemplateBuilderPage() {
             categoryId: q.categoryId ?? "",
             required: !!q.required,
             options: q.options ?? [],
+            isCsatQuestion: !!q.isCsatQuestion,
           }))
         );
       })
@@ -151,6 +174,11 @@ export default function QuestionTemplateBuilderPage() {
 
   function updateQuestion(index: number, patch: Partial<QuestionRow>) {
     setQuestions((qs) => qs.map((q, i) => (i === index ? { ...q, ...patch } : q)));
+  }
+
+  // At most one CSAT question per template — checking one unchecks any other.
+  function setCsatQuestion(index: number, checked: boolean) {
+    setQuestions((qs) => qs.map((q, i) => ({ ...q, isCsatQuestion: i === index ? checked : checked ? false : q.isCsatQuestion })));
   }
 
   function removeQuestion(index: number) {
@@ -203,6 +231,7 @@ export default function QuestionTemplateBuilderPage() {
         categoryId: q.categoryId || null,
         required: q.required,
         options: q.options.map((o) => o.trim()).filter(Boolean),
+        isCsatQuestion: q.type === "star_1_5" && q.isCsatQuestion,
       })),
     };
 
@@ -340,6 +369,12 @@ export default function QuestionTemplateBuilderPage() {
                   <input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(i, { required: e.target.checked })} />
                   Required
                 </label>
+                {q.type === "star_1_5" && (
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }} title="CSAT is reported from this question's answers only, never blended across every star rating in the template.">
+                    <input type="checkbox" checked={q.isCsatQuestion} onChange={(e) => setCsatQuestion(i, e.target.checked)} />
+                    This is the CSAT question
+                  </label>
+                )}
               </div>
               {OPTION_BASED_TYPES.includes(q.type as (typeof OPTION_BASED_TYPES)[number]) && (
                 <div className="q-options" style={{ marginTop: 10 }}>

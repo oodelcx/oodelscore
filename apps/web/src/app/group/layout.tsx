@@ -25,6 +25,7 @@ import { ProductViewSwitcher } from "@/components/product-view-switcher";
 import { resolveViewProduct } from "@/lib/viewProduct";
 import { AccessDenied } from "@/components/access-denied";
 import { isAccessDenied, GROUP_ACCESS_CONFIG } from "@/lib/routeAccess";
+import { NavIcon } from "@/components/nav-icon";
 
 export default async function GroupLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
@@ -55,6 +56,12 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   const isGated = billingStatus !== "active" && !isBillingRoute;
   const bothProductsEnabled = hasProduct(org, "customer_experience") && hasProduct(org, "colleague_experience");
   const viewProduct = bothProductsEnabled ? await resolveViewProduct(org) : null;
+  // Single-product-only nav items (Insights/Analytics/Reports are CX-only;
+  // Closing the Loop is CE-only) must also respect which tab is actually
+  // active on a dual-product account — see business/layout.tsx's identical
+  // comment for the bug this fixes.
+  const showCx = !bothProductsEnabled || viewProduct === "customer_experience";
+  const showCe = !bothProductsEnabled || viewProduct === "colleague_experience";
   // Which product "CX Pulse" in the nav should point at — the two pages
   // (the CX maturity ladder and its Colleague Experience analogue) share
   // the one label per the branding rule (CX means whichever product you're
@@ -75,58 +82,152 @@ export default async function GroupLayout({ children }: { children: ReactNode })
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
-              <a href="/group/cases">My Cases</a>
+              <a href="/group/cases">
+                <NavIcon name="cases" />
+                My Cases
+              </a>
             </nav>
           ) : (
             <>
               <NavSection
                 storageKey="group-organisation"
                 label="Organisation"
-                hrefs={["/group", "/group/command-center", "/group/branches", "/group/compare"]}
+                hrefs={["/group", "/group/command-center", "/group/branches", "/group/compare", "/group/compass"]}
               >
-                <a href="/group">Overview</a>
-                {commandCenterEnabled && <a href="/group/command-center">Command Center</a>}
-                <a href="/group/branches">Branches</a>
-                <a href="/group/compare">Compare branches</a>
+                <a href="/group">
+                  <NavIcon name="overview" />
+                  Overview
+                </a>
+                {hasFeature(org.enabledFeatures, "compass") && teamMemberCanAccess(user, "compass") && (
+                  <a href="/group/compass">
+                    <NavIcon name="compass" />
+                    OodelCX Compass
+                  </a>
+                )}
+                {commandCenterEnabled && (
+                  <a href="/group/command-center">
+                    <NavIcon name="command-center" />
+                    Command Center
+                  </a>
+                )}
+                <a href="/group/branches">
+                  <NavIcon name="branches" />
+                  Branches
+                </a>
+                <a href="/group/compare">
+                  <NavIcon name="compare" />
+                  Compare branches
+                </a>
               </NavSection>
-              <NavSection storageKey="group-listen" label="Listen" hrefs={["/group/raw-feedback"]}>
-                {teamMemberCanAccess(user, "rawFeedback") && <a href="/group/raw-feedback">Raw feedback</a>}
+              <NavSection storageKey="group-capture" label="Capture" hrefs={["/group/raw-feedback", "/group/feedback-points"]}>
+                {teamMemberCanAccess(user, "feedbackPoints") && (
+                  <a href="/group/feedback-points">
+                    <NavIcon name="feedback-points" />
+                    Feedback Points
+                  </a>
+                )}
+                {teamMemberCanAccess(user, "rawFeedback") && (
+                  <a href="/group/raw-feedback">
+                    <NavIcon name="raw-feedback" />
+                    Raw feedback
+                  </a>
+                )}
               </NavSection>
 
               <NavSection
-                storageKey="group-understand"
-                label="Understand"
-                hrefs={["/group/insights", "/group/analytics", "/group/alert-rules", "/group/alerts", "/group/reports"]}
+                storageKey="group-clarify"
+                label="Clarify"
+                hrefs={[
+                  "/group/insights",
+                  "/group/analytics",
+                  "/group/alert-rules",
+                  "/group/alerts",
+                  "/group/business-value",
+                ]}
               >
                 {hasProduct(org, "customer_experience") &&
+                  showCx &&
                   hasFeature(org.enabledFeatures, "insights") &&
-                  teamMemberCanAccess(user, "insights") && <a href="/group/insights">Insights</a>}
+                  teamMemberCanAccess(user, "insights") && (
+                    <a href="/group/insights">
+                      <NavIcon name="insights" />
+                      Insights
+                    </a>
+                  )}
                 {hasProduct(org, "customer_experience") &&
+                  showCx &&
                   hasFeature(org.enabledFeatures, "analytics") &&
-                  teamMemberCanAccess(user, "analytics") && <a href="/group/analytics">Analytics</a>}
+                  teamMemberCanAccess(user, "analytics") && (
+                    <a href="/group/analytics">
+                      <NavIcon name="analytics" />
+                      Analytics
+                    </a>
+                  )}
                 {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
-                  <a href="/group/alert-rules">Alert rules</a>
+                  <a href="/group/alert-rules">
+                    <NavIcon name="alert-rules" />
+                    Alert rules
+                  </a>
                 )}
                 {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alerts") && (
-                  <a href="/group/alerts">Alerts</a>
+                  <a href="/group/alerts">
+                    <NavIcon name="alerts" />
+                    Alerts
+                  </a>
                 )}
-                {hasProduct(org, "customer_experience") &&
-                  hasFeature(org.enabledFeatures, "reports") &&
-                  teamMemberCanAccess(user, "reports") && <a href="/group/reports">Reports</a>}
+                {hasFeature(org.enabledFeatures, "businessValue") && teamMemberCanAccess(user, "businessValue") && (
+                  <a href="/group/business-value">
+                    <NavIcon name="business-value" />
+                    Business Value
+                  </a>
+                )}
               </NavSection>
               <NavSection
-                storageKey="group-act"
-                label="Act"
-                hrefs={["/group/cases", "/group/improvement-initiatives", "/group/decision-log"]}
+                storageKey="group-claim"
+                label="Claim"
+                hrefs={["/group/attention-centre", "/group/cases"]}
               >
-                {teamMemberCanAccess(user, "caseManagement") && <a href="/group/cases">Case Management</a>}
+                {teamMemberCanAccess(user, "attentionCentre") && (
+                  <a href="/group/attention-centre">
+                    <NavIcon name="attention-centre" />
+                    Attention Centre
+                  </a>
+                )}
+                {teamMemberCanAccess(user, "caseManagement") && (
+                  <a href="/group/cases">
+                    <NavIcon name="cases" />
+                    Case Management
+                  </a>
+                )}
+              </NavSection>
+
+              <NavSection
+                storageKey="group-close"
+                label="Close"
+                hrefs={["/group/improvement-initiatives", "/group/decision-log", "/group/closing-the-loop"]}
+              >
                 {hasFeature(org.enabledFeatures, "improvementInitiatives") &&
                   teamMemberCanAccess(user, "improvementInitiatives") && (
-                    <a href="/group/improvement-initiatives">Improvement Initiatives</a>
+                    <a href="/group/improvement-initiatives">
+                      <NavIcon name="improvement-initiatives" />
+                      Improvement Initiatives
+                    </a>
                   )}
                 {hasFeature(org.enabledFeatures, "decisionLog") && teamMemberCanAccess(user, "decisionLog") && (
-                  <a href="/group/decision-log">Decision log</a>
+                  <a href="/group/decision-log">
+                    <NavIcon name="decision-log" />
+                    Decision log
+                  </a>
                 )}
+                {hasProduct(org, "colleague_experience") &&
+                  showCe &&
+                  hasFeature(org.enabledFeatures, "closingLoop") &&
+                  teamMemberCanAccess(user, "closingLoop") && (
+                    <a href="/group/closing-the-loop">
+                      <NavIcon name="closing-loop" />
+                      Closing the Loop
+                    </a>
+                  )}
               </NavSection>
               {(() => {
                 const showCxPulse =
@@ -144,13 +245,23 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 if (!showCxPulse && !showCorrelation) return null;
                 return (
                   <NavSection
-                    storageKey="group-measure"
-                    label="Measure"
+                    storageKey="group-confirm"
+                    label="Confirm"
                     defaultOpen={false}
                     hrefs={[cxPulseHref, "/group/cx-ex-correlation"]}
                   >
-                    {showCxPulse && <a href={cxPulseHref}>{cxPulseNavLabel}</a>}
-                    {showCorrelation && <a href="/group/cx-ex-correlation">CX ↔ EX Correlation</a>}
+                    {showCxPulse && (
+                      <a href={cxPulseHref}>
+                        <NavIcon name="pulse" />
+                        {cxPulseNavLabel}
+                      </a>
+                    )}
+                    {showCorrelation && (
+                      <a href="/group/cx-ex-correlation">
+                        <NavIcon name="correlation" />
+                        CX ↔ EX Correlation
+                      </a>
+                    )}
                   </NavSection>
                 );
               })()}
@@ -165,19 +276,55 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   "/group/category-owners",
                   "/group/support",
                   "/group/billing",
+                  "/group/escalation",
                   "/group/playbooks",
                   "/group/security",
                 ]}
               >
-                <a href="/group/team">Team &amp; access</a>
-                {!isOrgTeamMember && <a href="/group/team-members">Team Members</a>}
-                {!isOrgTeamMember && <a href="/group/category-owners">Category Owners</a>}
-                {teamMemberCanAccess(user, "support") && <a href="/group/support">Support</a>}
-                {!isOrgTeamMember && <a href="/group/billing">Billing</a>}
-                {hasFeature(org.enabledFeatures, "playbooks") && teamMemberCanAccess(user, "playbooks") && (
-                  <a href="/group/playbooks">Playbook Library</a>
+                <a href="/group/team">
+                  <NavIcon name="team" />
+                  Team &amp; access
+                </a>
+                {!isOrgTeamMember && (
+                  <a href="/group/team-members">
+                    <NavIcon name="team-members" />
+                    Team Members
+                  </a>
                 )}
-                <a href="/group/security">Security</a>
+                {!isOrgTeamMember && (
+                  <a href="/group/category-owners">
+                    <NavIcon name="category-owners" />
+                    Category Owners
+                  </a>
+                )}
+                {teamMemberCanAccess(user, "support") && (
+                  <a href="/group/support">
+                    <NavIcon name="support" />
+                    Support
+                  </a>
+                )}
+                {!isOrgTeamMember && (
+                  <a href="/group/billing">
+                    <NavIcon name="billing" />
+                    Billing
+                  </a>
+                )}
+                {!isOrgTeamMember && (
+                  <a href="/group/escalation">
+                    <NavIcon name="escalation" />
+                    Escalation hierarchy
+                  </a>
+                )}
+                {hasFeature(org.enabledFeatures, "playbooks") && teamMemberCanAccess(user, "playbooks") && (
+                  <a href="/group/playbooks">
+                    <NavIcon name="playbooks" />
+                    Playbook Library
+                  </a>
+                )}
+                <a href="/group/security">
+                  <NavIcon name="security" />
+                  Security
+                </a>
               </NavSection>
             </>
           )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
+import { DetailDrawer, NotesThread } from "@/components/detail-drawer";
 
 interface InitiativeRow {
   _id: string;
@@ -16,6 +17,16 @@ interface InitiativeRow {
   startedAt: string | null;
   completedAt: string | null;
   linkedActionIds: string[];
+  notes: { text: string; authorLabel: string; createdAt: string }[];
+  linkedDecision: {
+    _id: string;
+    title: string;
+    status: string;
+    outcomeBefore: number | null;
+    outcomeAfter: number | null;
+    outcomeMetricDescription: string;
+    closingLoop: { _id: string; title: string; status: string; sentAt: string | null } | null;
+  } | null;
 }
 
 interface TeamRow {
@@ -235,7 +246,25 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
     return team.find((t) => t.userId === id)?.label ?? "Unassigned";
   }
 
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+
+  async function addNote(id: string) {
+    if (!noteDraft.trim()) return;
+    setAddingNote(true);
+    await fetch(`/api/business/improvement-initiatives/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ addNote: noteDraft.trim() }),
+    });
+    setNoteDraft("");
+    setAddingNote(false);
+    load();
+  }
+
   const visible = initiatives.filter((i) => statusFilter === "all" || i.status === statusFilter);
+  const openRow = openId ? initiatives.find((i) => i._id === openId) ?? null : null;
 
   return (
     <div>
@@ -389,117 +418,38 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
 
       {loading && <p className="subtitle">Loading…</p>}
       {!loading && (
-        <div className="ab-list">
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
           {visible.map((row) => (
-            <div className="card ab-card" key={row._id}>
-              {editingId === row._id ? (
-                <div className="ab-panel" style={{ margin: 0 }}>
-                  <div className="field-row">
-                    <div className="field">
-                      <label>Title</label>
-                      <input value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>What's the pattern?</label>
-                      <input value={descriptionDraft} onChange={(e) => setDescriptionDraft(e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="field-row">
-                    <div className="field">
-                      <label>Baseline</label>
-                      <input type="number" step="0.1" value={baselineDraft} onChange={(e) => setBaselineDraft(e.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>Target</label>
-                      <input type="number" step="0.1" value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} />
-                    </div>
-                  </div>
-                  {caseOptions.length > 0 && (
-                    <div className="field">
-                      <label>Linked cases</label>
-                      <div style={{ maxHeight: 160, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 6, padding: 8 }}>
-                        {caseOptions.map((c) => (
-                          <label key={c._id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", fontSize: 13.5 }}>
-                            <input
-                              type="checkbox"
-                              checked={linkedCasesDraft.includes(c._id)}
-                              onChange={() => setLinkedCasesDraft((prev) => toggleId(prev, c._id))}
-                            />
-                            {c.title}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <button className="btn btn-dark btn-sm" onClick={() => saveEdit(row._id)}>
-                    Save
-                  </button>{" "}
-                  <button className="btn btn-sm" onClick={() => setEditingId(null)}>
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="ab-card-head">
-                    <div className="ab-title-block">
-                      <div className="ab-badges">
-                        {cxEnabled && ceEnabled && (
-                          <span className={`pill ${row.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
-                            {row.product === "colleague_experience" ? "Colleague" : "Customer"}
-                          </span>
-                        )}
-                        <span
-                          className={`pill ${row.status === "completed" ? "pill-green" : row.status === "in_progress" ? "pill-amber" : "pill-gray"}`}
-                        >
-                          {STATUS_LABELS[row.status] ?? row.status}
-                        </span>
-                        {row.linkedActionIds.length > 0 && (
-                          <span className="pill pill-gray">
-                            {row.linkedActionIds.length} case{row.linkedActionIds.length === 1 ? "" : "s"} linked
-                          </span>
-                        )}
-                      </div>
-                      <div className="ab-title">{row.title}</div>
-                      <div className="ab-meta-row">
-                        <span>
-                          Owner: <b>{ownerLabel(row.ownerId)}</b>
-                        </span>
-                        <span>
-                          Status:{" "}
-                          {readOnly ? (
-                            STATUS_LABELS[row.status] ?? row.status
-                          ) : (
-                            <select value={row.status} onChange={(e) => updateStatus(row._id, e.target.value)} style={{ marginLeft: 4 }}>
-                              <option value="planned">Planned</option>
-                              <option value="in_progress">In progress</option>
-                              <option value="completed">Completed</option>
-                            </select>
-                          )}
-                        </span>
-                      </div>
-                      {row.description && (
-                        <div className="ab-desc">
-                          <b>Pattern:</b> {row.description}
-                        </div>
-                      )}
-                      <div className="ab-callout">
-                        <b>{row.baselineMetricDescription || "Metric"}:</b>{" "}
-                        {progressLabel(row) ?? "no baseline/target set yet"}
-                      </div>
-                    </div>
-                  </div>
-                  {!readOnly && (
-                    <div className="action-links">
-                      <button type="button" className="btn btn-sm action-btn" onClick={() => startEdit(row)}>
-                        ✎ Edit
-                      </button>
-                      <button type="button" className="icon-btn btn-danger" onClick={() => removeInitiative(row._id)}>
-                        🗑
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
+            <div
+              className="summary-card"
+              key={row._id}
+              onClick={() => {
+                setOpenId(row._id);
+                setNoteDraft("");
+              }}
+            >
+              <div className="badge-row" style={{ marginBottom: 8 }}>
+                {cxEnabled && ceEnabled && (
+                  <span className={`pill ${row.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                    {row.product === "colleague_experience" ? "Colleague" : "Customer"}
+                  </span>
+                )}
+                <span className={`pill ${row.status === "completed" ? "pill-green" : row.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
+                  {STATUS_LABELS[row.status] ?? row.status}
+                </span>
+              </div>
+              <div style={{ fontWeight: 600, fontSize: 14.5, marginBottom: 6 }}>{row.title}</div>
+              <div className="subtitle" style={{ margin: "0 0 8px" }}>
+                Owner: <b style={{ color: "var(--text-1)" }}>{ownerLabel(row.ownerId)}</b>
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--text-2)" }}>
+                <b>{row.baselineMetricDescription || "Metric"}:</b> {progressLabel(row) ?? "no baseline/target set yet"}
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 10, fontSize: 11.5, color: "var(--text-3)" }}>
+                {row.linkedActionIds.length > 0 && <span>{row.linkedActionIds.length} case{row.linkedActionIds.length === 1 ? "" : "s"}</span>}
+                {row.notes.length > 0 && <span>{row.notes.length} note{row.notes.length === 1 ? "" : "s"}</span>}
+                {row.linkedDecision && <span>→ Decision Log</span>}
+              </div>
             </div>
           ))}
           {visible.length === 0 && (
@@ -509,6 +459,139 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
           )}
         </div>
       )}
+
+      <DetailDrawer open={!!openRow} onClose={() => setOpenId(null)} title={openRow?.title ?? ""}>
+        {openRow && (
+          <div>
+            {editingId === openRow._id ? (
+              <div className="ab-panel" style={{ margin: 0 }}>
+                <div className="field">
+                  <label>Title</label>
+                  <input value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>What's the pattern?</label>
+                  <input value={descriptionDraft} onChange={(e) => setDescriptionDraft(e.target.value)} />
+                </div>
+                <div className="field-row">
+                  <div className="field">
+                    <label>Baseline</label>
+                    <input type="number" step="0.1" value={baselineDraft} onChange={(e) => setBaselineDraft(e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Target</label>
+                    <input type="number" step="0.1" value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} />
+                  </div>
+                </div>
+                {caseOptions.length > 0 && (
+                  <div className="field">
+                    <label>Linked cases</label>
+                    <div style={{ maxHeight: 160, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 6, padding: 8 }}>
+                      {caseOptions.map((c) => (
+                        <label key={c._id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", fontSize: 13.5 }}>
+                          <input
+                            type="checkbox"
+                            checked={linkedCasesDraft.includes(c._id)}
+                            onChange={() => setLinkedCasesDraft((prev) => toggleId(prev, c._id))}
+                          />
+                          {c.title}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button className="btn btn-dark btn-sm" onClick={() => saveEdit(openRow._id)}>
+                  Save
+                </button>{" "}
+                <button className="btn btn-sm" onClick={() => setEditingId(null)}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="ab-meta-row" style={{ marginBottom: 10 }}>
+                  <span>
+                    Owner: <b>{ownerLabel(openRow.ownerId)}</b>
+                  </span>
+                  <span>
+                    Status:{" "}
+                    {readOnly ? (
+                      STATUS_LABELS[openRow.status] ?? openRow.status
+                    ) : (
+                      <select value={openRow.status} onChange={(e) => updateStatus(openRow._id, e.target.value)} style={{ marginLeft: 4 }}>
+                        <option value="planned">Planned</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    )}
+                  </span>
+                </div>
+                {openRow.description && (
+                  <div className="ab-desc" style={{ marginBottom: 10 }}>
+                    <b>Pattern:</b> {openRow.description}
+                  </div>
+                )}
+                <div className="ab-callout">
+                  <b>{openRow.baselineMetricDescription || "Metric"}:</b> {progressLabel(openRow) ?? "no baseline/target set yet"}
+                </div>
+                {openRow.linkedDecision && (
+                  <div className="ab-callout" style={{ marginTop: 8 }}>
+                    <b>Decision Log:</b> {openRow.linkedDecision.title} ({STATUS_LABELS[openRow.linkedDecision.status] ?? openRow.linkedDecision.status})
+                    {openRow.linkedDecision.outcomeBefore !== null && openRow.linkedDecision.outcomeAfter !== null && (
+                      <>
+                        {" — "}
+                        {openRow.linkedDecision.outcomeMetricDescription || "score"} {openRow.linkedDecision.outcomeBefore} →{" "}
+                        {openRow.linkedDecision.outcomeAfter}
+                      </>
+                    )}
+                    {openRow.linkedDecision.closingLoop && (
+                      <>
+                        {" · "}
+                        <b>Closing the Loop:</b> {openRow.linkedDecision.closingLoop.title} (
+                        {openRow.linkedDecision.closingLoop.status === "sent" ? "sent" : "draft"})
+                      </>
+                    )}
+                  </div>
+                )}
+                {!readOnly && (
+                  <div className="action-links" style={{ marginTop: 12 }}>
+                    <button type="button" className="btn btn-sm action-btn" onClick={() => startEdit(openRow)}>
+                      ✎ Edit
+                    </button>
+                    {!openRow.linkedDecision && (
+                      <a
+                        className="btn btn-sm action-btn"
+                        href={`/business/decision-log?new=1&title=${encodeURIComponent(openRow.title)}&trigger=${encodeURIComponent(openRow.description)}&linkedInitiativeId=${openRow._id}`}
+                      >
+                        Log outcome →
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      className="icon-btn btn-danger"
+                      onClick={() => {
+                        removeInitiative(openRow._id);
+                        setOpenId(null);
+                      }}
+                    >
+                      🗑
+                    </button>
+                  </div>
+                )}
+                <div style={{ marginTop: 18 }}>
+                  <NotesThread
+                    notes={openRow.notes}
+                    draft={noteDraft}
+                    onDraftChange={setNoteDraft}
+                    onSubmit={() => addNote(openRow._id)}
+                    submitting={addingNote}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </DetailDrawer>
     </div>
   );
 }

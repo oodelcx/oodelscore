@@ -56,6 +56,17 @@ describe("isAccessDenied — Business portal", () => {
   it("every route in the Alerts feed (the newest addition) is covered by the config, not silently unmapped", () => {
     expect(BUSINESS_ACCESS_CONFIG.pageAccessKeys.some(([prefix]) => prefix === "/business/alerts")).toBe(true);
   });
+
+  it("Attention Centre is covered by the config, and a limited-tier team member (locked to caseManagement only) is denied on it", () => {
+    expect(BUSINESS_ACCESS_CONFIG.pageAccessKeys.some(([prefix]) => prefix === "/business/attention-centre")).toBe(true);
+    expect(isAccessDenied("/business/attention-centre", limitedTeamMember, true, true, BUSINESS_ACCESS_CONFIG)).toBe(true);
+    expect(isAccessDenied("/business/attention-centre", fullTeamMember, true, false, BUSINESS_ACCESS_CONFIG)).toBe(false);
+  });
+
+  it("Closing the Loop and Business Value are covered by the config", () => {
+    expect(BUSINESS_ACCESS_CONFIG.pageAccessKeys.some(([prefix]) => prefix === "/business/closing-the-loop")).toBe(true);
+    expect(BUSINESS_ACCESS_CONFIG.pageAccessKeys.some(([prefix]) => prefix === "/business/business-value")).toBe(true);
+  });
 });
 
 describe("isAccessDenied — Group portal", () => {
@@ -83,5 +94,14 @@ describe("isAccessDenied — Group portal", () => {
 
   it("every route in the Alerts feed is covered by the config, not silently unmapped", () => {
     expect(GROUP_ACCESS_CONFIG.pageAccessKeys.some(([prefix]) => prefix === "/group/alerts")).toBe(true);
+  });
+
+  it("Attention Centre is covered by the config", () => {
+    expect(GROUP_ACCESS_CONFIG.pageAccessKeys.some(([prefix]) => prefix === "/group/attention-centre")).toBe(true);
+  });
+
+  it("Closing the Loop and Business Value are covered by the config", () => {
+    expect(GROUP_ACCESS_CONFIG.pageAccessKeys.some(([prefix]) => prefix === "/group/closing-the-loop")).toBe(true);
+    expect(GROUP_ACCESS_CONFIG.pageAccessKeys.some(([prefix]) => prefix === "/group/business-value")).toBe(true);
   });
 });

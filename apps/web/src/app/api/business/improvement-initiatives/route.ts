@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase, ImprovementInitiative, hasFeature, PRODUCTS, type Product } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
+import { attachActChain } from "@/lib/actChain";
 
 const PRODUCT_SET: readonly string[] = PRODUCTS;
 
@@ -26,7 +27,9 @@ export async function GET() {
       : { businessId: session.business._id, product }
   ).sort({ createdAt: -1 });
 
-  return NextResponse.json({ status: "ok", product, initiatives, readOnly: isBranch });
+  const withChain = await attachActChain(initiatives);
+
+  return NextResponse.json({ status: "ok", product, initiatives: withChain, readOnly: isBranch });
 }
 
 export async function POST(request: Request) {

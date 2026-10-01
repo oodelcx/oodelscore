@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
+import { PulseSelfAssessmentCard } from "@/components/pulse-self-assessment-card";
 
 interface Dimensions {
   awareness: number;
@@ -32,12 +33,14 @@ interface RegionData {
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — see group/maturity/maturity-client.tsx for why
+// these differ from the schema field names.
 const DIMENSION_LABELS: { key: keyof Dimensions; label: string }[] = [
-  { key: "awareness", label: "Awareness" },
-  { key: "response", label: "Response" },
-  { key: "ownership", label: "Ownership" },
-  { key: "culture", label: "Culture" },
-  { key: "outcome", label: "Outcome" },
+  { key: "awareness", label: "Signal" },
+  { key: "response", label: "Speed" },
+  { key: "ownership", label: "Accountability" },
+  { key: "culture", label: "Buy-in" },
+  { key: "outcome", label: "Impact" },
 ];
 
 function trendPath(history: ScoreDoc[]): string | null {
@@ -132,6 +135,8 @@ export default function BranchCxPulseClient({ tooltips }: { tooltips: Record<str
           ))}
         </div>
       </div>
+
+      <PulseSelfAssessmentCard apiPath="/api/business/cx-pulse/self-assessment" title="Quarterly self-assessment" />
 
       <div className="section-title">Other branches in {data.region ?? "your region"}</div>
       <div className="card">

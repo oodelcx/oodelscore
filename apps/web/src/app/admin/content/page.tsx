@@ -21,12 +21,17 @@ interface Weights {
 }
 
 const LEVEL_NAMES = ["Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — the underlying field names (awareness/response/
+// ownership/culture/outcome) are unchanged to avoid a data migration.
+// Renamed so CX Pulse's dimensions stop using the same words as Compass's
+// ANCHOR assessment (Culture, Ownership); keep these in sync with the
+// customer-facing labels in the Business/Group CX Pulse pages.
 const DIMENSION_LABELS: { key: keyof Weights; label: string }[] = [
-  { key: "awareness", label: "Awareness" },
-  { key: "response", label: "Response" },
-  { key: "ownership", label: "Ownership" },
-  { key: "culture", label: "Culture" },
-  { key: "outcome", label: "Outcome" },
+  { key: "awareness", label: "Signal" },
+  { key: "response", label: "Speed" },
+  { key: "ownership", label: "Accountability" },
+  { key: "culture", label: "Buy-in" },
+  { key: "outcome", label: "Impact" },
 ];
 const CONTENT_TABS = [
   { id: "site-name", label: "Site name" },
@@ -280,6 +285,7 @@ function GuidedToursTab() {
 function CxPulseLadderTab() {
   const [weights, setWeights] = useState<Weights | null>(null);
   const [pulseQuestions, setPulseQuestions] = useState("");
+  const [ceSelfAssessmentQuestions, setCeSelfAssessmentQuestions] = useState("");
   const [levelDescriptions, setLevelDescriptions] = useState<string[]>(["", "", "", "", ""]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -291,6 +297,7 @@ function CxPulseLadderTab() {
       .then((frameworkData) => {
         setWeights(frameworkData.framework?.weights ?? null);
         setPulseQuestions((frameworkData.framework?.pulseQuestions ?? []).join("\n"));
+        setCeSelfAssessmentQuestions((frameworkData.framework?.ceSelfAssessmentQuestions ?? []).join("\n"));
         const descs = frameworkData.framework?.levelDescriptions;
         if (Array.isArray(descs) && descs.length === 5) setLevelDescriptions(descs);
       })
@@ -307,6 +314,7 @@ function CxPulseLadderTab() {
       body: JSON.stringify({
         weights,
         pulseQuestions: pulseQuestions.split("\n").map((q) => q.trim()).filter(Boolean),
+        ceSelfAssessmentQuestions: ceSelfAssessmentQuestions.split("\n").map((q) => q.trim()).filter(Boolean),
         levelDescriptions,
       }),
     });
@@ -340,8 +348,15 @@ function CxPulseLadderTab() {
         Total: {total}
         {total !== 100 ? " — must equal 100" : ""}
       </p>
-      <p className="field-hint">Quarterly self-assessment questions (one per line)</p>
+      <p className="field-hint">Quarterly self-assessment questions — Customer Experience (one per line)</p>
       <textarea style={{ width: "100%", minHeight: 80 }} value={pulseQuestions} onChange={(e) => setPulseQuestions(e.target.value)} />
+
+      <p className="field-hint" style={{ marginTop: 12 }}>Quarterly self-assessment questions — Colleague Experience (one per line)</p>
+      <textarea
+        style={{ width: "100%", minHeight: 80 }}
+        value={ceSelfAssessmentQuestions}
+        onChange={(e) => setCeSelfAssessmentQuestions(e.target.value)}
+      />
 
       <p className="field-hint" style={{ marginTop: 16 }}>
         Maturity ladder descriptions — shown under each level on the real CX Pulse page.

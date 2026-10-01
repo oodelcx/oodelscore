@@ -19,6 +19,7 @@ import {
   logApiRouteError,
   isFeedbackPointOpen,
   effectiveDemographicConfig,
+  effectiveQuestions,
   type QuestionType,
   type DemographicMode,
 } from "@oodelscore/shared";
@@ -82,12 +83,27 @@ async function handlePost(request: NextRequest, qrToken: string) {
     );
   }
 
+  // A point built through the real survey builder carries its own fully
+  // authored question set and needs no template at all — see
+  // effectiveQuestions()'s own doc comment for the full priority order.
+  const hasCustomQuestions = !!feedbackPoint.customQuestions && feedbackPoint.customQuestions.length > 0;
   const templateId = feedbackPoint.questionTemplateOverride ?? business.questionTemplateId;
-  const template = templateId ? await QuestionTemplate.findById(templateId) : null;
-  if (!template) {
+  const template = !hasCustomQuestions && templateId ? await QuestionTemplate.findById(templateId) : null;
+  if (!hasCustomQuestions && !template) {
     return NextResponse.json({ status: "error", message: "No survey is configured for this link yet" }, { status: 404 });
   }
 
+  // Re-checked here, not just at page-load — the scan token this submit
+  // consumes below could have been minted just before the quota's last
+  // slot filled.
+  if (feedbackPoint.responseQuota) {
+    const responseCount = await Response.countDocuments({ feedbackPointId: feedbackPoint._id });
+    if (responseCount >= feedbackPoint.responseQuota) {
+      return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+    }
+  }
+
+  const questions = effectiveQuestions(feedbackPoint, template ?? { questions: [] });
   const body = await request.json().catch(() => null);
 
   const answers: SubmittedAnswer[] = Array.isArray(body?.answers) ? body.answers : [];
@@ -110,8 +126,8 @@ async function handlePost(request: NextRequest, qrToken: string) {
 
   const answerByIndex = new Map(answers.map((a) => [a.index, a.value]));
 
-  for (let i = 0; i < template.questions.length; i++) {
-    const question = template.questions[i];
+  for (let i = 0; i < questions.length; i++) {
+    const question = questions[i];
     if (question.required && (answerByIndex.get(i) === undefined || answerByIndex.get(i) === "")) {
       return NextResponse.json({ status: "error", message: `"${question.text}" is required` }, { status: 400 });
     }
@@ -172,9 +188,10 @@ async function handlePost(request: NextRequest, qrToken: string) {
     }
   }
 
-  const responseAnswers = template.questions.map((question, index) => {
+  const responseAnswers = questions.map((question, index) => {
     const raw = answerByIndex.get(index) ?? null;
-    const isNumericType = question.type === "star_1_5" || question.type === "nps_0_10" || question.type === "slider";
+    const isNumericType =
+      question.type === "star_1_5" || question.type === "nps_0_10" || question.type === "slider" || question.type === "ces_1_5";
     const value = isNumericType && raw !== null && raw !== "" ? Number(raw) : raw;
     return {
       questionId: question._id!,
