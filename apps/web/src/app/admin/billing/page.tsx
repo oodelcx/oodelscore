@@ -11,6 +11,8 @@ interface SubscriptionRow {
   mrrValue: number;
   status: string;
   nextPaymentDate: string | null;
+  paidThroughDate: string | null;
+  compExpiresAt: string | null;
 }
 interface InvoiceRow {
   _id: string;
@@ -101,6 +103,26 @@ export default function BillingOversightPage() {
 
   const overdueSubs = subscriptions.filter((s) => s.status === "overdue");
   const overdueAtRisk = overdueSubs.reduce((sum, s) => sum + s.mrrValue, 0);
+
+  // Anything requiring finance's attention in the next 30 days: a real
+  // subscription's next auto-charge, an annual lump-sum that won't
+  // auto-renew and needs a fresh Checkout link before it lapses, or a comp
+  // period about to expire. Canceled subscriptions are excluded — nothing
+  // upcoming to act on there.
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const renewalCutoff = Date.now() + THIRTY_DAYS_MS;
+  const upcomingRenewals = subscriptions
+    .filter((s) => s.status !== "canceled")
+    .map((s) => {
+      const dateStr = s.isComp ? s.compExpiresAt : s.paidThroughDate ?? s.nextPaymentDate;
+      if (!dateStr) return null;
+      const date = new Date(dateStr).getTime();
+      if (date > renewalCutoff) return null;
+      const kind = s.isComp ? "Comp expires" : s.paidThroughDate ? "Annual — needs renewal" : "Next auto-charge";
+      return { ...s, renewalDate: dateStr, renewalKind: kind };
+    })
+    .filter((r): r is SubscriptionRow & { renewalDate: string; renewalKind: string } => r !== null)
+    .sort((a, b) => new Date(a.renewalDate).getTime() - new Date(b.renewalDate).getTime());
 
   const mrrByPlan = new Map<string, number>();
   for (const s of subscriptions) {
@@ -237,6 +259,32 @@ export default function BillingOversightPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {upcomingRenewals.length > 0 && (
+            <div className="card" style={{ marginBottom: 24 }}>
+              <h3>Upcoming renewals &amp; expirations (next 30 days)</h3>
+              <table className="clean">
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Plan</th>
+                    <th>What&rsquo;s due</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcomingRenewals.map((r) => (
+                    <tr key={r._id}>
+                      <td>{r.ownerName}</td>
+                      <td>{r.plan}</td>
+                      <td>{r.renewalKind}</td>
+                      <td>{new Date(r.renewalDate).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 

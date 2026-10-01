@@ -53,6 +53,7 @@ const PERMISSION_AREAS: { key: string; label: string; scoped: boolean }[] = [
   { key: "questionTemplates", label: "Question Templates", scoped: false },
   { key: "emailAndSiteContent", label: "Email Templates & Site Content", scoped: false },
   { key: "aiInsightsQueue", label: "AI Insights Queue", scoped: true },
+  { key: "feedbackResponses", label: "Feedback Responses (raw customer feedback)", scoped: true },
 ];
 
 function blankPermissions(): Record<string, PermissionValue> {

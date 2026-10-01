@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/session";
 import { requireStaffSession } from "@/lib/adminAuth";
-import { connectToDatabase, AiInsightReport, Business, FeedbackPointRequest, SupportTicket } from "@oodelscore/shared";
+import { connectToDatabase, AiInsightReport, Business, SupportTicket } from "@oodelscore/shared";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { NavIcon } from "@/components/nav-icon";
@@ -25,19 +25,6 @@ async function getPendingAiCount(): Promise<number> {
   }
   const businessIds = await Business.find({ accountManagerId: user._id }).distinct("_id");
   return AiInsightReport.countDocuments({ status: "pending", ownerType: "business", ownerId: { $in: businessIds } });
-}
-
-/** Same scoping as the Feedback Point Requests page itself. */
-async function getPendingFeedbackRequestCount(): Promise<number> {
-  const session = await requireStaffSession();
-  if (!session) return 0;
-  const { role, user } = session;
-  if (!role.permissions.businesses.view) return 0;
-
-  await connectToDatabase();
-  const businessFilter = role.permissions.businesses.scope === "assigned" ? { accountManagerId: user._id } : {};
-  const scopedBusinessIds = await Business.find(businessFilter).distinct("_id");
-  return FeedbackPointRequest.countDocuments({ status: "pending", businessId: { $in: scopedBusinessIds } });
 }
 
 /** Unresolved support tickets — same staffAndRoles.view gate as the queue page itself. */
@@ -68,7 +55,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (user.accountType !== "admin_staff") redirect("/dashboard");
 
   const pendingAiCount = await getPendingAiCount();
-  const pendingFeedbackRequestCount = await getPendingFeedbackRequestCount();
   const openSupportTicketCount = await getOpenSupportTicketCount();
   const devToolsVisible = await canSeeDevTools();
 
@@ -144,13 +130,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               <NavIcon name="feedback-responses" />
               Feedback Responses
             </a>
-            <a href="/admin/feedback-requests" style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <NavIcon name="feedback-requests" />
-                Feedback Point Requests
-              </span>
-              {pendingFeedbackRequestCount > 0 && <span className="nav-badge">{pendingFeedbackRequestCount}</span>}
-            </a>
             <a href="/admin/ai-queue" style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
                 <NavIcon name="ai-queue" />
@@ -173,6 +152,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <a href="/admin/compass-content">
               <NavIcon name="pulse" />
               Compass Content
+            </a>
+            <a href="/admin/sector-benchmarks">
+              <NavIcon name="pulse" />
+              Sector Benchmarks
             </a>
             <a href="/admin/platform-health">
               <NavIcon name="platform-health" />

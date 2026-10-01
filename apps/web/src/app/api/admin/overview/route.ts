@@ -104,6 +104,31 @@ export async function GET() {
   }
   const suspiciousRecipientCount = [...ownerIdsByRecipient.values()].filter((owners) => owners.size > 1).length;
 
+  // Customer health signal (OBS11): an actively-paying business that's
+  // gone quiet — no customer responses in 30 days — is a churn risk long
+  // before it shows up as a support ticket or a canceled subscription.
+  // Comp accounts are excluded: a business on a free/pilot period going
+  // quiet isn't the same commercial risk as a paying one.
+  let quietPayingBusinessCount = 0;
+  if (role.permissions.businesses.view && role.permissions.billingOversight.view) {
+    const payingBusinessIds = await BillingSubscription.find({ ownerType: "business", isComp: false, status: { $ne: "canceled" } }).distinct(
+      "ownerId"
+    );
+    const scopedPayingIds =
+      role.permissions.businesses.scope === "assigned"
+        ? await Business.find({ _id: { $in: payingBusinessIds }, accountManagerId: user._id }).distinct("_id")
+        : payingBusinessIds;
+    if (scopedPayingIds.length > 0) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const activeResponderIds = await Response.find({
+        businessId: { $in: scopedPayingIds },
+        submittedAt: { $gte: thirtyDaysAgo },
+      }).distinct("businessId");
+      const activeSet = new Set(activeResponderIds.map((id) => id.toString()));
+      quietPayingBusinessCount = scopedPayingIds.filter((id) => !activeSet.has(id.toString())).length;
+    }
+  }
+
   const needsAttention: { label: string; issue: string; severity: "red" | "amber"; href: string }[] = [];
   if (expiredUsers.length > 0) {
     needsAttention.push({
@@ -151,6 +176,14 @@ export async function GET() {
       issue: "Payment overdue",
       severity: "amber",
       href: "/admin/billing",
+    });
+  }
+  if (quietPayingBusinessCount > 0) {
+    needsAttention.push({
+      label: `${quietPayingBusinessCount} business(es)`,
+      issue: "Paying but no customer responses in 30 days — churn risk",
+      severity: "amber",
+      href: "/admin/accounts",
     });
   }
 

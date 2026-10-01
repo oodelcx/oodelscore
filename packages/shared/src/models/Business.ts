@@ -155,6 +155,13 @@ export interface IBusiness {
   // account being tested without affecting every other account.
   paymentGateEnabled: boolean | null;
   businessValueInputs: IBusinessValueInputs;
+  // Business-owner-editable: opts this account's data into OodelCX's
+  // anonymized sector benchmark reports (OBS11) — aggregated by industry
+  // only, across a group large enough that no single business is
+  // identifiable, and never shown or exported per-business. Defaults to
+  // false; every existing account is opted OUT until its owner explicitly
+  // turns this on.
+  benchmarkOptIn: boolean;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -213,6 +220,7 @@ const BusinessSchema = new Schema<IBusiness>(
     sensitiveRoutingContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     paymentGateEnabled: { type: Boolean, default: null },
     businessValueInputs: { type: BusinessValueInputsSchema, default: () => ({}) },
+    benchmarkOptIn: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }
