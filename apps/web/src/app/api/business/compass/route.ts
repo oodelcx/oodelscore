@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, getCompassView, getEnabledProducts, hasFeature } from "@oodelscore/shared";
+import { connectToDatabase, getCompassView, getEnabledProducts, hasFeature, computeEvidenceFusion } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
@@ -20,5 +20,10 @@ export async function GET() {
   const products = getEnabledProducts(session.business);
   const view = await getCompassView("business", session.business._id, session.business.industry, products);
 
-  return NextResponse.json({ status: "ok", ...view });
+  const evidenceFusion =
+    view.assessmentStatus === "completed" && view.result
+      ? await computeEvidenceFusion("business", session.business._id, view.result.dimensionScores ?? [], products)
+      : null;
+
+  return NextResponse.json({ status: "ok", ...view, evidenceFusion });
 }

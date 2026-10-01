@@ -46,6 +46,27 @@ interface CompassHistoryEntry {
   archivedAt: string;
 }
 
+type EvidenceStatus = "confirmed" | "overstated" | "understated" | "insufficient_data";
+
+interface EvidenceIndicator {
+  key: string;
+  label: string;
+  met: boolean;
+}
+
+interface DimensionEvidence {
+  dimension: string;
+  selfScore: 0 | 1 | 2 | 3;
+  evidenceScore: 0 | 1 | 2 | 3;
+  indicators: EvidenceIndicator[];
+  status: EvidenceStatus;
+}
+
+interface EvidenceFusionView {
+  dimensions: DimensionEvidence[];
+  computedAt: string;
+}
+
 interface CompassView {
   assessmentStatus: "draft" | "completed";
   industry: string;
@@ -56,6 +77,7 @@ interface CompassView {
   dueForReassessment: boolean;
   reassessmentDueAt: string | null;
   history: CompassHistoryEntry[];
+  evidenceFusion: EvidenceFusionView | null;
 }
 
 function groupByDimension(questions: CompassQuestionView[]): [string, CompassQuestionView[]][] {
@@ -194,6 +216,7 @@ export function CompassClient({ apiPath }: { apiPath: string }) {
           dueForReassessment={view.dueForReassessment}
           reassessmentDueAt={view.reassessmentDueAt}
           history={view.history}
+          evidenceFusion={view.evidenceFusion}
         />
       ) : (
         <CompassQuestionsView
@@ -213,6 +236,59 @@ function stageLabel(stage: "established" | "emerging"): string {
   return stage === "established" ? "Established" : "Emerging";
 }
 
+const EVIDENCE_STATUS_META: Record<EvidenceStatus, { label: string; color: string }> = {
+  confirmed: { label: "Confirmed by activity", color: "var(--green)" },
+  overstated: { label: "Self-score looks overstated", color: "var(--red)" },
+  understated: { label: "Doing better than self-reported", color: "#5DA5D6" },
+  insufficient_data: { label: "Not enough activity data yet", color: "var(--text-3)" },
+};
+
+function EvidenceFusionCard({ evidenceFusion }: { evidenceFusion: EvidenceFusionView }) {
+  return (
+    <div className="card" style={{ marginTop: 20 }}>
+      <h3 style={{ marginTop: 0 }}>Evidence Fusion</h3>
+      <p className="card-sub" style={{ margin: "0 0 14px" }}>
+        Self-reported Compass answers checked against what&rsquo;s actually happening in the account — a goal set, a
+        decision owned, a case resolved with a note on it. A dimension with no real activity behind it yet reads
+        &ldquo;not enough activity data,&rdquo; not a score, exactly as it should once that data starts showing up.
+      </p>
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+        {evidenceFusion.dimensions.map((d) => {
+          const meta = EVIDENCE_STATUS_META[d.status];
+          return (
+            <div key={d.dimension} className="card" style={{ background: "var(--bg-2, #f7f7f5)" }}>
+              <div className="page-head" style={{ marginBottom: 8 }}>
+                <b style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>{DIMENSION_ICONS[d.dimension]}</span>
+                  {DIMENSION_LABELS[d.dimension]}
+                </b>
+                <span className="pill" style={{ background: `${meta.color}22`, color: meta.color, border: `1px solid ${meta.color}55` }}>
+                  {meta.label}
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: 12.5 }}>
+                <span>
+                  Self-reported: <b style={{ color: "var(--text-1)" }}>{LADDER_LABELS[d.selfScore]}</b>
+                </span>
+                <span>
+                  Evidence: <b style={{ color: "var(--text-1)" }}>{LADDER_LABELS[d.evidenceScore]}</b>
+                </span>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5 }}>
+                {d.indicators.map((ind) => (
+                  <li key={ind.key} style={{ color: ind.met ? "var(--text-1)" : "var(--text-3)", marginBottom: 2 }}>
+                    {ind.met ? "✓" : "—"} {ind.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CompassResultsView({
   result,
   onRestart,
@@ -220,6 +296,7 @@ function CompassResultsView({
   dueForReassessment,
   reassessmentDueAt,
   history,
+  evidenceFusion,
 }: {
   result: CompassResultView;
   onRestart: () => void;
@@ -227,6 +304,7 @@ function CompassResultsView({
   dueForReassessment: boolean;
   reassessmentDueAt: string | null;
   history: CompassHistoryEntry[];
+  evidenceFusion: EvidenceFusionView | null;
 }) {
   return (
     <div>
@@ -346,6 +424,8 @@ function CompassResultsView({
           </table>
         </div>
       )}
+
+      {evidenceFusion && <EvidenceFusionCard evidenceFusion={evidenceFusion} />}
     </div>
   );
 }
