@@ -33,27 +33,31 @@ export async function GET() {
     mappings,
     ceEnabled: hasProduct(session.business, "colleague_experience"),
     sensitiveRoutingContactId: session.business.sensitiveRoutingContactId,
+    benchmarkOptIn: session.business.benchmarkOptIn,
   });
 }
 
 /**
- * Sets the business's sensitive-category routing contact (see
- * Category.sensitive / Business.sensitiveRoutingContactId) — separate
- * from the per-category PUT below since this is one account-wide setting,
- * not a per-category mapping.
+ * Sets one of this account's standalone toggles — the sensitive-category
+ * routing contact (Category.sensitive / Business.sensitiveRoutingContactId)
+ * or the anonymized sector-benchmark opt-in (OBS11) — separate from the
+ * per-category PUT below since these are account-wide settings, not a
+ * per-category mapping.
  */
 export async function PATCH(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const body = await request.json().catch(() => null);
-  if (!("sensitiveRoutingContactId" in (body ?? {}))) {
-    return NextResponse.json({ status: "error", message: "sensitiveRoutingContactId is required" }, { status: 400 });
-  }
-  const contactId = typeof body.sensitiveRoutingContactId === "string" ? new Types.ObjectId(body.sensitiveRoutingContactId) : null;
-
   await connectToDatabase();
-  session.business.sensitiveRoutingContactId = contactId;
+
+  if ("sensitiveRoutingContactId" in (body ?? {})) {
+    session.business.sensitiveRoutingContactId =
+      typeof body.sensitiveRoutingContactId === "string" ? new Types.ObjectId(body.sensitiveRoutingContactId) : null;
+  }
+  if (typeof body?.benchmarkOptIn === "boolean") {
+    session.business.benchmarkOptIn = body.benchmarkOptIn;
+  }
   await session.business.save();
 
   return NextResponse.json({ status: "ok" });
