@@ -14,7 +14,13 @@ interface AssignmentRow {
   _id: string;
   level: number;
   region: string;
+  businessId: string | null;
   userId: { email: string } | string;
+}
+interface BranchOption {
+  id: string;
+  name: string;
+  region: string;
 }
 
 /**
@@ -39,9 +45,12 @@ export function EscalationSettingsClient({
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [availableRegions, setAvailableRegions] = useState<string[]>(regions ?? []);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
   const [newLevel, setNewLevel] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newScope, setNewScope] = useState<"org" | "region" | "branch">("org");
   const [newRegion, setNewRegion] = useState("");
+  const [newBranchId, setNewBranchId] = useState("");
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +70,7 @@ export function EscalationSettingsClient({
         setAssignments(d.assignments ?? []);
         setCandidates(d.candidates ?? []);
         if (d.regions) setAvailableRegions(d.regions);
+        if (d.branches) setBranches(d.branches);
       });
   }
 
@@ -106,12 +116,19 @@ export function EscalationSettingsClient({
 
   async function addAssignment() {
     if (!newLevel || !newEmail) return;
+    if (newScope === "region" && !newRegion) return;
+    if (newScope === "branch" && !newBranchId) return;
     setSavingAssignment(true);
     setAssignmentError(null);
     const res = await fetch(`${apiPath}/assignments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ level: Number(newLevel), email: newEmail, region: newRegion }),
+      body: JSON.stringify({
+        level: Number(newLevel),
+        email: newEmail,
+        region: newScope === "region" ? newRegion : "",
+        businessId: newScope === "branch" ? newBranchId : null,
+      }),
     });
     const data = await res.json().catch(() => null);
     setSavingAssignment(false);
@@ -121,7 +138,9 @@ export function EscalationSettingsClient({
     }
     setNewLevel("");
     setNewEmail("");
+    setNewScope("org");
     setNewRegion("");
+    setNewBranchId("");
     load();
   }
 
@@ -202,9 +221,11 @@ export function EscalationSettingsClient({
       <div className="card" style={{ maxWidth: 640 }}>
         <h3>Who holds each level</h3>
         <p className="card-sub" style={{ margin: "0 0 12px" }}>
-          {availableRegions.length > 0
-            ? "Assign someone org-wide, or scoped to just one region — a region-specific assignment wins over an org-wide one."
-            : "Assign one of your own team to each level above."}
+          {branches.length > 0
+            ? "Assign someone org-wide, scoped to one region, or scoped to one specific branch — a branch-specific assignment wins over a region one, which wins over an org-wide one."
+            : availableRegions.length > 0
+              ? "Assign someone org-wide, or scoped to just one region — a region-specific assignment wins over an org-wide one."
+              : "Assign one of your own team to each level above."}
         </p>
 
         {assignments.length === 0 && <p className="subtitle">No one assigned yet — cases will escalate without notifying anyone.</p>}
@@ -213,7 +234,7 @@ export function EscalationSettingsClient({
             <thead>
               <tr>
                 <th>Level</th>
-                {availableRegions.length > 0 && <th>Region</th>}
+                {(availableRegions.length > 0 || branches.length > 0) && <th>Scope</th>}
                 <th>Holder</th>
                 <th></th>
               </tr>
@@ -222,7 +243,15 @@ export function EscalationSettingsClient({
               {assignments.map((a) => (
                 <tr key={a._id}>
                   <td>{levels.find((l) => l.level === a.level)?.label ?? `Level ${a.level}`}</td>
-                  {availableRegions.length > 0 && <td>{a.region || "Org-wide"}</td>}
+                  {(availableRegions.length > 0 || branches.length > 0) && (
+                    <td>
+                      {a.businessId
+                        ? `Branch — ${branches.find((b) => b.id === a.businessId)?.name ?? "unknown branch"}`
+                        : a.region
+                          ? `Region — ${a.region}`
+                          : "Org-wide"}
+                    </td>
+                  )}
                   <td>{typeof a.userId === "string" ? a.userId : a.userId.email}</td>
                   <td style={{ textAlign: "right" }}>
                     <span className="icon-btn btn-danger" onClick={() => removeAssignment(a._id)}>
@@ -251,14 +280,46 @@ export function EscalationSettingsClient({
                   ))}
                 </select>
               </div>
-              {availableRegions.length > 0 && (
+              {(availableRegions.length > 0 || branches.length > 0) && (
+                <div className="field">
+                  <label>Scope</label>
+                  <select
+                    value={newScope}
+                    onChange={(e) => {
+                      const scope = e.target.value as "org" | "region" | "branch";
+                      setNewScope(scope);
+                      setNewRegion("");
+                      setNewBranchId("");
+                    }}
+                  >
+                    <option value="org">Org-wide</option>
+                    {availableRegions.length > 0 && <option value="region">A region</option>}
+                    {branches.length > 0 && <option value="branch">A specific branch</option>}
+                  </select>
+                </div>
+              )}
+              {newScope === "region" && (
                 <div className="field">
                   <label>Region</label>
                   <select value={newRegion} onChange={(e) => setNewRegion(e.target.value)}>
-                    <option value="">Org-wide</option>
+                    <option value="">Select…</option>
                     {availableRegions.map((r) => (
                       <option key={r} value={r}>
                         {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {newScope === "branch" && (
+                <div className="field">
+                  <label>Branch</label>
+                  <select value={newBranchId} onChange={(e) => setNewBranchId(e.target.value)}>
+                    <option value="">Select…</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                        {b.region ? ` (${b.region})` : ""}
                       </option>
                     ))}
                   </select>
@@ -277,7 +338,17 @@ export function EscalationSettingsClient({
               </div>
             </div>
             {assignmentError && <p className="error-text">{assignmentError}</p>}
-            <button className="btn btn-dark btn-sm" disabled={savingAssignment || !newLevel || !newEmail} onClick={addAssignment}>
+            <button
+              className="btn btn-dark btn-sm"
+              disabled={
+                savingAssignment ||
+                !newLevel ||
+                !newEmail ||
+                (newScope === "region" && !newRegion) ||
+                (newScope === "branch" && !newBranchId)
+              }
+              onClick={addAssignment}
+            >
               {savingAssignment ? "Saving…" : "Assign"}
             </button>
           </div>
