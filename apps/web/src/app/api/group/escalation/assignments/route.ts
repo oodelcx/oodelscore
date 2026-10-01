@@ -35,8 +35,9 @@ export async function GET() {
     })),
   ];
   const regions = [...new Set(branches.map((b) => b.region).filter((r): r is string => !!r))].sort();
+  const branchOptions = branches.map((b) => ({ id: b._id.toString(), name: b.name, region: b.region }));
 
-  return NextResponse.json({ status: "ok", assignments, candidates, regions });
+  return NextResponse.json({ status: "ok", assignments, candidates, regions, branches: branchOptions });
 }
 
 export async function POST(request: Request) {
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
   const level = typeof body?.level === "number" ? body.level : null;
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : null;
   const region = typeof body?.region === "string" ? body.region.trim() : "";
+  const businessId = typeof body?.businessId === "string" && body.businessId.trim() ? body.businessId.trim() : null;
   if (!level || level <= 1 || !email) {
     return NextResponse.json({ status: "error", message: "level (>1) and email are required" }, { status: 400 });
   }
@@ -59,6 +61,15 @@ export async function POST(request: Request) {
 
   const branches = await Business.find({ parentOrgId: session.org._id }).select("_id");
   const branchIds = branches.map((b) => b._id);
+
+  // A branch-specific override is scoped to exactly one of this org's own
+  // branches — never region ("") since the two are mutually exclusive ways
+  // of narrowing who holds a level (see escalation/engine.ts's resolution
+  // order: branch override wins over region, which wins over org-wide).
+  if (businessId && !branchIds.some((id) => id.toString() === businessId)) {
+    return NextResponse.json({ status: "error", message: "That branch isn't part of this organization." }, { status: 400 });
+  }
+
   const user = await User.findOne({
     email,
     $or: [
@@ -75,7 +86,7 @@ export async function POST(request: Request) {
   }
 
   const assignment = await EscalationAssignment.findOneAndUpdate(
-    { parentOrgId: session.org._id, businessId: null, region, level },
+    { parentOrgId: session.org._id, businessId, region: businessId ? "" : region, level },
     { userId: user._id },
     { upsert: true, new: true }
   );
