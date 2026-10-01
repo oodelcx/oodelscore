@@ -39,6 +39,8 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
   const [ceEnabled, setCeEnabled] = useState(false);
   const [sensitiveRoutingContactId, setSensitiveRoutingContactId] = useState("");
   const [savingSensitiveContact, setSavingSensitiveContact] = useState(false);
+  const [benchmarkOptIn, setBenchmarkOptIn] = useState(false);
+  const [savingBenchmarkOptIn, setSavingBenchmarkOptIn] = useState(false);
   const [escalationLevels, setEscalationLevels] = useState<EscalationLevelRow[]>([]);
   const [escalateDrafts, setEscalateDrafts] = useState<Record<string, { days: string; level: string }>>({});
   const [savingEscalateFor, setSavingEscalateFor] = useState<string | null>(null);
@@ -73,6 +75,7 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
       setIsBranch(!!meData.business?.parentOrgId);
       setCeEnabled(!!data.ceEnabled);
       setSensitiveRoutingContactId(data.sensitiveRoutingContactId ?? "");
+      setBenchmarkOptIn(!!data.benchmarkOptIn);
       setLoading(false);
     });
   }
@@ -88,6 +91,17 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
       body: JSON.stringify({ sensitiveRoutingContactId: value || null }),
     });
     setSavingSensitiveContact(false);
+  }
+
+  async function saveBenchmarkOptIn(value: boolean) {
+    setBenchmarkOptIn(value);
+    setSavingBenchmarkOptIn(true);
+    await fetch("/api/business/category-owners", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ benchmarkOptIn: value }),
+    });
+    setSavingBenchmarkOptIn(false);
   }
 
   async function setOwner(categoryId: string, defaultOwnerId: string) {
@@ -200,6 +214,26 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
               ))}
             </select>
           </div>
+        </div>
+      )}
+
+      {!loading && (
+        <div className="callout" style={{ marginBottom: 20 }}>
+          <h3 style={{ marginTop: 0 }}>Sector benchmarking</h3>
+          <p className="subtitle" style={{ marginTop: 0 }}>
+            Opt in to have your scores included, fully anonymized, in OodelCX&rsquo;s sector benchmark reports —
+            aggregated across enough businesses in your industry that no single business is identifiable, and never
+            shown or exported per-business. Off by default.
+          </p>
+          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={benchmarkOptIn}
+              disabled={savingBenchmarkOptIn}
+              onChange={(e) => saveBenchmarkOptIn(e.target.checked)}
+            />
+            Include my anonymized data in sector benchmark reports
+          </label>
         </div>
       )}
 
