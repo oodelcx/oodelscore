@@ -13,6 +13,11 @@ export interface IPlatformSettings {
   // customers with nothing to show for it. Turn on only after confirming
   // existing accounts are either genuinely subscribed or marked comp.
   paymentGateEnabled: boolean;
+  // Global default for how often an account should retake its OodelCX
+  // Compass assessment (OBS2/OBS12) — null means no reassessment nudge at
+  // all. A business/parent org's own view can be reminded once this many
+  // days have passed since its last completed assessment.
+  compassReassessmentCadenceDays: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +27,7 @@ const PlatformSettingsSchema = new Schema<IPlatformSettings>(
     singletonKey: { type: String, required: true, unique: true, default: PLATFORM_SETTINGS_SINGLETON_KEY },
     toursEnabled: { type: Boolean, required: true, default: true },
     paymentGateEnabled: { type: Boolean, required: true, default: false },
+    compassReassessmentCadenceDays: { type: Number, default: 180 },
   },
   { timestamps: true }
 );
