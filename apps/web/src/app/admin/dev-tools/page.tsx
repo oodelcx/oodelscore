@@ -10,10 +10,6 @@ export default function DevDataToolsPage() {
   const [seedResult, setSeedResult] = useState<Record<string, number> | null>(null);
   const [insightsResult, setInsightsResult] = useState<{ reportsCreated: number; reportsSkipped: number } | null>(null);
 
-  const [seedingDemo, setSeedingDemo] = useState(false);
-  const [seedDemoError, setSeedDemoError] = useState<string | null>(null);
-  const [seedDemoResult, setSeedDemoResult] = useState<readonly { email: string; label: string }[] | null>(null);
-
   const [recomputing, setRecomputing] = useState(false);
   const [recomputeError, setRecomputeError] = useState<string | null>(null);
   const [recomputeResult, setRecomputeResult] = useState<{
@@ -48,20 +44,6 @@ export default function DevDataToolsPage() {
     }
     setSeedResult(data.result);
     setInsightsResult(data.insights ?? null);
-  }
-
-  async function runSeedDemo() {
-    setSeedingDemo(true);
-    setSeedDemoError(null);
-    setSeedDemoResult(null);
-    const res = await fetch("/api/admin/dev-tools/seed-demo", { method: "POST" });
-    const data = await res.json().catch(() => null);
-    setSeedingDemo(false);
-    if (!res.ok) {
-      setSeedDemoError(data?.message ?? "Failed to seed demo accounts");
-      return;
-    }
-    setSeedDemoResult(data.accounts);
   }
 
   async function runRecomputeNow() {
@@ -144,25 +126,6 @@ export default function DevDataToolsPage() {
             {seedResult.responses} feedback responses, {seedResult.actionBoardItems} cases,{" "}
             {seedResult.alertRules} alert rules, {seedResult.billingSubscriptions} billing subscriptions created.
             {insightsResult && ` ${insightsResult.reportsCreated} AI Insight Reports generated (${insightsResult.reportsSkipped} skipped — already existed or nothing to report).`}
-          </div>
-        )}
-      </div>
-
-      <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
-        <h3>Seed the 4 documented demo logins</h3>
-        <p className="card-sub">
-          Ensures one login per account type — Admin, Group owner, standalone Business owner, Business-as-branch
-          owner — exists with a working password, using the fixed emails/passwords documented in the repo
-          (<code>demoAccounts.ts</code>). Idempotent: safe to run again if any of the four are missing or broken.
-          Use this instead of Seed showcase data when you just need one known login per role, not a full dataset.
-        </p>
-        {seedDemoError && <p className="error-text">{seedDemoError}</p>}
-        <button className="btn btn-dark" disabled={seedingDemo} onClick={runSeedDemo}>
-          {seedingDemo ? "Seeding…" : "Seed demo accounts"}
-        </button>
-        {seedDemoResult && (
-          <div className="callout" style={{ marginTop: 12 }}>
-            Ready: {seedDemoResult.map((a) => `${a.label} (${a.email})`).join(", ")}.
           </div>
         )}
       </div>
