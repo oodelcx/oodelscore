@@ -143,13 +143,13 @@ export default async function CompanyPage() {
       <section className="final-cta">
         <div className="wrap">
           <Reveal as="div">
-            <h2>Let&rsquo;s talk.</h2>
+            <h2>{f.finalCtaHeadline || "Let’s talk."}</h2>
             <p>
-              Questions about the product, a specific industry, or how this would fit your organization — a person
-              who knows it answers.
+              {f.finalCtaSubhead ||
+                "Questions about the product, a specific industry, or how this would fit your organization — a person who knows it answers."}
             </p>
             <div className="hero-ctas" style={{ justifyContent: "center" }}>
-              <BookDemoButton className="btn-primary hover-lift">Book a demo</BookDemoButton>
+              <BookDemoButton className="btn-primary hover-lift">{f.finalCtaPrimaryButton || "Book a demo"}</BookDemoButton>
               <a className="btn-ghost hover-lift" href={`mailto:${f.contactEmail}`}>
                 {f.contactEmail}
               </a>
