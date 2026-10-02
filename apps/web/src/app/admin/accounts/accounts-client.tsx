@@ -7,6 +7,8 @@ import { InfoTip } from "@/components/info-tip";
 
 type TabId = "businesses" | "orgs" | "staff" | "roles";
 
+type CompassStatus = "off" | "not_started" | "in_progress" | "established" | "emerging";
+
 interface BusinessRow {
   _id: string;
   name: string;
@@ -16,6 +18,7 @@ interface BusinessRow {
   accountManagerId: string | null;
   ownerUserId: string | null;
   ownerInviteStatus: string | null;
+  compassStatus: CompassStatus;
 }
 interface ParentOrgRow {
   _id: string;
@@ -23,6 +26,7 @@ interface ParentOrgRow {
   accountManagerId: string | null;
   ownerUserId: string | null;
   ownerInviteStatus: string | null;
+  compassStatus: CompassStatus;
 }
 interface StaffRow {
   _id: string;
@@ -401,6 +405,24 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
     );
   }
 
+  const COMPASS_PILL_CLASS: Record<CompassStatus, string> = {
+    off: "pill-gray",
+    not_started: "pill-gray",
+    in_progress: "pill-amber",
+    established: "pill-green",
+    emerging: "pill-amber",
+  };
+  const COMPASS_LABEL: Record<CompassStatus, string> = {
+    off: "Off",
+    not_started: "Not started",
+    in_progress: "In progress",
+    established: "Established",
+    emerging: "Emerging",
+  };
+  function compassCell(status: CompassStatus) {
+    return <span className={`pill ${COMPASS_PILL_CLASS[status]}`}>{COMPASS_LABEL[status]}</span>;
+  }
+
   const filteredBusinesses = businesses
     .filter((b) => b.name.toLowerCase().includes(businessSearch.trim().toLowerCase()))
     .filter((b) =>
@@ -510,6 +532,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
                 Login
                 <InfoTip text={tooltips["login-status"]} />
               </th>
+              <th>Compass</th>
               <th>Active</th>
               <th>Actions</th>
             </tr>
@@ -529,6 +552,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
                   )}
                 </td>
                 <td>{loginStatusCell(b.ownerUserId, b.ownerInviteStatus)}</td>
+                <td>{compassCell(b.compassStatus)}</td>
                 <td>
                   <button
                     type="button"
@@ -550,7 +574,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
             ))}
             {filteredBusinesses.length === 0 && (
               <tr>
-                <td colSpan={6} className="subtitle">
+                <td colSpan={7} className="subtitle">
                   {businesses.length === 0 ? "No businesses yet." : "No businesses match your search/filter."}
                 </td>
               </tr>
@@ -579,6 +603,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
                 Login
                 <InfoTip text={tooltips["login-status"]} />
               </th>
+              <th>Compass</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -590,6 +615,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
                   <span className="pill pill-gray">{businessCountByOrgId.get(o._id) ?? 0}</span>
                 </td>
                 <td>{loginStatusCell(o.ownerUserId, o.ownerInviteStatus)}</td>
+                <td>{compassCell(o.compassStatus)}</td>
                 <td style={{ textAlign: "right" }}>
                   <Link className="btn btn-sm" style={{ marginRight: 8 }} href={`/admin/parent-orgs/${o._id}`}>
                     Manage →
@@ -602,7 +628,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
             ))}
             {filteredOrgs.length === 0 && (
               <tr>
-                <td colSpan={4} className="subtitle">
+                <td colSpan={5} className="subtitle">
                   {parentOrgs.length === 0 ? "No parent organizations yet." : "No organizations match your search."}
                 </td>
               </tr>

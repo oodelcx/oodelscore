@@ -4,6 +4,7 @@ import {
   Business,
   User,
   ParentOrganization,
+  CompassAssessment,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
   PRICING_INTERVALS,
@@ -14,6 +15,7 @@ import {
   type BillingAssignment,
   type CompPeriod,
 } from "@oodelscore/shared";
+import { compassStatusFor } from "@/lib/compassStatus";
 import { requireStaffSession } from "@/lib/adminAuth";
 import { assertStaffCanEditBusinessAdminFields, ForbiddenFieldWriteError } from "@oodelscore/shared";
 
@@ -39,9 +41,20 @@ export async function GET() {
     "_id parentId inviteStatus"
   );
   const ownerByBusinessId = new Map(owners.map((o) => [o.parentId?.toString(), o]));
+
+  const assessments = await CompassAssessment.find({ ownerType: "business", ownerId: { $in: businesses.map((b) => b._id) } }).select(
+    "ownerId status stage"
+  );
+  const assessmentByBusinessId = new Map(assessments.map((a) => [a.ownerId.toString(), a]));
+
   const businessesWithOwner = businesses.map((b) => {
     const owner = ownerByBusinessId.get(b._id.toString());
-    return { ...b.toObject(), ownerUserId: owner?._id ?? null, ownerInviteStatus: owner?.inviteStatus ?? null };
+    return {
+      ...b.toObject(),
+      ownerUserId: owner?._id ?? null,
+      ownerInviteStatus: owner?.inviteStatus ?? null,
+      compassStatus: compassStatusFor(b.enabledFeatures, assessmentByBusinessId.get(b._id.toString())),
+    };
   });
 
   return NextResponse.json({ status: "ok", businesses: businessesWithOwner });
