@@ -139,21 +139,32 @@ export default async function MarketingHomePage() {
           </div>
 
           {f.loopEyebrow && <p className="loop-eyebrow" style={{ marginTop: 56 }}>{f.loopEyebrow}</p>}
-          <div className="loop-stages">
-            {loopStages.map((stage, i) => (
-              <Reveal key={stage.label} delay={i * 90}>
-                <div className="loop-stage">
-                  <div className="loop-stage-label">{stage.label}</div>
-                  <div className="loop-stage-card hover-lift">
-                    <StageFragment stage={stage.label} />
-                    <div>
-                      <div className="loop-stage-title">{stage.title}</div>
-                      <div className="loop-stage-body">{stage.body}</div>
+          <div className="loop-stages-wrap">
+            <div className="loop-stages">
+              {loopStages.map((stage, i) => (
+                <Reveal key={stage.label} delay={i * 90}>
+                  <div className="loop-stage">
+                    <div className="loop-stage-label">{stage.label}</div>
+                    <div className="loop-stage-card hover-lift">
+                      <StageFragment stage={stage.label} />
+                      <div>
+                        <div className="loop-stage-title">{stage.title}</div>
+                        <div className="loop-stage-body">{stage.body}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Reveal>
-            ))}
+                </Reveal>
+              ))}
+            </div>
+            {/* Visible only in the 561–1000px band where loop-stages scrolls
+                horizontally instead of wrapping — a static cue that there's
+                more to the right, since a trackpad/mouse hover affordance
+                doesn't exist on the touch devices that hit this breakpoint. */}
+            <div className="loop-stages-scroll-hint" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none">
+                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
           </div>
         </div>
       </section>
