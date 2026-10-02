@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Event, FeedbackPoint } from "@oodelscore/shared";
+import { connectToDatabase, Event, FeedbackPoint, EVENT_CATEGORIES } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+
+const EVENT_CATEGORY_SET: readonly string[] = EVENT_CATEGORIES;
 
 type RouteParams = { params: Promise<{ id: string; eventId: string }> };
 
@@ -24,6 +26,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body?.startsAt === null || typeof body?.startsAt === "string") event.startsAt = body.startsAt ? new Date(body.startsAt) : null;
   if (body?.endsAt === null || typeof body?.endsAt === "string") event.endsAt = body.endsAt ? new Date(body.endsAt) : null;
   if (body?.expectedAttendees === null || typeof body?.expectedAttendees === "number") event.expectedAttendees = body.expectedAttendees;
+  if (typeof body?.category === "string" && EVENT_CATEGORY_SET.includes(body.category)) event.category = body.category as typeof event.category;
 
   await event.save();
   return NextResponse.json({ status: "ok", event });

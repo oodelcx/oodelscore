@@ -49,3 +49,4 @@ export * from "./RosterSurveyToken";
 export * from "./CompassAssessment";
 export * from "./CompassAssessmentHistory";
 export * from "./CompassQuestion";
+export * from "./ProgramEvaluationReport";

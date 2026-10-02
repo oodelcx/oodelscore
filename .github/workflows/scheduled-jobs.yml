@@ -34,6 +34,7 @@ on:
     - cron: "17 5 * * *" # daily — comp-expiry-reminders
     - cron: "27 5 * * *" # daily — ce-lifecycle-triggers
     - cron: "33 5 * * *" # daily — ce-pulse-cadence
+    - cron: "47 5 * * *" # daily — program-evaluation
   workflow_dispatch:
     inputs:
       job:
@@ -48,6 +49,7 @@ on:
           - comp-expiry-reminders
           - ce-lifecycle-triggers
           - ce-pulse-cadence
+          - program-evaluation
       target_url:
         description: "Manual run only: override which deployment to hit (e.g. https://oodelscore-staging.onrender.com). Leave blank for production."
         type: string
@@ -72,6 +74,7 @@ jobs:
             "17 5 * * *") echo "endpoint=comp-expiry-reminders" >> "$GITHUB_OUTPUT" ;;
             "27 5 * * *") echo "endpoint=ce-lifecycle-triggers" >> "$GITHUB_OUTPUT" ;;
             "33 5 * * *") echo "endpoint=ce-pulse-cadence" >> "$GITHUB_OUTPUT" ;;
+            "47 5 * * *") echo "endpoint=program-evaluation" >> "$GITHUB_OUTPUT" ;;
             *) echo "endpoint=${{ github.event.inputs.job }}" >> "$GITHUB_OUTPUT" ;;
           esac
       - name: Call the cron route

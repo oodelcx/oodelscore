@@ -144,6 +144,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   "/group/alert-rules",
                   "/group/alerts",
                   "/group/business-value",
+                  "/group/program-evaluation",
                 ]}
               >
                 {hasProduct(org, "customer_experience") &&
@@ -186,6 +187,12 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   <a href="/group/business-value">
                     <NavIcon name="business-value" />
                     Business Value
+                  </a>
+                )}
+                {teamMemberCanAccess(user, "programEvaluation") && (
+                  <a href="/group/program-evaluation">
+                    <NavIcon name="program-evaluation" />
+                    Program Evaluation
                   </a>
                 )}
               </NavSection>

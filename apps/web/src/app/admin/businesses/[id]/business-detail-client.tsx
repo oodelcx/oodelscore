@@ -61,6 +61,7 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
   { key: "compass", label: "OodelCX Compass", description: "ANCHOR six-dimension maturity diagnostic assessment." },
   { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes." },
+  { key: "programEvaluation", label: "Program Evaluation", description: "AI evaluation of a training Event's feedback against the business's own stated objectives." },
 ];
 
 // Keep in sync with packages/shared/src/features/teamPermissions.ts — same
@@ -80,6 +81,7 @@ const TEAM_RESTRICTABLE_PAGES: { key: string; label: string }[] = [
   { key: "support", label: "Support" },
   { key: "compass", label: "OodelCX Compass" },
   { key: "highlights", label: "Highlights" },
+  { key: "programEvaluation", label: "Program Evaluation" },
 ];
 const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);
 
@@ -422,11 +424,13 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     startsAt: string | null;
     endsAt: string | null;
     expectedAttendees: number | null;
+    category: "training" | "other";
   }
   const [events, setEvents] = useState<EventRow[]>([]);
   const [evName, setEvName] = useState("");
   const [evFacilitator, setEvFacilitator] = useState("");
   const [evLocation, setEvLocation] = useState("");
+  const [evCategory, setEvCategory] = useState<"training" | "other">("other");
   const [evCreating, setEvCreating] = useState(false);
   const [evError, setEvError] = useState<string | null>(null);
 
@@ -449,7 +453,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     const res = await fetch(`/api/admin/businesses/${params.id}/events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: evName, facilitator: evFacilitator, location: evLocation }),
+      body: JSON.stringify({ name: evName, facilitator: evFacilitator, location: evLocation, category: evCategory }),
     });
     const data = await res.json().catch(() => null);
     setEvCreating(false);
@@ -460,6 +464,21 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     setEvName("");
     setEvFacilitator("");
     setEvLocation("");
+    setEvCategory("other");
+    loadEvents();
+  }
+
+  async function updateEventCategory(eventId: string, category: "training" | "other") {
+    const res = await fetch(`/api/admin/businesses/${params.id}/events/${eventId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setEvError(data?.message ?? "Failed to update event");
+      return;
+    }
     loadEvents();
   }
 
@@ -2362,7 +2381,18 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                 <label>Location</label>
                 <input value={evLocation} onChange={(e) => setEvLocation(e.target.value)} placeholder="Optional" />
               </div>
+              <div className="field">
+                <label>Category</label>
+                <select value={evCategory} onChange={(e) => setEvCategory(e.target.value as "training" | "other")}>
+                  <option value="other">Other</option>
+                  <option value="training">Training</option>
+                </select>
+              </div>
             </div>
+            <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: -8, marginBottom: 14 }}>
+              Mark an event &quot;Training&quot; to unlock Program Evaluation for it (if the branch has that feature
+              enabled) — synopsis/objectives entry and an AI evaluation of feedback against those objectives.
+            </p>
             {evError && <p className="error-text">{evError}</p>}
             <button className="btn btn-dark" disabled={evCreating} onClick={createEvent}>
               {evCreating ? "Creating…" : "+ Create event"}
@@ -2375,6 +2405,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                     <th>Name</th>
                     <th>Facilitator</th>
                     <th>Location</th>
+                    <th>Category</th>
                     <th>Linked feedback points</th>
                     <th></th>
                   </tr>
@@ -2385,6 +2416,15 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
                       <td>{ev.name}</td>
                       <td>{ev.facilitator || "—"}</td>
                       <td>{ev.location || "—"}</td>
+                      <td>
+                        <select
+                          value={ev.category}
+                          onChange={(e) => updateEventCategory(ev._id, e.target.value as "training" | "other")}
+                        >
+                          <option value="other">Other</option>
+                          <option value="training">Training</option>
+                        </select>
+                      </td>
                       <td>{feedbackPoints.filter((fp) => fp.eventId === ev._id).length}</td>
                       <td style={{ textAlign: "right" }}>
                         <button className="icon-btn btn-danger" onClick={() => removeEvent(ev._id)}>

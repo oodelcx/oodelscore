@@ -52,6 +52,7 @@ const PATHS: Record<string, string> = {
   "business-value": "M8.5 2v13|M11.5 4.8c0-1-1-1.8-3-1.8s-3.3 1-3.3 2.3c0 1.4 1.3 1.9 3.3 2.3s3.3 1 3.3 2.4c0 1.3-1.3 2.3-3.3 2.3s-3-.8-3-1.8",
   compass: "M8.5 14.5a6 6 0 100-12 6 6 0 000 12z|M11 6l-1.5 4-4 1.5 1.5-4z",
   escalation: "M2.5 14.5h4v-4h-4z|M6.5 14.5h4v-7h-4z|M10.5 14.5h4v-10h-4z|M2.5 8l5-4.5 3 2 4-4",
+  "program-evaluation": "M5 2.5h6.5a1 1 0 011 1V14a1 1 0 01-1 1H5a1 1 0 01-1-1V3.5a1 1 0 011-1z|M6.5 2v1.5h3.5V2|M5.8 8.3l1.3 1.3 2.6-3",
 };
 
 export function NavIcon({ name }: { name: string }) {

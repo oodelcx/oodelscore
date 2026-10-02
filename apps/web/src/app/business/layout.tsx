@@ -174,6 +174,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   "/business/alert-rules",
                   "/business/alerts",
                   "/business/business-value",
+                  "/business/program-evaluation",
                 ]}
               >
                 {hasProduct(business, "customer_experience") &&
@@ -218,6 +219,13 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                   <a href="/business/business-value">
                     <NavIcon name="business-value" />
                     Business Value
+                  </a>
+                )}
+                {hasFeature(business.enabledFeatures, "programEvaluation") &&
+                  teamMemberCanAccess(user, "programEvaluation") && (
+                  <a href="/business/program-evaluation">
+                    <NavIcon name="program-evaluation" />
+                    Program Evaluation
                   </a>
                 )}
               </NavSection>
