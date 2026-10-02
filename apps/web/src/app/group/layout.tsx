@@ -140,6 +140,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 hrefs={[
                   "/group/insights",
                   "/group/analytics",
+                  "/group/highlights",
                   "/group/alert-rules",
                   "/group/alerts",
                   "/group/business-value",
@@ -155,6 +156,12 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                       Insights
                     </a>
                   )}
+                {hasFeature(org.enabledFeatures, "highlights") && teamMemberCanAccess(user, "highlights") && (
+                  <a href="/group/highlights">
+                    <NavIcon name="insights" />
+                    Highlights
+                  </a>
+                )}
                 {hasProduct(org, "customer_experience") &&
                   showCx &&
                   hasFeature(org.enabledFeatures, "analytics") &&

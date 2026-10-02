@@ -60,6 +60,7 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
   { key: "compass", label: "OodelCX Compass", description: "ANCHOR six-dimension maturity diagnostic assessment." },
+  { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes." },
   { key: "programEvaluation", label: "Program Evaluation", description: "AI evaluation of a training Event's feedback against the business's own stated objectives." },
 ];
 
@@ -79,6 +80,7 @@ const TEAM_RESTRICTABLE_PAGES: { key: string; label: string }[] = [
   { key: "playbooks", label: "Playbook Library" },
   { key: "support", label: "Support" },
   { key: "compass", label: "OodelCX Compass" },
+  { key: "highlights", label: "Highlights" },
   { key: "programEvaluation", label: "Program Evaluation" },
 ];
 const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);

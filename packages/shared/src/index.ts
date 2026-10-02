@@ -32,6 +32,7 @@ export * from "./scoring/playbookTrigger";
 export * from "./scoring/cxExCorrelation";
 export * from "./scoring/caseAutoAttach";
 export * from "./scoring/attentionCentre";
+export * from "./scoring/highlights";
 export * from "./scoring/programEvaluationEvidence";
 export * from "./scoring/programEvaluation";
 export * from "./scoring/businessValue";
