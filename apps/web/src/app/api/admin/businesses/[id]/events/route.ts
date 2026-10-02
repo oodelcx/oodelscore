@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, Event } from "@oodelscore/shared";
+import { connectToDatabase, Business, Event, EVENT_CATEGORIES } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+
+const EVENT_CATEGORY_SET: readonly string[] = EVENT_CATEGORIES;
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -54,6 +56,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     startsAt: body?.startsAt ? new Date(body.startsAt) : null,
     endsAt: body?.endsAt ? new Date(body.endsAt) : null,
     expectedAttendees: typeof body?.expectedAttendees === "number" ? body.expectedAttendees : null,
+    category: typeof body?.category === "string" && EVENT_CATEGORY_SET.includes(body.category) ? body.category : "other",
   });
 
   return NextResponse.json({ status: "ok", event }, { status: 201 });
