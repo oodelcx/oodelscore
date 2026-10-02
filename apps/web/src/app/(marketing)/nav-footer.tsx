@@ -56,6 +56,18 @@ function MegaMenu({
 }) {
   const [open, setOpen] = useState(false);
   const { columns, seeAllHref, seeAllLabel } = section;
+  // Every submenu item for this menu can be individually turned off in
+  // Admin (the "In menu" checkbox on each feature/industry) — once all of
+  // them are off, this menu has nothing to drop down, so it renders as a
+  // plain link: no caret, no hover panel.
+  const hasContent = columns.some((col) => col.items.length > 0);
+  if (!hasContent) {
+    return (
+      <Link href={PATH_BY_KEY[menuKey]} className={`nav-menu-trigger${active ? " active" : ""}`}>
+        {label}
+      </Link>
+    );
+  }
   return (
     <div className={`nav-menu-item${open ? " open" : ""}`} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <Link
@@ -89,6 +101,69 @@ function MegaMenu({
               </Link>
             )}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileNavItem({
+  item,
+  active,
+  section,
+  onNavigate,
+}: {
+  item: INavItem;
+  active: boolean;
+  section: MegaMenuSection | null;
+  onNavigate: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const hasContent = !!section && section.columns.some((col) => col.items.length > 0);
+
+  if (!hasContent) {
+    return (
+      <Link href={PATH_BY_KEY[item.key] ?? "/"} className={active ? "active" : ""} onClick={onNavigate}>
+        {item.label}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={`nav-mobile-group${expanded ? " open" : ""}`}>
+      <div className="nav-mobile-group-head">
+        <Link href={PATH_BY_KEY[item.key] ?? "/"} className={active ? "active" : ""} onClick={onNavigate}>
+          {item.label}
+        </Link>
+        <button
+          type="button"
+          className="nav-mobile-group-toggle"
+          aria-label={expanded ? `Collapse ${item.label}` : `Expand ${item.label}`}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          <svg viewBox="0 0 10 6" fill="none" aria-hidden="true">
+            <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+      {expanded && (
+        <div className="nav-mobile-sub">
+          {section!.columns.map((col) => (
+            <div className="nav-mobile-sub-col" key={col.label}>
+              <h5>{col.label}</h5>
+              {col.items.map((link) => (
+                <Link key={link.href + link.label} href={link.href} onClick={onNavigate}>
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          ))}
+          {section!.seeAllHref && (
+            <Link href={section!.seeAllHref} onClick={onNavigate} className="nav-mobile-see-all">
+              {section!.seeAllLabel ?? "See all →"}
+            </Link>
+          )}
         </div>
       )}
     </div>
@@ -168,14 +243,13 @@ export function MarketingNav({
       {mobileOpen && (
         <div className="nav-mobile-panel">
           {visible.map((item) => (
-            <Link
+            <MobileNavItem
               key={item.key}
-              href={PATH_BY_KEY[item.key] ?? "/"}
-              className={active === item.key ? "active" : ""}
-              onClick={() => setMobileOpen(false)}
-            >
-              {item.label}
-            </Link>
+              item={item}
+              active={active === item.key}
+              section={MEGA_MENU_KEYS.has(item.key) && megaData ? megaData[item.key as "product" | "colleague-pulse" | "solutions"] : null}
+              onNavigate={() => setMobileOpen(false)}
+            />
           ))}
         </div>
       )}

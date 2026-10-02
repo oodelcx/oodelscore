@@ -17,7 +17,6 @@ import { ImprovementInitiative } from "../models/ImprovementInitiative";
 import { RecurringIssueFlag, type RecurringFlagStatus } from "../models/RecurringIssueFlag";
 import { Playbook } from "../models/Playbook";
 import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
-import { seedIndustryContentPacks } from "../compass/industryContent";
 import { autoAttachPlaybook } from "../scoring/caseAutoAttach";
 import { CxPulseScore } from "../models/CxPulseScore";
 import { CxPulsePulseResponse } from "../models/CxPulsePulseResponse";
@@ -539,7 +538,6 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     { upsert: true }
   );
   await Industry.findOneAndUpdate({ name: "Aviation" }, { $setOnInsert: { name: "Aviation", usedByCount: 0 } }, { upsert: true });
-  await seedIndustryContentPacks();
 
   // 2. One QuestionTemplate per CX sector, plus the single shared CE template.
   const templateBySector = new Map<string, InstanceType<typeof QuestionTemplate>>();

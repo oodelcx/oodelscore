@@ -41,6 +41,14 @@ interface TitleBodyItem {
   body: string;
 }
 
+function splitChips(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 // Otherwise Next statically prerenders this at build time and a Site
 // Content edit would never show up without a redeploy.
 export const revalidate = 60;
@@ -131,21 +139,32 @@ export default async function MarketingHomePage() {
           </div>
 
           {f.loopEyebrow && <p className="loop-eyebrow" style={{ marginTop: 56 }}>{f.loopEyebrow}</p>}
-          <div className="loop-stages">
-            {loopStages.map((stage, i) => (
-              <Reveal key={stage.label} delay={i * 90}>
-                <div className="loop-stage">
-                  <div className="loop-stage-label">{stage.label}</div>
-                  <div className="loop-stage-card hover-lift">
-                    <StageFragment stage={stage.label} />
-                    <div>
-                      <div className="loop-stage-title">{stage.title}</div>
-                      <div className="loop-stage-body">{stage.body}</div>
+          <div className="loop-stages-wrap">
+            <div className="loop-stages">
+              {loopStages.map((stage, i) => (
+                <Reveal key={stage.label} delay={i * 90}>
+                  <div className="loop-stage">
+                    <div className="loop-stage-label">{stage.label}</div>
+                    <div className="loop-stage-card hover-lift">
+                      <StageFragment stage={stage.label} />
+                      <div>
+                        <div className="loop-stage-title">{stage.title}</div>
+                        <div className="loop-stage-body">{stage.body}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Reveal>
-            ))}
+                </Reveal>
+              ))}
+            </div>
+            {/* Visible only in the 561–1000px band where loop-stages scrolls
+                horizontally instead of wrapping — a static cue that there's
+                more to the right, since a trackpad/mouse hover affordance
+                doesn't exist on the touch devices that hit this breakpoint. */}
+            <div className="loop-stages-scroll-hint" aria-hidden="true">
+              <svg viewBox="0 0 16 16" fill="none">
+                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
           </div>
         </div>
       </section>
@@ -180,20 +199,20 @@ export default async function MarketingHomePage() {
             <Reveal>
               <div className="fork-card light hover-lift">
                 <div className="fork-eyebrow">{f.heroTwoProductsCxLabel}</div>
-                <h2>Customer Experience</h2>
+                <h2>{f.heroTwoProductsCxHeading || "Customer Experience"}</h2>
                 <p>{f.heroTwoProductsCxBody}</p>
                 <a href="/product" className="fork-cta">
-                  Explore Customer Experience →
+                  {f.heroTwoProductsCxCta || "Explore Customer Experience →"}
                 </a>
               </div>
             </Reveal>
             <Reveal delay={100}>
               <div className="fork-card dark hover-lift">
                 <div className="fork-eyebrow">{f.heroTwoProductsCeLabel}</div>
-                <h2>Colleague Pulse</h2>
+                <h2>{f.heroTwoProductsCeHeading || "Colleague Pulse"}</h2>
                 <p>{f.heroTwoProductsCeBody}</p>
                 <a href="/colleague-pulse" className="fork-cta">
-                  Explore Colleague Pulse →
+                  {f.heroTwoProductsCeCta || "Explore Colleague Pulse →"}
                 </a>
               </div>
             </Reveal>
@@ -211,22 +230,34 @@ export default async function MarketingHomePage() {
             <div className="scale-grid">
               <div className="scale-panel hover-lift">
                 <div className="scale-tag">{f.scalePanel1Tag}</div>
-                <h3>Everything in one view</h3>
-                <p>Every response, every trend, every flagged issue — one dashboard, no setup required beyond your QR code.</p>
+                <h3>{f.scalePanel1Title || "Everything in one view"}</h3>
+                <p>
+                  {f.scalePanel1Body ||
+                    "Every response, every trend, every flagged issue — one dashboard, no setup required beyond your QR code."}
+                </p>
                 <div className="scale-mini">
-                  <span>Feedback points</span>
-                  <span>AI Insights</span>
-                  <span>Alert rules</span>
+                  {(splitChips(f.scalePanel1Chips).length > 0
+                    ? splitChips(f.scalePanel1Chips)
+                    : ["Feedback points", "AI Insights", "Alert rules"]
+                  ).map((chip) => (
+                    <span key={chip}>{chip}</span>
+                  ))}
                 </div>
               </div>
               <div className="scale-panel dark hover-lift">
                 <div className="scale-tag">{f.scalePanel2Tag}</div>
-                <h3>Compare every branch, act across all of them</h3>
-                <p>Regional rollups, branch-vs-branch comparison, and shared Case Management so nothing falls through the cracks between locations.</p>
+                <h3>{f.scalePanel2Title || "Compare every branch, act across all of them"}</h3>
+                <p>
+                  {f.scalePanel2Body ||
+                    "Regional rollups, branch-vs-branch comparison, and shared Case Management so nothing falls through the cracks between locations."}
+                </p>
                 <div className="scale-mini">
-                  <span>Regional benchmarks</span>
-                  <span>Shared playbooks</span>
-                  <span>Role-based access</span>
+                  {(splitChips(f.scalePanel2Chips).length > 0
+                    ? splitChips(f.scalePanel2Chips)
+                    : ["Regional benchmarks", "Shared playbooks", "Role-based access"]
+                  ).map((chip) => (
+                    <span key={chip}>{chip}</span>
+                  ))}
                 </div>
               </div>
             </div>
@@ -240,10 +271,10 @@ export default async function MarketingHomePage() {
             <div className="pulse-tag">CX Pulse</div>
             <h2>{f.cxPulseHeadline}</h2>
             <p>
-              CX Pulse measures whether feedback is actually shaping decisions — awareness, response speed, ownership, culture, and
-              measured outcomes, rolled into one score your whole team can rally around.
+              {f.cxPulseBody ||
+                "CX Pulse measures whether feedback is actually shaping decisions — awareness, response speed, ownership, culture, and measured outcomes, rolled into one score your whole team can rally around."}
             </p>
-            <BookDemoButton className="btn-ghost on-dark hover-lift">See CX Pulse in a demo</BookDemoButton>
+            <BookDemoButton className="btn-ghost on-dark hover-lift">{f.cxPulseButton || "See CX Pulse in a demo"}</BookDemoButton>
           </Reveal>
           <Reveal delay={100}>
             <div className="levels">
@@ -262,7 +293,7 @@ export default async function MarketingHomePage() {
       <section className="why" id="company">
         <div className="wrap">
           <Reveal className="narrative-head">
-            <h2>Why teams choose OodelCX</h2>
+            <h2>{f.whyHeadline || "Why teams choose OodelCX"}</h2>
           </Reveal>
           <div className="why-grid">
             {whyItems.map((item, i) => (
@@ -279,12 +310,12 @@ export default async function MarketingHomePage() {
 
       <section className="final-cta" id="demo">
         <div className="wrap">
-          <h2>See what your customers are already telling you.</h2>
-          <p>Twenty minutes, a live walkthrough of real workflows — not a canned script.</p>
+          <h2>{f.finalCtaHeadline || "See what your customers are already telling you."}</h2>
+          <p>{f.finalCtaSubhead || "Twenty minutes, a live walkthrough of real workflows — not a canned script."}</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <BookDemoButton className="btn-primary hover-lift">Book a demo</BookDemoButton>
+            <BookDemoButton className="btn-primary hover-lift">{f.finalCtaPrimaryButton || "Book a demo"}</BookDemoButton>
             <a className="btn-ghost hover-lift" href="/login">
-              Sign in
+              {f.finalCtaSecondaryButton || "Sign in"}
             </a>
           </div>
         </div>

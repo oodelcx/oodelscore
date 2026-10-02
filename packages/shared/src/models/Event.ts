@@ -15,6 +15,21 @@ import mongoose, { Schema, model, type Model, type Types } from "mongoose";
  * seriesKey) — this is what an eventual "compare across all runs of this
  * course" view filters on, distinct from comparing one specific instance.
  */
+// "training" is the only category Program Evaluation (see
+// ../scoring/programEvaluation.ts) ever acts on — a musical event, a trade
+// show booth, or anything else stays "other" and is invisible to that
+// feature even if the business has it turned on. Defaults to "other" so
+// no event created before this field existed is retroactively treated as
+// a training program.
+export const EVENT_CATEGORIES = ["training", "other"] as const;
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
+export interface IEventProgramDetails {
+  synopsis: string;
+  objectives: string[];
+  expectedOutcomes: string[];
+}
+
 export interface IEvent {
   businessId: Types.ObjectId;
   name: string; // the offering itself, e.g. "Excel Fundamentals" — not the instance
@@ -24,9 +39,25 @@ export interface IEvent {
   startsAt: Date | null;
   endsAt: Date | null; // once passed, linked FeedbackPoints are treated as closed even if `active` is still true
   expectedAttendees: number | null; // lets Analytics show response rate per session, not just raw count
+  category: EventCategory;
+  // Only meaningful when category is "training" — what Program Evaluation
+  // compares the actual feedback against. Entered by the business itself
+  // (unlike the rest of this model, which stays Admin-managed) since it's
+  // the business's own program content, not survey/question structure —
+  // see PATCH /api/business/events/[id].
+  programDetails: IEventProgramDetails | null;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const EventProgramDetailsSchema = new Schema<IEventProgramDetails>(
+  {
+    synopsis: { type: String, default: "" },
+    objectives: { type: [String], default: [] },
+    expectedOutcomes: { type: [String], default: [] },
+  },
+  { _id: false }
+);
 
 const EventSchema = new Schema<IEvent>(
   {
@@ -38,6 +69,8 @@ const EventSchema = new Schema<IEvent>(
     startsAt: { type: Date, default: null },
     endsAt: { type: Date, default: null },
     expectedAttendees: { type: Number, default: null },
+    category: { type: String, enum: EVENT_CATEGORIES, default: "other" },
+    programDetails: { type: EventProgramDetailsSchema, default: null },
   },
   { timestamps: true }
 );

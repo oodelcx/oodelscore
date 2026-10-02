@@ -3,6 +3,7 @@ import {
   connectToDatabase,
   ParentOrganization,
   User,
+  CompassAssessment,
   BILLING_MODES,
   PRICING_INTERVALS,
   COMP_PERIODS,
@@ -12,6 +13,7 @@ import {
   type CompPeriod,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+import { compassStatusFor } from "@/lib/compassStatus";
 
 const BILLING_MODE_SET: readonly string[] = BILLING_MODES;
 const PRICING_INTERVAL_SET: readonly string[] = PRICING_INTERVALS;
@@ -34,9 +36,20 @@ export async function GET() {
     "_id parentId inviteStatus"
   );
   const ownerByOrgId = new Map(owners.map((o) => [o.parentId?.toString(), o]));
+
+  const assessments = await CompassAssessment.find({ ownerType: "parentOrg", ownerId: { $in: parentOrgs.map((o) => o._id) } }).select(
+    "ownerId status stage"
+  );
+  const assessmentByOrgId = new Map(assessments.map((a) => [a.ownerId.toString(), a]));
+
   const orgsWithOwner = parentOrgs.map((o) => {
     const owner = ownerByOrgId.get(o._id.toString());
-    return { ...o.toObject(), ownerUserId: owner?._id ?? null, ownerInviteStatus: owner?.inviteStatus ?? null };
+    return {
+      ...o.toObject(),
+      ownerUserId: owner?._id ?? null,
+      ownerInviteStatus: owner?.inviteStatus ?? null,
+      compassStatus: compassStatusFor(o.enabledFeatures, assessmentByOrgId.get(o._id.toString())),
+    };
   });
 
   return NextResponse.json({ status: "ok", parentOrgs: orgsWithOwner });

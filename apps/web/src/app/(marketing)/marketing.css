@@ -228,6 +228,69 @@
 .mkt .nav.nav-dark .nav-mobile-panel a:hover {
   color: #fff;
 }
+/* Mobile hamburger panel: "Customer Experience"/"Colleague Pulse"/
+ * "Solutions" are mega-menus on desktop (a mouse hover reveals their
+ * sub-links) — mobile has no hover, so each becomes a tap-to-expand row
+ * instead of silently dropping its sub-links. The row's own label still
+ * links straight to the overview page; only the chevron button expands. */
+.mkt .nav-mobile-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mkt .nav-mobile-group-head a {
+  flex: 1;
+}
+.mkt .nav-mobile-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+.mkt .nav-mobile-group-toggle svg {
+  width: 10px;
+  height: 6px;
+  transition: transform 0.15s ease;
+}
+.mkt .nav-mobile-group.open .nav-mobile-group-toggle svg {
+  transform: rotate(180deg);
+}
+.mkt .nav.nav-dark .nav-mobile-group-toggle {
+  color: rgba(255, 255, 255, 0.72);
+}
+.mkt .nav-mobile-sub {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0 10px 14px;
+  gap: 10px;
+}
+.mkt .nav-mobile-sub-col h5 {
+  margin: 0 0 2px;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3, var(--text-2));
+  font-weight: 600;
+}
+.mkt .nav-mobile-sub-col a {
+  padding: 6px 0;
+  font-size: 14px;
+  display: block;
+}
+.mkt .nav-mobile-see-all {
+  font-size: 13.5px;
+  font-weight: 600;
+  padding-top: 4px;
+}
+.mkt .nav.nav-dark .nav-mobile-sub-col h5 {
+  color: rgba(255, 255, 255, 0.5);
+}
 @media (max-width: 860px) {
   .mkt .nav-links {
     display: none;
@@ -1641,6 +1704,9 @@
   color: var(--signal);
   margin: 0 0 14px;
 }
+.mkt .loop-stages-wrap {
+  position: relative;
+}
 .mkt .loop-stages {
   margin-top: 18px;
   display: grid;
@@ -1668,10 +1734,56 @@
     scroll-snap-align: start;
   }
 }
+.mkt .loop-stages-scroll-hint {
+  display: none;
+}
+@media (max-width: 1000px) and (min-width: 561px) {
+  /* Fade + arrow badge pinned to the right edge of the row, over the
+     scrolling content but never under it (pointer-events: none so it
+     never blocks a swipe) — the only signal on a touch device that the
+     row continues past the visible edge, since there's no hover state
+     to reveal it the way a mouse cursor would on desktop. */
+  .mkt .loop-stages-scroll-hint {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 10px;
+    width: 56px;
+    background: linear-gradient(to right, transparent, var(--paper) 55%);
+    pointer-events: none;
+  }
+  .mkt .loop-stages-scroll-hint svg {
+    width: 20px;
+    height: 20px;
+    color: var(--signal);
+    margin-right: 2px;
+    animation: loop-scroll-hint-nudge 1.6s ease-in-out infinite;
+  }
+  @keyframes loop-scroll-hint-nudge {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(4px);
+    }
+  }
+}
 @media (max-width: 560px) {
   .mkt .loop-stages {
     grid-template-columns: 1fr;
     gap: 16px;
+  }
+  /* Single column at phone width — a card sized to fit a 5-across grid row
+     (min-height: 190 + vertically centered content) leaves a lot of dead
+     air above/below the fragment and title here, making the heading read
+     as "floating" rather than anchored to its card. Let the card hug its
+     own content instead. */
+  .mkt .loop-stage-card {
+    min-height: 0;
+    justify-content: flex-start;
   }
 }
 .mkt .loop-stages > .reveal {
