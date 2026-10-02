@@ -17,6 +17,10 @@ export interface ICompassAnswer {
   questionKey: string;
   dimension: AnchorDimension;
   value: LadderValue;
+  // Snapshot of the question's wording at the moment it was answered — so
+  // a later admin edit to the live question bank never silently rewrites
+  // history. Optional/blank on an answer saved before this field existed.
+  questionText: string;
 }
 
 export interface ICompassDimensionScore {
@@ -51,6 +55,7 @@ const CompassAnswerSchema = new Schema<ICompassAnswer>(
     questionKey: { type: String, required: true },
     dimension: { type: String, enum: ANCHOR_DIMENSIONS, required: true },
     value: { type: Number, min: 0, max: 3, required: true },
+    questionText: { type: String, default: "" },
   },
   { _id: false }
 );

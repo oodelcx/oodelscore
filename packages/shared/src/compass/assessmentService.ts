@@ -6,7 +6,6 @@ import type { BillingOwnerType } from "../models/BillingSubscription";
 import type { Product } from "../models/products";
 import { questionsForProducts, type AnchorDimension } from "./questionBank";
 import { computeCompassResult, type LadderValue } from "./scoring";
-import { resolveIndustryContent, renderQuestionText } from "./industryContent";
 
 /**
  * Owner-agnostic OodelCX Compass assessment logic — identical for a
@@ -36,11 +35,10 @@ export async function getCompassView(
   products: readonly Product[]
 ) {
   const assessment = await getOrCreateAssessment(ownerType, ownerId, industry);
-  const content = await resolveIndustryContent(assessment.industry || industry);
-  const defs = questionsForProducts(products);
+  const defs = await questionsForProducts(products);
   const questions: CompassQuestionView[] = defs.map((q) => {
     const existing = assessment.answers.find((a) => a.questionKey === q.key);
-    return { key: q.key, dimension: q.dimension, text: renderQuestionText(q.text, content), value: existing?.value ?? null };
+    return { key: q.key, dimension: q.dimension, text: q.text, value: existing?.value ?? null };
   });
 
   const history = await getCompassHistory(ownerType, ownerId);
@@ -100,11 +98,12 @@ export async function submitCompassAnswer(
   industry: string,
   questionKey: string,
   dimension: AnchorDimension,
-  value: LadderValue
+  value: LadderValue,
+  questionText: string
 ): Promise<void> {
   const assessment = await getOrCreateAssessment(ownerType, ownerId, industry);
   const existingIndex = assessment.answers.findIndex((a) => a.questionKey === questionKey);
-  const entry: ICompassAnswer = { questionKey, dimension, value };
+  const entry: ICompassAnswer = { questionKey, dimension, value, questionText };
   if (existingIndex === -1) {
     assessment.answers.push(entry);
   } else {
@@ -137,7 +136,7 @@ export async function completeCompassAssessment(
   const assessment = await CompassAssessment.findOne({ ownerType, ownerId });
   if (!assessment) return { ok: false, message: "No assessment found — answer at least one question first." };
 
-  const defs = questionsForProducts(products);
+  const defs = await questionsForProducts(products);
   const answeredKeys = new Set(assessment.answers.map((a) => a.questionKey));
   const missing = defs.filter((q) => !answeredKeys.has(q.key));
   if (missing.length > 0) {

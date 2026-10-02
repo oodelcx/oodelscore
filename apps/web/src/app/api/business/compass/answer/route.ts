@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, submitCompassAnswer, hasFeature, ANCHOR_DIMENSIONS, COMPASS_QUESTION_BANK } from "@oodelscore/shared";
+import { connectToDatabase, submitCompassAnswer, hasFeature, ANCHOR_DIMENSIONS, getCompassQuestionBank } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 export async function POST(request: Request) {
@@ -12,7 +12,10 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const questionKey = typeof body?.questionKey === "string" ? body.questionKey : null;
   const value = body?.value;
-  const questionDef = questionKey ? COMPASS_QUESTION_BANK.find((q) => q.key === questionKey) : undefined;
+
+  await connectToDatabase();
+  const bank = await getCompassQuestionBank();
+  const questionDef = questionKey ? bank.find((q) => q.key === questionKey) : undefined;
   if (!questionDef) return NextResponse.json({ status: "error", message: "Unknown question" }, { status: 400 });
   if (typeof value !== "number" || ![0, 1, 2, 3].includes(value)) {
     return NextResponse.json({ status: "error", message: "value must be 0, 1, 2, or 3" }, { status: 400 });
@@ -21,8 +24,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "error", message: "Invalid dimension" }, { status: 400 });
   }
 
-  await connectToDatabase();
-  await submitCompassAnswer("business", session.business._id, session.business.industry, questionKey!, questionDef.dimension, value as 0 | 1 | 2 | 3);
+  await submitCompassAnswer(
+    "business",
+    session.business._id,
+    session.business.industry,
+    questionKey!,
+    questionDef.dimension,
+    value as 0 | 1 | 2 | 3,
+    questionDef.text
+  );
 
   return NextResponse.json({ status: "ok" });
 }

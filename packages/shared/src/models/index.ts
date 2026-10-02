@@ -46,6 +46,6 @@ export * from "./SupportTicket";
 export * from "./RecurringIssueFlag";
 export * from "./RosterEntry";
 export * from "./RosterSurveyToken";
-export * from "./IndustryContentPack";
 export * from "./CompassAssessment";
 export * from "./CompassAssessmentHistory";
+export * from "./CompassQuestion";
