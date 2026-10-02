@@ -23,6 +23,7 @@ export const FEATURE_DEFINITIONS = [
   { key: "closingLoop", label: "Closing the Loop", description: "\"You said, we did\" broadcast updates to the Colleague Experience roster." },
   { key: "businessValue", label: "Business Value", description: "The £/$ module translating at-risk feedback into a commercial exposure figure." },
   { key: "compass", label: "OodelCX Compass", description: "The ANCHOR maturity assessment (Established/Emerging) with industry-tailored questions." },
+  { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes — the other tail of the distribution from Attention Centre." },
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_DEFINITIONS)[number]["key"];

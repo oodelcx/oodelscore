@@ -31,6 +31,7 @@ export * from "./scoring/playbookTrigger";
 export * from "./scoring/cxExCorrelation";
 export * from "./scoring/caseAutoAttach";
 export * from "./scoring/attentionCentre";
+export * from "./scoring/highlights";
 export * from "./scoring/businessValue";
 export * from "./analytics/questionTrend";
 export * from "./security/rateLimit";
