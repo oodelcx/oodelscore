@@ -1816,7 +1816,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
   justify-content: center;
 }
 /* Phone-width overrides — placed after the base .loop-stage-label/-card
@@ -1831,7 +1831,7 @@
    room above it than the 10px that's fine next to a tall desktop card. */
 @media (max-width: 560px) {
   .mkt .loop-stage-label {
-    margin-bottom: 26px;
+    margin-bottom: 16px;
   }
   .mkt .loop-stage-card {
     min-height: 0;
