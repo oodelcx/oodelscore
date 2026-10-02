@@ -1776,15 +1776,6 @@
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  /* Single column at phone width — a card sized to fit a 5-across grid row
-     (min-height: 190 + vertically centered content) leaves a lot of dead
-     air above/below the fragment and title here, making the heading read
-     as "floating" rather than anchored to its card. Let the card hug its
-     own content instead. */
-  .mkt .loop-stage-card {
-    min-height: 0;
-    justify-content: flex-start;
-  }
 }
 .mkt .loop-stages > .reveal {
   position: relative;
@@ -1827,6 +1818,25 @@
   flex-direction: column;
   gap: 10px;
   justify-content: center;
+}
+/* Phone-width overrides — placed after the base .loop-stage-label/-card
+   rules above so they actually win the cascade (an equal-specificity
+   @media block declared earlier in the file loses to a later
+   unconditional rule once both apply, which silently ate an earlier
+   attempt at this same fix). Single column at phone width: a card sized
+   to fit a 5-across grid row (min-height: 190 + vertically centered
+   content) leaves a lot of dead air above/below the fragment and title,
+   making the heading read as floating rather than anchored to its card —
+   let the card hug its own content, and give the label more breathing
+   room above it than the 10px that's fine next to a tall desktop card. */
+@media (max-width: 560px) {
+  .mkt .loop-stage-label {
+    margin-bottom: 16px;
+  }
+  .mkt .loop-stage-card {
+    min-height: 0;
+    justify-content: flex-start;
+  }
 }
 .mkt .loop-stage-title {
   font-size: 14.5px;
