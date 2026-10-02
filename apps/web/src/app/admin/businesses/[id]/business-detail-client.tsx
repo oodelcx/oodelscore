@@ -60,6 +60,7 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
   { key: "compass", label: "OodelCX Compass", description: "ANCHOR six-dimension maturity diagnostic assessment." },
+  { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes." },
 ];
 
 // Keep in sync with packages/shared/src/features/teamPermissions.ts — same
@@ -78,6 +79,7 @@ const TEAM_RESTRICTABLE_PAGES: { key: string; label: string }[] = [
   { key: "playbooks", label: "Playbook Library" },
   { key: "support", label: "Support" },
   { key: "compass", label: "OodelCX Compass" },
+  { key: "highlights", label: "Highlights" },
 ];
 const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);
 
