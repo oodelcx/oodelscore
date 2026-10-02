@@ -56,6 +56,18 @@ function MegaMenu({
 }) {
   const [open, setOpen] = useState(false);
   const { columns, seeAllHref, seeAllLabel } = section;
+  // Every submenu item for this menu can be individually turned off in
+  // Admin (the "In menu" checkbox on each feature/industry) — once all of
+  // them are off, this menu has nothing to drop down, so it renders as a
+  // plain link: no caret, no hover panel.
+  const hasContent = columns.some((col) => col.items.length > 0);
+  if (!hasContent) {
+    return (
+      <Link href={PATH_BY_KEY[menuKey]} className={`nav-menu-trigger${active ? " active" : ""}`}>
+        {label}
+      </Link>
+    );
+  }
   return (
     <div className={`nav-menu-item${open ? " open" : ""}`} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <Link

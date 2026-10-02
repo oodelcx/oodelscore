@@ -65,9 +65,13 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroTwoProductsBody:
         "Customer Experience and Colleague Pulse run on the exact same engine — QR feedback, AI Insights, Case Management, and a maturity score — pointed at two different audiences. Run one or both.",
       heroTwoProductsCxLabel: "Customer Experience",
+      heroTwoProductsCxHeading: "Customer Experience",
       heroTwoProductsCxBody: "What customers, clients, or patients tell you after an interaction.",
+      heroTwoProductsCxCta: "Explore Customer Experience →",
       heroTwoProductsCeLabel: "Colleague Pulse",
+      heroTwoProductsCeHeading: "Colleague Pulse",
       heroTwoProductsCeBody: "What your own staff tell you, including what routes straight to HR, not their manager.",
+      heroTwoProductsCeCta: "Explore Colleague Pulse →",
       narrativeHeadline: "Most tools stop at Capture. We built Clarify, Claim, Close, and Confirm too.",
       narrativeSubhead: "A score with nowhere to go is just a number.",
       narrativeSteps: JSON.stringify([
@@ -90,8 +94,19 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       scaleHeadline: "One location or a thousand — same clarity.",
       scaleSubhead: "The dashboard scales with you, without becoming a different product.",
       scalePanel1Tag: "Single business",
+      scalePanel1Title: "Everything in one view",
+      scalePanel1Body:
+        "Every response, every trend, every flagged issue — one dashboard, no setup required beyond your QR code.",
+      scalePanel1Chips: "Feedback points, AI Insights, Alert rules",
       scalePanel2Tag: "Multi-location groups",
+      scalePanel2Title: "Compare every branch, act across all of them",
+      scalePanel2Body:
+        "Regional rollups, branch-vs-branch comparison, and shared Case Management so nothing falls through the cracks between locations.",
+      scalePanel2Chips: "Regional benchmarks, Shared playbooks, Role-based access",
       cxPulseHeadline: "Are you improving, or just watching a number?",
+      cxPulseBody:
+        "CX Pulse measures whether feedback is actually shaping decisions — awareness, response speed, ownership, culture, and measured outcomes, rolled into one score your whole team can rally around.",
+      cxPulseButton: "See CX Pulse in a demo",
       cxPulseLevels: JSON.stringify([
         { level: "1", name: "Collecting", desc: "Gathering feedback, no consistent follow-up" },
         { level: "2", name: "Reacting", desc: "Occasional responses, no clear ownership" },
@@ -99,6 +114,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         { level: "4", name: "Improving", desc: "Feedback drives visible operational change" },
         { level: "5", name: "Embedded", desc: "Outcomes are measured, culture is customer-led" },
       ]),
+      whyHeadline: "Why teams choose OodelCX",
       whyItems: JSON.stringify([
         {
           title: "Nothing reaches a dashboard unchecked",
@@ -113,6 +129,10 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "No app to install, no account for your customers to create.",
         },
       ]),
+      finalCtaHeadline: "See what your customers are already telling you.",
+      finalCtaSubhead: "Twenty minutes, a live walkthrough of real workflows — not a canned script.",
+      finalCtaPrimaryButton: "Book a demo",
+      finalCtaSecondaryButton: "Sign in",
     },
   },
   {
@@ -331,6 +351,10 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "Custom roles mean a shift lead sees their own cases, a CFO sees billing, and a regional manager sees their region — all with two-factor authentication protecting every login.",
         },
       ]),
+      finalCtaHeadline: "See the whole loop, start to finish.",
+      finalCtaSubhead: "Twenty minutes, a live walkthrough of real workflows — not a canned script.",
+      finalCtaPrimaryButton: "Book a demo",
+      finalCtaSecondaryButton: "Sign in",
     },
   },
   {
@@ -423,6 +447,10 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "A Colleague Pulse dip, a sudden eNPS drop, or an outlier branch triggers an alert to the right person immediately — same mechanism as Customer Experience's alert rules.",
         },
       ]),
+      finalCtaHeadline: "See Colleague Pulse running on real data.",
+      finalCtaSubhead: "Twenty minutes, a live walkthrough of real workflows — not a canned script.",
+      finalCtaPrimaryButton: "Book a demo",
+      finalCtaSecondaryButton: "Sign in",
     },
   },
   {
@@ -535,6 +563,10 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           ],
         },
       ]),
+      finalCtaHeadline: "Tell us how your organization is structured.",
+      finalCtaSubhead: "We’ll show you exactly how it maps onto OodelCX.",
+      finalCtaPrimaryButton: "Book a demo",
+      finalCtaSecondaryButton: "See pricing",
     },
   },
   {
@@ -577,6 +609,10 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "Not just today's score — whether the organization is actually getting better at closing the loop: awareness, response speed, ownership, culture, and measured outcomes.",
         },
       ]),
+      finalCtaHeadline: "See the loop close on your own feedback.",
+      finalCtaSubhead: "Twenty minutes, a live walkthrough of real workflows — not a canned script.",
+      finalCtaPrimaryButton: "Book a demo",
+      finalCtaSecondaryButton: "See the product",
     },
   },
   {
@@ -635,6 +671,10 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
         { slug: "healthcare", name: "Healthcare", body: "Facility networks turning wait-time complaints into a tracked, measured fix." },
       ]),
       contactEmail: "hello@oodelscore.com",
+      finalCtaHeadline: "Let’s talk.",
+      finalCtaSubhead:
+        "Questions about the product, a specific industry, or how this would fit your organization — a person who knows it answers.",
+      finalCtaPrimaryButton: "Book a demo",
     },
   },
   {

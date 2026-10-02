@@ -246,6 +246,49 @@ function Field({
   );
 }
 
+function FinalCtaCard({
+  page,
+  content,
+  onFieldChange,
+  showSecondaryButton = true,
+}: {
+  page: string;
+  content: PageContent;
+  onFieldChange: (page: string, key: string, value: string) => void;
+  showSecondaryButton?: boolean;
+}) {
+  return (
+    <div className="card">
+      <h3>Final call-to-action</h3>
+      <p className="card-sub">The closing section at the bottom of this page, just above the footer.</p>
+      <Field
+        label="Headline"
+        value={content.fields.finalCtaHeadline}
+        onChange={(v) => onFieldChange(page, "finalCtaHeadline", v)}
+      />
+      <Field
+        label="Subhead"
+        value={content.fields.finalCtaSubhead}
+        onChange={(v) => onFieldChange(page, "finalCtaSubhead", v)}
+      />
+      <div className="field-row">
+        <Field
+          label="Primary button text"
+          value={content.fields.finalCtaPrimaryButton}
+          onChange={(v) => onFieldChange(page, "finalCtaPrimaryButton", v)}
+        />
+        {showSecondaryButton && (
+          <Field
+            label="Secondary button text"
+            value={content.fields.finalCtaSecondaryButton}
+            onChange={(v) => onFieldChange(page, "finalCtaSecondaryButton", v)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StringListEditor({ items, onChange }: { items: string[]; onChange: (items: string[]) => void }) {
   return (
     <div>
@@ -664,6 +707,20 @@ function HomePanel({
         </div>
         <div className="field-row">
           <Field
+            label="Customer Experience card heading"
+            value={content.fields.heroTwoProductsCxHeading}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsCxHeading", v)}
+            placeholder="Customer Experience"
+          />
+          <Field
+            label="Colleague Pulse card heading"
+            value={content.fields.heroTwoProductsCeHeading}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsCeHeading", v)}
+            placeholder="Colleague Pulse"
+          />
+        </div>
+        <div className="field-row">
+          <Field
             label="Customer Experience card body"
             value={content.fields.heroTwoProductsCxBody}
             onChange={(v) => onFieldChange("home", "heroTwoProductsCxBody", v)}
@@ -672,6 +729,20 @@ function HomePanel({
             label="Colleague Pulse card body"
             value={content.fields.heroTwoProductsCeBody}
             onChange={(v) => onFieldChange("home", "heroTwoProductsCeBody", v)}
+          />
+        </div>
+        <div className="field-row">
+          <Field
+            label="Customer Experience card link text"
+            value={content.fields.heroTwoProductsCxCta}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsCxCta", v)}
+            placeholder="Explore Customer Experience →"
+          />
+          <Field
+            label="Colleague Pulse card link text"
+            value={content.fields.heroTwoProductsCeCta}
+            onChange={(v) => onFieldChange("home", "heroTwoProductsCeCta", v)}
+            placeholder="Explore Colleague Pulse →"
           />
         </div>
       </div>
@@ -690,6 +761,48 @@ function HomePanel({
           <Field label="Panel 1 tag" value={content.fields.scalePanel1Tag} onChange={(v) => onFieldChange("home", "scalePanel1Tag", v)} />
           <Field label="Panel 2 tag" value={content.fields.scalePanel2Tag} onChange={(v) => onFieldChange("home", "scalePanel2Tag", v)} />
         </div>
+        <div className="field-row">
+          <Field
+            label="Panel 1 title"
+            value={content.fields.scalePanel1Title}
+            onChange={(v) => onFieldChange("home", "scalePanel1Title", v)}
+            placeholder="Everything in one view"
+          />
+          <Field
+            label="Panel 2 title"
+            value={content.fields.scalePanel2Title}
+            onChange={(v) => onFieldChange("home", "scalePanel2Title", v)}
+            placeholder="Compare every branch, act across all of them"
+          />
+        </div>
+        <div className="field-row">
+          <Field
+            label="Panel 1 body"
+            value={content.fields.scalePanel1Body}
+            onChange={(v) => onFieldChange("home", "scalePanel1Body", v)}
+            placeholder="Every response, every trend, every flagged issue — one dashboard, no setup required beyond your QR code."
+          />
+          <Field
+            label="Panel 2 body"
+            value={content.fields.scalePanel2Body}
+            onChange={(v) => onFieldChange("home", "scalePanel2Body", v)}
+            placeholder="Regional rollups, branch-vs-branch comparison, and shared Case Management so nothing falls through the cracks between locations."
+          />
+        </div>
+        <div className="field-row">
+          <Field
+            label="Panel 1 chips (comma-separated)"
+            value={content.fields.scalePanel1Chips}
+            onChange={(v) => onFieldChange("home", "scalePanel1Chips", v)}
+            placeholder="Feedback points, AI Insights, Alert rules"
+          />
+          <Field
+            label="Panel 2 chips (comma-separated)"
+            value={content.fields.scalePanel2Chips}
+            onChange={(v) => onFieldChange("home", "scalePanel2Chips", v)}
+            placeholder="Regional benchmarks, Shared playbooks, Role-based access"
+          />
+        </div>
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
@@ -699,6 +812,18 @@ function HomePanel({
           describe a different scale than the product actually uses.
         </p>
         <Field label="Headline" value={content.fields.cxPulseHeadline} onChange={(v) => onFieldChange("home", "cxPulseHeadline", v)} />
+        <Field
+          label="Body"
+          value={content.fields.cxPulseBody}
+          onChange={(v) => onFieldChange("home", "cxPulseBody", v)}
+          placeholder="CX Pulse measures whether feedback is actually shaping decisions — awareness, response speed, ownership, culture, and measured outcomes, rolled into one score your whole team can rally around."
+        />
+        <Field
+          label="Button text"
+          value={content.fields.cxPulseButton}
+          onChange={(v) => onFieldChange("home", "cxPulseButton", v)}
+          placeholder="See CX Pulse in a demo"
+        />
         {levels.map((lvl, i) => (
           <div className="qrow" key={i}>
             <div className="qrow-top">
@@ -737,8 +862,14 @@ function HomePanel({
         ))}
       </div>
 
-      <div className="card">
+      <div className="card" style={{ marginBottom: 20 }}>
         <h3>Why teams choose us</h3>
+        <Field
+          label="Section headline"
+          value={content.fields.whyHeadline}
+          onChange={(v) => onFieldChange("home", "whyHeadline", v)}
+          placeholder="Why teams choose OodelCX"
+        />
         {whyItems.map((item, i) => (
           <div className="qrow" key={i}>
             <div className="qrow-top">
@@ -773,6 +904,8 @@ function HomePanel({
           + Add item
         </button>
       </div>
+
+      <FinalCtaCard page="home" content={content} onFieldChange={onFieldChange} />
     </>
   );
 }
@@ -1031,7 +1164,9 @@ function ProductPanel({
           belong here — this list is what prospects use to self-qualify before a sales call, so it should never claim
           more than the product actually does. Tick &quot;In menu&quot; on a handful of headline features to keep the
           &quot;Platform&quot; mega-menu short (a proper SaaS nav lists a few things, not every feature) — the rest
-          still appear on this page with a &quot;See every feature&quot; link at the bottom of the menu.
+          still appear on this page with a &quot;See every feature&quot; link at the bottom of the menu. Untick every
+          box and the nav item stops showing a dropdown at all — it becomes a plain link with no arrow, straight to
+          this page.
         </p>
         {features.map((feature, i) => (
           <div className="qrow" key={i}>
@@ -1083,6 +1218,9 @@ function ProductPanel({
           + Add feature
         </button>
       </div>
+      <div style={{ marginTop: 20 }}>
+        <FinalCtaCard page="product" content={content} onFieldChange={onFieldChange} />
+      </div>
     </>
   );
 }
@@ -1133,7 +1271,8 @@ function ColleaguePulsePanel({
         <p className="card-sub">
           Same convention as Customer Experience&apos;s Feature sections — each renders as an alternating text/visual
           row on this page, in this order. Only real, shipped capabilities belong here. Tick &quot;In menu&quot; on a
-          handful of headline features to keep the &quot;Colleague Pulse&quot; mega-menu short.
+          handful of headline features to keep the &quot;Colleague Pulse&quot; mega-menu short. Untick every box and
+          the nav item stops showing a dropdown at all — it becomes a plain link with no arrow.
         </p>
         {features.map((feature, i) => (
           <div className="qrow" key={i}>
@@ -1186,6 +1325,9 @@ function ColleaguePulsePanel({
         >
           + Add feature
         </button>
+      </div>
+      <div style={{ marginTop: 20 }}>
+        <FinalCtaCard page="colleague-pulse" content={content} onFieldChange={onFieldChange} />
       </div>
     </>
   );
@@ -1257,6 +1399,7 @@ function SolutionsPanel({
           onChange={(items) => onFieldChange("solutions", "industryDetails", JSON.stringify(items))}
         />
       </div>
+      <FinalCtaCard page="solutions" content={content} onFieldChange={onFieldChange} />
     </>
   );
 }
@@ -1421,6 +1564,9 @@ function HowItWorksPanel({
         >
           + Add step
         </button>
+      </div>
+      <div style={{ marginTop: 20 }}>
+        <FinalCtaCard page="how-it-works" content={content} onFieldChange={onFieldChange} />
       </div>
     </>
   );
@@ -1683,6 +1829,8 @@ function CompanyPanel({
           onChange={(v) => onFieldChange("company", "contactEmail", v)}
         />
       </div>
+
+      <FinalCtaCard page="company" content={content} onFieldChange={onFieldChange} showSecondaryButton={false} />
     </>
   );
 }

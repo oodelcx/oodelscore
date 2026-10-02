@@ -62,12 +62,12 @@ export default async function HowItWorksPage() {
 
       <section className="final-cta">
         <div className="wrap">
-          <h2>See the loop close on your own feedback.</h2>
-          <p>Twenty minutes, a live walkthrough of real workflows — not a canned script.</p>
+          <h2>{f.finalCtaHeadline || "See the loop close on your own feedback."}</h2>
+          <p>{f.finalCtaSubhead || "Twenty minutes, a live walkthrough of real workflows — not a canned script."}</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <BookDemoButton className="btn-primary hover-lift">Book a demo</BookDemoButton>
+            <BookDemoButton className="btn-primary hover-lift">{f.finalCtaPrimaryButton || "Book a demo"}</BookDemoButton>
             <a className="btn-ghost hover-lift" href="/product">
-              See the product
+              {f.finalCtaSecondaryButton || "See the product"}
             </a>
           </div>
         </div>

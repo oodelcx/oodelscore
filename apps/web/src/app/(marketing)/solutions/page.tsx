@@ -116,12 +116,12 @@ export default async function SolutionsPage() {
 
       <section className="final-cta">
         <div className="wrap">
-          <h2>Tell us how your organization is structured.</h2>
-          <p>We&rsquo;ll show you exactly how it maps onto OodelCX.</p>
+          <h2>{f.finalCtaHeadline || "Tell us how your organization is structured."}</h2>
+          <p>{f.finalCtaSubhead || "We’ll show you exactly how it maps onto OodelCX."}</p>
           <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <BookDemoButton className="btn-primary hover-lift">Book a demo</BookDemoButton>
+            <BookDemoButton className="btn-primary hover-lift">{f.finalCtaPrimaryButton || "Book a demo"}</BookDemoButton>
             <a className="btn-ghost hover-lift" href="/pricing">
-              See pricing
+              {f.finalCtaSecondaryButton || "See pricing"}
             </a>
           </div>
         </div>

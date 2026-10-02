@@ -57,7 +57,15 @@ async function buildProductMenu(page: "product" | "colleague-pulse", seed: (type
   if (!features.some((f) => f.group === "act")) {
     features = parseJsonArray<Feature>(seed.fields.features);
   }
-  const curated = features.some((f) => f.menuFeatured) ? features.filter((f) => f.menuFeatured) : features;
+  // Once an admin has touched any "In menu" checkbox at all, trust that
+  // configuration completely — including the case where every box ends up
+  // unchecked, which means "hide this submenu entirely," not "show
+  // everything." Only a features list nobody has ever configured
+  // (menuFeatured is undefined on every item — true for a doc saved before
+  // this field existed) falls back to showing everything, so an
+  // un-migrated list still renders something instead of an empty menu.
+  const everConfigured = features.some((f) => f.menuFeatured !== undefined);
+  const curated = everConfigured ? features.filter((f) => f.menuFeatured) : features;
   const toLink = (f: Feature): NavLink => ({ label: f.tag, href: `/${page}#${featureSlug(f.tag)}` });
   const understand = curated.filter((f) => f.group !== "act").map(toLink);
   const act = curated.filter((f) => f.group === "act").map(toLink);
