@@ -1831,7 +1831,7 @@
    room above it than the 10px that's fine next to a tall desktop card. */
 @media (max-width: 560px) {
   .mkt .loop-stage-label {
-    margin-bottom: -6px;
+    margin-bottom: 0px;
   }
   .mkt .loop-stage-card {
     min-height: 0;
