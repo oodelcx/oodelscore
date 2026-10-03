@@ -26,9 +26,54 @@ export function MarketingNav({
    * original look), so nothing breaks before an admin sets it. */
   headerStyle?: string;
 }) {
-  const visible = [...navItems].filter((n) => n.visible).sort((a, b) => a.order - b.order);
   const isDark = headerStyle === "dark";
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Build a map for quick lookup
+  const itemsByKey = Object.fromEntries(navItems.map((item) => [item.key, item]));
+
+  // Check if parent has any visible children
+  function hasVisibleChildren(item: INavItem): boolean {
+    const childKeys = item.children || [];
+    return childKeys.some((key) => {
+      const child = itemsByKey[key];
+      return child && child.visible;
+    });
+  }
+
+  // Get root items (no parent), filtered by visibility
+  // Parent is hidden if: not visible OR has no visible children
+  const visible = navItems
+    .filter((item) => !item.parentKey && item.visible && (!(item.children && item.children.length > 0) || hasVisibleChildren(item)))
+    .sort((a, b) => a.order - b.order);
+
+  function renderNavItem(item: INavItem, isMobile: boolean = false) {
+    const childKeys = item.children || [];
+    const children = childKeys.map((k) => itemsByKey[k]).filter((c) => c?.visible) || [];
+
+    return (
+      <div key={item.key}>
+        <Link href={PATH_BY_KEY[item.key] ?? "/"} className={active === item.key ? "active" : ""}>
+          {item.label}
+          {children.length > 0 && !isMobile && " ▼"}
+        </Link>
+        {isMobile && children.length > 0 && (
+          <div style={{ marginLeft: 16, display: "flex", flexDirection: "column", gap: 8, marginTop: 8, marginBottom: 8 }}>
+            {children.map((child) => (
+              <Link
+                key={child.key}
+                href={PATH_BY_KEY[child.key] ?? "/"}
+                className={active === child.key ? "active" : ""}
+                style={{ fontSize: 14 }}
+              >
+                {child.label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <nav className={`nav ${isDark ? "nav-dark" : "nav-light"}`}>
@@ -37,22 +82,11 @@ export function MarketingNav({
           <img src={isDark ? "/oodelcx-logo-white.webp" : "/oodelcx-logo-dark.webp"} alt="OodelCX" />
         </Link>
         <div className="nav-links">
-          {visible.map((item) => (
-            <Link key={item.key} href={PATH_BY_KEY[item.key] ?? "/"} className={active === item.key ? "active" : ""}>
-              {item.label}
-            </Link>
-          ))}
+          {visible.map((item) => renderNavItem(item, false))}
         </div>
         <div className="nav-right">
           <Link href="/login">Sign in</Link>
           <BookDemoButton className="btn-primary">Book a demo</BookDemoButton>
-          {/* Only rendered/visible below the 860px breakpoint where
-              .nav-links is hidden (marketing.css) — lives inside nav-right
-              (not as a separate flex child of nav-inner) so it clusters
-              with Sign in/Book a demo at the right edge instead of being
-              spaced apart from them by nav-inner's space-between. Sign in
-              and Book a demo both stay visible at mobile width; only the
-              page links (Home/Product/…) move into the panel below. */}
           <button
             type="button"
             className="nav-mobile-toggle"
@@ -68,16 +102,7 @@ export function MarketingNav({
       </div>
       {mobileOpen && (
         <div className="nav-mobile-panel">
-          {visible.map((item) => (
-            <Link
-              key={item.key}
-              href={PATH_BY_KEY[item.key] ?? "/"}
-              className={active === item.key ? "active" : ""}
-              onClick={() => setMobileOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {visible.map((item) => renderNavItem(item, true))}
         </div>
       )}
     </nav>
