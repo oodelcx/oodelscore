@@ -7,6 +7,8 @@ interface NavItem {
   label: string;
   visible: boolean;
   order: number;
+  parentKey?: string;
+  children?: string[]; // array of child keys
 }
 
 interface PageContent {
@@ -331,57 +333,119 @@ function MenuPanel({
   onFieldChange: (page: string, key: string, value: string) => void;
   onNavItemsChange: (page: string, navItems: NavItem[]) => void;
 }) {
+  const itemsByKey = Object.fromEntries(content.navItems.map((item) => [item.key, item]));
+
+  function updateItem(key: string, patch: Partial<NavItem>) {
+    const idx = content.navItems.findIndex((n) => n.key === key);
+    if (idx === -1) return;
+    const next = [...content.navItems];
+    next[idx] = { ...next[idx], ...patch };
+
+    // If setting a parent, update the parent's children array
+    if (patch.parentKey !== undefined) {
+      const newParentKey = patch.parentKey;
+      const oldParentKey = content.navItems[idx].parentKey;
+
+      if (oldParentKey && oldParentKey !== newParentKey) {
+        const oldParentIdx = next.findIndex((n) => n.key === oldParentKey);
+        if (oldParentIdx !== -1) {
+          const oldParentChildren = next[oldParentIdx].children || [];
+          next[oldParentIdx] = { ...next[oldParentIdx], children: oldParentChildren.filter((k) => k !== key) };
+        }
+      }
+
+      if (newParentKey) {
+        const newParentIdx = next.findIndex((n) => n.key === newParentKey);
+        if (newParentIdx !== -1) {
+          const parentChildren = next[newParentIdx].children || [];
+          if (!parentChildren.includes(key)) {
+            next[newParentIdx] = { ...next[newParentIdx], children: [...parentChildren, key] };
+          }
+        }
+      }
+    }
+
+    onNavItemsChange("menu", next);
+  }
+
+  function renderNavItem(item: NavItem, depth: number = 0) {
+    const childKeys = item.children || [];
+    const children = childKeys.map((k) => itemsByKey[k]).filter(Boolean);
+
+    return (
+      <div key={item.key}>
+        <div className="nav-item-row" style={{ paddingLeft: `${depth * 20}px` }}>
+          <div className="nav-item-top">
+            <div className="reorder-arrows">
+              <span
+                style={{ cursor: "pointer" }}
+                onClick={() => {
+                  const idx = content.navItems.findIndex((n) => n.key === item.key);
+                  if (idx <= 0) return;
+                  const next = [...content.navItems];
+                  [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                  onNavItemsChange("menu", next.map((n, i) => ({ ...n, order: i })));
+                }}
+              >
+                ▲
+              </span>
+              <span
+                style={{ cursor: "pointer" }}
+                onClick={() => {
+                  const idx = content.navItems.findIndex((n) => n.key === item.key);
+                  if (idx >= content.navItems.length - 1) return;
+                  const next = [...content.navItems];
+                  [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                  onNavItemsChange("menu", next.map((n, i) => ({ ...n, order: i })));
+                }}
+              >
+                ▼
+              </span>
+            </div>
+            <input
+              type="text"
+              style={{ flex: 1, border: "none", background: "none", padding: 0, fontWeight: depth === 0 ? 500 : 400 }}
+              value={item.label}
+              onChange={(e) => updateItem(item.key, { label: e.target.value })}
+            />
+            {depth === 0 && (
+              <>
+                <select
+                  value={item.parentKey || ""}
+                  onChange={(e) => updateItem(item.key, { parentKey: e.target.value || undefined })}
+                  style={{ marginRight: 8, fontSize: 12, width: 140 }}
+                  title="Set this as a child of another menu item"
+                >
+                  <option value="">No parent</option>
+                  {content.navItems
+                    .filter((n) => n.key !== item.key && !n.parentKey && !(n.children || []).includes(item.key))
+                    .map((n) => (
+                      <option key={n.key} value={n.key}>
+                        {n.label}
+                      </option>
+                    ))}
+                </select>
+              </>
+            )}
+            <span
+              className={`toggle ${item.visible ? "on" : ""}`}
+              onClick={() => updateItem(item.key, { visible: !item.visible })}
+            />
+          </div>
+        </div>
+        {children.map((child) => renderNavItem(child, depth + 1))}
+      </div>
+    );
+  }
+
+  const rootItems = content.navItems.filter((item) => !item.parentKey).sort((a, b) => a.order - b.order);
+
   return (
     <div className="grid grid-2">
       <div className="card">
         <h3>Navigation</h3>
-        <p className="card-sub">Reorder, rename, or hide. Matches the live nav exactly.</p>
-        {content.navItems.map((item, i) => (
-          <div className="nav-item-row" key={item.key}>
-            <div className="nav-item-top">
-              <div className="reorder-arrows">
-                <span
-                  onClick={() => {
-                    if (i === 0) return;
-                    const next = [...content.navItems];
-                    [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                    onNavItemsChange("menu", next.map((n, idx) => ({ ...n, order: idx })));
-                  }}
-                >
-                  ▲
-                </span>
-                <span
-                  onClick={() => {
-                    if (i === content.navItems.length - 1) return;
-                    const next = [...content.navItems];
-                    [next[i], next[i + 1]] = [next[i + 1], next[i]];
-                    onNavItemsChange("menu", next.map((n, idx) => ({ ...n, order: idx })));
-                  }}
-                >
-                  ▼
-                </span>
-              </div>
-              <input
-                type="text"
-                style={{ flex: 1, border: "none", background: "none", padding: 0, fontWeight: 500 }}
-                value={item.label}
-                onChange={(e) => {
-                  const next = [...content.navItems];
-                  next[i] = { ...next[i], label: e.target.value };
-                  onNavItemsChange("menu", next);
-                }}
-              />
-              <span
-                className={`toggle ${item.visible ? "on" : ""}`}
-                onClick={() => {
-                  const next = [...content.navItems];
-                  next[i] = { ...next[i], visible: !next[i].visible };
-                  onNavItemsChange("menu", next);
-                }}
-              />
-            </div>
-          </div>
-        ))}
+        <p className="card-sub">Reorder, rename, set parents, or hide. Matches the live nav exactly.</p>
+        {rootItems.map((item) => renderNavItem(item))}
         <button
           className="btn btn-sm"
           onClick={() =>

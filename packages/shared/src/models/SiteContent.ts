@@ -21,6 +21,8 @@ export interface INavItem {
   label: string;
   visible: boolean;
   order: number;
+  parentKey?: string; // key of parent menu item, if any
+  children?: string[]; // array of child keys
 }
 
 export interface ISiteSection {
@@ -44,6 +46,8 @@ const NavItemSchema = new Schema<INavItem>(
     label: { type: String, required: true },
     visible: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
+    parentKey: { type: String },
+    children: { type: [String], default: [] }, // array of child keys, stored as strings for simplicity
   },
   { _id: false }
 );
