@@ -1,8 +1,25 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ParentOrganization, Business, User, BILLING_MODES, canAccessScopedResource } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  ParentOrganization,
+  Business,
+  User,
+  BillingSubscription,
+  Invoice,
+  BillingCredit,
+  BILLING_MODES,
+  PRICING_INTERVALS,
+  canAccessScopedResource,
+  isValidFeatureKey,
+  PRODUCTS,
+  syncProductCoverageForOwner,
+  logSystemHealthEvent,
+} from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const BILLING_MODE_SET: readonly string[] = BILLING_MODES;
+const PRICING_INTERVAL_SET: readonly string[] = PRICING_INTERVALS;
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -56,10 +73,72 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.defaultBillingMode !== undefined && !BILLING_MODE_SET.includes(body.defaultBillingMode)) {
     return NextResponse.json({ status: "error", message: "Invalid defaultBillingMode" }, { status: 400 });
   }
+  if (body.pricingTerms !== undefined) {
+    const terms = body.pricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
+    }
+  }
+  if (body.cePricingTerms !== undefined) {
+    const terms = body.cePricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid cePricingTerms" }, { status: 400 });
+    }
+  }
 
-  // Command Center visibility and RAG banding are Admin-only decisions —
-  // same rule as billingAssignment on a Business (spec Section 4).
-  const adminOnlyFields = (["ragThresholds", "commandCenterEnabled"] as const).filter((f) => f in body);
+  if (body.escalationLevels !== undefined) {
+    const levels = body.escalationLevels;
+    const valid =
+      Array.isArray(levels) &&
+      levels.every((l: unknown) => l && typeof (l as { level?: unknown }).level === "number" && typeof (l as { label?: unknown }).label === "string");
+    if (!valid) {
+      return NextResponse.json({ status: "error", message: "Invalid escalationLevels" }, { status: 400 });
+    }
+  }
+  if (body.escalationSlaHours !== undefined && body.escalationSlaHours !== null && typeof body.escalationSlaHours !== "number") {
+    return NextResponse.json({ status: "error", message: "Invalid escalationSlaHours" }, { status: 400 });
+  }
+  if (body.enabledFeatures !== undefined && body.enabledFeatures !== null) {
+    const keys = body.enabledFeatures;
+    if (!Array.isArray(keys) || !keys.every((k: unknown) => typeof k === "string" && isValidFeatureKey(k))) {
+      return NextResponse.json({ status: "error", message: "Invalid enabledFeatures" }, { status: 400 });
+    }
+  }
+  if (body.paymentGateEnabled !== undefined && body.paymentGateEnabled !== null && typeof body.paymentGateEnabled !== "boolean") {
+    return NextResponse.json({ status: "error", message: "Invalid paymentGateEnabled" }, { status: 400 });
+  }
+  if (body.enabledProducts !== undefined && body.enabledProducts !== null) {
+    const products = body.enabledProducts;
+    if (!Array.isArray(products) || !products.every((p: unknown) => typeof p === "string" && PRODUCT_SET.includes(p))) {
+      return NextResponse.json({ status: "error", message: "Invalid enabledProducts" }, { status: 400 });
+    }
+    if (products.length === 0) {
+      return NextResponse.json({ status: "error", message: "An organization needs at least one product enabled" }, { status: 400 });
+    }
+  }
+
+  // Command Center visibility, RAG banding, pricing, the escalation chain,
+  // which advanced features are enabled, and the payment gate override are
+  // Admin-only decisions — same rule as billingAssignment on a Business
+  // (spec Section 4).
+  const adminOnlyFields = (
+    [
+      "ragThresholds",
+      "commandCenterEnabled",
+      "pricingTerms",
+      "cePricingTerms",
+      "checkoutEnabled",
+      "escalationLevels",
+      "escalationSlaHours",
+      "enabledFeatures",
+      "enabledProducts",
+      "paymentGateEnabled",
+    ] as const
+  ).filter((f) => f in body);
   if (adminOnlyFields.length > 0 && !(role.isSystemRole && role.name === "Admin")) {
     return NextResponse.json(
       { status: "error", message: `Not permitted to write field(s): ${adminOnlyFields.join(", ")}` },
@@ -101,11 +180,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "address",
     "billingAddressSameAsAddress",
     "defaultBillingMode",
+    "pricingTerms",
+    "cePricingTerms",
+    "checkoutEnabled",
+    "escalationLevels",
+    "escalationSlaHours",
     "accountManagerId",
     "branchSeatLimit",
     "teamMemberSeatLimit",
     "ragThresholds",
     "commandCenterEnabled",
+    "enabledFeatures",
+    "enabledProducts",
+    "paymentGateEnabled",
   ] as const;
 
   for (const field of editableFields) {
@@ -115,7 +202,23 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await parentOrg.save();
-  return NextResponse.json({ status: "ok", parentOrg });
+
+  // Same reasoning as the business PATCH route: never let a Stripe sync
+  // failure block the save itself.
+  let billingSyncWarning: string | null = null;
+  if ("enabledProducts" in body) {
+    try {
+      await syncProductCoverageForOwner("parentOrg", parentOrg._id.toString());
+    } catch (err) {
+      billingSyncWarning = err instanceof Error ? err.message : "Failed to sync Stripe billing coverage";
+      await logSystemHealthEvent("billing_sync_failure", billingSyncWarning, {
+        parentOrgId: parentOrg._id.toString(),
+        parentOrgName: parentOrg.name,
+      });
+    }
+  }
+
+  return NextResponse.json({ status: "ok", parentOrg, billingSyncWarning });
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
@@ -144,6 +247,14 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   if (!parentOrg) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   await User.deleteOne({ accountType: "parent_org", parentId: id });
+
+  // Same orphaned-billing-records cleanup as the business delete route —
+  // DB-only, no Stripe cancel call. See that route for the full rationale.
+  await Promise.all([
+    BillingSubscription.deleteMany({ ownerType: "parentOrg", ownerId: id }),
+    Invoice.deleteMany({ ownerType: "parentOrg", ownerId: id }),
+    BillingCredit.deleteMany({ ownerType: "parentOrg", ownerId: id }),
+  ]);
 
   return NextResponse.json({ status: "ok" });
 }

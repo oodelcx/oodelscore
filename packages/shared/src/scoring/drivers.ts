@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { Response } from "../models/Response";
 import { Category } from "../models/Category";
+import type { Product } from "../models/products";
 
 /**
  * "What's driving our score" — correlates each category's star rating
@@ -50,12 +51,13 @@ function pearson(xs: number[], ys: number[]): number | null {
 export async function computeDriverAnalysis(
   businessIds: (Types.ObjectId | string)[],
   from: Date,
-  to: Date
+  to: Date,
+  product: Product = "customer_experience"
 ): Promise<DriverResult[]> {
   if (businessIds.length === 0) return [];
 
   const [responses, categories] = await Promise.all([
-    Response.find({ businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: to } }).select("answers").lean(),
+    Response.find({ businessId: { $in: businessIds }, product, submittedAt: { $gte: from, $lte: to } }).select("answers").lean(),
     Category.find(),
   ]);
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));

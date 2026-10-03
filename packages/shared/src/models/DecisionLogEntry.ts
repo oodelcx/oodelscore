@@ -1,9 +1,11 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
+import { NoteEntrySchema, type INoteEntry } from "./common";
 
 export const DECISION_STATUSES = ["planned", "in_progress", "implemented"] as const;
 export type DecisionStatus = (typeof DECISION_STATUSES)[number];
 
-export const DECISION_OUTCOME_METRICS = ["starAverage", "nps", "categoryAverage"] as const;
+export const DECISION_OUTCOME_METRICS = ["starAverage", "nps", "categoryAverage", "csat", "ces"] as const;
 export type DecisionOutcomeMetric = (typeof DECISION_OUTCOME_METRICS)[number];
 
 export interface IDecisionLogEntry {
@@ -14,6 +16,13 @@ export interface IDecisionLogEntry {
   // Decision Log too.
   parentOrgId: Types.ObjectId | null;
   businessId: Types.ObjectId | null;
+  // Which product this decision belongs to — defaults to customer_experience
+  // so every entry that predates Colleague Experience is unaffected.
+  product: Product;
+  // Set when this entry was created from an Improvement Initiative's "Log
+  // outcome" button — lets the initiative show its own decision log entry
+  // rather than a user having to find it by title.
+  linkedInitiativeId: Types.ObjectId | null;
   title: string;
   trigger: string;
   linkedActionIds: Types.ObjectId[];
@@ -32,6 +41,16 @@ export interface IDecisionLogEntry {
   outcomeBefore: number | null;
   outcomeAfter: number | null;
   outcomeMeasuredAt: Date | null;
+  // Response counts behind the before/after numbers, and whether either
+  // fell below the low-sample threshold — set alongside outcomeBefore/After
+  // by computeDecisionOutcome, so the confidence flag persists with the
+  // measurement instead of being recomputed (and potentially drifting) on
+  // every page load.
+  outcomeSampleSizeBefore: number | null;
+  outcomeSampleSizeAfter: number | null;
+  outcomeLowConfidence: boolean;
+  // Same append-only commentary thread as ImprovementInitiative.notes.
+  notes: INoteEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +59,8 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
   {
     parentOrgId: { type: Schema.Types.ObjectId, ref: "ParentOrganization", default: null },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", default: null },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
+    linkedInitiativeId: { type: Schema.Types.ObjectId, ref: "ImprovementInitiative", default: null },
     title: { type: String, required: true },
     trigger: { type: String, default: "" },
     linkedActionIds: { type: [Schema.Types.ObjectId], ref: "ActionBoardItem", default: [] },
@@ -53,6 +74,10 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
     outcomeBefore: { type: Number, default: null },
     outcomeAfter: { type: Number, default: null },
     outcomeMeasuredAt: { type: Date, default: null },
+    outcomeSampleSizeBefore: { type: Number, default: null },
+    outcomeSampleSizeAfter: { type: Number, default: null },
+    outcomeLowConfidence: { type: Boolean, default: false },
+    notes: { type: [NoteEntrySchema], default: [] },
   },
   { timestamps: true }
 );

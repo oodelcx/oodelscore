@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, BillingSubscription, Invoice, Business } from "@oodelscore/shared";
+import { connectToDatabase, BillingSubscription, Invoice, BillingCredit, Business } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 export async function GET() {
@@ -8,9 +8,10 @@ export async function GET() {
   if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const [subscription, invoices, businesses] = await Promise.all([
+  const [subscription, invoices, credits, businesses] = await Promise.all([
     BillingSubscription.findOne({ ownerType: "parentOrg", ownerId: session.org._id }),
     Invoice.find({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ issuedAt: -1 }).limit(12),
+    BillingCredit.find({ ownerType: "parentOrg", ownerId: session.org._id }).sort({ issuedAt: -1 }).limit(12),
     Business.find({ parentOrgId: session.org._id }).select("name billingAssignment active"),
   ]);
 
@@ -40,14 +41,22 @@ export async function GET() {
 
   const overdueSelfBilledCount = branchRows.filter((b) => b.billingAssignment === "branch_pays" && b.status === "overdue").length;
 
+  const hasLiveSubscription = Boolean(subscription && !subscription.isComp && (subscription.stripeSubscriptionId || subscription.paidThroughDate));
+  const checkoutLinkAvailable = session.org.checkoutEnabled && !hasLiveSubscription;
+
   return NextResponse.json({
     status: "ok",
     subscription,
     invoices,
+    credits,
     totalBranches: businesses.length,
     groupPaysBranchCount: groupPaysBranches.length,
     branchPaysBranchCount: branchPaysBranches.length,
     overdueSelfBilledCount,
     branches: branchRows,
+    checkoutLinkAvailable,
+    pricingTerms: session.org.pricingTerms,
+    cePricingTerms: session.org.cePricingTerms,
+    enabledProducts: session.org.enabledProducts,
   });
 }

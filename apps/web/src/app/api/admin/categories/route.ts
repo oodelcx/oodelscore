@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Category, QuestionTemplate, getCategoryUsageMap } from "@oodelscore/shared";
+import { connectToDatabase, Category, QuestionTemplate, getCategoryUsageMap, PRODUCTS } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 export async function GET() {
@@ -58,12 +58,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "error", message: "name is required" }, { status: 400 });
   }
 
+  const product = (PRODUCTS as readonly string[]).includes(body.product) ? body.product : "customer_experience";
+
   await connectToDatabase();
-  const existing = await Category.findOne({ name: body.name.trim() });
+  const existing = await Category.findOne({ name: body.name.trim(), product });
   if (existing) {
-    return NextResponse.json({ status: "error", message: "A category with this name already exists" }, { status: 409 });
+    return NextResponse.json({ status: "error", message: "A category with this name already exists for this product" }, { status: 409 });
   }
 
-  const category = await Category.create({ name: body.name.trim() });
+  const category = await Category.create({
+    name: body.name.trim(),
+    product,
+    sensitive: typeof body.sensitive === "boolean" ? body.sensitive : false,
+  });
   return NextResponse.json({ status: "ok", category }, { status: 201 });
 }

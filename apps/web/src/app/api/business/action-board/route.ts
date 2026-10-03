@@ -7,10 +7,16 @@ import {
   ParentOrganization,
   sendTemplatedEmail,
   ACTION_PRIORITIES,
+  CASE_TYPES,
   autoAttachPlaybook,
+  PRODUCTS,
+  type Product,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/lib/caseStats";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 /**
  * Standalone business's own single-business Action Board (spec Section 16
@@ -18,12 +24,13 @@ import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/li
  * Team Member only ever sees items assigned to them.
  */
 export async function GET() {
-  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
 
-  const filter: Record<string, unknown> = { businessId: session.business._id };
+  const filter: Record<string, unknown> = { businessId: session.business._id, product };
   if (session.tier === "limited") filter.ownerId = session.user._id;
 
   const scope = session.business.parentOrgId
@@ -50,6 +57,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    product,
     items: itemsWithRatings,
     playbooks,
     tier: session.tier,
@@ -60,7 +68,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -70,13 +78,16 @@ export async function POST(request: Request) {
   if (!title) return NextResponse.json({ status: "error", message: "title is required" }, { status: 400 });
 
   const priority = ACTION_PRIORITIES.includes(body?.priority) ? body.priority : "medium";
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
 
   const item = await ActionBoardItem.create({
     parentOrgId: null,
     businessId: session.business._id,
+    product,
     title,
     description: typeof body?.description === "string" ? body.description : "",
     categoryId: typeof body?.categoryId === "string" ? body.categoryId : null,
+    caseType: CASE_TYPES.includes(body?.caseType) ? body.caseType : "operational_fix",
     priority,
     ownerId: typeof body?.ownerId === "string" ? body.ownerId : null,
     dueDate: typeof body?.dueDate === "string" ? new Date(body.dueDate) : null,

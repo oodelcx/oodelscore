@@ -39,6 +39,14 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
   const [recipients, setRecipients] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editThreshold, setEditThreshold] = useState("");
+  const [editSensitivity, setEditSensitivity] = useState("");
+  const [editDropPercent, setEditDropPercent] = useState("");
+  const [editBaselineWindowDays, setEditBaselineWindowDays] = useState("");
+  const [editRecipients, setEditRecipients] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   function load() {
     setLoading(true);
@@ -95,6 +103,45 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !rule.active }),
     });
+    load();
+  }
+
+  function startEdit(rule: RuleRow) {
+    setEditingId(rule._id);
+    setEditThreshold(rule.threshold != null ? String(rule.threshold) : "");
+    setEditSensitivity(rule.sensitivity != null ? String(rule.sensitivity) : "");
+    setEditDropPercent(rule.dropPercent != null ? String(rule.dropPercent) : "");
+    setEditBaselineWindowDays("30");
+    setEditRecipients(rule.recipients.join(", "));
+    setEditError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditError(null);
+  }
+
+  async function saveEdit(rule: RuleRow) {
+    setSaving(true);
+    setEditError(null);
+    const res = await fetch(`/api/group/alert-rules/${rule._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        threshold: rule.ruleType === "fixed_threshold" ? Number(editThreshold) : undefined,
+        sensitivity: rule.ruleType === "regional_outlier" ? Number(editSensitivity) : undefined,
+        dropPercent: rule.ruleType === "sudden_drop" ? Number(editDropPercent) : undefined,
+        baselineWindowDays: rule.ruleType === "sudden_drop" ? Number(editBaselineWindowDays) : undefined,
+        recipients: editRecipients.split(",").map((r) => r.trim()).filter(Boolean),
+      }),
+    });
+    const data = await res.json();
+    setSaving(false);
+    if (!res.ok) {
+      setEditError(data.message);
+      return;
+    }
+    setEditingId(null);
     load();
   }
 
@@ -206,42 +253,93 @@ export default function GroupAlertRulesClient({ tooltips }: { tooltips: Record<s
               </tr>
             </thead>
             <tbody>
-              {orgRules.map((r) => (
-                <tr key={r._id}>
-                  <td>{r.scope === "parentOrg_region" ? `Region: ${r.region}` : "All businesses"}</td>
-                  <td>
-                    {r.ruleType.replace(/_/g, " ")}
-                    {r.warning && (
-                      <div className="subtitle" style={{ color: "var(--danger, #b91c1c)", marginTop: 2 }}>
-                        ⚠ {r.warning}
+              {orgRules.map((r) =>
+                editingId === r._id ? (
+                  <tr key={r._id}>
+                    <td colSpan={6}>
+                      <div className="field-row" style={{ alignItems: "flex-end" }}>
+                        {r.ruleType === "fixed_threshold" && (
+                          <div className="field">
+                            <label>Threshold</label>
+                            <input type="number" value={editThreshold} onChange={(e) => setEditThreshold(e.target.value)} />
+                          </div>
+                        )}
+                        {r.ruleType === "regional_outlier" && (
+                          <div className="field">
+                            <label>Sensitivity</label>
+                            <input type="number" value={editSensitivity} onChange={(e) => setEditSensitivity(e.target.value)} />
+                          </div>
+                        )}
+                        {r.ruleType === "sudden_drop" && (
+                          <>
+                            <div className="field">
+                              <label>Drop %</label>
+                              <input type="number" value={editDropPercent} onChange={(e) => setEditDropPercent(e.target.value)} />
+                            </div>
+                            <div className="field">
+                              <label>Baseline window (days)</label>
+                              <input
+                                type="number"
+                                value={editBaselineWindowDays}
+                                onChange={(e) => setEditBaselineWindowDays(e.target.value)}
+                              />
+                            </div>
+                          </>
+                        )}
+                        <div className="field" style={{ flex: 1 }}>
+                          <label>Recipients (comma-separated emails)</label>
+                          <input value={editRecipients} onChange={(e) => setEditRecipients(e.target.value)} />
+                        </div>
+                        <button className="btn btn-dark btn-sm" disabled={saving} onClick={() => saveEdit(r)}>
+                          {saving ? "Saving…" : "Save"}
+                        </button>
+                        <button className="btn btn-sm" onClick={cancelEdit}>
+                          Cancel
+                        </button>
                       </div>
-                    )}
-                  </td>
-                  <td>{r.metric || "—"} {r.threshold ?? r.sensitivity ?? r.dropPercent ?? ""}</td>
-                  <td>
-                    {r.firedCount > 0 ? (
-                      <span className="pill pill-red">{r.firedCount} branch{r.firedCount === 1 ? "" : "es"} →</span>
-                    ) : (
-                      <span className="pill pill-green">0</span>
-                    )}
-                  </td>
-                  <td>
-                    <span
-                      className={`pill ${r.active ? "pill-green" : "pill-gray"}`}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => toggleActive(r)}
-                      title="Click to toggle"
-                    >
-                      {r.active ? "On" : "Off"}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="icon-btn btn-danger" onClick={() => removeRule(r._id)}>
-                      🗑
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      {editError && <p className="error-text" style={{ margin: "8px 0 0" }}>{editError}</p>}
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={r._id}>
+                    <td>{r.scope === "parentOrg_region" ? `Region: ${r.region}` : "All businesses"}</td>
+                    <td>
+                      {r.ruleType.replace(/_/g, " ")}
+                      {r.warning && (
+                        <div className="subtitle" style={{ color: "var(--danger, #b91c1c)", marginTop: 2 }}>
+                          ⚠ {r.warning}
+                        </div>
+                      )}
+                    </td>
+                    <td>{r.metric || "—"} {r.threshold ?? r.sensitivity ?? r.dropPercent ?? ""}</td>
+                    <td>
+                      {r.firedCount > 0 ? (
+                        <span className="pill pill-red">{r.firedCount} branch{r.firedCount === 1 ? "" : "es"} →</span>
+                      ) : (
+                        <span className="pill pill-green">0</span>
+                      )}
+                    </td>
+                    <td>
+                      <span
+                        className={`pill ${r.active ? "pill-green" : "pill-gray"}`}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => toggleActive(r)}
+                        title="Click to toggle"
+                      >
+                        {r.active ? "On" : "Off"}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => startEdit(r)}>
+                        Edit
+                      </button>
+                      <button className="icon-btn btn-danger" onClick={() => removeRule(r._id)}>
+                        🗑
+                      </button>
+                    </td>
+                  </tr>
+                )
+              )}
               {orgRules.length === 0 && (
                 <tr>
                   <td colSpan={6} className="subtitle">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Response, Category, FeedbackPoint } from "@oodelscore/shared";
+import { connectToDatabase, Response, Category, FeedbackPoint, Event, hasFeature } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import type { FilterQuery } from "mongoose";
 import type { IResponse } from "@oodelscore/shared";
 
@@ -55,32 +56,48 @@ function trendFromResponses(responses: IResponse[], from: Date, to: Date) {
 }
 
 export async function GET(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "analytics" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "analytics")) {
+    return NextResponse.json({ status: "error", message: "Analytics is not enabled for this account" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const feedbackPointId = searchParams.get("feedbackPointId");
+  const eventId = searchParams.get("eventId");
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
 
   await connectToDatabase();
   const businessId = session.business._id;
+  // A dual-product business's Analytics must respect the active product
+  // tab — without this, CX and CE responses/categories/feedback points were
+  // pooled together regardless of which tab was open. See the identical
+  // fix on the Group Analytics route.
+  const product = await resolveViewProduct(session.business);
   const now = new Date();
   const to = toParam ? new Date(`${toParam}T23:59:59.999Z`) : now;
   const from = fromParam ? new Date(`${fromParam}T00:00:00.000Z`) : new Date(now.getTime() - TREND_DAYS * 24 * 60 * 60 * 1000);
 
-  const filter: FilterQuery<IResponse> = { businessId, submittedAt: { $gte: from, $lte: to } };
+  const filter: FilterQuery<IResponse> = { businessId, product, submittedAt: { $gte: from, $lte: to } };
   if (feedbackPointId) filter.feedbackPointId = feedbackPointId;
+  if (eventId) filter.eventId = eventId;
 
-  const [responses, categories, feedbackPoints] = await Promise.all([
+  const [responses, categories, feedbackPoints, events] = await Promise.all([
     Response.find(filter),
-    Category.find(),
-    FeedbackPoint.find({ businessId }).select("name").sort({ createdAt: 1 }),
+    Category.find({ product }),
+    FeedbackPoint.find({ businessId, product }).select("name eventId scans").sort({ createdAt: 1 }),
+    Event.find({ businessId }).sort({ createdAt: -1 }),
   ]);
   const trend = trendFromResponses(responses, from, to);
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));
 
   const npsAnswers: number[] = [];
+  let csatSatisfied = 0;
+  let csatTotal = 0;
+  let cesSum = 0;
+  let cesLowEffort = 0;
+  let cesTotal = 0;
   const categoryTotals = new Map<string, { sum: number; count: number }>();
   const comments: string[] = [];
   const ageGroups = new Map<string, number>();
@@ -98,6 +115,15 @@ export async function GET(request: Request) {
 
     for (const answer of response.answers) {
       if (answer.type === "nps_0_10" && typeof answer.value === "number") npsAnswers.push(answer.value);
+      if (answer.type === "star_1_5" && typeof answer.value === "number") {
+        csatTotal += 1;
+        if (answer.value >= 4) csatSatisfied += 1;
+      }
+      if (answer.type === "ces_1_5" && typeof answer.value === "number") {
+        cesTotal += 1;
+        cesSum += answer.value;
+        if (answer.value <= 2) cesLowEffort += 1;
+      }
       if (answer.type === "star_1_5" && typeof answer.value === "number" && answer.categoryId) {
         const key = answer.categoryId.toString();
         const entry = categoryTotals.get(key) ?? { sum: 0, count: 0 };
@@ -119,12 +145,95 @@ export async function GET(request: Request) {
     .map(([id, { sum, count }]) => ({ name: categoryNameById.get(id) ?? "Uncategorized", average: Math.round((sum / count) * 100) / 100 }))
     .sort((a, b) => b.average - a.average);
 
+  // "Compare by event": always computed across ALL of the business's
+  // events in range, independent of the feedbackPointId/eventId filters
+  // above — those filters narrow the detail charts, this table is the
+  // side-by-side comparison the filters would otherwise hide one row of.
+  let eventBreakdown: {
+    _id: string;
+    name: string;
+    seriesKey: string;
+    facilitator: string;
+    location: string;
+    responseCount: number;
+    starAverage: number | null;
+    responseRate: number | null;
+    scanCount: number;
+    conversionRate: number | null;
+  }[] = [];
+  if (events.length > 0) {
+    const eventResponses = await Response.find({
+      businessId,
+      product,
+      submittedAt: { $gte: from, $lte: to },
+      eventId: { $ne: null },
+    }).select("eventId answers");
+
+    const statsByEvent = new Map<string, { count: number; starSum: number; starCount: number }>();
+    for (const response of eventResponses) {
+      const key = response.eventId!.toString();
+      const entry = statsByEvent.get(key) ?? { count: 0, starSum: 0, starCount: 0 };
+      entry.count += 1;
+      for (const answer of response.answers) {
+        if (answer.type === "star_1_5" && typeof answer.value === "number") {
+          entry.starSum += answer.value;
+          entry.starCount += 1;
+        }
+      }
+      statsByEvent.set(key, entry);
+    }
+
+    // scans is a lifetime counter on each FeedbackPoint (see feedback-points/route.ts),
+    // not bucketed by date, so this total — unlike responseCount above — isn't
+    // restricted to the from/to range.
+    const scanCountByEvent = new Map<string, number>();
+    for (const point of feedbackPoints) {
+      if (!point.eventId) continue;
+      const key = point.eventId.toString();
+      scanCountByEvent.set(key, (scanCountByEvent.get(key) ?? 0) + point.scans);
+    }
+
+    eventBreakdown = events.map((e) => {
+      const stats = statsByEvent.get(e._id.toString());
+      const responseCount = stats?.count ?? 0;
+      const scanCount = scanCountByEvent.get(e._id.toString()) ?? 0;
+      return {
+        _id: e._id.toString(),
+        name: e.name,
+        seriesKey: e.seriesKey,
+        facilitator: e.facilitator,
+        location: e.location,
+        responseCount,
+        starAverage: stats && stats.starCount > 0 ? Math.round((stats.starSum / stats.starCount) * 100) / 100 : null,
+        responseRate: e.expectedAttendees ? Math.round((responseCount / e.expectedAttendees) * 1000) / 10 : null,
+        scanCount,
+        conversionRate: scanCount > 0 ? Math.round((responseCount / scanCount) * 1000) / 10 : null,
+      };
+    });
+  }
+
   return NextResponse.json({
     status: "ok",
-    feedbackPoints: feedbackPoints.map((p) => ({ _id: p._id.toString(), name: p.name })),
-    filters: { feedbackPointId: feedbackPointId ?? null, from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
+    feedbackPoints: feedbackPoints.map((p) => ({ _id: p._id.toString(), name: p.name, eventId: p.eventId ? p.eventId.toString() : null })),
+    events: events.map((e) => ({ _id: e._id.toString(), name: e.name, seriesKey: e.seriesKey })),
+    eventBreakdown,
+    filters: {
+      feedbackPointId: feedbackPointId ?? null,
+      eventId: eventId ?? null,
+      from: from.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10),
+    },
     trend,
-    npsBreakdown: { promoters, passives, detractors },
+    npsBreakdown: { promoters, passives, detractors, sampleSize: npsAnswers.length },
+    csat: {
+      percent: csatTotal === 0 ? null : Math.round((csatSatisfied / csatTotal) * 1000) / 10,
+      sampleSize: csatTotal,
+    },
+    ces: {
+      average: cesTotal === 0 ? null : Math.round((cesSum / cesTotal) * 100) / 100,
+      lowEffortPercent: cesTotal === 0 ? null : Math.round((cesLowEffort / cesTotal) * 1000) / 10,
+      sampleSize: cesTotal,
+    },
     categoryBreakdown,
     commentTags: extractTags(comments),
     demographics: {

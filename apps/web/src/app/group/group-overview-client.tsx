@@ -5,6 +5,46 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PeriodComparisonCards, type Comparisons } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
+import { ThemeCard } from "@/components/theme-card";
+
+interface RecurringFlagRow {
+  _id: string;
+  categoryName: string;
+  count: number;
+  windowDays: number;
+  businessIds: string[];
+}
+
+/** Self-contained — fetches its own data so the main overview payload doesn't need to change. */
+function RecurringIssuesCard() {
+  const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
+
+  useEffect(() => {
+    fetch("/api/group/recurring-issues")
+      .then((r) => r.json())
+      .then((d) => setFlags(d.flags ?? []))
+      .catch(() => setFlags([]));
+  }, []);
+
+  if (flags.length === 0) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #E0A100)" }}>
+      <div className="metric-label">Recurring issues — cross-branch</div>
+      <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+        {flags.map((f) => (
+          <li key={f._id} style={{ marginBottom: 4 }}>
+            <b>{f.categoryName}</b> — {f.count} cases across {f.businessIds.length} branches in the last{" "}
+            {f.windowDays} days
+          </li>
+        ))}
+      </ul>
+      <a href="/group/improvement-initiatives" style={{ color: "var(--accent)" }}>
+        Review in Improvement Initiatives →
+      </a>
+    </div>
+  );
+}
 
 interface RegionRow {
   region: string;
@@ -27,18 +67,68 @@ interface TopRow {
   starAverage: number | null;
   responseCount: number;
 }
+interface ValueDelivered {
+  casesResolvedThisPeriod: number;
+  casesResolvedPrevPeriod: number;
+  customersRespondedTo: number;
+  activeInitiatives: number;
+  completedInitiatives: number;
+}
+interface DecisionRow {
+  _id: string;
+  title: string;
+  businessName: string;
+}
+interface ThemeRow {
+  theme: string;
+  frequency: number;
+  sentimentBreakdown: { positive: number; neutral: number; negative: number };
+  trend: "up" | "down" | "flat" | null;
+}
+interface HoldingBackDimension {
+  dimension: "awareness" | "response" | "ownership" | "culture" | "outcome";
+  value: number;
+}
 interface OverviewData {
+  product: "customer_experience" | "colleague_experience";
   branchCount: number;
   networkAverage: number | null;
   networkNps: number | null;
+  networkCsat: number | null;
+  networkCsatSampleSize: number;
+  networkCesLowEffort: number | null;
+  networkCesSampleSize: number;
   cxPulseLevel: number | null;
+  cxPulseHoldingBack: HoldingBackDimension[];
   comparisons: Comparisons;
   regions: RegionRow[];
   needsAttention: OutlierRow[];
   topPerformers: TopRow[];
+  headline: string | null;
+  valueDelivered: ValueDelivered;
+  needsYourDecision: DecisionRow[];
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — see group/maturity/maturity-client.tsx for why
+// these differ from the schema field names.
+const DIMENSION_LABELS: Record<HoldingBackDimension["dimension"], string> = {
+  awareness: "Signal",
+  response: "Speed",
+  ownership: "Accountability",
+  culture: "Buy-in",
+  outcome: "Impact",
+};
+
+/** CX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /group/maturity. */
+function CxPulseHoldingBack({ dimensions }: { dimensions: HoldingBackDimension[] }) {
+  if (dimensions.length === 0) return null;
+  return (
+    <div className="metric-note" style={{ marginTop: 8 }}>
+      Holding the network back: {dimensions.map((d) => `${DIMENSION_LABELS[d.dimension]} (${d.value})`).join(" · ")}
+    </div>
+  );
+}
 
 export default function GroupOverviewClient({ tooltips }: { tooltips: Record<string, string> }) {
   const router = useRouter();
@@ -46,12 +136,16 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
   const [loading, setLoading] = useState(true);
   const [jump, setJump] = useState("");
   const [jumpResults, setJumpResults] = useState<{ businessId: string; name: string }[]>([]);
+  const [topThemes, setTopThemes] = useState<ThemeRow[]>([]);
 
   useEffect(() => {
     fetch("/api/group/overview")
       .then((res) => res.json())
       .then(setData)
       .finally(() => setLoading(false));
+    fetch("/api/group/theme-intelligence")
+      .then((res) => res.json())
+      .then((d) => setTopThemes((d.themes ?? []).slice(0, 3)));
   }, []);
 
   useEffect(() => {
@@ -72,13 +166,23 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load overview.</p>;
 
+  const isCe = data.product === "colleague_experience";
+  const npsLabel = isCe ? "eNPS" : "NPS";
+  const pulseLabel = isCe ? "Colleague Pulse" : "CX Pulse";
+  const averageLabel = isCe ? "Network average rating" : "Network average";
+  const pulseHref = isCe ? "/group/ex-pulse" : "/group/maturity";
+  const respondedToLabel = isCe ? "Colleagues personally responded to" : "Customers personally responded to";
+  const branchNoun = isCe ? "location" : "branch";
+  const branchNounPlural = isCe ? "locations" : "branches";
+
   return (
     <div>
       <div className="page-head">
         <div>
           <h1>Your Organization</h1>
           <p className="subtitle" style={{ margin: 0 }}>
-            {data.branchCount} branches across {data.regions.length} region{data.regions.length === 1 ? "" : "s"}.
+            {data.branchCount} {data.branchCount === 1 ? branchNoun : branchNounPlural} across {data.regions.length} region
+            {data.regions.length === 1 ? "" : "s"}.
           </p>
         </div>
         <div style={{ position: "relative" }}>
@@ -106,35 +210,112 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         </div>
       </div>
 
+      {data.headline && (
+        <div className="callout" style={{ marginBottom: 16, fontSize: 15 }}>
+          {data.headline}
+        </div>
+      )}
+
+      <RecurringIssuesCard />
+
+      {data.needsYourDecision.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #b57a00)" }}>
+          <h3 style={{ margin: "0 0 8px" }}>Needs a decision from you</h3>
+          <p className="card-sub">Cases that reached the top of your escalation chain and are still unresolved.</p>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {data.needsYourDecision.map((d) => (
+              <li key={d._id} style={{ marginBottom: 4 }}>
+                <b>{d.businessName}</b> — {d.title}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="section-title">Value delivered this period</div>
+      <div className="grid grid-4" style={{ marginBottom: 20 }}>
+        <div className="card">
+          <div className="metric-label">Cases resolved</div>
+          <div className="metric-val">{data.valueDelivered.casesResolvedThisPeriod}</div>
+          <div className="metric-note">
+            {data.valueDelivered.casesResolvedPrevPeriod > 0
+              ? `vs ${data.valueDelivered.casesResolvedPrevPeriod} previous 30 days`
+              : "previous period had none"}
+          </div>
+        </div>
+        <div className="card">
+          <div className="metric-label">{respondedToLabel}</div>
+          <div className="metric-val">{data.valueDelivered.customersRespondedTo}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">Improvement initiatives in progress</div>
+          <div className="metric-val">{data.valueDelivered.activeInitiatives}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">Initiatives completed this period</div>
+          <div className="metric-val">{data.valueDelivered.completedInitiatives}</div>
+        </div>
+      </div>
+
+      {topThemes.length > 0 && (
+        <>
+          <div className="section-title">Top themes this month</div>
+          <div className="theme-card-row">
+            {topThemes.map((t, i) => (
+              <ThemeCard key={t.theme} rank={i + 1} theme={t} />
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="grid grid-4" data-tour="group-kpi-strip" style={{ marginBottom: 20 }}>
         <div className="card">
-          <div className="metric-label">Branches</div>
+          <div className="metric-label">{branchNounPlural.charAt(0).toUpperCase() + branchNounPlural.slice(1)}</div>
           <div className="metric-val">{data.branchCount}</div>
         </div>
         <div className="card">
           <div className="metric-label">
-            Network average
+            {averageLabel}
             <InfoTip text={tooltips["network-average"]} />
           </div>
           <div className="metric-val">{data.networkAverage !== null ? `${data.networkAverage}/5` : "—"}</div>
         </div>
         <div className="card">
           <div className="metric-label">
-            Network NPS
+            Network {npsLabel}
             <InfoTip text={tooltips["network-nps"]} />
           </div>
           <div className="metric-val">{data.networkNps !== null ? formatSigned(data.networkNps) : "—"}</div>
         </div>
         <div className="card">
           <div className="metric-label">
-            CX Pulse
+            Network CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5, weighted across branches by their response count." />
+          </div>
+          <div className="metric-val">{data.networkCsat !== null ? `${data.networkCsat}%` : "—"}</div>
+          <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
+            {data.networkCsatSampleSize} response{data.networkCsatSampleSize === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            Network CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 (low effort = good), weighted across branches by their response count." />
+          </div>
+          <div className="metric-val">{data.networkCesLowEffort !== null ? `${data.networkCesLowEffort}%` : "—"}</div>
+          <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
+            {data.networkCesSampleSize} response{data.networkCesSampleSize === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            {pulseLabel}
             <InfoTip text={tooltips["cx-pulse-level"]} />
           </div>
           <div className="metric-val" style={{ fontSize: 18 }}>
             {data.cxPulseLevel ? `Level ${data.cxPulseLevel} · ${LEVEL_LABELS[data.cxPulseLevel]}` : "Not yet scored"}
           </div>
+          <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} />
           <div className="metric-note">
-            <Link href="/group/maturity" style={{ color: "var(--accent)" }}>
+            <Link href={pulseHref} style={{ color: "var(--accent)" }}>
               See what&apos;s behind this →
             </Link>
           </div>

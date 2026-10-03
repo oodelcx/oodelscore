@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, createCheckoutSessionForOwner, CHECKOUT_PLANS } from "@oodelscore/shared";
+import { connectToDatabase, createCheckoutSessionForOwner } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 import { billingErrorResponse } from "@/lib/billingErrorResponse";
 
-const CHECKOUT_PLAN_SET: readonly string[] = CHECKOUT_PLANS;
-
 type RouteParams = { params: Promise<{ id: string }> };
 
-export async function POST(request: Request, { params }: RouteParams) {
+/**
+ * Starts a Stripe Checkout Session priced from whatever Admin has already
+ * set in this org's own pricingTerms (see PATCH .../parent-orgs/[id]) — the
+ * subscription itself isn't recorded until the checkout.session.completed
+ * webhook fires.
+ */
+export async function POST(_request: Request, { params }: RouteParams) {
   const session = await requireStaffSession();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   if (!session.role.permissions.billingOversight.edit) {
@@ -15,11 +19,6 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const body = await request.json().catch(() => null);
-  if (!body || typeof body.plan !== "string" || !CHECKOUT_PLAN_SET.includes(body.plan)) {
-    return NextResponse.json({ status: "error", message: "A valid plan is required" }, { status: 400 });
-  }
-
   const appUrl = process.env.APP_URL ?? "";
 
   await connectToDatabase();
@@ -27,7 +26,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     const url = await createCheckoutSessionForOwner({
       ownerType: "parentOrg",
       ownerId: id,
-      plan: body.plan,
       successUrl: `${appUrl}/admin/parent-orgs/${id}?checkout=success`,
       cancelUrl: `${appUrl}/admin/parent-orgs/${id}?checkout=canceled`,
     });

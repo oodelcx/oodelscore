@@ -2,12 +2,19 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { QrModal } from "@/components/qr-modal";
 
+interface FeedbackPointRow {
+  _id: string;
+  name: string;
+  qrToken: string;
+}
 interface BranchDetail {
   business: { name: string; region: string; billingAssignment: string };
-  metrics: { responseCount: number; starAverage: number | null; npsScore: number | null };
+  metrics: { responseCount: number; starAverage: number | null; npsScore: number | null; csatPercent: number | null; cesAverage: number | null };
   openActionItems: { _id: string; title: string; status: string; overdue: boolean }[];
   cxPulse: { level: number; compositeScore: number } | null;
+  feedbackPoints: FeedbackPointRow[];
 }
 
 const LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
@@ -16,6 +23,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const [data, setData] = useState<BranchDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [qrPoint, setQrPoint] = useState<FeedbackPointRow | null>(null);
 
   useEffect(() => {
     fetch(`/api/group/branches/${id}`)
@@ -58,6 +66,17 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
+      <div className="grid grid-2" style={{ marginBottom: 20 }}>
+        <div className="card">
+          <div className="metric-label">CSAT</div>
+          <div className="metric-val">{data.metrics.csatPercent !== null ? `${data.metrics.csatPercent}%` : "—"}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">CES</div>
+          <div className="metric-val">{data.metrics.cesAverage !== null ? `${data.metrics.cesAverage}/5` : "—"}</div>
+        </div>
+      </div>
+
       <div className="grid grid-2">
         <div className="card">
           <h3>Open cases here</h3>
@@ -78,7 +97,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
               )}
             </tbody>
           </table>
-          <Link className="btn btn-sm" style={{ marginTop: 10, display: "inline-block" }} href="/group/action-board">
+          <Link className="btn btn-sm" style={{ marginTop: 10, display: "inline-block" }} href="/group/cases">
             View in Case Management →
           </Link>
         </div>
@@ -92,7 +111,38 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
             <p className="subtitle">Not yet scored.</p>
           )}
         </div>
+        <div className="card">
+          <h3>Feedback QR links</h3>
+          <table className="clean">
+            <tbody>
+              {data.feedbackPoints.map((fp) => (
+                <tr key={fp._id}>
+                  <td>{fp.name}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <button type="button" className="btn btn-sm" onClick={() => setQrPoint(fp)}>
+                      View QR
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {data.feedbackPoints.length === 0 && (
+                <tr>
+                  <td className="subtitle">No active feedback points.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {qrPoint && (
+        <QrModal
+          name={qrPoint.name}
+          qrToken={qrPoint.qrToken}
+          posterHref={`/print/group-branch-feedback-point/${qrPoint._id}`}
+          onClose={() => setQrPoint(null)}
+        />
+      )}
     </div>
   );
 }

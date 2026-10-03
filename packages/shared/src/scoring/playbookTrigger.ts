@@ -3,6 +3,7 @@ import { Response } from "../models/Response";
 import { Category } from "../models/Category";
 import type { IPlaybook } from "../models/Playbook";
 import { computeCategoryAverage } from "./goals";
+import type { Product } from "../models/products";
 
 const CATEGORY_AVERAGE_WINDOW_DAYS = 30;
 const DEFAULT_MENTION_WINDOW_DAYS = 14;
@@ -14,9 +15,20 @@ export interface PlaybookTriggerStatus {
   description: string;
 }
 
-async function countNegativeMentions(businessIds: Types.ObjectId[], categoryId: Types.ObjectId | null, windowDays: number, now: Date): Promise<number> {
+async function countNegativeMentions(
+  businessIds: Types.ObjectId[],
+  categoryId: Types.ObjectId | null,
+  windowDays: number,
+  now: Date,
+  product: Product
+): Promise<number> {
   const from = new Date(now.getTime() - windowDays * DAY_MS);
-  const filter: Record<string, unknown> = { businessId: { $in: businessIds }, submittedAt: { $gte: from, $lte: now }, sentiment: "negative" };
+  const filter: Record<string, unknown> = {
+    businessId: { $in: businessIds },
+    product,
+    submittedAt: { $gte: from, $lte: now },
+    sentiment: "negative",
+  };
   if (categoryId) filter["answers.categoryId"] = categoryId;
   return Response.countDocuments(filter);
 }
@@ -29,7 +41,7 @@ async function countNegativeMentions(businessIds: Types.ObjectId[], categoryId: 
  * still works purely as a checklist template. Pure computation, no AI.
  */
 export async function evaluatePlaybookTrigger(
-  playbook: Pick<IPlaybook, "triggerMetric" | "triggerComparator" | "triggerThreshold" | "triggerWindowDays" | "categoryId">,
+  playbook: Pick<IPlaybook, "triggerMetric" | "triggerComparator" | "triggerThreshold" | "triggerWindowDays" | "categoryId" | "product">,
   businessIds: (Types.ObjectId | string)[],
   now: Date = new Date()
 ): Promise<PlaybookTriggerStatus | null> {
@@ -39,7 +51,7 @@ export async function evaluatePlaybookTrigger(
   if (playbook.triggerMetric === "categoryAverage") {
     if (!playbook.categoryId) return null;
     const from = new Date(now.getTime() - CATEGORY_AVERAGE_WINDOW_DAYS * DAY_MS);
-    const average = await computeCategoryAverage(ids, playbook.categoryId, from, now);
+    const average = await computeCategoryAverage(ids, playbook.categoryId, from, now, playbook.product);
     if (average === null) return { isTriggered: false, currentValue: null, description: "Not enough data in the last 30 days yet" };
 
     const comparator = playbook.triggerComparator ?? "below";
@@ -54,7 +66,7 @@ export async function evaluatePlaybookTrigger(
 
   // negativeMentionCount
   const windowDays = playbook.triggerWindowDays ?? DEFAULT_MENTION_WINDOW_DAYS;
-  const count = await countNegativeMentions(ids, playbook.categoryId, windowDays, now);
+  const count = await countNegativeMentions(ids, playbook.categoryId, windowDays, now, playbook.product);
   const isTriggered = count >= playbook.triggerThreshold;
   return {
     isTriggered,

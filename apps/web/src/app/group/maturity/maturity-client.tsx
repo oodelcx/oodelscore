@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
+import { PulseSelfAssessmentCard } from "@/components/pulse-self-assessment-card";
 
 interface Dimensions {
   awareness: number;
@@ -28,6 +29,7 @@ interface ChecklistItem {
   done: boolean;
 }
 interface MaturityData {
+  product?: "customer_experience" | "colleague_experience";
   score: ScoreDoc | null;
   history: ScoreDoc[];
   branches: BranchRow[];
@@ -45,12 +47,16 @@ const FALLBACK_LEVEL_BLURBS = [
   "Named owners, playbooks, and closed loops on issues.",
   "Feedback drives measurable strategy shifts.",
 ];
+// Display labels only — the underlying field names (awareness/response/
+// ownership/culture/outcome) are unchanged to avoid a data migration.
+// Renamed so CX Pulse's dimensions stop using the same words as Compass's
+// ANCHOR assessment (Culture, Ownership), which is a different framework.
 const DIMENSION_LABELS: { key: keyof Dimensions; label: string; color: string }[] = [
-  { key: "awareness", label: "Awareness", color: "#0F6E56" },
-  { key: "response", label: "Response", color: "#7F77DD" },
-  { key: "ownership", label: "Ownership", color: "#EF9F27" },
-  { key: "culture", label: "Culture", color: "#E24B4A" },
-  { key: "outcome", label: "Outcome", color: "#5DCAA5" },
+  { key: "awareness", label: "Signal", color: "#0F6E56" },
+  { key: "response", label: "Speed", color: "#7F77DD" },
+  { key: "ownership", label: "Accountability", color: "#EF9F27" },
+  { key: "culture", label: "Buy-in", color: "#E24B4A" },
+  { key: "outcome", label: "Impact", color: "#5DCAA5" },
 ];
 
 function levelPillClass(level: number) {
@@ -70,15 +76,17 @@ export default function MaturityClient({ tooltips }: { tooltips: Record<string, 
       .finally(() => setLoading(false));
   }, []);
 
+  const pulseLabel = data?.product === "colleague_experience" ? "Colleague Pulse" : "CX Pulse";
+
   if (loading) return <p className="subtitle">Loading…</p>;
-  if (!data) return <p className="error-text">Couldn&apos;t load CX Pulse.</p>;
+  if (!data) return <p className="error-text">Couldn&apos;t load {pulseLabel}.</p>;
 
   const blurbs = data.levelDescriptions && data.levelDescriptions.length === 5 ? ["", ...data.levelDescriptions] : FALLBACK_LEVEL_BLURBS;
 
   return (
     <div>
       <h1>
-        CX Pulse
+        {pulseLabel}
         <InfoTip text={tooltips["cx-pulse-composite"]} />
       </h1>
       <p className="subtitle">Your organization&apos;s maturity in acting on feedback, across five dimensions.</p>
@@ -216,6 +224,8 @@ export default function MaturityClient({ tooltips }: { tooltips: Record<string, 
               </div>
             </div>
           </div>
+
+          <PulseSelfAssessmentCard apiPath="/api/group/cx-pulse/self-assessment" title="Quarterly self-assessment" />
         </>
       )}
     </div>

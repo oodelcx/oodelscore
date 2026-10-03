@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, SiteContent, SITE_CONTENT_PAGES, SEED_SITE_CONTENT } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
-import { mergeNavItems } from "@/lib/siteContent";
+import { mergeNavItems, mergeFields } from "@/lib/siteContent";
 
 export async function GET() {
   const session = await requireStaffSession();
@@ -30,11 +30,22 @@ export async function GET() {
       // never shows up here as a manageable toggle even though it correctly
       // renders on the live site via the seed fallback.
       const navItems = doc ? (seed ? mergeNavItems(doc.navItems, seed.navItems) : doc.navItems) : (seed?.navItems ?? []);
+      // Same self-healing merge as navItems just above, now applied to
+      // fields too: a DB doc that predates a field added to the seed later
+      // (e.g. company's storyParagraphs/beliefs/audienceItems, added in PR
+      // #168) used to fall through to `Object.fromEntries(doc.fields)`
+      // alone here — showing this editor as empty for content that renders
+      // correctly on the live public page via getSiteContent's own
+      // mergeFields() call. Worse than a display bug: saving from that
+      // empty state would $set a real-but-empty key into the DB doc,
+      // permanently wiping the live seed-backed content the next reader
+      // would otherwise have fallen back to.
+      const fields = doc ? (seed ? mergeFields(Object.fromEntries(doc.fields), seed.fields) : Object.fromEntries(doc.fields)) : (seed?.fields ?? {});
       return {
         page,
         navItems,
         sections: doc?.sections ?? seed?.sections ?? [],
-        fields: doc ? Object.fromEntries(doc.fields) : (seed?.fields ?? {}),
+        fields,
       };
     }),
   });

@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const ALERT_SCOPES = ["business", "parentOrg_all", "parentOrg_region"] as const;
 export type AlertScope = (typeof ALERT_SCOPES)[number];
@@ -14,6 +15,9 @@ export type AlertRuleType = (typeof ALERT_RULE_TYPES)[number];
 
 export interface IAlertRule {
   scope: AlertScope;
+  // Which product this rule watches — defaults to customer_experience so
+  // every rule that predates Colleague Experience is unaffected.
+  product: Product;
   ownerId: Types.ObjectId; // business or parentOrg that owns this rule
   region: string; // only meaningful when scope is "parentOrg_region" — matches businesses.region
   ruleType: AlertRuleType;
@@ -32,6 +36,7 @@ export interface IAlertRule {
 const AlertRuleSchema = new Schema<IAlertRule>(
   {
     scope: { type: String, enum: ALERT_SCOPES, required: true },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     ownerId: { type: Schema.Types.ObjectId, required: true },
     region: { type: String, default: "" },
     ruleType: { type: String, enum: ALERT_RULE_TYPES, required: true },
@@ -46,5 +51,12 @@ const AlertRuleSchema = new Schema<IAlertRule>(
   },
   { timestamps: true }
 );
+
+// Every rules listing (business, group, and the real-time/baseline alert
+// evaluators) filters by scope+ownerId first.
+AlertRuleSchema.index({ scope: 1, ownerId: 1 });
+// The baseline-alerts cron scans every active regional_outlier/sudden_drop
+// rule on the whole platform regardless of owner.
+AlertRuleSchema.index({ active: 1, ruleType: 1 });
 
 export const AlertRule: Model<IAlertRule> = mongoose.models.AlertRule ?? model<IAlertRule>("AlertRule", AlertRuleSchema);

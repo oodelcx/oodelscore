@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
 
+// A branch with a handful of responses shouldn't read as equivalent to one
+// with hundreds — flag anything below this as low-confidence rather than
+// showing a bare number next to a high-volume branch's.
+const LOW_SAMPLE_THRESHOLD = 10;
+
 interface BusinessOption {
   businessId: string;
   name: string;
@@ -167,31 +172,79 @@ export default function CompareClient({ tooltips }: { tooltips: Record<string, s
 
       {branches.length > 0 && (
         <>
-          <div className="grid grid-4" style={{ marginBottom: 24 }}>
-            {branches.map((b) => (
-              <div className="compare-summary" key={b.businessId}>
-                <div className="cs-name">{b.name}</div>
-                <div className="cs-row">
-                  <span>Average</span>
-                  <b>{b.starAverage !== null ? `${b.starAverage}/5` : "—"}</b>
-                </div>
-                <div className="cs-row">
-                  <span>NPS</span>
-                  <b>{b.npsScore ?? "—"}</b>
-                </div>
-                <div className="cs-row">
-                  <span>Responses (30d)</span>
-                  <b>{b.responseCount}</b>
-                </div>
-                <div className="cs-row">
-                  <span>
-                    CX Pulse
-                    <InfoTip text={tooltips["cx-pulse-level"]} />
-                  </span>
-                  <b>{b.cxPulseLevel ? `Level ${b.cxPulseLevel}` : "—"}</b>
-                </div>
+          {(() => {
+            const ranked = [...branches].filter((b) => b.starAverage !== null).sort((a, b) => (b.starAverage as number) - (a.starAverage as number));
+            const leaderId = ranked[0]?.businessId;
+            const spread = ranked.length >= 2 ? ((ranked[0].starAverage as number) - (ranked[ranked.length - 1].starAverage as number)).toFixed(1) : null;
+            return spread && Number(spread) > 0 ? (
+              <div className="callout" style={{ marginBottom: 16 }}>
+                <b>{spread}-point spread</b> between {ranked[0].name} and {ranked[ranked.length - 1].name} on the branches selected — the
+                category breakdown below shows where it comes from.
               </div>
-            ))}
+            ) : null;
+          })()}
+
+          <div className="grid grid-4" style={{ marginBottom: 24 }}>
+            {(() => {
+              const topAvg = Math.max(...branches.map((b) => b.starAverage ?? -1));
+              return branches.map((b, i) => {
+                const isLeader = b.starAverage !== null && b.starAverage === topAvg;
+                return (
+                  <div
+                    className="compare-summary"
+                    key={b.businessId}
+                    style={{ borderTop: `3px solid ${COLORS[i % COLORS.length]}`, position: "relative" }}
+                  >
+                    {isLeader && (
+                      <span
+                        className="pill pill-green"
+                        style={{ position: "absolute", top: -10, right: 10, fontSize: 10 }}
+                      >
+                        ★ Leader
+                      </span>
+                    )}
+                    <div className="cs-name" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="dot" style={{ background: COLORS[i % COLORS.length], display: "inline-block", width: 9, height: 9, borderRadius: 2 }} />
+                      {b.name}
+                    </div>
+                    <div className="cs-row">
+                      <span>Average</span>
+                      <b>{b.starAverage !== null ? `${b.starAverage}/5` : "—"}</b>
+                    </div>
+                    <div className="cs-row">
+                      <span>NPS</span>
+                      <b>{b.npsScore ?? "—"}</b>
+                    </div>
+                    <div className="cs-row">
+                      <span>Responses (30d)</span>
+                      <b>
+                        {b.responseCount}
+                        {b.responseCount > 0 && b.responseCount < LOW_SAMPLE_THRESHOLD && (
+                          <span className="pill pill-gray" style={{ marginLeft: 6, fontSize: 10 }} title="Fewer than 10 responses — treat this score as low-confidence">
+                            low sample
+                          </span>
+                        )}
+                      </b>
+                    </div>
+                    <div className="cs-row">
+                      <span>
+                        CX Pulse
+                        <InfoTip text={tooltips["cx-pulse-level"]} />
+                      </span>
+                      <b>
+                        {b.cxPulseLevel ? (
+                          <span className={`pill ${b.cxPulseLevel >= 4 ? "pill-green" : b.cxPulseLevel >= 2 ? "pill-amber" : "pill-gray"}`} style={{ fontSize: 10.5 }}>
+                            Level {b.cxPulseLevel}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </b>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
 
           <div className="section-title">Response trend, overlaid</div>
@@ -289,7 +342,14 @@ export default function CompareClient({ tooltips }: { tooltips: Record<string, s
                       const value = categoryAverage(b, name);
                       return <td key={name}>{value !== null ? value.toFixed(1) : "—"}</td>;
                     })}
-                    <td>{b.responseCount}</td>
+                    <td>
+                      {b.responseCount}
+                      {b.responseCount > 0 && b.responseCount < LOW_SAMPLE_THRESHOLD && (
+                        <span className="pill pill-gray" style={{ marginLeft: 6, fontSize: 10 }} title="Fewer than 10 responses — treat this score as low-confidence">
+                          low
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

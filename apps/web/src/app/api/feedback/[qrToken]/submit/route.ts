@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Types } from "mongoose";
 import {
   connectToDatabase,
   FeedbackPoint,
@@ -7,11 +6,20 @@ import {
   QuestionTemplate,
   Response,
   ScanToken,
+  RosterSurveyToken,
   evaluateRealTimeAlertsForBusiness,
+  screenForSensitiveComment,
+  autoTriageAndCreateActionItem,
   analyzeThemeSentiment,
   classifyDevice,
   dedupCookieName,
   DEDUP_WINDOW_SECONDS,
+  checkRateLimit,
+  getRequestIp,
+  logApiRouteError,
+  isFeedbackPointOpen,
+  effectiveDemographicConfig,
+  effectiveQuestions,
   type QuestionType,
   type DemographicMode,
 } from "@oodelscore/shared";
@@ -31,16 +39,38 @@ interface SubmittedAnswer {
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { qrToken } = await params;
+  try {
+    return await handlePost(request, qrToken);
+  } catch (err) {
+    await logApiRouteError("feedback/[qrToken]/submit POST", err, { qrToken });
+    return NextResponse.json(
+      { status: "error", message: "Something went wrong submitting your feedback. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+async function handlePost(request: NextRequest, qrToken: string) {
   await connectToDatabase();
 
-  const feedbackPoint = await FeedbackPoint.findOne({ qrToken, active: true });
-  if (!feedbackPoint) {
+  const feedbackPoint = await FeedbackPoint.findOne({ qrToken });
+  if (!feedbackPoint || !isFeedbackPointOpen(feedbackPoint)) {
     return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
   }
 
   const business = await Business.findById(feedbackPoint.businessId);
   if (!business || !business.active) {
     return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+  }
+
+  // Defense in depth alongside the scan-token single-use lock below: even
+  // someone holding several valid scan tokens can't submit unboundedly
+  // fast from one IP. A real person submits once per visit; 10 covers a
+  // shared device across a small group without being a real ceiling for
+  // an actual respondent.
+  const submitRateLimit = await checkRateLimit(`feedback-submit:${getRequestIp(request)}:${feedbackPoint._id}`, 10, 600);
+  if (!submitRateLimit.allowed) {
+    return NextResponse.json({ status: "error", message: "Too many requests — please try again in a few minutes." }, { status: 429 });
   }
 
   // Same-device recheck (defense in depth against a client that skipped
@@ -53,14 +83,76 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 
+  // A point built through the real survey builder carries its own fully
+  // authored question set and needs no template at all — see
+  // effectiveQuestions()'s own doc comment for the full priority order.
+  const hasCustomQuestions = !!feedbackPoint.customQuestions && feedbackPoint.customQuestions.length > 0;
   const templateId = feedbackPoint.questionTemplateOverride ?? business.questionTemplateId;
-  const template = templateId ? await QuestionTemplate.findById(templateId) : null;
-  if (!template) {
+  const template = !hasCustomQuestions && templateId ? await QuestionTemplate.findById(templateId) : null;
+  if (!hasCustomQuestions && !template) {
     return NextResponse.json({ status: "error", message: "No survey is configured for this link yet" }, { status: 404 });
   }
 
+  // Re-checked here, not just at page-load — the scan token this submit
+  // consumes below could have been minted just before the quota's last
+  // slot filled.
+  if (feedbackPoint.responseQuota) {
+    const responseCount = await Response.countDocuments({ feedbackPointId: feedbackPoint._id });
+    if (responseCount >= feedbackPoint.responseQuota) {
+      return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+    }
+  }
+
+  const questions = effectiveQuestions(feedbackPoint, template ?? { questions: [] });
   const body = await request.json().catch(() => null);
 
+  const answers: SubmittedAnswer[] = Array.isArray(body?.answers) ? body.answers : [];
+  // Colleague Experience never collects an employee's identity — hard-null
+  // here regardless of what the client sent, not just left to the
+  // demographicConfig mandatory/off check below, so a malformed or
+  // malicious request body can't smuggle identity onto an anonymous
+  // response even if every other check were somehow bypassed.
+  const isColleagueExperience = feedbackPoint.product === "colleague_experience";
+  const respondentName =
+    !isColleagueExperience && typeof body?.respondentName === "string" ? body.respondentName.trim() || null : null;
+  const respondentEmail =
+    !isColleagueExperience && typeof body?.respondentEmail === "string"
+      ? body.respondentEmail.trim().toLowerCase() || null
+      : null;
+  const respondentPhone =
+    !isColleagueExperience && typeof body?.respondentPhone === "string" ? body.respondentPhone.trim() || null : null;
+  const ageGroup = typeof body?.ageGroup === "string" ? body.ageGroup : "";
+  const gender = typeof body?.gender === "string" ? body.gender : "";
+
+  const answerByIndex = new Map(answers.map((a) => [a.index, a.value]));
+
+  for (let i = 0; i < questions.length; i++) {
+    const question = questions[i];
+    if (question.required && (answerByIndex.get(i) === undefined || answerByIndex.get(i) === "")) {
+      return NextResponse.json({ status: "error", message: `"${question.text}" is required` }, { status: 400 });
+    }
+  }
+
+  const demographicConfig = effectiveDemographicConfig(feedbackPoint, business);
+  const demographicChecks: [string, DemographicMode, unknown][] = [
+    ["Name", demographicConfig.name, respondentName],
+    ["Email", demographicConfig.email, respondentEmail],
+    ["Phone number", demographicConfig.phone, respondentPhone],
+    ["Age group", demographicConfig.ageGroup, ageGroup || null],
+    ["Gender", demographicConfig.gender, gender || null],
+  ];
+  for (const [label, mode, value] of demographicChecks) {
+    if (mode === "mandatory" && !value) {
+      return NextResponse.json({ status: "error", message: `${label} is required` }, { status: 400 });
+    }
+  }
+
+  // Consumed only now, after every validation check above has passed — not
+  // before, as it previously was. Burning the token on a request that then
+  // fails validation left the respondent with a dead token: correcting the
+  // missing field and resubmitting on the same page (the only option the
+  // single-page layout gives them) hit "already submitted" instead of
+  // succeeding, even though nothing had actually been recorded yet.
   const scanToken = typeof body?.scanToken === "string" ? body.scanToken : "";
   const consumedToken = scanToken
     ? await ScanToken.findOneAndUpdate(
@@ -73,36 +165,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { status: "error", message: "This feedback session has already been submitted or expired — please rescan the QR code." },
       { status: 409 }
     );
-  }
-
-  const answers: SubmittedAnswer[] = Array.isArray(body?.answers) ? body.answers : [];
-  const respondentName = typeof body?.respondentName === "string" ? body.respondentName.trim() || null : null;
-  const respondentEmail = typeof body?.respondentEmail === "string" ? body.respondentEmail.trim().toLowerCase() || null : null;
-  const respondentPhone = typeof body?.respondentPhone === "string" ? body.respondentPhone.trim() || null : null;
-  const ageGroup = typeof body?.ageGroup === "string" ? body.ageGroup : "";
-  const gender = typeof body?.gender === "string" ? body.gender : "";
-
-  const answerByIndex = new Map(answers.map((a) => [a.index, a.value]));
-
-  for (let i = 0; i < template.questions.length; i++) {
-    const question = template.questions[i];
-    if (question.required && (answerByIndex.get(i) === undefined || answerByIndex.get(i) === "")) {
-      return NextResponse.json({ status: "error", message: `"${question.text}" is required` }, { status: 400 });
-    }
-  }
-
-  const demographicConfig = feedbackPoint.demographicOverride ?? business.demographicConfig;
-  const demographicChecks: [string, DemographicMode, unknown][] = [
-    ["Name", demographicConfig.name, respondentName],
-    ["Email", demographicConfig.email, respondentEmail],
-    ["Phone number", demographicConfig.phone, respondentPhone],
-    ["Age group", demographicConfig.ageGroup, ageGroup || null],
-    ["Gender", demographicConfig.gender, gender || null],
-  ];
-  for (const [label, mode, value] of demographicChecks) {
-    if (mode === "mandatory" && !value) {
-      return NextResponse.json({ status: "error", message: `${label} is required` }, { status: 400 });
-    }
   }
 
   // Device-independent recheck: if this respondent gave contact info,
@@ -126,21 +188,41 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
   }
 
-  const responseAnswers = template.questions.map((question, index) => {
+  const responseAnswers = questions.map((question, index) => {
     const raw = answerByIndex.get(index) ?? null;
-    const isNumericType = question.type === "star_1_5" || question.type === "nps_0_10" || question.type === "slider";
+    const isNumericType =
+      question.type === "star_1_5" || question.type === "nps_0_10" || question.type === "slider" || question.type === "ces_1_5";
     const value = isNumericType && raw !== null && raw !== "" ? Number(raw) : raw;
     return {
-      questionId: new Types.ObjectId(),
+      questionId: question._id!,
       type: question.type as QuestionType,
       value,
       categoryId: question.categoryId,
     };
   });
 
+  // Roster-personalized link (Colleague Experience's participation-tracking
+  // distribution mode): if this submission came in via a personalized
+  // token, mark it used so the token can't be reused and the account's
+  // participation rate reflects a real count. Deliberately fails open — an
+  // invalid or already-used token never blocks a genuine response; it just
+  // means this particular submission won't be reflected in the
+  // participation count, which is far better than losing real feedback
+  // over a stale link. Nothing about the token is ever attached to the
+  // Response itself; see RosterSurveyToken's own comment for why.
+  const rosterToken = typeof body?.rosterToken === "string" ? body.rosterToken : "";
+  if (rosterToken) {
+    await RosterSurveyToken.updateOne(
+      { token: rosterToken, feedbackPointId: feedbackPoint._id, usedAt: null },
+      { $set: { usedAt: new Date() } }
+    ).catch((err) => console.error("[feedback] failed to consume roster survey token", err));
+  }
+
   const createdResponse = await Response.create({
     feedbackPointId: feedbackPoint._id,
     businessId: business._id,
+    product: feedbackPoint.product,
+    eventId: feedbackPoint.eventId,
     answers: responseAnswers,
     respondentName,
     respondentEmail,
@@ -155,9 +237,36 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const openTextAnswer = responseAnswers.find((a) => a.type === "open_text" && typeof a.value === "string" && a.value.trim());
   const triggeringComment = typeof openTextAnswer?.value === "string" ? openTextAnswer.value : null;
 
-  await evaluateRealTimeAlertsForBusiness(business._id, triggeringComment).catch((err) =>
+  await evaluateRealTimeAlertsForBusiness(business._id, triggeringComment, feedbackPoint.product).catch((err) =>
     console.error("[feedback] real-time alert evaluation failed", err)
   );
+
+  // Colleague Experience's real-time safety check (PDF Section 2, steps 4-6):
+  // every response with a comment is screened for whether it concerns a
+  // specific senior leader/HR, before anyone at the company ever sees it —
+  // unconditionally, not only when an Alert Rule happens to also fire on
+  // this same response (evaluateRealTimeAlertsForBusiness above only
+  // triages when a threshold is actually crossed, which is the gap this
+  // closes). Awaited, same as the alert evaluation above: this has to
+  // finish before this request returns, since "before anyone sees anything"
+  // means before the response is visible internally, not just before the
+  // respondent's own thank-you screen.
+  if (feedbackPoint.product === "colleague_experience" && triggeringComment) {
+    try {
+      const isSensitive = await screenForSensitiveComment(triggeringComment);
+      if (isSensitive) {
+        await autoTriageAndCreateActionItem(
+          business,
+          "Directly reported via a Colleague Experience response",
+          triggeringComment,
+          "colleague_experience"
+        );
+        await Response.findByIdAndUpdate(createdResponse._id, { sensitiveRouted: true });
+      }
+    } catch (err) {
+      console.error("[feedback] sensitive-comment screen failed", err);
+    }
+  }
 
   // Theme & Sentiment Intelligence (CX roadmap Phase 2) — deliberately NOT
   // awaited: a respondent filling out a form shouldn't wait on a Claude

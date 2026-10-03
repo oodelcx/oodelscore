@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import "./marketing.css";
 import { DemoModalProvider } from "./demo-modal";
+import { CookieConsentBanner } from "./cookie-consent";
 
 // Marketing pages use the same single global Inter font as the rest of the
 // app (dashboards, auth) — set once via next/font in the root layout
@@ -12,6 +13,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <div className="mkt">
       <DemoModalProvider>{children}</DemoModalProvider>
+      <CookieConsentBanner />
     </div>
   );
 }

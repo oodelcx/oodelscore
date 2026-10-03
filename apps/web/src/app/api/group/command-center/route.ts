@@ -20,6 +20,7 @@ import {
   type IRagThresholds,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -49,14 +50,21 @@ export async function GET() {
   const prev7End = from7;
 
   const thresholds: IRagThresholds = org.ragThresholds;
+  // Command Center predates Colleague Experience and only ever shows one
+  // product's numbers — Customer Experience when enabled (even alongside
+  // Colleague Experience), otherwise Colleague Experience. Without this, an
+  // org that turned Customer Experience off kept computing (and showing)
+  // its empty Customer Experience metrics forever, never falling back to
+  // the Colleague Experience data it actually has.
+  const product = await resolveViewProduct(org);
 
   const [businesses, summaries30d, summariesLast7d, summariesPrev7d, categoryIds, orgScore, subscription] = await Promise.all([
     Business.find({ parentOrgId: org._id }).select("_id name region"),
-    computeNetworkSummaries(org._id, from30, now),
-    computeNetworkSummaries(org._id, from7, now),
-    computeNetworkSummaries(org._id, prev7Start, prev7End),
+    computeNetworkSummaries(org._id, from30, now, product),
+    computeNetworkSummaries(org._id, from7, now, product),
+    computeNetworkSummaries(org._id, prev7Start, prev7End, product),
     getCategoriesInUseForParentOrg(org._id),
-    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: org._id }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: org._id, product }).sort({ period: -1 }),
     BillingSubscription.findOne({ ownerType: "parentOrg", ownerId: org._id }),
   ]);
 
@@ -73,7 +81,7 @@ export async function GET() {
         ActionBoardItem.countDocuments({ businessId: id, status: { $ne: "resolved" }, dueDate: { $lt: now } })
       )
     ),
-    Promise.all(businessIds.map((id) => computeBusinessCategoryBreakdown(id, from30, now))),
+    Promise.all(businessIds.map((id) => computeBusinessCategoryBreakdown(id, from30, now, product))),
   ]);
 
   const branchTiles = summaries30d.map((s, i) => {
@@ -87,6 +95,8 @@ export async function GET() {
       region: s.region,
       starAverage: s.starAverage,
       npsScore: s.npsScore,
+      csatPercent: s.csatPercent,
+      cesLowEffortPercent: s.cesLowEffortPercent,
       responseCount: s.responseCount,
       starDelta,
       band: ragBandForStar(s.starAverage, thresholds) ?? ragBandForNps(s.npsScore, thresholds),
@@ -193,7 +203,7 @@ export async function GET() {
     const dayStart = new Date(now.getTime() - d * DAY_MS);
     const dayEnd = new Date(dayStart.getTime() + DAY_MS);
     const dayCounts = await Promise.all(
-      businessIds.map((id) => FeedbackResponse.countDocuments({ businessId: id, submittedAt: { $gte: dayStart, $lt: dayEnd } }))
+      businessIds.map((id) => FeedbackResponse.countDocuments({ businessId: id, product, submittedAt: { $gte: dayStart, $lt: dayEnd } }))
     );
     businesses.forEach((b, i) => {
       sparkByBusiness.get(b._id.toString())?.days.push(dayCounts[i]);
@@ -204,11 +214,36 @@ export async function GET() {
     .filter((b) => b.starDelta !== null)
     .sort((a, b) => (b.starDelta as number) - (a.starDelta as number));
 
+  // Org-wide CSAT/CES headline, alongside star/NPS — weighted by each
+  // branch's own response count so a high-volume branch isn't diluted to
+  // the same weight as a branch with a handful of responses.
+  const csatBranches = summaries30d.filter((s) => s.csatPercent !== null);
+  const csatPercent =
+    csatBranches.length === 0
+      ? null
+      : Math.round(
+          (csatBranches.reduce((sum, s) => sum + (s.csatPercent as number) * s.responseCount, 0) /
+            csatBranches.reduce((sum, s) => sum + s.responseCount, 0)) *
+            10
+        ) / 10;
+  const cesBranches = summaries30d.filter((s) => s.cesLowEffortPercent !== null);
+  const cesLowEffortPercent =
+    cesBranches.length === 0
+      ? null
+      : Math.round(
+          (cesBranches.reduce((sum, s) => sum + (s.cesLowEffortPercent as number) * s.responseCount, 0) /
+            cesBranches.reduce((sum, s) => sum + s.responseCount, 0)) *
+            10
+        ) / 10;
+
   return NextResponse.json({
     status: "ok",
     orgName: org.name,
+    product,
     ragThresholds: thresholds,
     branchTiles,
+    csatPercent,
+    cesLowEffortPercent,
     categoryMatrix,
     feed: feed.slice(0, 20),
     cxPulse: orgScore ? { compositeScore: orgScore.compositeScore, level: orgScore.level } : null,

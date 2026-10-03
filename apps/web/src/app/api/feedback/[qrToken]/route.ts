@@ -6,8 +6,15 @@ import {
   Business,
   ParentOrganization,
   QuestionTemplate,
+  Response,
   ScanToken,
   dedupCookieName,
+  checkRateLimit,
+  getRequestIp,
+  logApiRouteError,
+  isFeedbackPointOpen,
+  effectiveDemographicConfig,
+  effectiveQuestions,
 } from "@oodelscore/shared";
 
 type RouteParams = { params: Promise<{ qrToken: string }> };
@@ -15,11 +22,30 @@ type RouteParams = { params: Promise<{ qrToken: string }> };
 /** Public: fetches what the respondent-facing form needs to render. */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { qrToken } = await params;
+  try {
+    return await handleGet(request, qrToken);
+  } catch (err) {
+    await logApiRouteError("feedback/[qrToken] GET", err, { qrToken });
+    return NextResponse.json({ status: "error", message: "Something went wrong loading this form. Please try again." }, { status: 500 });
+  }
+}
+
+async function handleGet(request: NextRequest, qrToken: string) {
   await connectToDatabase();
 
-  const feedbackPoint = await FeedbackPoint.findOne({ qrToken, active: true });
-  if (!feedbackPoint) {
+  const feedbackPoint = await FeedbackPoint.findOne({ qrToken });
+  if (!feedbackPoint || !isFeedbackPointOpen(feedbackPoint)) {
     return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+  }
+
+  // Loading this page mints a fresh single-use scan token every time —
+  // without a limit here, a bot could mint (and later spend) unlimited
+  // tokens to flood a business with fake responses. 40 loads per IP per
+  // feedback point per 10 minutes comfortably covers a real person
+  // reloading or a few people sharing one Wi-Fi connection.
+  const rateLimit = await checkRateLimit(`feedback-scan:${getRequestIp(request)}:${feedbackPoint._id}`, 40, 600);
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ status: "error", message: "Too many requests — please try again in a few minutes." }, { status: 429 });
   }
 
   const business = await Business.findById(feedbackPoint.businessId);
@@ -41,10 +67,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
   }
 
+  // A point built through the real survey builder carries its own fully
+  // authored question set and needs no template at all — see
+  // effectiveQuestions()'s own doc comment for the full priority order.
+  const hasCustomQuestions = !!feedbackPoint.customQuestions && feedbackPoint.customQuestions.length > 0;
   const templateId = feedbackPoint.questionTemplateOverride ?? business.questionTemplateId;
-  const template = templateId ? await QuestionTemplate.findById(templateId) : null;
-  if (!template) {
+  const template = !hasCustomQuestions && templateId ? await QuestionTemplate.findById(templateId) : null;
+  if (!hasCustomQuestions && !template) {
     return NextResponse.json({ status: "error", message: "No survey is configured for this link yet" }, { status: 404 });
+  }
+
+  // Business-side survey builder's response quota — auto-closes the point
+  // once reached, same "no need to remember to turn it off" reasoning as
+  // startsAt/endsAt in isFeedbackPointOpen above.
+  if (feedbackPoint.responseQuota) {
+    const responseCount = await Response.countDocuments({ feedbackPointId: feedbackPoint._id });
+    if (responseCount >= feedbackPoint.responseQuota) {
+      return NextResponse.json({ status: "error", message: "This feedback link is no longer active" }, { status: 404 });
+    }
   }
 
   // Fire-and-forget: powers the conversion-rate metric (responses / scans).
@@ -61,7 +101,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   await ScanToken.create({ token: scanToken, feedbackPointId: feedbackPoint._id });
 
   const groupTag = business.parentOrgId ? (await ParentOrganization.findById(business.parentOrgId))?.name ?? null : null;
-  const demographicConfig = feedbackPoint.demographicOverride ?? business.demographicConfig;
+  const demographicConfig = effectiveDemographicConfig(feedbackPoint, business);
   const formLayout = feedbackPoint.formLayoutOverride ?? "single_page";
 
   return NextResponse.json({
@@ -71,7 +111,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     groupTag: groupTag ? `Part of ${groupTag}` : null,
     formLayout,
     demographicConfig,
-    questions: template.questions.map((q, index) => ({
+    questions: effectiveQuestions(feedbackPoint, template ?? { questions: [] }).map((q, index) => ({
       index,
       text: q.text,
       type: q.type,

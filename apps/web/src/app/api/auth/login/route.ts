@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { connectToDatabase, User, verifyPassword, signSessionToken, signPending2faToken } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  User,
+  verifyPassword,
+  signSessionToken,
+  signPending2faToken,
+  logApiRouteError,
+} from "@oodelscore/shared";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/session";
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -11,6 +18,15 @@ function invalidCredentials() {
 }
 
 export async function POST(request: Request) {
+  try {
+    return await handlePost(request);
+  } catch (err) {
+    await logApiRouteError("auth/login POST", err);
+    return NextResponse.json({ status: "error", message: "Something went wrong. Please try again." }, { status: 500 });
+  }
+}
+
+async function handlePost(request: Request) {
   const body = await request.json().catch(() => null);
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : null;
   const password = typeof body?.password === "string" ? body.password : null;

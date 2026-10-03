@@ -1,14 +1,29 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, seedShowcaseData } from "@oodelscore/shared";
+import {
+  connectToDatabase,
+  seedShowcaseData,
+  generateDueInsights,
+  ALL_AI_REPORT_PERIODS,
+  recomputeAllCxPulseScores,
+} from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 /**
- * Fills the database with a realistic multi-sector showcase (a bank group
- * with branches, a school trust, a diagnostics lab group, a retail chain,
- * and a handful of standalone businesses) so a new Admin can click through
- * every page and see real, connected data instead of empty states. Gated
- * behind ENABLE_DEV_DATA_TOOLS=true and the "Admin" system role — never
- * available unless the deploying environment explicitly opts in.
+ * Fills the database with a realistic multi-organization showcase (a bank
+ * group, a telecom, a school trust, an airline, a hospital network, and
+ * standalone businesses spanning Customer Experience, Colleague Experience,
+ * and both) so a new Admin can click through every page and see real,
+ * connected data instead of empty states. Also generates AI Insight Reports
+ * for every owner across every cadence against the data just seeded — via
+ * the live Claude API when ANTHROPIC_API_KEY is set, falling back to a
+ * deterministic narrative otherwise (see ai/insightsGeneration.ts) — and
+ * recomputes every owner's CX Pulse score, which otherwise stays
+ * permanently empty on a fresh environment until the nightly
+ * recompute-cx-pulse cron happens to run against it (a staging/demo
+ * environment usually never gets that cron scheduled at all — see
+ * .github/workflows/scheduled-jobs.yml, which only targets production).
+ * Gated behind ENABLE_DEV_DATA_TOOLS=true and the "Admin" system role —
+ * never available unless the deploying environment explicitly opts in.
  */
 export async function POST() {
   if (process.env.ENABLE_DEV_DATA_TOOLS !== "true") {
@@ -21,5 +36,7 @@ export async function POST() {
 
   await connectToDatabase();
   const result = await seedShowcaseData(session.user._id);
-  return NextResponse.json({ status: "ok", result });
+  const insights = await generateDueInsights(new Date(), [...ALL_AI_REPORT_PERIODS]);
+  const cxPulse = await recomputeAllCxPulseScores();
+  return NextResponse.json({ status: "ok", result, insights, cxPulse });
 }

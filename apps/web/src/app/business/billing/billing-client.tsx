@@ -13,11 +13,22 @@ interface BillingData {
     paymentMethodLast4: string;
   } | null;
   invoices: { _id: string; amount: number; currency: string; status: string; issuedAt: string }[];
+  credits: { _id: string; type: string; amount: number; reason: string; issuedAt: string }[];
   usage: { feedbackPointsUsed: number; feedbackPointsAllowed: number; responseCount: number };
   billingAssignment: string;
   groupName: string | null;
   groupBranchCount: number | null;
+  checkoutLinkAvailable: boolean;
+  pricingTerms: { amount: number | null; currency: string; interval: "monthly" | "annual_monthly_rate" | "annual_lump_sum" | null };
+  cePricingTerms: { amount: number | null; currency: string; interval: "monthly" | "annual_monthly_rate" | "annual_lump_sum" | null };
+  enabledProducts: ("customer_experience" | "colleague_experience")[] | null;
 }
+
+const INTERVAL_LABELS: Record<string, string> = {
+  monthly: "/month",
+  annual_monthly_rate: "/month, billed annually",
+  annual_lump_sum: "/year",
+};
 
 export default function BillingClient({ tooltips }: { tooltips: Record<string, string> }) {
   const [data, setData] = useState<BillingData | null>(null);
@@ -34,6 +45,15 @@ export default function BillingClient({ tooltips }: { tooltips: Record<string, s
   async function openPortal() {
     setBusy(true);
     const res = await fetch("/api/business/billing/portal", { method: "POST" });
+    const responseData = await res.json();
+    setBusy(false);
+    if (res.ok) window.location.href = responseData.url;
+    else alert(responseData.message);
+  }
+
+  async function continueToPayment() {
+    setBusy(true);
+    const res = await fetch("/api/business/billing/checkout", { method: "POST" });
     const responseData = await res.json();
     setBusy(false);
     if (res.ok) window.location.href = responseData.url;
@@ -74,6 +94,35 @@ export default function BillingClient({ tooltips }: { tooltips: Record<string, s
       <h1>Billing</h1>
       <p className="subtitle">Manage your subscription.</p>
 
+      {data.checkoutLinkAvailable && (
+        <div className="callout callout-amber" style={{ marginBottom: 20 }}>
+          <b>Ready to continue with OodelCX?</b>{" "}
+          {(() => {
+            const ceEnabled = !!data.enabledProducts?.includes("colleague_experience");
+            const lines = [
+              data.pricingTerms.amount !== null && data.pricingTerms.interval
+                ? `Customer Experience: ${data.pricingTerms.currency.toUpperCase()} ${data.pricingTerms.amount.toFixed(2)}${INTERVAL_LABELS[data.pricingTerms.interval] ?? ""}`
+                : null,
+              ceEnabled && data.cePricingTerms.amount !== null && data.cePricingTerms.interval
+                ? `Colleague Experience: ${data.cePricingTerms.currency.toUpperCase()} ${data.cePricingTerms.amount.toFixed(2)}${INTERVAL_LABELS[data.cePricingTerms.interval] ?? ""}`
+                : null,
+            ].filter((l): l is string => l !== null);
+            return lines.length > 0 ? (
+              <>
+                Your plan is <b>{lines.join(" + ")}</b>. Click below to enter your card details and start your subscription.
+              </>
+            ) : (
+              "Click below to enter your card details and start your subscription."
+            );
+          })()}
+          <div style={{ marginTop: 10 }}>
+            <button className="btn btn-primary" disabled={busy} onClick={continueToPayment}>
+              Continue to payment →
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-2">
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -86,7 +135,7 @@ export default function BillingClient({ tooltips }: { tooltips: Record<string, s
             <div className="metric-note">Next payment: {new Date(data.subscription.nextPaymentDate).toLocaleDateString()}</div>
           )}
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-            <button className="btn" disabled={busy} onClick={openPortal}>
+            <button className="btn" disabled={busy || data.checkoutLinkAvailable} onClick={openPortal}>
               Manage subscription
             </button>
           </div>
@@ -156,6 +205,34 @@ export default function BillingClient({ tooltips }: { tooltips: Record<string, s
           )}
         </tbody>
       </table>
+
+      {data.credits.length > 0 && (
+        <>
+          <div className="section-title">Credits &amp; refunds</div>
+          <table className="clean">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.credits.map((c) => (
+                <tr key={c._id}>
+                  <td>{new Date(c.issuedAt).toLocaleDateString()}</td>
+                  <td>
+                    <span className={`pill ${c.type === "refund" ? "pill-amber" : "pill-green"}`}>{c.type}</span>
+                  </td>
+                  <td>{c.amount.toFixed(2)}</td>
+                  <td>{c.reason || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 }

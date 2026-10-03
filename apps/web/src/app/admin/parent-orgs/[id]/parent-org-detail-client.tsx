@@ -1,25 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
 
-type TabId = "general" | "performance" | "address" | "contact" | "businesses" | "command-center";
+type TabId = "general" | "performance" | "address" | "contact" | "businesses" | "team" | "escalation" | "command-center";
 
+// Same reasoning as the Business detail page: identity, then contact, then
+// pricing, then the rest — Performance last since there's nothing to show
+// there until the org exists and has real branch data.
 const TABS: { id: TabId; label: string }[] = [
   { id: "general", label: "General" },
-  { id: "performance", label: "Performance" },
-  { id: "address", label: "Address & Billing" },
   { id: "contact", label: "Contact" },
+  { id: "address", label: "Address & Billing" },
   { id: "businesses", label: "Businesses & Billing" },
+  { id: "team", label: "Team" },
+  { id: "escalation", label: "Escalation" },
   { id: "command-center", label: "Command Center" },
+  { id: "performance", label: "Performance" },
 ];
 
-const VALID_TAB_IDS: readonly TabId[] = ["general", "performance", "address", "contact", "businesses", "command-center"];
+// Only these 3 steps are reachable while creating a new org — the rest
+// (Businesses, Team, Escalation, Command Center, Performance) need a real
+// org _id, same reason their tab buttons are already disabled while isNew.
+const CREATE_WIZARD_STEPS: TabId[] = ["general", "contact", "address"];
+
+const VALID_TAB_IDS: readonly TabId[] = [
+  "general",
+  "performance",
+  "address",
+  "contact",
+  "businesses",
+  "team",
+  "escalation",
+  "command-center",
+];
 
 const CX_PULSE_LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+
+// Keep in sync with packages/shared/src/features/flags.ts — duplicated here
+// (rather than imported) because that package also re-exports server-only
+// Mongoose models, which can't ship in a "use client" bundle.
+const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
+  { key: "insights", label: "Insights", description: "AI-generated feedback insight reports." },
+  { key: "analytics", label: "Analytics", description: "Trend, tag, and driver analytics dashboards." },
+  { key: "alertRules", label: "Alert Rules", description: "Configurable score/volume alert thresholds and notifications." },
+  { key: "reports", label: "Reports", description: "The Report tab inside Analytics — printable period scorecard (PDF/export)." },
+  { key: "improvementInitiatives", label: "Improvement Initiatives", description: "Structured improvement-initiative tracking." },
+  { key: "decisionLog", label: "Decision Log", description: "Decision log with before/after outcome measurement." },
+  { key: "cxPulse", label: "CX Pulse", description: "CX maturity scoring ladder." },
+  { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
+  { key: "compass", label: "OodelCX Compass", description: "ANCHOR six-dimension maturity diagnostic assessment." },
+  { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes." },
+];
+// Keep in sync with packages/shared/src/features/teamPermissions.ts — same
+// reason as FEATURE_TOGGLES above.
+const TEAM_RESTRICTABLE_PAGES: { key: string; label: string }[] = [
+  { key: "caseManagement", label: "Case Management" },
+  { key: "rawFeedback", label: "Raw Feedback" },
+  { key: "feedbackPoints", label: "Feedback Points" },
+  { key: "insights", label: "Insights" },
+  { key: "analytics", label: "Analytics" },
+  { key: "alertRules", label: "Alert Rules" },
+  { key: "reports", label: "Reports" },
+  { key: "improvementInitiatives", label: "Improvement Initiatives" },
+  { key: "decisionLog", label: "Decision Log" },
+  { key: "cxPulse", label: "CX Pulse" },
+  { key: "playbooks", label: "Playbook Library" },
+  { key: "support", label: "Support" },
+  { key: "compass", label: "OodelCX Compass" },
+  { key: "highlights", label: "Highlights" },
+];
+const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);
 
 function formatSigned(value: number): string {
   return value > 0 ? `+${value}` : String(value);
@@ -102,6 +156,12 @@ interface FormState {
   compCustomExpiresAt: string;
   commandCenterEnabled: boolean;
   ragThresholds: { starGreenMin: string; starAmberMin: string; npsGreenMin: string; npsAmberMin: string };
+  pricingAmount: string;
+  pricingCurrency: string;
+  pricingInterval: string;
+  cePricingAmount: string;
+  cePricingCurrency: string;
+  cePricingInterval: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -119,6 +179,18 @@ const EMPTY_FORM: FormState = {
   compCustomExpiresAt: "",
   commandCenterEnabled: true,
   ragThresholds: { starGreenMin: "3.7", starAmberMin: "3.0", npsGreenMin: "30", npsAmberMin: "0" },
+  pricingAmount: "",
+  pricingCurrency: "usd",
+  pricingInterval: "",
+  cePricingAmount: "",
+  cePricingCurrency: "usd",
+  cePricingInterval: "",
+};
+
+const PRICING_INTERVAL_LABELS: Record<string, string> = {
+  monthly: "Monthly",
+  annual_monthly_rate: "Annual commitment, billed monthly",
+  annual_lump_sum: "Annual, one lump-sum payment",
 };
 
 const COMP_PERIOD_LABELS: Record<string, string> = {
@@ -160,10 +232,139 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     stripeCustomerId: string;
   } | null>(null);
   const [billingBusy, setBillingBusy] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [priceSaveMessage, setPriceSaveMessage] = useState<string | null>(null);
+  const [checkoutEnabled, setCheckoutEnabled] = useState(false);
+  const [enabledProducts, setEnabledProducts] = useState<string[]>(["customer_experience"]);
+  const [productsBusy, setProductsBusy] = useState(false);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [editingCompPeriod, setEditingCompPeriod] = useState(false);
   const [compPeriodDraft, setCompPeriodDraft] = useState("30_days");
   const [compCustomDraft, setCompCustomDraft] = useState("");
+
+  // Escalation chain — inherited by every branch under this org (same rule
+  // as ragThresholds). Level 1 stays fixed at "the branch's own owner."
+  const [escalationLevels, setEscalationLevels] = useState<{ level: number; label: string }[]>([{ level: 1, label: "Owner" }]);
+  const [escalationSlaHours, setEscalationSlaHours] = useState("");
+  const [escalationBusy, setEscalationBusy] = useState(false);
+  const [escalationMessage, setEscalationMessage] = useState<string | null>(null);
+
+  // Feature flags (task #121) — which advanced features Admin has turned on
+  // for this org (and, independently, each of its branches). null on the
+  // org doc means "all on", so the toggle list starts fully checked.
+  const [enabledFeatures, setEnabledFeatures] = useState<string[]>(ALL_FEATURE_KEYS);
+  const [featuresBusy, setFeaturesBusy] = useState(false);
+  const [featuresMessage, setFeaturesMessage] = useState<string | null>(null);
+  const [paymentGateEnabled, setPaymentGateEnabled] = useState<boolean | null>(null);
+  const [escalationAssignments, setEscalationAssignments] = useState<
+    { _id: string; level: number; region: string; userId: { _id: string; email: string } | null }[]
+  >([]);
+  const [assignLevel, setAssignLevel] = useState("");
+  const [assignRegion, setAssignRegion] = useState("");
+  const [assignEmail, setAssignEmail] = useState("");
+
+  // Team Members — Admin-provisioned only (task #P7.3): a group can no
+  // longer self-invite, so this tab is the one place logins get added,
+  // edited, or removed. Also feeds the escalation "who holds each level"
+  // dropdown with real people instead of a free-text email.
+  interface TeamMemberRow {
+    _id: string;
+    email: string;
+    teamRole: string;
+    tier: "full" | "limited";
+    restrictedPages: string[];
+    products: string[] | null;
+    inviteStatus: string;
+  }
+  const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
+  const [teamSeatLimit, setTeamSeatLimit] = useState<number | null>(null);
+  const [teamActiveCount, setTeamActiveCount] = useState(0);
+  const [teamAddEmail, setTeamAddEmail] = useState("");
+  const [teamAddRole, setTeamAddRole] = useState("");
+  const [teamAddTier, setTeamAddTier] = useState<"full" | "limited">("full");
+  const [teamAddRestrictedPages, setTeamAddRestrictedPages] = useState<string[]>([]);
+  const [teamAdding, setTeamAdding] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [teamEditingId, setTeamEditingId] = useState<string | null>(null);
+  const [teamEditRole, setTeamEditRole] = useState("");
+  const [teamEditTier, setTeamEditTier] = useState<"full" | "limited">("full");
+  const [teamEditRestrictedPages, setTeamEditRestrictedPages] = useState<string[]>([]);
+  const [teamEditHasCE, setTeamEditHasCE] = useState(false);
+
+  function toggleRestrictedPage(list: string[], key: string): string[] {
+    return list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+  }
+
+  function loadTeamMembers() {
+    fetch(`/api/admin/parent-orgs/${params.id}/team-members`)
+      .then((r) => r.json())
+      .then((d) => {
+        setTeamMembers(d.members ?? []);
+        setTeamSeatLimit(d.seatLimit ?? null);
+        setTeamActiveCount(d.activeCount ?? 0);
+      });
+  }
+
+  useEffect(() => {
+    if (isNew) return;
+    loadTeamMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, params.id]);
+
+  async function addTeamMember() {
+    if (!teamAddEmail.trim()) return;
+    setTeamAdding(true);
+    setTeamError(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/team-members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: teamAddEmail.trim(),
+        teamRole: teamAddRole.trim(),
+        tier: teamAddTier,
+        restrictedPages: teamAddRestrictedPages,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setTeamAdding(false);
+    if (!res.ok) {
+      setTeamError(data?.message ?? "Failed to add team member");
+      return;
+    }
+    setTeamAddEmail("");
+    setTeamAddRole("");
+    setTeamAddTier("full");
+    setTeamAddRestrictedPages([]);
+    loadTeamMembers();
+  }
+
+  function startTeamEdit(m: TeamMemberRow) {
+    setTeamEditingId(m._id);
+    setTeamEditRole(m.teamRole);
+    setTeamEditTier(m.tier);
+    setTeamEditRestrictedPages(m.restrictedPages ?? []);
+    setTeamEditHasCE(!!m.products?.includes("colleague_experience"));
+  }
+
+  async function saveTeamEdit(memberId: string) {
+    const products = teamEditHasCE ? ["customer_experience", "colleague_experience"] : ["customer_experience"];
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/team-members/${memberId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamRole: teamEditRole, tier: teamEditTier, restrictedPages: teamEditRestrictedPages, products }),
+    });
+    if (res.ok) {
+      setTeamEditingId(null);
+      loadTeamMembers();
+    }
+  }
+
+  async function removeTeamMember(memberId: string) {
+    if (!confirm("Remove this team member's access?")) return;
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/team-members/${memberId}`, { method: "DELETE" });
+    if (res.ok) loadTeamMembers();
+  }
 
   interface Comparison {
     starAverage: number | null;
@@ -181,6 +382,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     region: string;
     starAverage: number | null;
     npsScore: number | null;
+    csatPercent: number | null;
+    cesAverage: number | null;
     responseCount: number;
     weekChangePercent: number | null;
   }
@@ -189,6 +392,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     totalResponses: number;
     starAverage: number | null;
     npsScore: number | null;
+    csatPercent: number | null;
+    cesAverage: number | null;
     comparisons: { week: Comparison; month: Comparison; quarter: Comparison; year: Comparison };
     trend: TrendPoint[];
     distribution: { highPercent: number; midPercent: number; lowPercent: number };
@@ -236,6 +441,12 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
           branchSeatLimit: o.branchSeatLimit != null ? String(o.branchSeatLimit) : "",
           teamMemberSeatLimit: o.teamMemberSeatLimit != null ? String(o.teamMemberSeatLimit) : "",
           commandCenterEnabled: o.commandCenterEnabled ?? true,
+          pricingAmount: o.pricingTerms?.amount != null ? String(o.pricingTerms.amount) : "",
+          pricingCurrency: o.pricingTerms?.currency ?? "usd",
+          pricingInterval: o.pricingTerms?.interval ?? "",
+          cePricingAmount: o.cePricingTerms?.amount != null ? String(o.cePricingTerms.amount) : "",
+          cePricingCurrency: o.cePricingTerms?.currency ?? "usd",
+          cePricingInterval: o.cePricingTerms?.interval ?? "",
           ragThresholds: o.ragThresholds
             ? {
                 starGreenMin: String(o.ragThresholds.starGreenMin),
@@ -246,6 +457,12 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
             : EMPTY_FORM.ragThresholds,
         });
         setBusinesses(d.businesses ?? []);
+        setCheckoutEnabled(!!o.checkoutEnabled);
+        setEnabledProducts(o.enabledProducts?.length ? o.enabledProducts : ["customer_experience"]);
+        setEscalationLevels(o.escalationLevels?.length ? o.escalationLevels : [{ level: 1, label: "Owner" }]);
+        setEscalationSlaHours(o.escalationSlaHours != null ? String(o.escalationSlaHours) : "");
+        setEnabledFeatures(o.enabledFeatures ?? ALL_FEATURE_KEYS);
+        setPaymentGateEnabled(o.paymentGateEnabled ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setLoading(false));
@@ -258,14 +475,99 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       .then((d) => setSubscription(d.subscription ?? null));
   }, [isNew, params.id]);
 
-  async function startCheckout(plan: "business_monthly" | "business_yearly") {
-    setBillingBusy(true);
-    setBillingError(null);
-    const res = await fetch(`/api/admin/parent-orgs/${params.id}/billing/checkout`, {
+  function loadEscalationAssignments() {
+    fetch(`/api/admin/parent-orgs/${params.id}/escalation-assignments`)
+      .then((r) => r.json())
+      .then((d) => setEscalationAssignments(d.assignments ?? []));
+  }
+
+  useEffect(() => {
+    if (isNew) return;
+    loadEscalationAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, params.id]);
+
+  function addEscalationLevel() {
+    const nextLevel = Math.max(0, ...escalationLevels.map((l) => l.level)) + 1;
+    setEscalationLevels((levels) => [...levels, { level: nextLevel, label: "" }]);
+  }
+
+  function removeEscalationLevel(level: number) {
+    setEscalationLevels((levels) => levels.filter((l) => l.level !== level));
+  }
+
+  async function saveEscalationConfig() {
+    setEscalationBusy(true);
+    setEscalationMessage(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        escalationLevels: escalationLevels.filter((l) => l.label.trim()),
+        escalationSlaHours: escalationSlaHours.trim() ? Number(escalationSlaHours) : null,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalationBusy(false);
+    if (!res.ok) {
+      setEscalationMessage(data?.message ?? "Failed to save escalation config");
+      return;
+    }
+    setEscalationMessage("Saved.");
+  }
+
+  function toggleFeature(key: string) {
+    setEnabledFeatures((current) => (current.includes(key) ? current.filter((k) => k !== key) : [...current, key]));
+  }
+
+  async function saveFeatures() {
+    setFeaturesBusy(true);
+    setFeaturesMessage(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabledFeatures, paymentGateEnabled }),
+    });
+    const data = await res.json().catch(() => null);
+    setFeaturesBusy(false);
+    if (!res.ok) {
+      setFeaturesMessage(data?.message ?? "Failed to save features");
+      return;
+    }
+    setFeaturesMessage("Saved.");
+  }
+
+  async function addEscalationAssignment() {
+    if (!assignLevel || !assignEmail.trim()) return;
+    setEscalationBusy(true);
+    setEscalationMessage(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/escalation-assignments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ level: Number(assignLevel), region: assignRegion.trim(), email: assignEmail.trim() }),
     });
+    const data = await res.json().catch(() => null);
+    setEscalationBusy(false);
+    if (!res.ok) {
+      setEscalationMessage(data?.message ?? "Failed to assign");
+      return;
+    }
+    setAssignEmail("");
+    setAssignRegion("");
+    loadEscalationAssignments();
+  }
+
+  async function removeEscalationAssignment(assignmentId: string) {
+    setEscalationBusy(true);
+    await fetch(`/api/admin/parent-orgs/${params.id}/escalation-assignments/${assignmentId}`, { method: "DELETE" });
+    setEscalationBusy(false);
+    loadEscalationAssignments();
+  }
+
+  async function startCheckout() {
+    setBillingBusy(true);
+    setBillingError(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/billing/checkout`, { method: "POST" });
     const data = await res.json().catch(() => null);
     setBillingBusy(false);
     if (!res.ok) {
@@ -273,6 +575,72 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       return;
     }
     window.location.href = data.url;
+  }
+
+  async function savePriceAndPush(product: "customer_experience" | "colleague_experience" = "customer_experience") {
+    setBillingBusy(true);
+    setBillingError(null);
+    setPriceSaveMessage(null);
+    const isCe = product === "colleague_experience";
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/billing/save-price`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product,
+        amount: (isCe ? form.cePricingAmount : form.pricingAmount).trim() ? Number(isCe ? form.cePricingAmount : form.pricingAmount) : null,
+        currency: (isCe ? form.cePricingCurrency : form.pricingCurrency) || "usd",
+        interval: (isCe ? form.cePricingInterval : form.pricingInterval) || null,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to save price");
+      return;
+    }
+    setPriceSaveMessage(data.message);
+  }
+
+  async function toggleCheckoutEnabled() {
+    setBillingBusy(true);
+    setBillingError(null);
+    const next = !checkoutEnabled;
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checkoutEnabled: next }),
+    });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to update checkout access");
+      return;
+    }
+    setCheckoutEnabled(next);
+  }
+
+  async function toggleProduct(product: "customer_experience" | "colleague_experience") {
+    setProductsBusy(true);
+    setProductsError(null);
+    const has = enabledProducts.includes(product);
+    if (has && enabledProducts.length === 1) {
+      setProductsBusy(false);
+      setProductsError("An organization needs at least one product enabled.");
+      return;
+    }
+    const next = has ? enabledProducts.filter((p) => p !== product) : [...enabledProducts, product];
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabledProducts: next }),
+    });
+    const data = await res.json().catch(() => null);
+    setProductsBusy(false);
+    if (!res.ok) {
+      setProductsError(data?.message ?? "Failed to update product access");
+      return;
+    }
+    setEnabledProducts(next);
   }
 
   function startMarkComp() {
@@ -316,6 +684,22 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     window.location.href = data.url;
   }
 
+  async function syncBranches() {
+    setBillingBusy(true);
+    setBillingError(null);
+    setSyncResult(null);
+    const res = await fetch(`/api/admin/parent-orgs/${params.id}/billing/sync-branches`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setBillingBusy(false);
+    if (!res.ok) {
+      setBillingError(data?.message ?? "Failed to sync branches");
+      return;
+    }
+    setSyncResult(
+      `${data.synced} branch(es) synced` + (data.failed?.length ? `, ${data.failed.length} failed — see server log` : "")
+    );
+  }
+
   async function handleSave() {
     if (isNew && !form.name.trim()) {
       setTab("general");
@@ -326,6 +710,20 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       setTab("contact");
       setError("Contact email is required — it becomes this organization's login.");
       return;
+    }
+
+    // Account activation completeness check — see the same block on the
+    // Business detail page for why this matters before the welcome email fires.
+    if (isNew) {
+      const missing: string[] = [];
+      if (!form.pricingAmount.trim()) missing.push("Pricing (Address & Billing tab)");
+      if (!form.contactPhone.trim()) missing.push("Contact phone (Contact tab)");
+      if (missing.length > 0) {
+        const proceed = confirm(
+          `This organization looks incomplete:\n\n${missing.map((m) => `• ${m}`).join("\n")}\n\nCreate it anyway? The welcome email will still be sent.`
+        );
+        if (!proceed) return;
+      }
     }
 
     setSaving(true);
@@ -341,6 +739,16 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
       contactPhone: form.contactPhone,
       branchSeatLimit: form.branchSeatLimit.trim() ? Number(form.branchSeatLimit) : null,
       teamMemberSeatLimit: form.teamMemberSeatLimit.trim() ? Number(form.teamMemberSeatLimit) : null,
+      pricingTerms: {
+        amount: form.pricingAmount.trim() ? Number(form.pricingAmount) : null,
+        currency: form.pricingCurrency || "usd",
+        interval: form.pricingInterval || null,
+      },
+      cePricingTerms: {
+        amount: form.cePricingAmount.trim() ? Number(form.cePricingAmount) : null,
+        currency: form.cePricingCurrency || "usd",
+        interval: form.cePricingInterval || null,
+      },
       ...(isNew && form.compEnabled
         ? { compPeriod: form.compPeriod, compCustomExpiresAt: form.compCustomExpiresAt || undefined }
         : {}),
@@ -381,6 +789,53 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
     }
   }
 
+  function goToNextWizardStep() {
+    if (tab === "general" && !form.name.trim()) {
+      setError("Organization name is required.");
+      return;
+    }
+    if (tab === "contact" && !form.contactEmail.trim()) {
+      setError("Contact email is required — it becomes this organization's login.");
+      return;
+    }
+    setError(null);
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    if (idx >= 0 && idx < CREATE_WIZARD_STEPS.length - 1) {
+      setTab(CREATE_WIZARD_STEPS[idx + 1]);
+    }
+  }
+
+  function goToPrevWizardStep() {
+    setError(null);
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    if (idx > 0) setTab(CREATE_WIZARD_STEPS[idx - 1]);
+  }
+
+  // Shared button row for each of the 3 creation-wizard steps — see the
+  // matching helper on the Business detail page for the full rationale.
+  function wizardButtons() {
+    const idx = CREATE_WIZARD_STEPS.indexOf(tab);
+    const isLastStep = idx === CREATE_WIZARD_STEPS.length - 1;
+    return (
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        {idx > 0 && (
+          <button className="btn" type="button" onClick={goToPrevWizardStep}>
+            ← Back
+          </button>
+        )}
+        {isLastStep ? (
+          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+            {saving ? "Saving…" : "Create organization"}
+          </button>
+        ) : (
+          <button className="btn btn-dark" type="button" onClick={goToNextWizardStep}>
+            Continue →
+          </button>
+        )}
+      </div>
+    );
+  }
+
   async function updateBusinessBilling(businessId: string, billingAssignment: string) {
     const res = await fetch(`/api/admin/businesses/${businessId}`, {
       method: "PATCH",
@@ -394,6 +849,12 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
 
   if (loading) return <p className="subtitle">Loading…</p>;
 
+  // Checkout covers whichever enabled products have a price set — at least
+  // one is enough to start it, not necessarily Customer Experience.
+  const hasAnyPriceSet =
+    (!!form.pricingAmount && !!form.pricingInterval) ||
+    (enabledProducts.includes("colleague_experience") && !!form.cePricingAmount && !!form.cePricingInterval);
+
   return (
     <div>
       <Link className="backlink" href="/admin/accounts">
@@ -406,25 +867,35 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         </div>
       </div>
 
-      {isNew && (
-        <div className="callout">
-          Creating a new Parent Organization. Fill in <b>General</b> and <b>Contact</b> (the contact email becomes its
-          login) before clicking <b>Create organization</b> — Businesses &amp; Billing unlocks once it exists.
+      {isNew ? (
+        <div className="callout" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <span>
+            Step {CREATE_WIZARD_STEPS.indexOf(tab) + 1} of {CREATE_WIZARD_STEPS.length} —{" "}
+            <b>{TABS.find((t) => t.id === tab)?.label}</b>
+          </span>
+          <span style={{ display: "flex", gap: 4 }}>
+            {CREATE_WIZARD_STEPS.map((step, i) => (
+              <span
+                key={step}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: i <= CREATE_WIZARD_STEPS.indexOf(tab) ? "var(--green, #2F5233)" : "var(--border)",
+                }}
+              />
+            ))}
+          </span>
+        </div>
+      ) : (
+        <div className="subtabs">
+          {TABS.map((t) => (
+            <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
         </div>
       )}
-
-      <div className="subtabs">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={tab === t.id ? "active" : ""}
-            disabled={isNew && (t.id === "businesses" || t.id === "command-center" || t.id === "performance")}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       {error && <p className="error-text">{error}</p>}
 
@@ -517,9 +988,13 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               )}
             </div>
           )}
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create organization" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       )}
 
@@ -559,6 +1034,17 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                   <div className="metric-val" style={{ fontSize: 18 }}>
                     {performance.cxPulseLevel ? `Level ${performance.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[performance.cxPulseLevel]}` : "Not yet scored"}
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-2" style={{ marginBottom: 20 }}>
+                <div className="card">
+                  <div className="metric-label">CSAT (network)</div>
+                  <div className="metric-val">{performance.csatPercent !== null ? `${performance.csatPercent}%` : "—"}</div>
+                </div>
+                <div className="card">
+                  <div className="metric-label">CES (network)</div>
+                  <div className="metric-val">{performance.cesAverage !== null ? `${performance.cesAverage}/5` : "—"}</div>
                 </div>
               </div>
 
@@ -632,6 +1118,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                     <th>Region</th>
                     <th>Average score</th>
                     <th>NPS</th>
+                    <th>CSAT</th>
+                    <th>CES</th>
                     <th>Responses</th>
                     <th>7d trend</th>
                     <th></th>
@@ -644,6 +1132,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                       <td>{b.region || "—"}</td>
                       <td>{b.starAverage !== null ? `${b.starAverage}/5` : "—"}</td>
                       <td>{b.npsScore !== null ? formatSigned(b.npsScore) : "—"}</td>
+                      <td>{b.csatPercent !== null ? `${b.csatPercent}%` : "—"}</td>
+                      <td>{b.cesAverage !== null ? `${b.cesAverage}/5` : "—"}</td>
                       <td>{b.responseCount}</td>
                       <td>
                         {b.weekChangePercent === null ? (
@@ -663,7 +1153,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                   ))}
                   {performance.businesses.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="subtitle">
+                      <td colSpan={9} className="subtitle">
                         No businesses in this organization yet.
                       </td>
                     </tr>
@@ -707,9 +1197,123 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
             />
             Billing address same as above
           </div>
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create organization" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {tab === "address" && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Pricing</h3>
+              <p className="card-sub" style={{ margin: "4px 0 0" }}>
+                What this org is charged for every &quot;group_pays&quot; branch it covers — set here, never in the
+                Stripe Dashboard.
+              </p>
+            </div>
+            {!isNew &&
+              (subscription?.isComp ? (
+                <span className="pill pill-purple">Comp</span>
+              ) : subscription?.status === "active" ? (
+                <span className="pill pill-green">Live on Stripe — ${subscription.mrrValue.toFixed(2)}/mo</span>
+              ) : (
+                <span className="pill pill-gray">Not billing yet</span>
+              ))}
+          </div>
+          <div className="field-row" style={{ marginTop: 14 }}>
+            <div className="field">
+              <label>Amount</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 49.00"
+                value={form.pricingAmount}
+                onChange={(e) => setForm((f) => ({ ...f, pricingAmount: e.target.value }))}
+              />
+            </div>
+            <div className="field">
+              <label>Currency</label>
+              <select value={form.pricingCurrency} onChange={(e) => setForm((f) => ({ ...f, pricingCurrency: e.target.value }))}>
+                <option value="usd">USD</option>
+                <option value="eur">EUR</option>
+                <option value="gbp">GBP</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Billing</label>
+              <select value={form.pricingInterval} onChange={(e) => setForm((f) => ({ ...f, pricingInterval: e.target.value }))}>
+                <option value="">Not set</option>
+                <option value="monthly">Monthly</option>
+                <option value="annual_monthly_rate">Annual commitment, billed monthly</option>
+                <option value="annual_lump_sum">Annual, one lump-sum payment</option>
+              </select>
+            </div>
+          </div>
+          {isNew ? (
+            <p className="card-sub" style={{ margin: "0 0 4px" }}>Saved when you create the organization.</p>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={() => savePriceAndPush("customer_experience")}>
+                {billingBusy ? "Saving…" : "Save & push to Stripe"}
+              </button>
+              {priceSaveMessage && <span className="card-sub" style={{ margin: 0 }}>{priceSaveMessage}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "address" && enabledProducts.includes("colleague_experience") && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
+          <h3 style={{ margin: 0 }}>Pricing — Colleague Experience</h3>
+          <p className="card-sub" style={{ margin: "4px 0 0" }}>
+            Charged as a separate line item alongside Customer Experience, if both are enabled.
+          </p>
+          <div className="field-row" style={{ marginTop: 14 }}>
+            <div className="field">
+              <label>Amount</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 29.00"
+                value={form.cePricingAmount}
+                onChange={(e) => setForm((f) => ({ ...f, cePricingAmount: e.target.value }))}
+              />
+            </div>
+            <div className="field">
+              <label>Currency</label>
+              <select value={form.cePricingCurrency} onChange={(e) => setForm((f) => ({ ...f, cePricingCurrency: e.target.value }))}>
+                <option value="usd">USD</option>
+                <option value="eur">EUR</option>
+                <option value="gbp">GBP</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Billing</label>
+              <select value={form.cePricingInterval} onChange={(e) => setForm((f) => ({ ...f, cePricingInterval: e.target.value }))}>
+                <option value="">Not set</option>
+                <option value="monthly">Monthly</option>
+                <option value="annual_monthly_rate">Annual commitment, billed monthly</option>
+                <option value="annual_lump_sum">Annual, one lump-sum payment</option>
+              </select>
+            </div>
+          </div>
+          {isNew ? (
+            <p className="card-sub" style={{ margin: "0 0 4px" }}>Saved when you create the organization.</p>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+              <button className="btn btn-dark btn-sm" disabled={billingBusy} onClick={() => savePriceAndPush("colleague_experience")}>
+                {billingBusy ? "Saving…" : "Save & push to Stripe"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -717,6 +1321,19 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
           <h3>Subscription</h3>
           {billingError && <p className="error-text">{billingError}</p>}
+          <div className="row-flex" style={{ marginBottom: 10, alignItems: "center", gap: 10 }}>
+            <span className={`pill ${checkoutEnabled ? "pill-green" : "pill-gray"}`}>
+              {checkoutEnabled ? "Self-service checkout: open" : "Self-service checkout: closed"}
+            </span>
+            <button className="btn btn-sm" disabled={billingBusy} onClick={toggleCheckoutEnabled}>
+              {checkoutEnabled ? "Turn off" : "Enable checkout"}
+            </button>
+            {checkoutEnabled && (
+              <span className="card-sub" style={{ margin: 0 }}>
+                A &quot;Continue to payment&quot; link is now live on this org&apos;s own billing page.
+              </span>
+            )}
+          </div>
           {subscription ? (
             <>
               <p className="card-sub">
@@ -729,8 +1346,8 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                   </>
                 ) : (
                   <>
-                    <span className="pill pill-green">{subscription.status}</span> — {subscription.plan} — $
-                    {subscription.mrrValue.toFixed(2)}/mo
+                    <span className="pill pill-green">{subscription.status}</span> —{" "}
+                    {PRICING_INTERVAL_LABELS[subscription.plan] ?? subscription.plan} — ${subscription.mrrValue.toFixed(2)}/mo
                   </>
                 )}
               </p>
@@ -739,9 +1356,35 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
                   Manage in Stripe
                 </button>
               )}
+              {!subscription.isComp && subscription.status === "active" && (
+                <button
+                  className="btn btn-sm"
+                  disabled={billingBusy}
+                  onClick={syncBranches}
+                  style={{ marginRight: 8 }}
+                  title={'Adds a Stripe line item for any branch already set to "group_pays" that this subscription hasn\'t picked up yet'}
+                >
+                  Sync branch coverage
+                </button>
+              )}
+              {syncResult && <p className="card-sub" style={{ margin: "6px 0 0" }}>{syncResult}</p>}
               {subscription.isComp && !editingCompPeriod && (
-                <button className="btn btn-sm" disabled={billingBusy} onClick={startMarkComp}>
+                <button className="btn btn-sm" disabled={billingBusy} onClick={startMarkComp} style={{ marginRight: 8 }}>
                   Edit comp period
+                </button>
+              )}
+              {subscription.isComp && (
+                <button
+                  className="btn btn-dark btn-sm"
+                  disabled={billingBusy || !hasAnyPriceSet}
+                  onClick={startCheckout}
+                  title={
+                    !hasAnyPriceSet
+                      ? "Set and save a price above first"
+                      : "Converts this account off comp once payment completes"
+                  }
+                >
+                  Convert to paying — start checkout
                 </button>
               )}
             </>
@@ -749,11 +1392,13 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
             <>
               <p className="card-sub">No subscription yet. This covers every business under this org billed "group_pays."</p>
               <div className="btn-group">
-                <button className="btn btn-dark" disabled={billingBusy} onClick={() => startCheckout("business_monthly")}>
-                  Start monthly checkout
-                </button>
-                <button className="btn btn-dark" disabled={billingBusy} onClick={() => startCheckout("business_yearly")}>
-                  Start yearly checkout
+                <button
+                  className="btn btn-dark"
+                  disabled={billingBusy || !hasAnyPriceSet}
+                  onClick={startCheckout}
+                  title={!hasAnyPriceSet ? "Set and save a price above first" : undefined}
+                >
+                  Start checkout
                 </button>
                 <button className="btn" disabled={billingBusy} onClick={startMarkComp}>
                   Mark as Comp
@@ -815,9 +1460,13 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               />
             </div>
           </div>
-          <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
-            {saving ? "Saving…" : isNew ? "Create organization" : "Save"}
-          </button>
+          {isNew ? (
+            wizardButtons()
+          ) : (
+            <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       )}
 
@@ -866,6 +1515,319 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === "team" && !isNew && (
+        <div className="card" style={{ maxWidth: 720 }}>
+          <h3>Team Members</h3>
+          <p className="card-sub">
+            Adding, editing, or removing a login here is the only way a team member gets set up — this group can no
+            longer self-invite; a change request comes in as a support ticket. This is the org&apos;s own staff pool,
+            independent of any branch&apos;s.
+          </p>
+          <p className="card-sub">
+            {teamSeatLimit === null ? "Unlimited team seats." : `${teamActiveCount} of ${teamSeatLimit} team seats used.`}
+          </p>
+          <table className="clean" style={{ marginBottom: 16 }}>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Access</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamMembers.map((m) =>
+                teamEditingId === m._id ? (
+                  <Fragment key={m._id}>
+                    <tr>
+                      <td>{m.email}</td>
+                      <td>
+                        <input
+                          value={teamEditRole}
+                          onChange={(e) => setTeamEditRole(e.target.value)}
+                          placeholder="e.g. Regional Manager"
+                        />
+                      </td>
+                      <td>
+                        <select value={teamEditTier} onChange={(e) => setTeamEditTier(e.target.value as "full" | "limited")}>
+                          <option value="full">Full</option>
+                          <option value="limited">Limited</option>
+                        </select>
+                      </td>
+                      <td>
+                        <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <button className="btn btn-sm" style={{ marginRight: 8 }} onClick={() => saveTeamEdit(m._id)}>
+                          Save
+                        </button>
+                        <button className="btn btn-sm" onClick={() => setTeamEditingId(null)}>
+                          Cancel
+                        </button>
+                      </td>
+                    </tr>
+                    {enabledProducts.includes("colleague_experience") && (
+                      <tr>
+                        <td colSpan={5} style={{ background: "var(--gray-50, #FAFAFA)" }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                            <input type="checkbox" checked={teamEditHasCE} onChange={() => setTeamEditHasCE((v) => !v)} />
+                            Colleague Experience access
+                          </label>
+                        </td>
+                      </tr>
+                    )}
+                    {teamEditTier === "full" && (
+                      <tr>
+                        <td colSpan={5} style={{ background: "var(--gray-50, #FAFAFA)" }}>
+                          <p className="card-sub" style={{ marginBottom: 6 }}>
+                            Page access — leave all unchecked to give full access to everything a Full member normally sees.
+                            Check a page to hide it from this person.
+                          </p>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "4px 12px" }}>
+                            {TEAM_RESTRICTABLE_PAGES.map((page) => (
+                              <label key={page.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={teamEditRestrictedPages.includes(page.key)}
+                                  onChange={() => setTeamEditRestrictedPages(toggleRestrictedPage(teamEditRestrictedPages, page.key))}
+                                />
+                                {page.label}
+                              </label>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ) : (
+                  <tr key={m._id}>
+                    <td>{m.email}</td>
+                    <td>{m.teamRole || "—"}</td>
+                    <td>{m.tier === "full" ? "Full" : "Limited"}</td>
+                    <td>
+                      <span className={`pill ${m.inviteStatus === "active" ? "pill-accent" : "pill-gray"}`}>{m.inviteStatus}</span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button className="icon-btn" style={{ marginRight: 4 }} onClick={() => startTeamEdit(m)} title="Edit role/access">
+                        ✎
+                      </button>
+                      <button className="icon-btn btn-danger" onClick={() => removeTeamMember(m._id)} title="Remove">
+                        🗑
+                      </button>
+                    </td>
+                  </tr>
+                )
+              )}
+              {teamMembers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="card-sub">
+                    No team members yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          <h3>Add a team member</h3>
+          <div className="field-row">
+            <div className="field">
+              <label>Email</label>
+              <input
+                type="email"
+                value={teamAddEmail}
+                onChange={(e) => setTeamAddEmail(e.target.value)}
+                disabled={teamSeatLimit !== null && teamActiveCount >= teamSeatLimit}
+              />
+            </div>
+            <div className="field">
+              <label>Role (optional)</label>
+              <input type="text" value={teamAddRole} onChange={(e) => setTeamAddRole(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Access</label>
+              <select value={teamAddTier} onChange={(e) => setTeamAddTier(e.target.value as "full" | "limited")}>
+                <option value="full">Full — same as the owner, minus billing &amp; team management</option>
+                <option value="limited">Limited — only their own assigned cases</option>
+              </select>
+            </div>
+          </div>
+          {teamAddTier === "full" && (
+            <div style={{ marginTop: 8, marginBottom: 8 }}>
+              <p className="card-sub" style={{ marginBottom: 6 }}>
+                Page access — leave all unchecked to give full access to everything a Full member normally sees. Check a
+                page to hide it from this person.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "4px 12px" }}>
+                {TEAM_RESTRICTABLE_PAGES.map((page) => (
+                  <label key={page.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={teamAddRestrictedPages.includes(page.key)}
+                      onChange={() => setTeamAddRestrictedPages(toggleRestrictedPage(teamAddRestrictedPages, page.key))}
+                    />
+                    {page.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          {teamError && <p className="error-text">{teamError}</p>}
+          <button
+            className="btn btn-dark btn-sm"
+            disabled={teamAdding || (teamSeatLimit !== null && teamActiveCount >= teamSeatLimit)}
+            onClick={addTeamMember}
+          >
+            {teamAdding ? "Adding…" : "+ Add team member"}
+          </button>
+        </div>
+      )}
+
+      {tab === "escalation" && !isNew && (
+        <div className="card" style={{ maxWidth: 760 }}>
+          <h3>Escalation chain</h3>
+          <p className="card-sub">
+            Who a case goes to if a branch doesn&apos;t resolve it. Level 1 is always the branch&apos;s own owner. Levels
+            above that are yours to label however this organisation calls them (Cluster Manager, Regional Head,
+            President…) — inherited by every branch under this org.
+          </p>
+          {escalationMessage && <p className="card-sub">{escalationMessage}</p>}
+          <table className="clean" style={{ marginBottom: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ width: 60 }}>Level</th>
+                <th>Label</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>Branch owner (fixed)</td>
+                <td></td>
+              </tr>
+              {escalationLevels
+                .filter((l) => l.level > 1)
+                .map((l) => (
+                  <tr key={l.level}>
+                    <td>{l.level}</td>
+                    <td>
+                      <input
+                        value={l.label}
+                        onChange={(e) =>
+                          setEscalationLevels((levels) =>
+                            levels.map((x) => (x.level === l.level ? { ...x, label: e.target.value } : x))
+                          )
+                        }
+                        placeholder="e.g. Cluster Manager"
+                      />
+                    </td>
+                    <td>
+                      <button className="btn btn-sm" onClick={() => removeEscalationLevel(l.level)}>
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+          <button className="btn btn-sm" onClick={addEscalationLevel} style={{ marginRight: 8 }}>
+            + Add level
+          </button>
+          <div className="field" style={{ maxWidth: 260, marginTop: 14 }}>
+            <label>Auto-escalate after (hours)</label>
+            <input
+              type="number"
+              value={escalationSlaHours}
+              onChange={(e) => setEscalationSlaHours(e.target.value)}
+              placeholder="Leave blank for manual only"
+            />
+          </div>
+          <button className="btn btn-dark btn-sm" disabled={escalationBusy} onClick={saveEscalationConfig} style={{ marginTop: 10 }}>
+            {escalationBusy ? "Saving…" : "Save escalation chain"}
+          </button>
+
+          {escalationLevels.filter((l) => l.level > 1).length > 0 && (
+            <>
+              <h3 style={{ marginTop: 24 }}>Who holds each level</h3>
+              <p className="card-sub">
+                Scope a person to one region (covers every branch in it) or leave region blank for org-wide.
+              </p>
+              <table className="clean" style={{ marginBottom: 12 }}>
+                <thead>
+                  <tr>
+                    <th>Level</th>
+                    <th>Region</th>
+                    <th>Person</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {escalationAssignments.map((a) => (
+                    <tr key={a._id}>
+                      <td>{a.level}</td>
+                      <td>{a.region || "Org-wide"}</td>
+                      <td>{a.userId?.email ?? "(user removed)"}</td>
+                      <td>
+                        <button className="btn btn-sm" onClick={() => removeEscalationAssignment(a._id)}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {escalationAssignments.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="card-sub">
+                        No one assigned yet — cases can&apos;t escalate past level 1 until you add someone.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="field-row" style={{ alignItems: "flex-end" }}>
+                <div className="field">
+                  <label>Level</label>
+                  <select value={assignLevel} onChange={(e) => setAssignLevel(e.target.value)}>
+                    <option value="">Choose…</option>
+                    {escalationLevels
+                      .filter((l) => l.level > 1)
+                      .map((l) => (
+                        <option key={l.level} value={l.level}>
+                          {l.level} — {l.label || "(unlabeled)"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Region (blank = org-wide)</label>
+                  <input value={assignRegion} onChange={(e) => setAssignRegion(e.target.value)} placeholder="e.g. North" />
+                </div>
+                <div className="field">
+                  <label>Person</label>
+                  <select value={assignEmail} onChange={(e) => setAssignEmail(e.target.value)}>
+                    <option value="">Choose…</option>
+                    {teamMembers.map((m) => (
+                      <option key={m._id} value={m.email}>
+                        {m.email}
+                        {m.teamRole ? ` — ${m.teamRole}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {teamMembers.length === 0 && (
+                    <p className="card-sub" style={{ margin: "4px 0 0" }}>
+                      No team members yet — add one on the Team tab first.
+                    </p>
+                  )}
+                </div>
+                <button className="btn btn-dark btn-sm" disabled={escalationBusy || !assignEmail} onClick={addEscalationAssignment}>
+                  Assign
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -955,6 +1917,88 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
           <button className="btn btn-dark" disabled={saving} onClick={handleSave}>
             {saving ? "Saving…" : "Save"}
           </button>
+        </div>
+      )}
+
+      {tab === "command-center" && !isNew && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 20 }}>
+          <h3>Products (Admin-only)</h3>
+          <p className="card-sub">
+            Which product(s) this org has bought — independently toggleable, an org can run Customer Experience
+            only, Colleague Experience only, or both. Turning one on does not by itself grant any team member
+            access to it — that&apos;s set per person on the Team tab. An org must keep at least one product
+            enabled.
+          </p>
+          {productsError && <p className="error-text">{productsError}</p>}
+          <div className="row-flex" style={{ alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span className={`pill ${enabledProducts.includes("customer_experience") ? "pill-green" : "pill-gray"}`}>
+              Customer Experience: {enabledProducts.includes("customer_experience") ? "on" : "off"}
+            </span>
+            <button className="btn btn-sm" disabled={productsBusy} onClick={() => toggleProduct("customer_experience")}>
+              {productsBusy ? "Saving…" : enabledProducts.includes("customer_experience") ? "Turn off" : "Turn on"}
+            </button>
+          </div>
+          <div className="row-flex" style={{ alignItems: "center", gap: 10 }}>
+            <span className={`pill ${enabledProducts.includes("colleague_experience") ? "pill-green" : "pill-gray"}`}>
+              Colleague Experience: {enabledProducts.includes("colleague_experience") ? "on" : "off"}
+            </span>
+            <button className="btn btn-sm" disabled={productsBusy} onClick={() => toggleProduct("colleague_experience")}>
+              {productsBusy ? "Saving…" : enabledProducts.includes("colleague_experience") ? "Turn off" : "Turn on"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === "command-center" && !isNew && (
+        <div className="card" style={{ maxWidth: 640, marginTop: 20 }}>
+          <h3>Features</h3>
+          <p className="card-sub">
+            Turn advanced features on or off for this org — e.g. to match a plan tier or hold something back from a
+            pilot. Each branch under this org has its own, independent feature toggles on its own detail page. Core
+            features (Case Management, Team Members, Billing, Messages, Support) are always on.
+          </p>
+          <div className="field-row" style={{ flexWrap: "wrap", gap: "10px 24px" }}>
+            {FEATURE_TOGGLES.map((f) => (
+              <label key={f.key} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: 260 }}>
+                <input
+                  type="checkbox"
+                  checked={enabledFeatures.includes(f.key)}
+                  onChange={() => toggleFeature(f.key)}
+                  style={{ marginTop: 3 }}
+                />
+                <span>
+                  <div>{f.label}</div>
+                  <div className="field-hint">{f.description}</div>
+                </span>
+              </label>
+            ))}
+          </div>
+
+          <div className="section-label" style={{ marginTop: 18 }}>
+            Payment gate
+          </div>
+          <div className="field" style={{ maxWidth: 320 }}>
+            <label>Require an active subscription to use the dashboard</label>
+            <select
+              value={paymentGateEnabled === null ? "default" : paymentGateEnabled ? "on" : "off"}
+              onChange={(e) =>
+                setPaymentGateEnabled(e.target.value === "default" ? null : e.target.value === "on")
+              }
+            >
+              <option value="default">Follow platform default</option>
+              <option value="on">On — lock this org without an active subscription</option>
+              <option value="off">Off — always let this org in</option>
+            </select>
+            <div className="field-hint">
+              Overrides the platform-wide payment gate setting for just this organisation. Branches under this org
+              have their own, independent override on their own Business detail page.
+            </div>
+          </div>
+
+          <button className="btn btn-dark" disabled={featuresBusy} onClick={saveFeatures} style={{ marginTop: 12 }}>
+            {featuresBusy ? "Saving…" : "Save features"}
+          </button>
+          {featuresMessage && <p className="field-hint">{featuresMessage}</p>}
         </div>
       )}
     </div>

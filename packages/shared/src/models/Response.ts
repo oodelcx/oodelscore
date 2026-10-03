@@ -1,5 +1,6 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { QUESTION_TYPES, type QuestionType } from "./QuestionTemplate";
+import { PRODUCTS, type Product } from "./products";
 
 export interface IAnswer {
   questionId: Types.ObjectId;
@@ -30,6 +31,13 @@ export type Sentiment = (typeof SENTIMENTS)[number];
 export interface IResponse {
   feedbackPointId: Types.ObjectId;
   businessId: Types.ObjectId;
+  // Denormalized from FeedbackPoint.product at submit time, same reason as
+  // eventId below — lets every future Colleague Experience aggregation
+  // filter by product with no join. Defaults to customer_experience so
+  // every response recorded before Colleague Experience existed is
+  // unaffected.
+  product: Product;
+  eventId: Types.ObjectId | null; // denormalized from FeedbackPoint.eventId at submit time, so Analytics can group by event with no join
   answers: IAnswer[];
   respondentName: string | null; // null if not collected
   respondentEmail: string | null; // null if not collected
@@ -45,6 +53,14 @@ export interface IResponse {
   sentiment: Sentiment | null;
   themes: string[];
   sentimentAnalyzedAt: Date | null;
+  // Colleague Experience only. True once this response's open comment has
+  // gone through the unconditional per-response sensitive-comment screen
+  // (see ai/sensitiveScreen.ts) and, if flagged, already been routed to a
+  // case via autoTriageAndCreateActionItem — regardless of whether an Alert
+  // Rule also later fires on the same response. Prevents that same comment
+  // from being triaged into a second, duplicate case through the ordinary
+  // alert-fire path.
+  sensitiveRouted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +87,8 @@ const ResponseSchema = new Schema<IResponse>(
   {
     feedbackPointId: { type: Schema.Types.ObjectId, ref: "FeedbackPoint", required: true },
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
+    product: { type: String, enum: PRODUCTS, default: "customer_experience" },
+    eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
     answers: { type: [AnswerSchema], default: [] },
     respondentName: { type: String, default: null },
     respondentEmail: { type: String, default: null },
@@ -82,10 +100,15 @@ const ResponseSchema = new Schema<IResponse>(
     sentiment: { type: String, enum: SENTIMENTS, default: null },
     themes: { type: [String], default: [] },
     sentimentAnalyzedAt: { type: Date, default: null },
+    sensitiveRouted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 ResponseSchema.index({ businessId: 1, submittedAt: -1 });
+// The device-independent dedup recheck on every public submit that
+// includes contact info filters by feedbackPointId + submittedAt, not
+// businessId — not covered by the index above.
+ResponseSchema.index({ feedbackPointId: 1, submittedAt: -1 });
 
 export const Response: Model<IResponse> = mongoose.models.Response ?? model<IResponse>("Response", ResponseSchema);

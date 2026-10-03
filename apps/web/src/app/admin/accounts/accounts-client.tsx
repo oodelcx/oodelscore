@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
 
 type TabId = "businesses" | "orgs" | "staff" | "roles";
+
+type CompassStatus = "off" | "not_started" | "in_progress" | "established" | "emerging";
 
 interface BusinessRow {
   _id: string;
@@ -15,6 +18,7 @@ interface BusinessRow {
   accountManagerId: string | null;
   ownerUserId: string | null;
   ownerInviteStatus: string | null;
+  compassStatus: CompassStatus;
 }
 interface ParentOrgRow {
   _id: string;
@@ -22,6 +26,7 @@ interface ParentOrgRow {
   accountManagerId: string | null;
   ownerUserId: string | null;
   ownerInviteStatus: string | null;
+  compassStatus: CompassStatus;
 }
 interface StaffRow {
   _id: string;
@@ -77,7 +82,17 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 export default function AccountsClient({ tooltips }: { tooltips: Record<string, string> }) {
-  const [tab, setTab] = useState<TabId>("businesses");
+  // Lets /admin/businesses and /admin/parent-orgs redirect here landed on
+  // the right tab/filter (both routes used to be their own standalone list
+  // pages before this Accounts view consolidated them) instead of always
+  // opening on the default Businesses tab.
+  const searchParams = useSearchParams();
+  const initialTab: TabId = searchParams.get("tab") === "orgs" ? "orgs" : "businesses";
+  const initialFilter =
+    searchParams.get("filter") === "standalone" || searchParams.get("filter") === "branch"
+      ? (searchParams.get("filter") as "standalone" | "branch")
+      : "all";
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [parentOrgs, setParentOrgs] = useState<ParentOrgRow[]>([]);
   const [staff, setStaff] = useState<StaffRow[]>([]);
@@ -85,6 +100,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [businessSearch, setBusinessSearch] = useState("");
+  const [businessTypeFilter, setBusinessTypeFilter] = useState<"all" | "standalone" | "branch">(initialFilter);
   const [orgSearch, setOrgSearch] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
 
@@ -105,6 +121,27 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const [paymentGateEnabled, setPaymentGateEnabled] = useState(false);
+  const [togglingGate, setTogglingGate] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/platform-settings")
+      .then((res) => res.json())
+      .then((data) => setPaymentGateEnabled(data.settings?.paymentGateEnabled ?? false));
+  }, []);
+
+  async function togglePaymentGate() {
+    setTogglingGate(true);
+    const next = !paymentGateEnabled;
+    const res = await fetch("/api/admin/platform-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentGateEnabled: next }),
+    });
+    setTogglingGate(false);
+    if (res.ok) setPaymentGateEnabled(next);
+  }
 
   async function removeStaff(id: string) {
     if (!confirm("Remove this staff member's access?")) return;
@@ -368,7 +405,29 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
     );
   }
 
-  const filteredBusinesses = businesses.filter((b) => b.name.toLowerCase().includes(businessSearch.trim().toLowerCase()));
+  const COMPASS_PILL_CLASS: Record<CompassStatus, string> = {
+    off: "pill-gray",
+    not_started: "pill-gray",
+    in_progress: "pill-amber",
+    established: "pill-green",
+    emerging: "pill-amber",
+  };
+  const COMPASS_LABEL: Record<CompassStatus, string> = {
+    off: "Off",
+    not_started: "Not started",
+    in_progress: "In progress",
+    established: "Established",
+    emerging: "Emerging",
+  };
+  function compassCell(status: CompassStatus) {
+    return <span className={`pill ${COMPASS_PILL_CLASS[status]}`}>{COMPASS_LABEL[status]}</span>;
+  }
+
+  const filteredBusinesses = businesses
+    .filter((b) => b.name.toLowerCase().includes(businessSearch.trim().toLowerCase()))
+    .filter((b) =>
+      businessTypeFilter === "all" ? true : businessTypeFilter === "branch" ? !!b.parentOrgId : !b.parentOrgId
+    );
   const filteredOrgs = parentOrgs.filter((o) => o.name.toLowerCase().includes(orgSearch.trim().toLowerCase()));
   const filteredStaff = staff.filter((s) => s.email.toLowerCase().includes(staffSearch.trim().toLowerCase()));
 
@@ -417,6 +476,26 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
         {cta}
       </div>
 
+      <div className="card" style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div>
+          <div style={{ fontWeight: 600 }}>Payment gate</div>
+          <p className="subtitle" style={{ margin: "2px 0 0" }}>
+            When on, a Business or Group portal locks to a &quot;Go to Billing&quot; screen unless the account has a
+            live subscription or unexpired comp status. Off by default — accounts created before billing existed have
+            no subscription row and would be locked out immediately. Confirm every real account is either subscribed
+            or marked Comp before turning this on.
+          </p>
+        </div>
+        <button
+          className={`pill ${paymentGateEnabled ? "pill-green" : "pill-gray"}`}
+          style={{ cursor: "pointer", whiteSpace: "nowrap" }}
+          disabled={togglingGate}
+          onClick={togglePaymentGate}
+        >
+          {togglingGate ? "…" : paymentGateEnabled ? "On — click to disable" : "Off — click to enable"}
+        </button>
+      </div>
+
       <div className="subtabs">
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => setTab(t.id)}>
@@ -437,6 +516,11 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
             value={businessSearch}
             onChange={(e) => setBusinessSearch(e.target.value)}
           />
+          <select value={businessTypeFilter} onChange={(e) => setBusinessTypeFilter(e.target.value as typeof businessTypeFilter)}>
+            <option value="all">All types</option>
+            <option value="standalone">Standalone</option>
+            <option value="branch">Branch</option>
+          </select>
         </div>
         <table className="clean">
           <thead>
@@ -448,6 +532,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
                 Login
                 <InfoTip text={tooltips["login-status"]} />
               </th>
+              <th>Compass</th>
               <th>Active</th>
               <th>Actions</th>
             </tr>
@@ -467,6 +552,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
                   )}
                 </td>
                 <td>{loginStatusCell(b.ownerUserId, b.ownerInviteStatus)}</td>
+                <td>{compassCell(b.compassStatus)}</td>
                 <td>
                   <button
                     type="button"
@@ -488,8 +574,8 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
             ))}
             {filteredBusinesses.length === 0 && (
               <tr>
-                <td colSpan={6} className="subtitle">
-                  {businesses.length === 0 ? "No businesses yet." : "No businesses match your search."}
+                <td colSpan={7} className="subtitle">
+                  {businesses.length === 0 ? "No businesses yet." : "No businesses match your search/filter."}
                 </td>
               </tr>
             )}
@@ -517,6 +603,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
                 Login
                 <InfoTip text={tooltips["login-status"]} />
               </th>
+              <th>Compass</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -528,6 +615,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
                   <span className="pill pill-gray">{businessCountByOrgId.get(o._id) ?? 0}</span>
                 </td>
                 <td>{loginStatusCell(o.ownerUserId, o.ownerInviteStatus)}</td>
+                <td>{compassCell(o.compassStatus)}</td>
                 <td style={{ textAlign: "right" }}>
                   <Link className="btn btn-sm" style={{ marginRight: 8 }} href={`/admin/parent-orgs/${o._id}`}>
                     Manage →
@@ -540,7 +628,7 @@ export default function AccountsClient({ tooltips }: { tooltips: Record<string, 
             ))}
             {filteredOrgs.length === 0 && (
               <tr>
-                <td colSpan={4} className="subtitle">
+                <td colSpan={5} className="subtitle">
                   {parentOrgs.length === 0 ? "No parent organizations yet." : "No organizations match your search."}
                 </td>
               </tr>

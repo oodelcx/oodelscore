@@ -92,7 +92,7 @@ export default function FeedbackFormPage({ params }: { params: Promise<{ token: 
             <h2>You've already given feedback here</h2>
             <p>{alreadySubmitted.businessName} received it recently — thanks again! You can share more in 24 hours.</p>
             <div className="ff-powered" style={{ marginTop: 30 }}>
-              Powered by <b>OodelCX</b>
+              Powered by <img src="/oodelcx-logo-dark.webp" alt="OodelCX" style={{ height: 13, width: "auto", verticalAlign: "middle" }} />
             </div>
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function FeedbackFormPage({ params }: { params: Promise<{ token: 
             <h2>Thanks for your feedback!</h2>
             <p>{data.businessName} received it — no account, no follow-up emails unless you asked for one.</p>
             <div className="ff-powered" style={{ marginTop: 30 }}>
-              Powered by <b>OodelCX</b>
+              Powered by <img src="/oodelcx-logo-dark.webp" alt="OodelCX" style={{ height: 13, width: "auto", verticalAlign: "middle" }} />
             </div>
           </div>
         </div>
@@ -241,6 +241,23 @@ function QuestionInput({
         <div className="ff-nps-labels">
           <span>Not likely</span>
           <span>Very likely</span>
+        </div>
+      </div>
+    );
+  }
+  if (question.type === "ces_1_5") {
+    return (
+      <div>
+        <div className="ff-nps-row">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button key={n} className={value === n ? "sel" : ""} onClick={() => onChange(n)}>
+              {n}
+            </button>
+          ))}
+        </div>
+        <div className="ff-nps-labels">
+          <span>Very easy</span>
+          <span>Very difficult</span>
         </div>
       </div>
     );
@@ -432,7 +449,7 @@ function SinglePageForm({
           {submitting ? "Submitting…" : "Submit feedback"}
         </button>
         <div className="ff-powered">
-          Powered by <b>OodelCX</b>
+          Powered by <img src="/oodelcx-logo-dark.webp" alt="OodelCX" style={{ height: 13, width: "auto", verticalAlign: "middle" }} />
         </div>
       </div>
     </>
@@ -523,7 +540,7 @@ function StepForm({
           </button>
         </div>
         <div className="ff-powered">
-          Powered by <b>OodelCX</b>
+          Powered by <img src="/oodelcx-logo-dark.webp" alt="OodelCX" style={{ height: 13, width: "auto", verticalAlign: "middle" }} />
         </div>
       </div>
     </>

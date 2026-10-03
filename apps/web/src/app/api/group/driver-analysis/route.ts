@@ -14,7 +14,7 @@ export async function GET() {
   const businessIds = businesses.map((b) => b._id);
   const now = new Date();
   const from = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const drivers = await computeDriverAnalysis(businessIds, from, now);
+  const drivers = await computeDriverAnalysis(businessIds, from, now, "customer_experience");
 
   return NextResponse.json({ status: "ok", drivers, windowDays: WINDOW_DAYS });
 }

@@ -15,7 +15,11 @@ export async function GET() {
   ]);
 
   const team = [
-    ...(owner ? [{ userId: owner._id.toString(), label: `${session.business.name} (Owner)` }] : []),
+    // "Owner (Business Name)", not the other way around — OwnerBadge
+    // derives its short display name from the text before " (", so this
+    // ordering is what makes the badge read "Owner" instead of silently
+    // showing the business's own name (which looked like "unassigned").
+    ...(owner ? [{ userId: owner._id.toString(), label: `Owner (${session.business.name})` }] : []),
     ...teamMembers.map((u) => ({ userId: u._id.toString(), label: `${u.email}${u.teamRole ? ` (${u.teamRole})` : ""}` })),
   ];
 

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, User, createInviteUser } from "@oodelscore/shared";
+import { connectToDatabase, User } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
- * Primary-account-only: inviting/removing Team Members is explicitly
- * excluded from the "full" tier's otherwise-equal access (spec Section 16).
+ * Read-only from the Business side — adding/removing Team Members is
+ * Admin-only (see api/admin/businesses/[id]/team-members). A business that
+ * wants a team change raises a support ticket instead of inviting directly.
  */
 export async function GET() {
   const session = await requireBusinessOwner();
@@ -12,61 +13,25 @@ export async function GET() {
   if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
-  const members = await User.find({ accountType: "team_member", teamOfType: "business", parentId: session.business._id }).sort({
-    createdAt: 1,
-  });
+  const [owner, teamMembers] = await Promise.all([
+    User.findOne({ accountType: "business", parentId: session.business._id }),
+    User.find({ accountType: "team_member", teamOfType: "business", parentId: session.business._id }).sort({ createdAt: 1 }),
+  ]);
+
+  // The primary owner login has its own account here too — without it,
+  // this list ("Everyone at your business with their own OodelCX login")
+  // silently omits the one person other pages (e.g. the Owner badge on
+  // Case Management) already show as an assignable owner, which reads as
+  // if that account doesn't exist.
+  const members = [
+    ...(owner ? [{ _id: owner._id, email: owner.email, teamRole: "Owner", tier: "full" as const, inviteStatus: owner.inviteStatus }] : []),
+    ...teamMembers,
+  ];
 
   return NextResponse.json({
     status: "ok",
     members,
     seatLimit: session.business.teamMemberSeatLimit,
-    activeCount: members.filter((m) => m.inviteStatus !== "invite_expired").length,
+    activeCount: teamMembers.filter((m) => m.inviteStatus !== "invite_expired").length,
   });
-}
-
-export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
-  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
-  if (session.isTeamMember) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
-
-  const body = await request.json().catch(() => null);
-  const email = typeof body?.email === "string" ? body.email.trim() : "";
-  const teamRole = typeof body?.teamRole === "string" ? body.teamRole.trim() : "";
-  const tier = body?.tier === "limited" ? "limited" : "full";
-  if (!email) return NextResponse.json({ status: "error", message: "Email is required" }, { status: 400 });
-
-  await connectToDatabase();
-
-  const limit = session.business.teamMemberSeatLimit;
-  if (limit !== null) {
-    const activeCount = await User.countDocuments({
-      accountType: "team_member",
-      teamOfType: "business",
-      parentId: session.business._id,
-      inviteStatus: { $ne: "invite_expired" },
-    });
-    if (activeCount >= limit) {
-      return NextResponse.json(
-        { status: "error", message: `Team seat limit reached (${activeCount} of ${limit} used). Ask Admin for more seats.` },
-        { status: 409 }
-      );
-    }
-  }
-
-  try {
-    const member = await createInviteUser({
-      email,
-      accountType: "team_member",
-      parentId: session.business._id,
-      teamRole,
-      tier,
-      teamOfType: "business",
-      inviterName: session.user.email,
-      businessOrOrgName: session.business.name,
-      appUrl: process.env.APP_URL ?? "",
-    });
-    return NextResponse.json({ status: "ok", member }, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ status: "error", message: err instanceof Error ? err.message : "Failed to invite" }, { status: 400 });
-  }
 }

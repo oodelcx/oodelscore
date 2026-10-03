@@ -47,12 +47,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!category) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const name = body.name.trim();
-  const duplicate = await Category.findOne({ name, _id: { $ne: id } });
+  const duplicate = await Category.findOne({ name, product: category.product, _id: { $ne: id } });
   if (duplicate) {
-    return NextResponse.json({ status: "error", message: "A category with this name already exists" }, { status: 409 });
+    return NextResponse.json({ status: "error", message: "A category with this name already exists for this product" }, { status: 409 });
   }
 
   category.name = name;
+  if (typeof body.sensitive === "boolean") category.sensitive = body.sensitive;
   await category.save();
   return NextResponse.json({ status: "ok", category });
 }

@@ -51,7 +51,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     computePeriodComparisons(businessIds, now),
     computeDailyTrend(businessIds, TREND_DAYS, now),
     computeRatingDistribution(businessIds, from30d, now),
-    CxPulseScore.findOne({ ownerType: "business", ownerId: business._id }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "business", ownerId: business._id, product: "customer_experience" }).sort({ period: -1 }),
     ActionBoardItem.find({ businessId: business._id }).select("status dueDate"),
   ]);
 
@@ -64,6 +64,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     totalResponses: overall.responseCount,
     starAverage: overall.starAverage,
     npsScore: overall.npsScore,
+    csatPercent: overall.csatPercent,
+    cesAverage: overall.cesAverage,
     comparisons,
     trend,
     distribution,

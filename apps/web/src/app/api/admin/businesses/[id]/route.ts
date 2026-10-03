@@ -3,16 +3,26 @@ import {
   connectToDatabase,
   Business,
   User,
+  BillingSubscription,
+  Invoice,
+  BillingCredit,
   BILLING_ASSIGNMENTS,
   BUSINESS_PLANS,
+  PRICING_INTERVALS,
+  syncProductCoverageForOwner,
   assertStaffCanEditBusinessAdminFields,
   canAccessScopedResource,
   ForbiddenFieldWriteError,
+  logSystemHealthEvent,
+  isValidFeatureKey,
+  PRODUCTS,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 const BILLING_ASSIGNMENT_SET: readonly string[] = BILLING_ASSIGNMENTS;
 const BUSINESS_PLAN_SET: readonly string[] = BUSINESS_PLANS;
+const PRICING_INTERVAL_SET: readonly string[] = PRICING_INTERVALS;
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -77,6 +87,52 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.plan !== undefined && !BUSINESS_PLAN_SET.includes(body.plan)) {
     return NextResponse.json({ status: "error", message: "Invalid plan" }, { status: 400 });
   }
+  if (body.pricingTerms !== undefined) {
+    const terms = body.pricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
+    }
+  }
+  if (body.cePricingTerms !== undefined) {
+    const terms = body.cePricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid cePricingTerms" }, { status: 400 });
+    }
+  }
+  if (body.escalationLevels !== undefined) {
+    const levels = body.escalationLevels;
+    const valid =
+      Array.isArray(levels) &&
+      levels.every((l: unknown) => l && typeof (l as { level?: unknown }).level === "number" && typeof (l as { label?: unknown }).label === "string");
+    if (!valid) {
+      return NextResponse.json({ status: "error", message: "Invalid escalationLevels" }, { status: 400 });
+    }
+  }
+  if (body.escalationSlaHours !== undefined && body.escalationSlaHours !== null && typeof body.escalationSlaHours !== "number") {
+    return NextResponse.json({ status: "error", message: "Invalid escalationSlaHours" }, { status: 400 });
+  }
+  if (body.enabledFeatures !== undefined && body.enabledFeatures !== null) {
+    const keys = body.enabledFeatures;
+    if (!Array.isArray(keys) || !keys.every((k: unknown) => typeof k === "string" && isValidFeatureKey(k))) {
+      return NextResponse.json({ status: "error", message: "Invalid enabledFeatures" }, { status: 400 });
+    }
+  }
+  if (body.paymentGateEnabled !== undefined && body.paymentGateEnabled !== null && typeof body.paymentGateEnabled !== "boolean") {
+    return NextResponse.json({ status: "error", message: "Invalid paymentGateEnabled" }, { status: 400 });
+  }
+  if (body.enabledProducts !== undefined && body.enabledProducts !== null) {
+    const products = body.enabledProducts;
+    if (!Array.isArray(products) || !products.every((p: unknown) => typeof p === "string" && PRODUCT_SET.includes(p))) {
+      return NextResponse.json({ status: "error", message: "Invalid enabledProducts" }, { status: 400 });
+    }
+    if (products.length === 0) {
+      return NextResponse.json({ status: "error", message: "A business needs at least one product enabled" }, { status: 400 });
+    }
+  }
 
   // Spec Section 16: never let teamMemberSeatLimit drop below the
   // currently-active team-member count.
@@ -106,6 +162,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "address",
     "billingAddressSameAsAddress",
     "billingAssignment",
+    "pricingTerms",
+    "cePricingTerms",
+    "checkoutEnabled",
+    "escalationLevels",
+    "escalationSlaHours",
     "plan",
     "maxFeedbackPoints",
     "questionTemplateId",
@@ -113,6 +174,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     "accountManagerId",
     "teamMemberSeatLimit",
     "ragThresholds",
+    "enabledFeatures",
+    "enabledProducts",
+    "paymentGateEnabled",
     "active",
   ] as const;
 
@@ -123,7 +187,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await business.save();
-  return NextResponse.json({ status: "ok", business });
+
+  // The billingAssignment/pricingTerms change itself is saved regardless —
+  // a Stripe sync failure (org has no subscription yet, org priced as a
+  // lump sum, etc.) is reported back but never blocks the save, so Admin
+  // isn't stuck unable to set billingAssignment until Stripe cooperates.
+  let billingSyncWarning: string | null = null;
+  if ("billingAssignment" in body || "enabledProducts" in body) {
+    try {
+      await syncProductCoverageForOwner("business", business._id.toString());
+    } catch (err) {
+      billingSyncWarning = err instanceof Error ? err.message : "Failed to sync Stripe billing coverage";
+      await logSystemHealthEvent("billing_sync_failure", billingSyncWarning, {
+        businessId: business._id.toString(),
+        businessName: business.name,
+      });
+    }
+  }
+
+  return NextResponse.json({ status: "ok", business, billingSyncWarning });
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
@@ -142,6 +224,18 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   // Never leave an orphaned login behind — spec Section 13's orphaned-record
   // bug class applies here just as much as it did to billing subscriptions.
   await User.deleteOne({ accountType: "business", parentId: id });
+
+  // Spec Section 13, orphaned-billing-records bug: a deleted business used
+  // to leave its BillingSubscription/Invoice/BillingCredit rows behind,
+  // showing up in Admin's ledgers as "Account: Unknown" forever. This is a
+  // DB-only cleanup — it never calls Stripe to cancel a live subscription,
+  // since that's a real-world charge-affecting action Admin must still do
+  // deliberately (per CLAUDE.md, no unconfirmed Stripe side effects here).
+  await Promise.all([
+    BillingSubscription.deleteMany({ ownerType: "business", ownerId: id }),
+    Invoice.deleteMany({ ownerType: "business", ownerId: id }),
+    BillingCredit.deleteMany({ ownerType: "business", ownerId: id }),
+  ]);
 
   return NextResponse.json({ status: "ok" });
 }

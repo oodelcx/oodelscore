@@ -3,7 +3,9 @@ import {
   connectToDatabase,
   ParentOrganization,
   User,
+  CompassAssessment,
   BILLING_MODES,
+  PRICING_INTERVALS,
   COMP_PERIODS,
   createInviteUser,
   expireStaleInvites,
@@ -11,8 +13,10 @@ import {
   type CompPeriod,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+import { compassStatusFor } from "@/lib/compassStatus";
 
 const BILLING_MODE_SET: readonly string[] = BILLING_MODES;
+const PRICING_INTERVAL_SET: readonly string[] = PRICING_INTERVALS;
 const COMP_PERIOD_SET: readonly string[] = COMP_PERIODS;
 
 export async function GET() {
@@ -32,9 +36,20 @@ export async function GET() {
     "_id parentId inviteStatus"
   );
   const ownerByOrgId = new Map(owners.map((o) => [o.parentId?.toString(), o]));
+
+  const assessments = await CompassAssessment.find({ ownerType: "parentOrg", ownerId: { $in: parentOrgs.map((o) => o._id) } }).select(
+    "ownerId status stage"
+  );
+  const assessmentByOrgId = new Map(assessments.map((a) => [a.ownerId.toString(), a]));
+
   const orgsWithOwner = parentOrgs.map((o) => {
     const owner = ownerByOrgId.get(o._id.toString());
-    return { ...o.toObject(), ownerUserId: owner?._id ?? null, ownerInviteStatus: owner?.inviteStatus ?? null };
+    return {
+      ...o.toObject(),
+      ownerUserId: owner?._id ?? null,
+      ownerInviteStatus: owner?.inviteStatus ?? null,
+      compassStatus: compassStatusFor(o.enabledFeatures, assessmentByOrgId.get(o._id.toString())),
+    };
   });
 
   return NextResponse.json({ status: "ok", parentOrgs: orgsWithOwner });
@@ -55,6 +70,14 @@ export async function POST(request: Request) {
   }
   if (body.defaultBillingMode !== undefined && !BILLING_MODE_SET.includes(body.defaultBillingMode)) {
     return NextResponse.json({ status: "error", message: "Invalid defaultBillingMode" }, { status: 400 });
+  }
+  if (body.pricingTerms !== undefined) {
+    const terms = body.pricingTerms;
+    const validAmount = terms?.amount === null || (typeof terms?.amount === "number" && terms.amount > 0);
+    const validInterval = terms?.interval === null || PRICING_INTERVAL_SET.includes(terms?.interval);
+    if (!terms || typeof terms !== "object" || !validAmount || !validInterval) {
+      return NextResponse.json({ status: "error", message: "Invalid pricingTerms" }, { status: 400 });
+    }
   }
   const contactEmail = typeof body.contactEmail === "string" ? body.contactEmail.trim().toLowerCase() : "";
   if (!contactEmail) {
@@ -83,6 +106,7 @@ export async function POST(request: Request) {
     address: body.address ?? undefined,
     billingAddressSameAsAddress: body.billingAddressSameAsAddress ?? true,
     defaultBillingMode: body.defaultBillingMode ?? "branch_pays",
+    pricingTerms: body.pricingTerms ?? undefined,
     accountManagerId,
   });
 

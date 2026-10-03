@@ -13,8 +13,8 @@ export async function GET() {
   }
 
   await connectToDatabase();
-  const own = await CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id }).sort({ period: -1 });
-  const ownHistory = await CxPulseScore.find({ ownerType: "business", ownerId: session.business._id })
+  const own = await CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id, product: "customer_experience" }).sort({ period: -1 });
+  const ownHistory = await CxPulseScore.find({ ownerType: "business", ownerId: session.business._id, product: "customer_experience" })
     .sort({ period: -1 })
     .limit(6);
 
@@ -27,7 +27,7 @@ export async function GET() {
     .select("name")
     .sort({ name: 1 });
   const siblingScores = await Promise.all(
-    siblingBusinesses.map((b) => CxPulseScore.findOne({ ownerType: "business", ownerId: b._id }).sort({ period: -1 }))
+    siblingBusinesses.map((b) => CxPulseScore.findOne({ ownerType: "business", ownerId: b._id, product: "customer_experience" }).sort({ period: -1 }))
   );
   const siblings = siblingBusinesses.map((b, i) => ({
     businessId: b._id.toString(),

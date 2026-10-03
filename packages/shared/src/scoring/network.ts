@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { Business } from "../models/Business";
 import { computeBusinessMetrics } from "./aggregate";
+import { hasProduct, type Product } from "../models/products";
 
 // Below this many responses, a score is noise, not a signal — never assert
 // a branch is "materially below average" or rank it against peers on this
@@ -24,6 +25,8 @@ export interface BusinessSummary {
   billingAssignment: string;
   starAverage: number | null;
   npsScore: number | null;
+  csatPercent: number | null;
+  cesLowEffortPercent: number | null;
   responseCount: number;
   confidence: BenchmarkConfidence;
 }
@@ -34,11 +37,17 @@ export interface BusinessSummary {
  * runs at; would want a single aggregation pipeline if a network grows into
  * the thousands of businesses.
  */
-export async function computeNetworkSummaries(parentOrgId: Types.ObjectId | string, from: Date, to: Date): Promise<BusinessSummary[]> {
+export async function computeNetworkSummaries(
+  parentOrgId: Types.ObjectId | string,
+  from: Date,
+  to: Date,
+  product: Product = "customer_experience"
+): Promise<BusinessSummary[]> {
   const businesses = await Business.find({ parentOrgId, active: true });
+  const scoped = product === "customer_experience" ? businesses : businesses.filter((b) => hasProduct(b, product));
   return Promise.all(
-    businesses.map(async (b) => {
-      const metrics = await computeBusinessMetrics(b._id, from, to);
+    scoped.map(async (b) => {
+      const metrics = await computeBusinessMetrics(b._id, from, to, product);
       return {
         businessId: b._id.toString(),
         name: b.name,
@@ -46,6 +55,8 @@ export async function computeNetworkSummaries(parentOrgId: Types.ObjectId | stri
         billingAssignment: b.billingAssignment,
         starAverage: metrics.starAverage,
         npsScore: metrics.npsScore,
+        csatPercent: metrics.csatPercent,
+        cesLowEffortPercent: metrics.cesLowEffortPercent,
         responseCount: metrics.responseCount,
         confidence: confidenceForSampleSize(metrics.responseCount),
       };

@@ -51,10 +51,12 @@ export default function FeedbackPointRequestsPage() {
 
   return (
     <div>
-      <h1>Feedback Point Requests</h1>
+      <h1>Feedback Point Requests (legacy)</h1>
       <p className="subtitle">
-        Businesses can&rsquo;t create their own feedback points — this is every request they&rsquo;ve raised for a new one or a
-        change to an existing one.
+        This flow has moved into the{" "}
+        <Link href="/admin/support-queue">Support Queue</Link>, as a &quot;Feedback point request&quot; ticket category —
+        new requests from businesses land there now. This page stays around only so any older requests below aren&rsquo;t
+        lost.
       </p>
 
       {error && <p className="error-text">{error}</p>}

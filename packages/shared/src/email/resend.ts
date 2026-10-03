@@ -69,7 +69,8 @@ export async function resolveOwnerLoginEmail(ownerType: BillingOwnerType, ownerI
 export async function sendTemplatedEmail(
   key: EmailTemplateKey,
   to: string,
-  vars: Record<string, string>
+  vars: Record<string, string>,
+  options?: { replyTo?: string; fromName?: string }
 ): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -84,6 +85,13 @@ export async function sendTemplatedEmail(
   const subject = substituteMergeVars(template.subject, vars);
   const body = substituteMergeVars(template.body, vars);
 
+  // Closing-the-loop tier 1 (no domain verification required): the email
+  // still sends from OodelCX's own verified domain, but wears the
+  // business's name and routes replies straight to the business's real
+  // inbox — exactly how most SaaS tools (Zendesk, Intercom) start before a
+  // customer asks for a fully custom sending domain.
+  const from = options?.fromName ? `${options.fromName} <${(process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM).match(/<(.+)>/)?.[1] ?? "noreply@oodelscore.com"}>` : (process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM);
+
   const res = await fetch(RESEND_API_URL, {
     method: "POST",
     headers: {
@@ -91,8 +99,9 @@ export async function sendTemplatedEmail(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM,
+      from,
       to: [to],
+      ...(options?.replyTo ? { reply_to: options.replyTo } : {}),
       subject,
       text: body,
     }),

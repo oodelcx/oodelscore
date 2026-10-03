@@ -52,7 +52,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     computePeriodComparisons(businessIds, now),
     computeDailyTrend(businessIds, TREND_DAYS, now),
     computeRatingDistribution(businessIds, from30d, now),
-    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: parentOrg._id }).sort({ period: -1 }),
+    CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: parentOrg._id, product: "customer_experience" }).sort({ period: -1 }),
     ActionBoardItem.find({ parentOrgId: parentOrg._id }).select("status dueDate"),
     Promise.all(
       businesses.map(async (b) => {
@@ -66,6 +66,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
           region: b.region,
           starAverage: metrics.starAverage,
           npsScore: metrics.npsScore,
+          csatPercent: metrics.csatPercent,
+          cesAverage: metrics.cesAverage,
           responseCount: metrics.responseCount,
           weekChangePercent: ownComparisons.week.changePercent,
         };
@@ -76,9 +78,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const totalResponses = perBusiness.reduce((sum, b) => sum + b.responseCount, 0);
   const starValues = perBusiness.map((b) => b.starAverage).filter((v): v is number => v !== null);
   const npsValues = perBusiness.map((b) => b.npsScore).filter((v): v is number => v !== null);
+  const csatValues = perBusiness.map((b) => b.csatPercent).filter((v): v is number => v !== null);
+  const cesValues = perBusiness.map((b) => b.cesAverage).filter((v): v is number => v !== null);
   const starAverage =
     starValues.length === 0 ? null : Math.round((starValues.reduce((s, v) => s + v, 0) / starValues.length) * 100) / 100;
   const npsScore = npsValues.length === 0 ? null : Math.round(npsValues.reduce((s, v) => s + v, 0) / npsValues.length);
+  const csatPercent =
+    csatValues.length === 0 ? null : Math.round((csatValues.reduce((s, v) => s + v, 0) / csatValues.length) * 10) / 10;
+  const cesAverage =
+    cesValues.length === 0 ? null : Math.round((cesValues.reduce((s, v) => s + v, 0) / cesValues.length) * 100) / 100;
 
   const openCount = actionItems.filter((i) => i.status !== "resolved").length;
   const overdueCount = actionItems.filter((i) => i.status !== "resolved" && i.dueDate && i.dueDate < now).length;
@@ -89,6 +97,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     totalResponses,
     starAverage,
     npsScore,
+    csatPercent,
+    cesAverage,
     comparisons,
     trend,
     distribution,

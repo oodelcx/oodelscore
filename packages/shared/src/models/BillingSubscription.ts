@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { PRODUCTS, type Product } from "./products";
 
 export const BILLING_OWNER_TYPES = ["business", "parentOrg"] as const;
 export type BillingOwnerType = (typeof BILLING_OWNER_TYPES)[number];
@@ -26,13 +27,34 @@ export interface IBillingSubscription {
   compPeriod: CompPeriod | null; // null unless isComp
   compStartedAt: Date | null;
   compExpiresAt: Date | null; // null = unlimited (or not comp)
+  // Set the moment the 1-week-before-expiry admin reminder actually sends,
+  // so the daily cron check doesn't re-send it every day until expiry.
+  // Cleared whenever markOwnerComp() sets a new compExpiresAt (extending
+  // or changing the expiry means a fresh reminder should fire again).
+  compExpiryReminderSentAt: Date | null;
   mrrValue: number; // 0 for comp
-  nextPaymentDate: Date | null;
+  nextPaymentDate: Date | null; // real subscriptions only (monthly / annual_monthly_rate)
+  // annual_lump_sum only: the one-time Checkout payment covers through this
+  // date, then real subscriptions won't auto-renew it — Admin has to send a
+  // fresh Checkout link before/at this date.
+  paidThroughDate: Date | null;
+  // Same reminder-dedup purpose as compExpiryReminderSentAt, but for an
+  // annual_lump_sum account's paidThroughDate instead.
+  lumpSumRenewalReminderSentAt: Date | null;
   status: SubscriptionStatus;
   paymentMethodLast4: string;
+  // Which Stripe subscription item (within this one subscription) backs
+  // each product this owner is billed for directly — "" when that product
+  // isn't currently a line item (not enabled, no price set yet, or its
+  // coverage is a group_pays branch item living on Business instead, not
+  // here). Lets savePricingAndPushToStripe() reprice or remove exactly one
+  // product's line without touching the other's.
+  productLineItems: Record<Product, string>;
   createdAt: Date;
   updatedAt: Date;
 }
+
+export const DEFAULT_PRODUCT_LINE_ITEMS: Record<Product, string> = { customer_experience: "", colleague_experience: "" };
 
 const BillingSubscriptionSchema = new Schema<IBillingSubscription>(
   {
@@ -45,10 +67,18 @@ const BillingSubscriptionSchema = new Schema<IBillingSubscription>(
     compPeriod: { type: String, enum: COMP_PERIODS, default: null },
     compStartedAt: { type: Date, default: null },
     compExpiresAt: { type: Date, default: null },
+    compExpiryReminderSentAt: { type: Date, default: null },
     mrrValue: { type: Number, default: 0 },
     nextPaymentDate: { type: Date, default: null },
+    paidThroughDate: { type: Date, default: null },
+    lumpSumRenewalReminderSentAt: { type: Date, default: null },
     status: { type: String, enum: SUBSCRIPTION_STATUSES, default: "active" },
     paymentMethodLast4: { type: String, default: "" },
+    productLineItems: {
+      type: Object.fromEntries(PRODUCTS.map((p) => [p, { type: String, default: "" }])),
+      default: () => ({ ...DEFAULT_PRODUCT_LINE_ITEMS }),
+      _id: false,
+    },
   },
   { timestamps: true }
 );

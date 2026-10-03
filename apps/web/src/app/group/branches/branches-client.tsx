@@ -14,6 +14,8 @@ interface BranchRow {
   responseCount: number;
 }
 
+type SortKey = "name" | "region" | "starAverage" | "npsScore" | "responseCount";
+
 export default function BranchesClient({ tooltips }: { tooltips: Record<string, string> }) {
   const [branches, setBranches] = useState<BranchRow[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
@@ -21,6 +23,8 @@ export default function BranchesClient({ tooltips }: { tooltips: Record<string, 
   const [search, setSearch] = useState("");
   const [region, setRegion] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortAsc, setSortAsc] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -36,6 +40,32 @@ export default function BranchesClient({ tooltips }: { tooltips: Record<string, 
       })
       .finally(() => setLoading(false));
   }, [search, region]);
+
+  function toggleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortAsc((asc) => !asc);
+    } else {
+      setSortKey(key);
+      setSortAsc(true);
+    }
+  }
+
+  function sortIndicator(key: SortKey) {
+    if (key !== sortKey) return "";
+    return sortAsc ? " ▲" : " ▼";
+  }
+
+  const sortedBranches = [...branches].sort((a, b) => {
+    const av = a[sortKey];
+    const bv = b[sortKey];
+    let cmp: number;
+    if (typeof av === "string" || typeof bv === "string") {
+      cmp = String(av ?? "").localeCompare(String(bv ?? ""));
+    } else {
+      cmp = (av ?? -Infinity) - (bv ?? -Infinity);
+    }
+    return sortAsc ? cmp : -cmp;
+  });
 
   return (
     <div>
@@ -64,11 +94,21 @@ export default function BranchesClient({ tooltips }: { tooltips: Record<string, 
         <table className="clean">
           <thead>
             <tr>
-              <th>Branch</th>
-              <th>Region</th>
-              <th>Average</th>
-              <th>NPS</th>
-              <th>Responses</th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("name")}>
+                Branch{sortIndicator("name")}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("region")}>
+                Region{sortIndicator("region")}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("starAverage")}>
+                Average{sortIndicator("starAverage")}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("npsScore")}>
+                NPS{sortIndicator("npsScore")}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => toggleSort("responseCount")}>
+                Responses{sortIndicator("responseCount")}
+              </th>
               <th>
                 Billed to
                 <InfoTip text={tooltips["billed-to"]} />
@@ -77,7 +117,7 @@ export default function BranchesClient({ tooltips }: { tooltips: Record<string, 
             </tr>
           </thead>
           <tbody>
-            {branches.map((b) => (
+            {sortedBranches.map((b) => (
               <tr key={b.businessId}>
                 <td>{b.name}</td>
                 <td>{b.region || "—"}</td>

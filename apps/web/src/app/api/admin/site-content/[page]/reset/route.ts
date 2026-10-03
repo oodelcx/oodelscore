@@ -17,10 +17,22 @@ const PAGE_SET: readonly string[] = SITE_CONTENT_PAGES;
 // Same revalidation map as the PATCH handler in ../route.ts — kept in sync
 // there; a reset touches the same public routes a manual save would.
 const MARKETING_ROUTES_BY_PAGE: Record<string, string[]> = {
-  menu: ["/", "/product", "/solutions", "/pricing", "/company", "/contact", "/privacy", "/terms"],
+  menu: [
+    "/",
+    "/product",
+    "/colleague-pulse",
+    "/solutions",
+    "/how-it-works",
+    "/pricing",
+    "/company",
+    "/contact",
+    "/privacy",
+    "/terms",
+  ],
   home: ["/"],
   pricing: ["/pricing"],
   product: ["/product"],
+  "colleague-pulse": ["/colleague-pulse"],
   solutions: ["/solutions"],
   company: ["/company"],
   contact: ["/contact"],
@@ -69,6 +81,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
   for (const route of MARKETING_ROUTES_BY_PAGE[page] ?? []) {
     revalidatePath(route);
   }
+  // See the same comment in ../route.ts — "menu" reaches dynamic pages
+  // (/solutions/[slug]) a hardcoded path list can't enumerate.
+  if (page === "menu") revalidatePath("/", "layout");
 
   await logAuditEvent({
     actor: session.user,

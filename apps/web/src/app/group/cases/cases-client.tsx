@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { InfoTip } from "@/components/info-tip";
 import { OwnerBadge } from "@/components/owner-badge";
 import { PlaybookRunPanelSlideout } from "@/components/playbook-run-panel-slideout";
+import { CaseSidePanel } from "@/components/case-side-panel";
 
 interface PlaybookRunSummary {
   id: string;
@@ -16,12 +18,20 @@ interface PlaybookRunSummary {
   status: "active" | "completed" | "abandoned";
   attachReason: string;
 }
+const CASE_TYPE_LABELS: Record<string, string> = {
+  customer_recovery: "Customer recovery",
+  operational_fix: "Operational fix",
+  investigation: "Investigation",
+};
+
 interface ItemRow {
   _id: string;
   title: string;
   description: string;
+  product?: "customer_experience" | "colleague_experience";
   businessId: string;
   categoryId: string | null;
+  caseType: string;
   ownerId: string | null;
   priority: string;
   status: string;
@@ -33,6 +43,8 @@ interface ItemRow {
   escalationNote: string;
   escalatedToOrg: boolean;
   escalatedToOrgNote: string;
+  currentEscalationLevel: number;
+  escalationHistory: { level: number; action: string; note: string; at: string }[];
   suggestedAction: string;
   rating: number | null;
   playbookRun?: PlaybookRunSummary | null;
@@ -45,6 +57,14 @@ interface BusinessRow {
 interface TeamRow {
   userId: string;
   label: string;
+}
+interface RecurringFlagRow {
+  _id: string;
+  categoryName: string;
+  count: number;
+  windowDays: number;
+  businessIds: string[];
+  actionable: boolean;
 }
 interface CategoryRow {
   _id: string;
@@ -128,6 +148,38 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [ceEnabled, setCeEnabled] = useState(false);
+  const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
+  const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
+
+  function loadFlags() {
+    fetch("/api/group/recurring-issues")
+      .then((r) => r.json())
+      .then((d) => setFlags(d.flags ?? []))
+      .catch(() => setFlags([]));
+  }
+
+  async function convertFlag(id: string) {
+    setConvertingFlagId(id);
+    await fetch(`/api/group/recurring-issues/${id}/convert`, { method: "POST" });
+    setConvertingFlagId(null);
+    loadFlags();
+  }
+
+  async function dismissFlag(id: string) {
+    setConvertingFlagId(id);
+    await fetch(`/api/group/recurring-issues/${id}/dismiss`, { method: "POST" });
+    setConvertingFlagId(null);
+    loadFlags();
+  }
+
+  useEffect(loadFlags, []);
+
+  useEffect(() => {
+    fetch("/api/group/me")
+      .then((r) => r.json())
+      .then((d) => setCeEnabled(!!d.org?.enabledProducts?.includes("colleague_experience")));
+  }, []);
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
@@ -220,6 +272,22 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
     setEscalating(item._id);
     await updateItem(item._id, { escalated: false });
     setEscalating(null);
+  }
+
+  async function escalateToNextLevel(id: string) {
+    setEscalating(id);
+    const res = await fetch(`/api/group/action-board/${id}/escalate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "" }),
+    });
+    const data = await res.json().catch(() => null);
+    setEscalating(null);
+    if (!res.ok) {
+      alert(data?.message ?? "Failed to escalate");
+      return;
+    }
+    load();
   }
 
   async function toggleComments(id: string) {
@@ -316,6 +384,37 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
         </div>
       </div>
 
+      {!isLimited && flags.length > 0 && (
+        <div className="card" style={{ marginBottom: 18, borderColor: "var(--amber, #E0A100)" }}>
+          <h3 style={{ margin: "0 0 4px" }}>Recurring patterns across branches</h3>
+          <p className="card-sub" style={{ margin: "0 0 10px" }}>
+            The same category keeps coming up across multiple branches — the system noticed the pattern
+            automatically. Turn it into a tracked Improvement Initiative, or dismiss it if it&rsquo;s not worth one
+            right now.
+          </p>
+          {flags.map((f) => (
+            <div
+              key={f._id}
+              className="field-row"
+              style={{ alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--border)" }}
+            >
+              <div>
+                <b>{f.categoryName}</b> — {f.count} cases across {f.businessIds.length} branches in the last{" "}
+                {f.windowDays} days
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-sm btn-dark" disabled={convertingFlagId === f._id} onClick={() => convertFlag(f._id)}>
+                  {convertingFlagId === f._id ? "…" : "Create initiative from this"}
+                </button>
+                <button className="btn btn-sm" disabled={convertingFlagId === f._id} onClick={() => dismissFlag(f._id)}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {!isLimited && (
         <div className="grid grid-6 kpi-strip" data-tour="cases-kpi-strip" style={{ marginBottom: 20 }}>
           <div className="card">
@@ -407,7 +506,9 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
               >
                 <div className="ab-card-head">
                   <div className="ab-title-block">
-                    <div className="ab-title">{item.title}</div>
+                    <div className="ab-title">
+                      {item.title} <Link href={`/group/cases/${item._id}`} className="ab-show-more">View full trail →</Link>
+                    </div>
                     <div className="ab-meta-row">
                       <Stars rating={item.rating} />
                       {!isLimited && (
@@ -453,6 +554,11 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                   </div>
                   <div className="ab-actions-col">
                     <div className="ab-badges">
+                      {ceEnabled && (
+                        <span className={`pill ${item.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                          {item.product === "colleague_experience" ? "Colleague" : "Customer"}
+                        </span>
+                      )}
                       {item.escalated && (
                         <span className="pill pill-red" title={item.escalationNote || undefined}>
                           Escalated
@@ -467,10 +573,16 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                       <span className={`pill ${item.status === "resolved" ? "pill-green" : "pill-amber"}`}>
                         {item.status.replace(/_/g, " ")}
                       </span>
+                      {item.currentEscalationLevel > 1 && (
+                        <span className="pill pill-amber">Escalation level {item.currentEscalationLevel}</span>
+                      )}
                       {age && <span className={`pill ${age.overdue ? "pill-red" : "pill-gray"}`}>{age.label}</span>}
                       <span className={`pill pill-${item.priority === "critical" || item.priority === "high" ? "amber" : "gray"}`}>
                         {item.priority}
                       </span>
+                      {item.caseType && item.caseType !== "operational_fix" && (
+                        <span className="pill pill-gray">{CASE_TYPE_LABELS[item.caseType] ?? item.caseType}</span>
+                      )}
                     </div>
                     {isLimited && item.status !== "resolved" && resolvingId !== item._id && (
                       <button className="btn btn-sm" onClick={() => startResolve(item._id)}>
@@ -502,7 +614,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                       className={`case-action-btn${expandedCommentsFor === item._id ? " active" : ""}`}
                       onClick={() => toggleComments(item._id)}
                     >
-                      💬 Comments{commentsByItem[item._id] ? ` (${commentsByItem[item._id].length})` : ""}
+                      💬 Comments{commentsByItem[item._id]?.length ? ` (${commentsByItem[item._id].length})` : ""}
                     </button>
                     {!isLimited && (
                       <button
@@ -512,68 +624,23 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                         disabled={escalating === item._id}
                         onClick={() => (item.escalated ? unEscalate(item) : startEscalate(item._id))}
                       >
-                        {item.escalated ? "↩ Un-escalate" : "↗ Escalate"}
+                        {item.escalated ? "↓ De-escalate" : "↗ Escalate"}
+                      </button>
+                    )}
+                    {!isLimited && item.status !== "resolved" && (
+                      <button
+                        type="button"
+                        className="case-action-btn"
+                        disabled={escalating === item._id}
+                        onClick={() => escalateToNextLevel(item._id)}
+                        title="Advance this case to the next configured escalation level"
+                      >
+                        ↑ Escalate to next level
                       </button>
                     )}
                   </div>
                   <OwnerBadge label={item.ownerId ? ownerLabel(item.ownerId) : null} tip={tooltips["owner"]} />
                 </div>
-
-                {escalatingId === item._id && (
-                  <div className="ab-panel">
-                    <p className="card-sub" style={{ marginTop: 0 }}>
-                      Escalating notifies{" "}
-                      <b>{item.ownerId ? ownerLabel(item.ownerId) : `${businessName(item.businessId)}'s owner`}</b> by
-                      email right now, flagging this item as needing their attention. Add a note so they know why.
-                    </p>
-                    <div className="field">
-                      <label>Note (optional, included in the email)</label>
-                      <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
-                    </div>
-                    <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
-                      {escalating === item._id ? "Escalating…" : "Send escalation"}
-                    </button>{" "}
-                    <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
-                      Cancel
-                    </button>
-                  </div>
-                )}
-
-                {expandedCommentsFor === item._id && (
-                  <div className="ab-panel">
-                    {(commentsByItem[item._id] ?? []).length === 0 ? (
-                      <p className="subtitle" style={{ margin: "0 0 8px" }}>
-                        No comments yet — start the trail below.
-                      </p>
-                    ) : (
-                      <ul style={{ margin: "0 0 8px", paddingLeft: 0, listStyle: "none" }}>
-                        {(commentsByItem[item._id] ?? []).map((c) => (
-                          <li key={c._id} style={{ marginBottom: 8, fontSize: "12.5px" }}>
-                            <b>{c.authorLabel}</b>{" "}
-                            <span style={{ color: "var(--text-3)" }}>{new Date(c.createdAt).toLocaleString()}</span>
-                            <div style={{ color: "var(--text-2)" }}>{c.body}</div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <div className="field-row" style={{ alignItems: "flex-end" }}>
-                      <div className="field" style={{ margin: 0, flex: 1 }}>
-                        <textarea
-                          placeholder="Add a note for whoever's on this item…"
-                          value={commentDraft}
-                          onChange={(e) => setCommentDraft(e.target.value)}
-                        />
-                      </div>
-                      <button
-                        className="btn btn-sm btn-dark"
-                        disabled={postingComment || !commentDraft.trim()}
-                        onClick={() => postComment(item._id)}
-                      >
-                        {postingComment ? "Posting…" : "Post"}
-                      </button>
-                    </div>
-                  </div>
-                )}
 
                 {isLimited && resolvingId === item._id && (
                   <div className="ab-panel">
@@ -617,6 +684,91 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
           </button>
         </div>
       )}
+
+      {expandedCommentsFor &&
+        (() => {
+          const item = items.find((i) => i._id === expandedCommentsFor);
+          if (!item) return null;
+          return (
+            <CaseSidePanel
+              title={`Comments — ${item.title}`}
+              onClose={() => setExpandedCommentsFor(null)}
+              footer={
+                <button
+                  className="btn btn-sm btn-dark"
+                  style={{ width: "100%" }}
+                  disabled={postingComment || !commentDraft.trim()}
+                  onClick={() => postComment(item._id)}
+                >
+                  {postingComment ? "Posting…" : "Post comment"}
+                </button>
+              }
+            >
+              {item.escalationHistory && item.escalationHistory.length > 0 && (
+                <ul style={{ margin: "0 0 14px", paddingLeft: 0, listStyle: "none" }}>
+                  {item.escalationHistory.map((h, i) => (
+                    <li key={i} style={{ marginBottom: 6, fontSize: "12.5px", color: "var(--text-3)" }}>
+                      ↑ Level {h.level} → escalated{h.note ? `: ${h.note}` : ""} — {new Date(h.at).toLocaleString()}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {(commentsByItem[item._id] ?? []).length === 0 ? (
+                <p className="subtitle" style={{ margin: "0 0 8px" }}>
+                  No comments yet — start the trail below.
+                </p>
+              ) : (
+                <ul style={{ margin: "0 0 8px", paddingLeft: 0, listStyle: "none" }}>
+                  {(commentsByItem[item._id] ?? []).map((c) => (
+                    <li key={c._id} style={{ marginBottom: 10, fontSize: "12.5px" }}>
+                      <b>{c.authorLabel}</b> <span style={{ color: "var(--text-3)" }}>{new Date(c.createdAt).toLocaleString()}</span>
+                      <div style={{ color: "var(--text-2)" }}>{c.body}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="field" style={{ margin: "12px 0 0" }}>
+                <textarea
+                  placeholder="Add a note for whoever's on this item…"
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                />
+              </div>
+            </CaseSidePanel>
+          );
+        })()}
+
+      {escalatingId &&
+        (() => {
+          const item = items.find((i) => i._id === escalatingId);
+          if (!item) return null;
+          return (
+            <CaseSidePanel
+              title={`Escalate — ${item.title}`}
+              onClose={() => setEscalatingId(null)}
+              footer={
+                <>
+                  <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
+                    {escalating === item._id ? "Escalating…" : "Send escalation"}
+                  </button>
+                  <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
+                    Cancel
+                  </button>
+                </>
+              }
+            >
+              <p className="subtitle" style={{ marginTop: 0 }}>
+                Escalating notifies{" "}
+                <b>{item.ownerId ? ownerLabel(item.ownerId) : `${businessName(item.businessId)}'s owner`}</b> by email
+                right now, flagging this item as needing their attention. Add a note so they know why.
+              </p>
+              <div className="field">
+                <label>Note (optional, included in the email)</label>
+                <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
+              </div>
+            </CaseSidePanel>
+          );
+        })()}
 
       {openRunFor && (
         <PlaybookRunPanelSlideout

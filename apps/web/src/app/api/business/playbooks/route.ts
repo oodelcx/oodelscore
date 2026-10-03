@@ -7,9 +7,15 @@ import {
   evaluatePlaybookTrigger,
   PLAYBOOK_TRIGGER_METRICS,
   PLAYBOOK_TRIGGER_COMPARATORS,
+  hasFeature,
+  PRODUCTS,
+  type Product,
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
 import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 // Mirrors /api/group/playbooks, scoped to businessId instead of
 // parentOrgId. Not available to limited-tier team members.
@@ -26,13 +32,19 @@ import { computePlaybookUsageBatch } from "@/lib/playbookUsage";
 // by checking off steps on its own cases in Case Management, same as
 // before — Group already sees that live via GET /api/group/playbook-runs.
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "playbooks" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "playbooks")) {
+    return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 
   const isBranch = !!session.business.parentOrgId;
 
+  // Both products' playbooks together, same "show all, badge by product"
+  // convention Alert Rules already uses — each row carries its own
+  // `product` field for the client to badge/filter with.
   const [playbooks, categories] = await Promise.all([
     isBranch
       ? Playbook.find({ parentOrgId: session.business.parentOrgId }).sort({ createdAt: -1 })
@@ -63,12 +75,22 @@ export async function GET() {
     }))
   );
 
-  return NextResponse.json({ status: "ok", playbooks: enriched, categories, readOnly: isBranch });
+  // Playbooks themselves stay unfiltered by product (see the comment
+  // above), but the "New playbook" form still needs to know which product
+  // tab is active so it doesn't silently default to Customer Experience —
+  // resolve and return it the same way every other product-scoped route
+  // already does.
+  const product = await resolveViewProduct(session.business);
+
+  return NextResponse.json({ status: "ok", playbooks: enriched, categories, readOnly: isBranch, product });
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "playbooks" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "playbooks")) {
+    return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });
+  }
   if (session.business.parentOrgId) {
     return NextResponse.json(
       { status: "error", message: "Playbooks for a branch are managed by your parent organization." },
@@ -86,9 +108,11 @@ export async function POST(request: Request) {
   const triggerComparator = PLAYBOOK_TRIGGER_COMPARATORS.includes(body?.triggerComparator) ? body.triggerComparator : null;
   const triggerThreshold = typeof body?.triggerThreshold === "number" ? body.triggerThreshold : null;
   const triggerWindowDays = typeof body?.triggerWindowDays === "number" ? body.triggerWindowDays : null;
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
 
   const playbook = await Playbook.create({
     businessId: session.business._id,
+    product,
     title,
     categoryId: typeof body?.categoryId === "string" ? body.categoryId : null,
     triggerCondition: typeof body?.triggerCondition === "string" ? body.triggerCondition : "",

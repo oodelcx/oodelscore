@@ -5,7 +5,7 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "rawFeedback" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const { id } = await params;

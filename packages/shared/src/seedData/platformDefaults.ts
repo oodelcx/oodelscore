@@ -2,10 +2,12 @@ import { Role } from "../models/Role";
 import { EmailTemplate } from "../models/EmailTemplate";
 import { SiteContent } from "../models/SiteContent";
 import { CxPulseFramework, CX_PULSE_FRAMEWORK_SINGLETON_KEY } from "../models/CxPulseFramework";
+import { CompassQuestion } from "../models/CompassQuestion";
 import { SYSTEM_ROLES } from "./roles";
 import { SEED_EMAIL_TEMPLATES } from "./emailTemplates";
 import { SEED_SITE_CONTENT } from "./siteContent";
-import { DEFAULT_CX_PULSE_WEIGHTS, DEFAULT_CX_PULSE_QUESTIONS } from "./cxPulseFramework";
+import { DEFAULT_CX_PULSE_WEIGHTS, DEFAULT_CX_PULSE_QUESTIONS, DEFAULT_CE_SELF_ASSESSMENT_QUESTIONS } from "./cxPulseFramework";
+import { DEFAULT_COMPASS_QUESTIONS } from "./compassQuestions";
 
 export interface PlatformDefaultsSeedResult {
   roles: string[];
@@ -39,6 +41,7 @@ export async function seedPlatformDefaults(): Promise<PlatformDefaultsSeedResult
         singletonKey: CX_PULSE_FRAMEWORK_SINGLETON_KEY,
         weights: DEFAULT_CX_PULSE_WEIGHTS,
         pulseQuestions: DEFAULT_CX_PULSE_QUESTIONS,
+        ceSelfAssessmentQuestions: DEFAULT_CE_SELF_ASSESSMENT_QUESTIONS,
       },
     },
     { upsert: true }
@@ -46,6 +49,10 @@ export async function seedPlatformDefaults(): Promise<PlatformDefaultsSeedResult
 
   for (const content of SEED_SITE_CONTENT) {
     await SiteContent.updateOne({ page: content.page }, { $setOnInsert: content }, { upsert: true });
+  }
+
+  for (const question of DEFAULT_COMPASS_QUESTIONS) {
+    await CompassQuestion.updateOne({ key: question.key }, { $setOnInsert: question }, { upsert: true });
   }
 
   return {

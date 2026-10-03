@@ -7,7 +7,8 @@ export const CX_PULSE_FRAMEWORK_SINGLETON_KEY = "default";
 export interface ICxPulseFramework {
   singletonKey: string;
   weights: ICxPulseDimensions; // sum to 100
-  pulseQuestions: string[]; // quarterly self-assessment questions
+  pulseQuestions: string[]; // quarterly self-assessment questions — Customer Experience
+  ceSelfAssessmentQuestions: string[]; // quarterly self-assessment questions — Colleague Experience's own set
   // One line per maturity level (index 0 = Level 1 Collecting ... index 4 =
   // Level 5 Embedded), shown under each rung of the ladder on the real CX
   // Pulse page. Admin-editable so the copy isn't hardcoded in the frontend.
@@ -32,6 +33,7 @@ const CxPulseFrameworkSchema = new Schema<ICxPulseFramework>(
     singletonKey: { type: String, required: true, unique: true, default: CX_PULSE_FRAMEWORK_SINGLETON_KEY },
     weights: { type: CxPulseWeightsSchema, required: true },
     pulseQuestions: { type: [String], default: [] },
+    ceSelfAssessmentQuestions: { type: [String], default: [] },
     levelDescriptions: {
       type: [String],
       default: [

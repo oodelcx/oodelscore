@@ -12,6 +12,8 @@ interface BranchTile {
   region: string;
   starAverage: number | null;
   npsScore: number | null;
+  csatPercent: number | null;
+  cesLowEffortPercent: number | null;
   responseCount: number;
   starDelta: number | null;
   band: "green" | "amber" | "red" | null;
@@ -38,7 +40,10 @@ interface Sparkline {
 }
 interface CommandCenterData {
   orgName: string;
+  product: "customer_experience" | "colleague_experience";
   branchTiles: BranchTile[];
+  csatPercent: number | null;
+  cesLowEffortPercent: number | null;
   categoryMatrix: CategoryRow[];
   feed: FeedEntry[];
   cxPulse: { compositeScore: number; level: number } | null;
@@ -133,6 +138,7 @@ export default function GroupCommandCenterClient() {
   if (!data) return null;
 
   const branchCount = data.branchTiles.length;
+  const npsLabel = data.product === "colleague_experience" ? "eNPS" : "NPS";
   const firingAlerts = data.feed.filter((f) => f.kind === "alert").length;
   const tickerItems = [...data.branchTiles, ...data.branchTiles];
   const totalOpenActions = data.branchTiles.reduce((sum, b) => sum + b.openActionItems, 0);
@@ -156,7 +162,7 @@ export default function GroupCommandCenterClient() {
               <span className="cc-ticker-item" key={`${b.businessId}-${i}`}>
                 <b className={`cc-band-${b.band ?? "amber"}`}>{b.name}</b>
                 <span>★ {b.starAverage?.toFixed(1) ?? "—"}</span>
-                <span>NPS {b.npsScore ?? "—"}</span>
+                <span>{npsLabel} {b.npsScore ?? "—"}</span>
                 {b.starDelta !== null && (
                   <span className={b.starDelta >= 0 ? "cc-band-green" : "cc-band-red"}>
                     {b.starDelta >= 0 ? "▲" : "▼"} {Math.abs(b.starDelta).toFixed(2)}
@@ -176,6 +182,12 @@ export default function GroupCommandCenterClient() {
           <div className="cc-chip-row">
             <div className="cc-chip live">● LIVE</div>
             <div className="cc-chip">{branchCount} BRANCHES</div>
+            <div className="cc-chip" title="% of star-rating responses that are 4 or 5 out of 5">
+              CSAT {data.csatPercent !== null ? `${data.csatPercent}%` : "—"}
+            </div>
+            <div className="cc-chip" title="% of effort-question responses answering 1 or 2 out of 5 (low effort = good)">
+              CES {data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}
+            </div>
             {firingAlerts > 0 && <div className="cc-chip alert">{firingAlerts} ALERTS FIRING</div>}
             <button
               type="button"
@@ -199,7 +211,7 @@ export default function GroupCommandCenterClient() {
                   Branch Health · 30d <InfoTip text={tooltips["health-band"]} />
                 </div>
                 <div className="cc-card-sub">
-                  ★ AVG <InfoTip text={tooltips["star-average"]} /> · NPS <InfoTip text={tooltips["nps"]} /> · RESP{" "}
+                  ★ AVG <InfoTip text={tooltips["star-average"]} /> · {npsLabel} <InfoTip text={tooltips["nps"]} /> · RESP{" "}
                   <InfoTip text={tooltips["response-count"]} /> · WoW TREND <InfoTip text={tooltips["star-delta"]} />
                 </div>
               </div>
@@ -230,12 +242,31 @@ export default function GroupCommandCenterClient() {
                         <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.starAverage?.toFixed(1) ?? "—"}</span>
                       </div>
                       <div>
-                        <span className="cc-bm-label">NPS</span>
+                        <span className="cc-bm-label">{npsLabel}</span>
                         <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.npsScore ?? "—"}</span>
+                      </div>
+                      <div>
+                        <span className="cc-bm-label">CSAT</span>
+                        <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.csatPercent !== null ? `${b.csatPercent}%` : "—"}</span>
+                      </div>
+                      <div>
+                        <span className="cc-bm-label">CES</span>
+                        <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.cesLowEffortPercent !== null ? `${b.cesLowEffortPercent}%` : "—"}</span>
                       </div>
                     </div>
                     <div className="cc-branch-foot">
-                      <span>{b.responseCount} resp / 30d</span>
+                      <span>
+                        {b.responseCount} resp / 30d
+                        {b.responseCount > 0 && b.responseCount < 10 && (
+                          <span
+                            className="pill pill-gray"
+                            style={{ marginLeft: 6, fontSize: 10 }}
+                            title="Fewer than 10 responses — treat this score as low-confidence"
+                          >
+                            low sample
+                          </span>
+                        )}
+                      </span>
                       {b.starDelta !== null && (
                         <span className={b.starDelta >= 0 ? "cc-band-green" : "cc-band-red"}>
                           {b.starDelta >= 0 ? "▲" : "▼"} {Math.abs(b.starDelta).toFixed(2)}
@@ -288,7 +319,7 @@ export default function GroupCommandCenterClient() {
                       <tr className="cc-matrix-extra">
                         <td>Open cases</td>
                         {data.branchTiles.map((b) => (
-                          <td className="num cc-clickable" key={b.businessId} onClick={() => router.push("/group/action-board")}>
+                          <td className="num cc-clickable" key={b.businessId} onClick={() => router.push("/group/cases")}>
                             {b.openActionItems}
                           </td>
                         ))}
@@ -296,7 +327,7 @@ export default function GroupCommandCenterClient() {
                       <tr className="cc-matrix-extra">
                         <td>Overdue cases</td>
                         {data.branchTiles.map((b) => (
-                          <td className="num cc-clickable" key={b.businessId} onClick={() => router.push("/group/action-board")}>
+                          <td className="num cc-clickable" key={b.businessId} onClick={() => router.push("/group/cases")}>
                             {b.overdueActionItems}
                           </td>
                         ))}

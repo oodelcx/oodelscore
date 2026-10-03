@@ -71,6 +71,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["name", "escalator_name", "business_name", "org_name", "action_title", "escalation_note", "action_link"],
   },
   {
+    key: "case_escalated",
+    subject: "Escalated to you ({{level_label}}): {{action_title}}",
+    body: "Hi {{name}}, a case at {{business_name}} has been escalated to you as {{level_label}}: {{action_title}}.\n\n{{escalation_note}}\n\nView it here: {{action_link}}",
+    availableVars: ["name", "level_label", "business_name", "action_title", "escalation_note", "action_link"],
+  },
+  {
     key: "invoice_receipt",
     subject: "Your OodelCX payment receipt",
     body: "Hi {{name}}, we've received your payment of {{invoice_amount}}. Thank you.",
@@ -81,6 +87,18 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     subject: "Payment failed for {{business_name}}",
     body: "Hi {{name}}, a payment for {{business_name}} failed. Please update your payment method: {{billing_link}}",
     availableVars: ["name", "business_name", "billing_link"],
+  },
+  {
+    key: "comp_expiry_reminder",
+    subject: "{{account_name}}'s pilot expires {{expires_on}}",
+    body: "Hi {{name}}, {{account_name}}'s comp/pilot period expires on {{expires_on}}. If they're continuing, enable checkout or start a real subscription before then: {{account_link}}",
+    availableVars: ["name", "account_name", "expires_on", "account_link"],
+  },
+  {
+    key: "customer_response",
+    subject: "A response from {{business_name}}",
+    body: "Hi {{respondent_name}}, thank you for your feedback. {{message_body}}\n\n— {{business_name}}",
+    availableVars: ["respondent_name", "business_name", "message_body"],
   },
   {
     key: "demo_request",
@@ -101,9 +119,33 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["business_name", "requester_email", "note"],
   },
   {
+    key: "support_ticket_created",
+    subject: "New support ticket ({{category}}): {{subject}}",
+    body: "{{account_name}} ({{submitter_email}}) opened a {{category}} ticket via the Support Queue.\n\nSubject: {{subject}}\n\n{{body}}\n\nView it here: {{ticket_link}}",
+    availableVars: ["account_name", "submitter_email", "category", "subject", "body", "ticket_link"],
+  },
+  {
     key: "decision_outcome_measured",
     subject: "Outcome measured: {{decision_title}} — {{verdict}}",
     body: "Hi {{name}}, the decision \"{{decision_title}}\" has a measured outcome: {{verdict}}. {{metric_label}} went from {{outcome_before}} to {{outcome_after}}. View it here: {{decision_link}}",
     availableVars: ["name", "decision_title", "verdict", "metric_label", "outcome_before", "outcome_after", "decision_link"],
+  },
+  {
+    key: "colleague_lifecycle_survey",
+    subject: "A quick, anonymous check-in",
+    body: "Hi, we'd like your honest, anonymous feedback — this takes about a minute and nothing you say is linked back to you. {{survey_link}}",
+    availableVars: ["survey_link"],
+  },
+  {
+    key: "colleague_pulse_survey",
+    subject: "Your anonymous pulse survey",
+    body: "Hi, it's time for the regular team pulse survey — your honest, anonymous feedback helps shape what changes next. It takes about a minute and nothing you say is linked back to you. {{survey_link}}",
+    availableVars: ["survey_link"],
+  },
+  {
+    key: "you_said_we_did",
+    subject: "You said, we did: {{update_title}}",
+    body: "Hi, here's an update on feedback you and your colleagues shared.\n\nWhat we heard:\n{{what_we_heard}}\n\nWhat we're doing:\n{{what_were_doing}}\n\nThanks for speaking up — it's what makes these changes happen.",
+    availableVars: ["update_title", "what_we_heard", "what_were_doing"],
   },
 ];

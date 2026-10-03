@@ -35,6 +35,21 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A Group user escalates a branch's case",
     category: "alerts",
   },
+  case_escalated: {
+    label: "Case Escalated",
+    trigger: "A case advances to the next configured escalation level",
+    category: "alerts",
+  },
+  comp_expiry_reminder: {
+    label: "Comp Expiry Reminder",
+    trigger: "A comp/pilot account's expiry is 7 days away",
+    category: "billing",
+  },
+  customer_response: {
+    label: "Customer Response",
+    trigger: "A business/branch sends a personal reply to a feedback respondent",
+    category: "alerts",
+  },
   case_escalated_to_org: {
     label: "Case Escalated to Org",
     trigger: "A branch escalates one of its own cases to its parent org",
@@ -57,9 +72,29 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A business requests a new feedback point or changes to one",
     category: "alerts",
   },
+  support_ticket_created: {
+    label: "Support Ticket Created",
+    trigger: "A business/group owner submits a ticket via the Support Queue",
+    category: "alerts",
+  },
   decision_outcome_measured: {
     label: "Decision Outcome Measured",
     trigger: "The daily sweep computes a real verdict (not \"not ready\"/\"insufficient data\") for a logged decision",
+    category: "alerts",
+  },
+  colleague_lifecycle_survey: {
+    label: "Colleague Lifecycle Survey",
+    trigger: "The daily sweep finds someone newly due for an onboarding (day-30/90) or exit survey",
+    category: "alerts",
+  },
+  colleague_pulse_survey: {
+    label: "Colleague Pulse Survey",
+    trigger: "A business sends its roster-personalized pulse survey links (Business portal, Colleague Roster)",
+    category: "alerts",
+  },
+  you_said_we_did: {
+    label: "You Said, We Did",
+    trigger: "A business/group sends a Closing the Loop broadcast to its Colleague Experience roster",
     category: "alerts",
   },
 };

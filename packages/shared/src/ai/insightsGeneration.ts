@@ -5,6 +5,7 @@ import { ParentOrganization } from "../models/ParentOrganization";
 import { ActionBoardItem } from "../models/ActionBoardItem";
 import { AiInsightReport, AI_REPORT_PERIODS, type AiReportPeriod } from "../models/AiInsightReport";
 import { computeBusinessMetrics, type BusinessMetrics } from "../scoring/aggregate";
+import { getEnabledProducts, type Product } from "../models/products";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -87,23 +88,40 @@ interface OwnerTarget {
   ownerId: Types.ObjectId;
   name: string;
   businessIds: Types.ObjectId[]; // itself, or every branch for a parentOrg
+  products: Product[]; // this owner's own enabled products — one report per product, never pooled
 }
 
+/**
+ * Every standalone Business and ParentOrganization, each carrying its own
+ * enabled products. Previously this loop had no notion of product at all,
+ * which meant generateDueInsights() always scored Customer Experience only
+ * (QA Blocking #2) — a Colleague-Experience-only account's responseCount
+ * was always 0 for that hardcoded product, so it silently got zero reports,
+ * ever, and a dual-product account never got a Colleague Experience report
+ * either.
+ */
 async function resolveOwners(): Promise<OwnerTarget[]> {
   const [standaloneBusinesses, orgs] = await Promise.all([
-    Business.find({ parentOrgId: null }).select("_id name"),
-    ParentOrganization.find().select("_id name"),
+    Business.find({ parentOrgId: null }).select("_id name enabledProducts"),
+    ParentOrganization.find().select("_id name enabledProducts"),
   ]);
   const targets: OwnerTarget[] = standaloneBusinesses.map((b) => ({
     ownerType: "business" as const,
     ownerId: b._id,
     name: b.name,
     businessIds: [b._id],
+    products: getEnabledProducts(b),
   }));
   for (const org of orgs) {
     const branches = await Business.find({ parentOrgId: org._id }).select("_id");
     if (branches.length === 0) continue;
-    targets.push({ ownerType: "parentOrg", ownerId: org._id, name: org.name, businessIds: branches.map((b) => b._id) });
+    targets.push({
+      ownerType: "parentOrg",
+      ownerId: org._id,
+      name: org.name,
+      businessIds: branches.map((b) => b._id),
+      products: getEnabledProducts(org),
+    });
   }
   return targets;
 }
@@ -119,20 +137,28 @@ interface PeriodMetrics extends BusinessMetrics {
  * business's own average) for consistency with the rest of the app's
  * multi-branch aggregation, plus the case counts an insight report needs
  * that periods.ts doesn't compute. */
-async function computeOwnerMetrics(businessIds: Types.ObjectId[], from: Date, to: Date): Promise<PeriodMetrics> {
-  const perBusiness = await Promise.all(businessIds.map((id) => computeBusinessMetrics(id, from, to)));
+async function computeOwnerMetrics(businessIds: Types.ObjectId[], from: Date, to: Date, product: Product): Promise<PeriodMetrics> {
+  const perBusiness = await Promise.all(businessIds.map((id) => computeBusinessMetrics(id, from, to, product)));
   const responseCount = perBusiness.reduce((sum, r) => sum + r.responseCount, 0);
   const starResults = perBusiness.filter((r) => r.starAverage !== null);
   const npsResults = perBusiness.filter((r) => r.npsScore !== null);
+  const csatResults = perBusiness.filter((r) => r.csatPercent !== null);
+  const cesResults = perBusiness.filter((r) => r.cesAverage !== null);
+  const starCount = perBusiness.reduce((sum, r) => sum + r.starCount, 0);
+  const npsCount = perBusiness.reduce((sum, r) => sum + r.npsCount, 0);
+  const csatCount = perBusiness.reduce((sum, r) => sum + r.csatCount, 0);
+  const cesCount = perBusiness.reduce((sum, r) => sum + r.cesCount, 0);
 
   const [casesResolved, casesStillOpenOverdue] = await Promise.all([
     ActionBoardItem.countDocuments({
       businessId: { $in: businessIds },
+      product,
       status: "resolved",
       resolvedAt: { $gte: from, $lte: to },
     }),
     ActionBoardItem.countDocuments({
       businessId: { $in: businessIds },
+      product,
       status: { $ne: "resolved" },
       dueDate: { $ne: null, $lt: to },
     }),
@@ -143,6 +169,18 @@ async function computeOwnerMetrics(businessIds: Types.ObjectId[], from: Date, to
     starAverage:
       starResults.length === 0 ? null : Math.round((starResults.reduce((s, r) => s + (r.starAverage as number), 0) / starResults.length) * 100) / 100,
     npsScore: npsResults.length === 0 ? null : Math.round(npsResults.reduce((s, r) => s + (r.npsScore as number), 0) / npsResults.length),
+    csatPercent:
+      csatResults.length === 0 ? null : Math.round((csatResults.reduce((s, r) => s + (r.csatPercent as number), 0) / csatResults.length) * 10) / 10,
+    cesAverage:
+      cesResults.length === 0 ? null : Math.round((cesResults.reduce((s, r) => s + (r.cesAverage as number), 0) / cesResults.length) * 100) / 100,
+    cesLowEffortPercent:
+      cesResults.length === 0
+        ? null
+        : Math.round((cesResults.reduce((s, r) => s + (r.cesLowEffortPercent as number), 0) / cesResults.length) * 10) / 10,
+    starCount,
+    npsCount,
+    csatCount,
+    cesCount,
     casesResolved,
     casesStillOpenOverdue,
   };
@@ -157,9 +195,20 @@ const PERIOD_LABEL: Record<AiReportPeriod, string> = {
   yearly: "year",
 };
 
-function fallbackNarrative(ownerName: string, label: string, current: PeriodMetrics, previous: PeriodMetrics): string {
+const PRODUCT_LABEL: Record<Product, string> = {
+  customer_experience: "customer experience",
+  colleague_experience: "colleague experience",
+};
+const NPS_LABEL: Record<Product, string> = {
+  customer_experience: "Net Promoter Score",
+  colleague_experience: "eNPS",
+};
+
+function fallbackNarrative(ownerName: string, label: string, product: Product, current: PeriodMetrics, previous: PeriodMetrics): string {
   const parts: string[] = [];
-  parts.push(`${ownerName} collected ${current.responseCount} response${current.responseCount === 1 ? "" : "s"} this ${label}.`);
+  parts.push(
+    `${ownerName} collected ${current.responseCount} ${PRODUCT_LABEL[product]} response${current.responseCount === 1 ? "" : "s"} this ${label}.`
+  );
   if (current.starAverage !== null) {
     const trend =
       previous.starAverage !== null
@@ -168,7 +217,7 @@ function fallbackNarrative(ownerName: string, label: string, current: PeriodMetr
     parts.push(`Average star rating was ${current.starAverage}/5${trend}.`);
   }
   if (current.npsScore !== null) {
-    parts.push(`Net Promoter Score was ${current.npsScore}, reported separately from the star average.`);
+    parts.push(`${NPS_LABEL[product]} was ${current.npsScore}, reported separately from the star average.`);
   }
   parts.push(
     `${current.casesResolved} case${current.casesResolved === 1 ? "" : "s"} resolved in Case Management this ${label}` +
@@ -177,10 +226,16 @@ function fallbackNarrative(ownerName: string, label: string, current: PeriodMetr
   return parts.join(" ");
 }
 
-async function narrate(ownerName: string, period: AiReportPeriod, current: PeriodMetrics, previous: PeriodMetrics): Promise<string> {
+async function narrate(
+  ownerName: string,
+  period: AiReportPeriod,
+  product: Product,
+  current: PeriodMetrics,
+  previous: PeriodMetrics
+): Promise<string> {
   const label = PERIOD_LABEL[period];
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return fallbackNarrative(ownerName, label, current, previous);
+  if (!apiKey) return fallbackNarrative(ownerName, label, product, current, previous);
 
   try {
     const client = new Anthropic({ apiKey });
@@ -188,24 +243,24 @@ async function narrate(ownerName: string, period: AiReportPeriod, current: Perio
       model: "claude-haiku-4-5-20251001",
       max_tokens: 500,
       system:
-        "You write a short, plain-English customer-experience performance summary for a business owner, using ONLY the numbers given to you — never invent a fact or number not present in the data. " +
+        `You write a short, plain-English ${PRODUCT_LABEL[product]} performance summary for a business owner, using ONLY the numbers given to you — never invent a fact or number not present in the data. ` +
         "2-4 sentences of plain prose, no markdown headers, no bullet points. " +
-        "Star rating (1-5) and Net Promoter Score are separate metrics measuring different things — never average them together or imply one derives from the other. " +
+        `Star rating (1-5) and ${NPS_LABEL[product]} are separate metrics measuring different things — never average them together or imply one derives from the other. ` +
         "A null metric means there wasn't enough data for it (e.g. no NPS question answered that period) — say so plainly rather than omitting it silently or inventing a number.",
       messages: [
         {
           role: "user",
           content:
-            `Business/organization: ${ownerName}\nPeriod: this ${label}\n` +
+            `Business/organization: ${ownerName}\nDomain: ${PRODUCT_LABEL[product]}\nPeriod: this ${label}\n` +
             `Current period: ${JSON.stringify(current)}\nPrevious ${label} (for comparison): ${JSON.stringify(previous)}`,
         },
       ],
     });
     const text = message.content.find((block) => block.type === "text")?.text ?? "";
-    return text.trim() || fallbackNarrative(ownerName, label, current, previous);
+    return text.trim() || fallbackNarrative(ownerName, label, product, current, previous);
   } catch (err) {
     console.error("[ai-insights] Claude call failed, using fallback narrative", err);
-    return fallbackNarrative(ownerName, label, current, previous);
+    return fallbackNarrative(ownerName, label, product, current, previous);
   }
 }
 
@@ -221,10 +276,14 @@ export interface GenerateInsightsResult {
  * Generates every "pending" AiInsightReport due for `asOf` (or the given
  * `periods`, e.g. for a manual Admin-triggered run) across every owner —
  * every standalone Business and every ParentOrganization (aggregated across
- * its branches). Never touches an owner/period/periodStart combination that
- * already has a report, so re-running (the daily cron firing twice, or an
- * Admin manual run on the same day the cron already ran) is a safe no-op
- * for anything already generated.
+ * its branches) — and, within each owner, once per product it has enabled
+ * (QA Blocking #2: previously hardcoded to Customer Experience only, so a
+ * Colleague-Experience-only account never got a report, and a dual-product
+ * account never got a Colleague Experience one). Never touches an
+ * owner/product/period/periodStart combination that already has a report,
+ * so re-running (the daily cron firing twice, or an Admin manual run on the
+ * same day the cron already ran) is a safe no-op for anything already
+ * generated.
  */
 export async function generateDueInsights(asOf: Date = new Date(), periods?: AiReportPeriod[]): Promise<GenerateInsightsResult> {
   const periodsToRun = periods ?? duePeriodsFor(asOf);
@@ -237,42 +296,46 @@ export async function generateDueInsights(asOf: Date = new Date(), periods?: AiR
     const previousRange = periodRangeFor(period, start);
 
     for (const owner of owners) {
-      const alreadyExists = await AiInsightReport.exists({
-        ownerType: owner.ownerType,
-        ownerId: owner.ownerId,
-        period,
-        periodStart: start,
-      });
-      if (alreadyExists) {
-        reportsSkipped++;
-        continue;
+      for (const product of owner.products) {
+        const alreadyExists = await AiInsightReport.exists({
+          ownerType: owner.ownerType,
+          ownerId: owner.ownerId,
+          product,
+          period,
+          periodStart: start,
+        });
+        if (alreadyExists) {
+          reportsSkipped++;
+          continue;
+        }
+
+        const [current, previous] = await Promise.all([
+          computeOwnerMetrics(owner.businessIds, start, end, product),
+          computeOwnerMetrics(owner.businessIds, previousRange.start, previousRange.end, product),
+        ]);
+
+        if (current.responseCount === 0) {
+          // Nothing happened this period for this product — not worth an
+          // Admin review or a "you got 0 responses" email to the owner.
+          reportsSkipped++;
+          continue;
+        }
+
+        const bodyMarkdown = await narrate(owner.name, period, product, current, previous);
+
+        await AiInsightReport.create({
+          ownerType: owner.ownerType,
+          ownerId: owner.ownerId,
+          product,
+          period,
+          periodStart: start,
+          periodEnd: end,
+          bodyMarkdown,
+          status: "pending",
+          generatedAt: new Date(),
+        });
+        reportsCreated++;
       }
-
-      const [current, previous] = await Promise.all([
-        computeOwnerMetrics(owner.businessIds, start, end),
-        computeOwnerMetrics(owner.businessIds, previousRange.start, previousRange.end),
-      ]);
-
-      if (current.responseCount === 0) {
-        // Nothing happened this period — not worth an Admin review or a
-        // "you got 0 responses" email to the owner.
-        reportsSkipped++;
-        continue;
-      }
-
-      const bodyMarkdown = await narrate(owner.name, period, current, previous);
-
-      await AiInsightReport.create({
-        ownerType: owner.ownerType,
-        ownerId: owner.ownerId,
-        period,
-        periodStart: start,
-        periodEnd: end,
-        bodyMarkdown,
-        status: "pending",
-        generatedAt: new Date(),
-      });
-      reportsCreated++;
     }
   }
 

@@ -7,8 +7,8 @@ import {
   BillingSubscription,
   AiInsightReport,
   AlertRule,
+  SupportTicket,
   Response,
-  FeedbackPointRequest,
   expireStaleInvites,
   findBillingIntegrityIssues,
 } from "@oodelscore/shared";
@@ -70,25 +70,14 @@ export async function GET() {
     accountType: { $in: ["business", "parent_org"] },
   }).select("accountType parentId");
 
-  // Needs attention: responses affected by the NPS/star legacy bug (mixed
-  // answer types on one submission — see feedback-responses route).
-  const mixedTypeCount = await Response.countDocuments({
-    $and: [{ "answers.type": "star_1_5" }, { "answers.type": "nps_0_10" }],
-  });
-
   // Needs attention: businesses asking for a new/changed feedback point —
   // they can't create these themselves, so this is the only signal Admin
-  // gets short of checking email.
-  let pendingFeedbackRequestIds: unknown[] = [];
-  if (role.permissions.businesses.view) {
-    const requestBusinessFilter =
-      role.permissions.businesses.scope === "assigned" ? { accountManagerId: user._id } : {};
-    const scopedBusinessIds = await Business.find(requestBusinessFilter).distinct("_id");
-    pendingFeedbackRequestIds = await FeedbackPointRequest.find({
-      status: "pending",
-      businessId: { $in: scopedBusinessIds },
-    }).distinct("_id");
-  }
+  // gets short of checking email. Submitted as a Support Ticket in the
+  // "feedback_point_request" category (folded in per OBS8).
+  const pendingFeedbackRequestIds = await SupportTicket.find({
+    category: "feedback_point_request",
+    status: { $ne: "resolved" },
+  }).distinct("_id");
 
   // Needs attention: alert-rule recipients shared across more than one owner.
   const alertRules = await AlertRule.find().select("ownerId recipients");
@@ -103,6 +92,31 @@ export async function GET() {
     }
   }
   const suspiciousRecipientCount = [...ownerIdsByRecipient.values()].filter((owners) => owners.size > 1).length;
+
+  // Customer health signal (OBS11): an actively-paying business that's
+  // gone quiet — no customer responses in 30 days — is a churn risk long
+  // before it shows up as a support ticket or a canceled subscription.
+  // Comp accounts are excluded: a business on a free/pilot period going
+  // quiet isn't the same commercial risk as a paying one.
+  let quietPayingBusinessCount = 0;
+  if (role.permissions.businesses.view && role.permissions.billingOversight.view) {
+    const payingBusinessIds = await BillingSubscription.find({ ownerType: "business", isComp: false, status: { $ne: "canceled" } }).distinct(
+      "ownerId"
+    );
+    const scopedPayingIds =
+      role.permissions.businesses.scope === "assigned"
+        ? await Business.find({ _id: { $in: payingBusinessIds }, accountManagerId: user._id }).distinct("_id")
+        : payingBusinessIds;
+    if (scopedPayingIds.length > 0) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const activeResponderIds = await Response.find({
+        businessId: { $in: scopedPayingIds },
+        submittedAt: { $gte: thirtyDaysAgo },
+      }).distinct("businessId");
+      const activeSet = new Set(activeResponderIds.map((id) => id.toString()));
+      quietPayingBusinessCount = scopedPayingIds.filter((id) => !activeSet.has(id.toString())).length;
+    }
+  }
 
   const needsAttention: { label: string; issue: string; severity: "red" | "amber"; href: string }[] = [];
   if (expiredUsers.length > 0) {
@@ -126,15 +140,7 @@ export async function GET() {
       label: `${pendingFeedbackRequestIds.length} request(s)`,
       issue: "Business asking for a new or changed feedback point",
       severity: "amber",
-      href: "/admin/feedback-requests",
-    });
-  }
-  if (mixedTypeCount > 0) {
-    needsAttention.push({
-      label: "Feedback Responses",
-      issue: `${mixedTypeCount} response(s) mix NPS with star ratings — legacy scoring-bug audit`,
-      severity: "red",
-      href: "/admin/feedback-responses",
+      href: "/admin/support-queue",
     });
   }
   if (suspiciousRecipientCount > 0) {
@@ -151,6 +157,14 @@ export async function GET() {
       issue: "Payment overdue",
       severity: "amber",
       href: "/admin/billing",
+    });
+  }
+  if (quietPayingBusinessCount > 0) {
+    needsAttention.push({
+      label: `${quietPayingBusinessCount} business(es)`,
+      issue: "Paying but no customer responses in 30 days — churn risk",
+      severity: "amber",
+      href: "/admin/accounts",
     });
   }
 

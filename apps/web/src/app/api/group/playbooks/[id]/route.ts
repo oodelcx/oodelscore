@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Playbook, PLAYBOOK_TRIGGER_METRICS, PLAYBOOK_TRIGGER_COMPARATORS } from "@oodelscore/shared";
+import { connectToDatabase, Playbook, PLAYBOOK_TRIGGER_METRICS, PLAYBOOK_TRIGGER_COMPARATORS , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "playbooks" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "playbooks")) {
+    return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 
@@ -32,8 +35,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "playbooks" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "playbooks")) {
+    return NextResponse.json({ status: "error", message: "Playbook Library is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 

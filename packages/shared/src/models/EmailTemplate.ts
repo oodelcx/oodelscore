@@ -11,12 +11,19 @@ export const EMAIL_TEMPLATE_KEYS = [
   "action_comment_added",
   "item_escalated",
   "case_escalated_to_org",
+  "case_escalated",
   "invoice_receipt",
   "payment_failed",
+  "comp_expiry_reminder",
+  "customer_response",
   "demo_request",
   "contact_form_submission",
   "feedback_point_request",
   "decision_outcome_measured",
+  "support_ticket_created",
+  "colleague_lifecycle_survey",
+  "colleague_pulse_survey",
+  "you_said_we_did",
 ] as const;
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
 

@@ -7,6 +7,16 @@ export type BillingCreditType = (typeof BILLING_CREDIT_TYPES)[number];
 /**
  * Written whenever Finance/Admin issues a credit or refund from Billing
  * Oversight. Permanent audit trail — never edited or deleted after creation.
+ *
+ * Finalized scope (Phase 4 item 18): this is a record-keeping ledger only.
+ * It does not call Stripe to adjust a real charge, and it is not a coupon
+ * applied automatically to a future invoice — Finance still handles the
+ * actual money movement (a manual Stripe refund/adjustment, a check, etc.)
+ * outside this app, per CLAUDE.md's rule against unconfirmed real-world
+ * Stripe side effects. What this app guarantees is that the record isn't
+ * silently invisible: it's shown on the owning business/org's own Billing
+ * page (see business/group billing routes + billing-client.tsx), not just
+ * in Admin's internal view.
  */
 export interface IBillingCredit {
   ownerType: BillingOwnerType;

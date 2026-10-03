@@ -20,12 +20,23 @@ interface BillingData {
     paymentMethodLast4: string;
   } | null;
   invoices: { _id: string; amount: number; currency: string; status: string; issuedAt: string }[];
+  credits: { _id: string; type: string; amount: number; reason: string; issuedAt: string }[];
   totalBranches: number;
   groupPaysBranchCount: number;
   branchPaysBranchCount: number;
   overdueSelfBilledCount: number;
   branches: BranchBillingRow[];
+  checkoutLinkAvailable: boolean;
+  pricingTerms: { amount: number | null; currency: string; interval: "monthly" | "annual_monthly_rate" | "annual_lump_sum" | null };
+  cePricingTerms: { amount: number | null; currency: string; interval: "monthly" | "annual_monthly_rate" | "annual_lump_sum" | null };
+  enabledProducts: ("customer_experience" | "colleague_experience")[] | null;
 }
+
+const INTERVAL_LABELS: Record<string, string> = {
+  monthly: "/month",
+  annual_monthly_rate: "/month, billed annually",
+  annual_lump_sum: "/year",
+};
 
 function statusPill(status: string) {
   const cls = status === "active" || status === "paid" ? "pill-green" : status === "overdue" ? "pill-red" : "pill-gray";
@@ -56,6 +67,15 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
     else alert(responseData.message);
   }
 
+  async function continueToPayment() {
+    setBusy(true);
+    const res = await fetch("/api/group/billing/checkout", { method: "POST" });
+    const responseData = await res.json();
+    setBusy(false);
+    if (res.ok) window.location.href = responseData.url;
+    else alert(responseData.message);
+  }
+
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load billing.</p>;
 
@@ -71,6 +91,35 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
     <div>
       <h1>Billing</h1>
       <p className="subtitle">What you&apos;re billed for, how you pay it, and the record of every payment.</p>
+
+      {data.checkoutLinkAvailable && (
+        <div className="callout callout-amber" style={{ marginBottom: 20 }}>
+          <b>Ready to continue with OodelCX?</b>{" "}
+          {(() => {
+            const ceEnabled = !!data.enabledProducts?.includes("colleague_experience");
+            const lines = [
+              data.pricingTerms.amount !== null && data.pricingTerms.interval
+                ? `Customer Experience: ${data.pricingTerms.currency.toUpperCase()} ${data.pricingTerms.amount.toFixed(2)}${INTERVAL_LABELS[data.pricingTerms.interval] ?? ""}`
+                : null,
+              ceEnabled && data.cePricingTerms.amount !== null && data.cePricingTerms.interval
+                ? `Colleague Experience: ${data.cePricingTerms.currency.toUpperCase()} ${data.cePricingTerms.amount.toFixed(2)}${INTERVAL_LABELS[data.cePricingTerms.interval] ?? ""}`
+                : null,
+            ].filter((l): l is string => l !== null);
+            return lines.length > 0 ? (
+              <>
+                Your plan is <b>{lines.join(" + ")}</b>. Click below to enter your card details and start your subscription.
+              </>
+            ) : (
+              "Click below to enter your card details and start your subscription."
+            );
+          })()}
+          <div style={{ marginTop: 10 }}>
+            <button className="btn btn-primary" disabled={busy} onClick={continueToPayment}>
+              Continue to payment →
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="callout callout-amber" style={{ marginBottom: 20 }}>
         <b>Which model each branch is on</b> (Group pays vs. branch pays) is set by your OodelCX account manager, not editable
@@ -126,10 +175,10 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
             <div className="metric-note">Next payment: {new Date(data.subscription.nextPaymentDate).toLocaleDateString()}</div>
           )}
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-            <button className="btn" disabled={busy} onClick={openPortal}>
+            <button className="btn" disabled={busy || data.checkoutLinkAvailable} onClick={openPortal}>
               Update payment method
             </button>
-            <button className="btn" disabled={busy} onClick={openPortal}>
+            <button className="btn" disabled={busy || data.checkoutLinkAvailable} onClick={openPortal}>
               Manage subscription
             </button>
           </div>
@@ -175,8 +224,8 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
               <td>{statusPill(b.status)}</td>
               <td style={{ textAlign: "right" }}>
                 {b.status === "overdue" ? (
-                  <Link className="btn btn-sm" href="/group/messages">
-                    Message about this →
+                  <Link className="btn btn-sm" href="/group/support">
+                    Report this →
                   </Link>
                 ) : (
                   <Link className="btn btn-sm" href={`/group/branches/${b.businessId}`}>
@@ -228,6 +277,34 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
           )}
         </tbody>
       </table>
+
+      {data.credits.length > 0 && (
+        <>
+          <div className="section-title">Credits &amp; refunds</div>
+          <table className="clean">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.credits.map((c) => (
+                <tr key={c._id}>
+                  <td>{new Date(c.issuedAt).toLocaleDateString()}</td>
+                  <td>
+                    <span className={`pill ${c.type === "refund" ? "pill-amber" : "pill-green"}`}>{c.type}</span>
+                  </td>
+                  <td>{c.amount.toFixed(2)}</td>
+                  <td>{c.reason || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 }

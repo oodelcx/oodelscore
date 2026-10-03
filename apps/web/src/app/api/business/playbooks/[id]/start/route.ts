@@ -21,7 +21,14 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   await connectToDatabase();
   const { id } = await params;
-  const playbook = await Playbook.findOne({ _id: id, businessId: session.business._id });
+  // A branch has no playbooks of its own (see ../route.ts GET) — it starts
+  // runs against its parent org's playbooks instead, same resolution the
+  // read-only listing already uses. The run itself still belongs to this
+  // business (ownerId below), not the org, so it shows up against this
+  // business's own case exactly like a locally-authored playbook would.
+  const playbook = session.business.parentOrgId
+    ? await Playbook.findOne({ _id: id, parentOrgId: session.business.parentOrgId })
+    : await Playbook.findOne({ _id: id, businessId: session.business._id });
   if (!playbook) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => null);

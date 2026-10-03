@@ -1,4 +1,14 @@
-import { Business, ParentOrganization, type IBusiness, type IParentOrganization, type TeamMemberTier } from "@oodelscore/shared";
+import {
+  Business,
+  ParentOrganization,
+  teamMemberCanAccess,
+  branchPermissionAllowed,
+  type IBusiness,
+  type IParentOrganization,
+  type TeamMemberTier,
+  type TeamPageKey,
+  type BranchDelegatablePermission,
+} from "@oodelscore/shared";
 import { getCurrentUser } from "./session";
 import type { HydratedDocument } from "mongoose";
 
@@ -25,6 +35,11 @@ interface OwnerAuthOptions {
   // opting out, keeping the safe behavior automatic for routes nobody
   // remembers to update.
   allowLimitedTeamMember?: boolean;
+  // Which page this route serves — checked against the team member's own
+  // restrictedPages (see features/teamPermissions.ts) so Admin's per-person
+  // access grid is actually enforced server-side, not just in the nav.
+  // Irrelevant for the primary owner, who always passes.
+  requirePage?: TeamPageKey;
 }
 
 /**
@@ -46,12 +61,30 @@ export async function requireBusinessOwner(options: OwnerAuthOptions = {}): Prom
 
   if (user.accountType === "team_member" && user.teamOfType === "business") {
     if (user.tier === "limited" && !options.allowLimitedTeamMember) return null;
+    if (options.requirePage && !teamMemberCanAccess(user, options.requirePage)) return null;
     const business = await Business.findById(user.parentId);
     if (!business) return null;
     return { user, business, isTeamMember: true, tier: user.tier };
   }
 
   return null;
+}
+
+/**
+ * Whether a business session may act on its own in one of the areas a
+ * parent org can choose to delegate down (Feedback Points viewing/requests,
+ * Category Owners overrides, CX Goals, Alert Rules) — false for a branch
+ * whose org has kept that area centralized. Always true for a standalone
+ * business or the actual top account of a group, which is who'd be doing
+ * the delegating in the first place.
+ */
+export async function checkBranchPermission(
+  business: HydratedDocument<IBusiness>,
+  permission: BranchDelegatablePermission
+): Promise<boolean> {
+  if (!business.parentOrgId) return true;
+  const org = await ParentOrganization.findById(business.parentOrgId).select("branchPermissions");
+  return branchPermissionAllowed(true, org?.branchPermissions, permission);
 }
 
 /**
@@ -73,6 +106,7 @@ export async function requireParentOrgOwner(options: OwnerAuthOptions = {}): Pro
 
   if (user.accountType === "team_member" && user.teamOfType === "parentOrg") {
     if (user.tier === "limited" && !options.allowLimitedTeamMember) return null;
+    if (options.requirePage && !teamMemberCanAccess(user, options.requirePage)) return null;
     const org = await ParentOrganization.findById(user.parentId);
     if (!org) return null;
     return { user, org, isTeamMember: true, tier: user.tier };

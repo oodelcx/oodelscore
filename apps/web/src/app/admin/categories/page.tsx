@@ -11,6 +11,8 @@ interface UsedByBusiness {
 interface CategoryRow {
   _id: string;
   name: string;
+  product: string;
+  sensitive: boolean;
   questionCount: number;
   templateCount: number;
   usedByBusinesses: UsedByBusiness[];
@@ -23,10 +25,13 @@ export default function CategoriesPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [name, setName] = useState("");
+  const [product, setProduct] = useState("customer_experience");
+  const [sensitive, setSensitive] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingSensitive, setEditingSensitive] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [expandedUsageFor, setExpandedUsageFor] = useState<string | null>(null);
 
@@ -43,6 +48,8 @@ export default function CategoriesPage() {
 
   function openCreateModal() {
     setName("");
+    setProduct("customer_experience");
+    setSensitive(false);
     setError(null);
     setShowCreateModal(true);
   }
@@ -54,7 +61,7 @@ export default function CategoriesPage() {
     const res = await fetch("/api/admin/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, product, sensitive }),
     });
     const data = await res.json();
     setCreating(false);
@@ -69,6 +76,7 @@ export default function CategoriesPage() {
   function openEditModal(cat: CategoryRow) {
     setEditingCategory(cat);
     setEditingName(cat.name);
+    setEditingSensitive(cat.sensitive);
     setError(null);
   }
 
@@ -78,7 +86,7 @@ export default function CategoriesPage() {
     const res = await fetch(`/api/admin/categories/${editingCategory._id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editingName }),
+      body: JSON.stringify({ name: editingName, sensitive: editingSensitive }),
     });
     const data = await res.json().catch(() => null);
     setSavingEdit(false);
@@ -127,6 +135,7 @@ export default function CategoriesPage() {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Product</th>
               <th>Used in</th>
               <th>Used by</th>
               <th style={{ textAlign: "right" }}>Actions</th>
@@ -136,7 +145,19 @@ export default function CategoriesPage() {
             {categories.map((c) => (
               <Fragment key={c._id}>
                 <tr>
-                  <td>{c.name}</td>
+                  <td>
+                    {c.name}
+                    {c.sensitive && (
+                      <span className="pill pill-red" style={{ marginLeft: 6 }} title="Sensitive category — bypasses normal category-owner routing">
+                        Sensitive
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`pill ${c.product === "colleague_experience" ? "pill-blue" : "pill-gray"}`}>
+                      {c.product === "colleague_experience" ? "Colleague" : "Customer"}
+                    </span>
+                  </td>
                   <td style={{ color: c.questionCount === 0 ? "var(--text-3)" : undefined }}>
                     {c.questionCount === 0
                       ? "Not currently used"
@@ -169,7 +190,7 @@ export default function CategoriesPage() {
                 </tr>
                 {expandedUsageFor === c._id && c.usedByBusinesses.length > 0 && (
                   <tr>
-                    <td colSpan={4} style={{ background: "var(--bg-2, #f7f7f8)" }}>
+                    <td colSpan={5} style={{ background: "var(--bg-2, #f7f7f8)" }}>
                       <ul style={{ margin: "4px 0", paddingLeft: 18, fontSize: "12.5px", color: "var(--text-2)" }}>
                         {c.usedByBusinesses.map((b) => (
                           <li key={b.businessId}>
@@ -185,7 +206,7 @@ export default function CategoriesPage() {
             ))}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={4} className="subtitle">
+                <td colSpan={5} className="subtitle">
                   No categories yet — add one above.
                 </td>
               </tr>
@@ -213,6 +234,22 @@ export default function CategoriesPage() {
                 onKeyDown={(e) => e.key === "Enter" && createCategory()}
               />
             </div>
+            <div className="field">
+              <label>Product</label>
+              <select value={product} onChange={(e) => setProduct(e.target.value)}>
+                <option value="customer_experience">Customer Experience</option>
+                <option value="colleague_experience">Colleague Experience</option>
+              </select>
+            </div>
+            {product === "colleague_experience" && (
+              <div className="field" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input type="checkbox" id="cat-sensitive" checked={sensitive} onChange={(e) => setSensitive(e.target.checked)} />
+                <label htmlFor="cat-sensitive" style={{ margin: 0 }}>
+                  Sensitive (HR/leadership) — bypasses normal category-owner routing, goes to the designated
+                  sensitive-routing contact instead
+                </label>
+              </div>
+            )}
             {error && <p className="error-text">{error}</p>}
             <div className="modal-actions">
               <button className="btn" onClick={() => setShowCreateModal(false)}>
@@ -244,6 +281,19 @@ export default function CategoriesPage() {
                 onKeyDown={(e) => e.key === "Enter" && saveEdit()}
               />
             </div>
+            {editingCategory.product === "colleague_experience" && (
+              <div className="field" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="checkbox"
+                  id="cat-edit-sensitive"
+                  checked={editingSensitive}
+                  onChange={(e) => setEditingSensitive(e.target.checked)}
+                />
+                <label htmlFor="cat-edit-sensitive" style={{ margin: 0 }}>
+                  Sensitive (HR/leadership) — bypasses normal category-owner routing
+                </label>
+              </div>
+            )}
             {error && <p className="error-text">{error}</p>}
             <div className="modal-actions">
               <button className="btn" onClick={() => setEditingCategory(null)}>

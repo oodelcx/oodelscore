@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ActionBoardItem, ActionItemComment, User, sendTemplatedEmail } from "@oodelscore/shared";
+import { connectToDatabase, ActionBoardItem, ActionItemComment, User, sendTemplatedEmail, logCaseEvent } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -14,7 +14,7 @@ function authorLabel(user: { email: string; teamRole: string }): string {
  * access, or the limited-tier assignee on their own item).
  */
 export async function GET(_request: Request, { params }: RouteParams) {
-  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true });
+  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true });
+  const session = await requireParentOrgOwner({ allowLimitedTeamMember: true, requirePage: "caseManagement" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   await connectToDatabase();
@@ -50,6 +50,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     authorId: session.user._id,
     authorLabel: authorLabel(session.user),
     body: text,
+  });
+
+  await logCaseEvent({
+    actionBoardItemId: item._id,
+    businessId: item.businessId,
+    kind: "comment_added",
+    fromValue: null,
+    toValue: null,
+    actorUserId: session.user._id,
+    actorLabel: authorLabel(session.user),
+    note: text,
   });
 
   if (item.ownerId && item.ownerId.toString() !== session.user._id.toString()) {

@@ -1,0 +1,58 @@
+name: CI
+
+# Runs on every pull request. Previously nothing ran automatically on a
+# PR at all — scheduled-jobs.yml only covers the 4 timed cron routes. This
+# is the regression gate: typecheck, build, the fast unit tests (pure
+# permission/access-control logic — no database needed), and a Playwright
+# smoke pass across every public marketing + login page (also no database
+# needed, via the seed-content fallback in src/lib/siteContent.ts).
+#
+# Deliberately NOT covered here: anything requiring a real session or
+# stored data (login, feedback submission, RBAC against a live account,
+# billing gates). This repo has no self-contained way to provision a test
+# database yet — see the unit-test layer's own comments for what it
+# stands in for in the meantime, and QA_HANDOFF-style manual passes
+# against staging for the rest until that's built.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke tests
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 14

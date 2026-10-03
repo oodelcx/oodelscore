@@ -38,7 +38,10 @@ function SetPasswordFields() {
 
     if (!res.ok) {
       const data = await res.json().catch(() => null);
-      setError(data?.message ?? "Something went wrong");
+      // "Invalid or expired link" means retrying this same link can never
+      // succeed — show the same actionable next step as the missing-params
+      // case below instead of leaving a form up that will just fail again.
+      setError(data?.message === "Invalid or expired link" ? "expired" : (data?.message ?? "Something went wrong"));
       return;
     }
 
@@ -48,6 +51,10 @@ function SetPasswordFields() {
 
   if (!uid || !token) {
     return <p className="auth-success">This link is missing its invite/reset details. Ask an admin to resend it.</p>;
+  }
+
+  if (error === "expired") {
+    return <p className="auth-success">This link has expired. Ask an admin to resend it.</p>;
   }
 
   if (success) {

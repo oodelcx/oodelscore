@@ -29,19 +29,95 @@ interface BranchInfo {
   regionBusinessCount: number;
   recentDecisions: { title: string; description: string; loggedAt: string }[];
 }
+interface HoldingBackDimension {
+  dimension: "awareness" | "response" | "ownership" | "culture" | "outcome";
+  value: number;
+}
 interface DashboardData {
+  product: "customer_experience" | "colleague_experience";
   totalResponses: number;
   starAverage: number | null;
   npsScore: number | null;
+  csatPercent: number | null;
+  cesAverage: number | null;
+  cesLowEffortPercent: number | null;
+  starCount: number;
+  npsCount: number;
+  csatCount: number;
+  cesCount: number;
   conversionRate: number | null;
   comparisons: { week: Comparison; month: Comparison; quarter: Comparison; year: Comparison };
   trend: TrendPoint[];
   distribution: { highPercent: number; midPercent: number; lowPercent: number };
   latestComments: Comment[];
   branch: BranchInfo | null;
+  cxPulseLevel: number | null;
+  cxPulseHoldingBack: HoldingBackDimension[];
 }
 
 const CX_PULSE_LEVEL_LABELS = ["", "Collecting", "Reacting", "Responding", "Improving", "Embedded"];
+// Display labels only — see group/maturity/maturity-client.tsx for why
+// these differ from the schema field names.
+const DIMENSION_LABELS: Record<HoldingBackDimension["dimension"], string> = {
+  awareness: "Signal",
+  response: "Speed",
+  ownership: "Accountability",
+  culture: "Buy-in",
+  outcome: "Impact",
+};
+
+/** CX Pulse as a widget, not a full section: score plus what's dragging it down most. Full drill-down lives at /business/cx-pulse or /business/ex-pulse. */
+function CxPulseHoldingBack({ dimensions, href = "/business/cx-pulse" }: { dimensions: HoldingBackDimension[]; href?: string }) {
+  if (dimensions.length === 0) return null;
+  return (
+    <div className="metric-note" style={{ marginTop: 8 }}>
+      Holding you back: {dimensions.map((d) => `${DIMENSION_LABELS[d.dimension]} (${d.value})`).join(" · ")}
+      {" — "}
+      <a href={href} style={{ color: "var(--accent)" }}>
+        full breakdown →
+      </a>
+    </div>
+  );
+}
+
+interface RecurringFlagRow {
+  _id: string;
+  categoryName: string;
+  count: number;
+  windowDays: number;
+  actionable: boolean;
+}
+
+/** Self-contained — fetches its own data so the main dashboard payload doesn't need to change. */
+function RecurringIssuesCard() {
+  const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
+
+  useEffect(() => {
+    fetch("/api/business/recurring-issues")
+      .then((r) => r.json())
+      .then((d) => setFlags(d.flags ?? []))
+      .catch(() => setFlags([]));
+  }, []);
+
+  if (flags.length === 0) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #E0A100)" }}>
+      <div className="metric-label">Recurring issues</div>
+      <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+        {flags.map((f) => (
+          <li key={f._id} style={{ marginBottom: 4 }}>
+            <b>{f.categoryName}</b> — {f.count} cases in the last {f.windowDays} days
+            {!f.actionable && <span className="subtitle"> · handled by your parent organization</span>}
+          </li>
+        ))}
+      </ul>
+      <a href="/business/improvement-initiatives" style={{ color: "var(--accent)" }}>
+        Review in Improvement Initiatives →
+      </a>
+    </div>
+  );
+}
 
 function trendSvgPoints(trend: TrendPoint[]): string {
   const values = trend.map((t) => t.starAverage);
@@ -76,6 +152,11 @@ export default function BusinessDashboardClient() {
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load your dashboard.</p>;
 
+  const isCe = data.product === "colleague_experience";
+  const npsLabel = isCe ? "eNPS" : "NPS";
+  const pulseLabel = "CX Pulse";
+  const pulseHref = isCe ? "/business/ex-pulse" : "/business/cx-pulse";
+
   if (data.branch) {
     const b = data.branch;
     return (
@@ -102,17 +183,36 @@ export default function BusinessDashboardClient() {
           </div>
           <div className="card">
             <div className="metric-label">
-              NPS <InfoTip text={tooltips["nps"]} />
+              {npsLabel} <InfoTip text={tooltips["nps"]} />
             </div>
             <div className="metric-val">{data.npsScore !== null ? formatSigned(data.npsScore) : "—"}</div>
           </div>
           <div className="card">
             <div className="metric-label">
-              CX Pulse <InfoTip text={tooltips["cx-pulse"]} />
+              CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number." />
+            </div>
+            <div className="metric-val">{data.csatPercent !== null ? `${data.csatPercent}%` : "—"}</div>
+            <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
+              {data.csatCount} response{data.csatCount === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div className="card">
+            <div className="metric-label">
+              CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome." />
+            </div>
+            <div className="metric-val">{data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}</div>
+            <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
+              {data.cesCount} response{data.cesCount === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div className="card">
+            <div className="metric-label">
+              {pulseLabel} <InfoTip text={tooltips["cx-pulse"]} />
             </div>
             <div className="metric-val" style={{ fontSize: 18 }}>
               {b.cxPulseLevel ? `Level ${b.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[b.cxPulseLevel]}` : "Not yet scored"}
             </div>
+            <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} href={pulseHref} />
           </div>
         </div>
 
@@ -147,6 +247,8 @@ export default function BusinessDashboardClient() {
       <h1>Your Dashboard</h1>
       <p className="subtitle">Your feedback performance at a glance.</p>
 
+      <RecurringIssuesCard />
+
       <div className="grid grid-4" data-tour="dash-kpi-strip" style={{ marginBottom: 20 }}>
         <div className="card">
           <div className="metric-label">
@@ -162,9 +264,27 @@ export default function BusinessDashboardClient() {
         </div>
         <div className="card">
           <div className="metric-label">
-            NPS <InfoTip text={tooltips["nps"]} />
+            {npsLabel} <InfoTip text={tooltips["nps"]} />
           </div>
           <div className="metric-val">{data.npsScore !== null ? formatSigned(data.npsScore) : "—"}</div>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number." />
+          </div>
+          <div className="metric-val">{data.csatPercent !== null ? `${data.csatPercent}%` : "—"}</div>
+          <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
+            {data.csatCount} response{data.csatCount === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="card">
+          <div className="metric-label">
+            CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome." />
+          </div>
+          <div className="metric-val">{data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}</div>
+          <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
+            {data.cesCount} response{data.cesCount === 1 ? "" : "s"}
+          </p>
         </div>
         <div className="card">
           <div className="metric-label">
@@ -172,6 +292,16 @@ export default function BusinessDashboardClient() {
           </div>
           <div className="metric-val">{data.conversionRate !== null ? `${data.conversionRate}%` : "—"}</div>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="metric-label">
+          {pulseLabel} <InfoTip text={tooltips["cx-pulse"]} />
+        </div>
+        <div className="metric-val" style={{ fontSize: 18 }}>
+          {data.cxPulseLevel ? `Level ${data.cxPulseLevel} · ${CX_PULSE_LEVEL_LABELS[data.cxPulseLevel]}` : "Not yet scored"}
+        </div>
+        <CxPulseHoldingBack dimensions={data.cxPulseHoldingBack} href={pulseHref} />
       </div>
 
       <div data-tour="dash-comparisons">

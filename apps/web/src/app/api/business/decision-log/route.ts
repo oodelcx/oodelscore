@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, DecisionLogEntry } from "@oodelscore/shared";
+import { connectToDatabase, DecisionLogEntry, hasFeature, PRODUCTS, type Product } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 // Mirrors /api/group/decision-log, scoped to businessId instead of
 // parentOrgId (spec Section 16 correction: a standalone business needs its
@@ -18,24 +21,31 @@ import { requireBusinessOwner } from "@/lib/ownerAuth";
 // would silently miss every one of them, since the auto-logged entries are
 // never given a businessId when the resolving business is a branch.
 export async function GET() {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "decisionLog" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.business);
 
   const isBranch = !!session.business.parentOrgId;
   const entries = await DecisionLogEntry.find(
     isBranch
-      ? { parentOrgId: session.business.parentOrgId, affectedBusinessIds: session.business._id }
-      : { businessId: session.business._id }
+      ? { parentOrgId: session.business.parentOrgId, affectedBusinessIds: session.business._id, product }
+      : { businessId: session.business._id, product }
   ).sort({ createdAt: -1 });
 
-  return NextResponse.json({ status: "ok", entries, readOnly: isBranch });
+  return NextResponse.json({ status: "ok", product, entries, readOnly: isBranch });
 }
 
 export async function POST(request: Request) {
-  const session = await requireBusinessOwner();
+  const session = await requireBusinessOwner({ requirePage: "decisionLog" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.business.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
   if (session.business.parentOrgId) {
     return NextResponse.json(
       { status: "error", message: "The Decision Log for a branch is managed by your parent organization." },
@@ -49,8 +59,12 @@ export async function POST(request: Request) {
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!title) return NextResponse.json({ status: "error", message: "title is required" }, { status: 400 });
 
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
+
   const entry = await DecisionLogEntry.create({
     businessId: session.business._id,
+    product,
+    linkedInitiativeId: typeof body?.linkedInitiativeId === "string" ? body.linkedInitiativeId : null,
     title,
     trigger: typeof body?.trigger === "string" ? body.trigger : "",
     linkedActionIds: Array.isArray(body?.linkedActionIds) ? body.linkedActionIds : [],

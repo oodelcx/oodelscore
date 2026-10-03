@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { AuthMobileNav } from "./auth-mobile-nav";
 import "./auth-shell.css";
 
@@ -52,7 +53,9 @@ export function AuthShell({
           {/* Mobile-only — .as-visual (with the white wordmark) is hidden
               below 900px, so this is the only branding on the page there.
               Hidden on desktop, where the visual panel already has it. */}
-          <img className="as-mobile-brand" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
+          <Link href="/" className="as-mobile-brand-link" aria-label="OodelCX home">
+            <img className="as-mobile-brand" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
+          </Link>
           {children}
         </div>
       </div>

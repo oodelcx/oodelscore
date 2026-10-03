@@ -1,20 +1,30 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, DecisionLogEntry, Business } from "@oodelscore/shared";
+import { connectToDatabase, DecisionLogEntry, Business, hasFeature, PRODUCTS, type Product } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { resolveViewProduct } from "@/lib/viewProduct";
+
+const PRODUCT_SET: readonly string[] = PRODUCTS;
 
 export async function GET() {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "decisionLog" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
+  const product = await resolveViewProduct(session.org);
 
-  const entries = await DecisionLogEntry.find({ parentOrgId: session.org._id }).sort({ createdAt: -1 });
-  return NextResponse.json({ status: "ok", entries });
+  const entries = await DecisionLogEntry.find({ parentOrgId: session.org._id, product }).sort({ createdAt: -1 });
+  return NextResponse.json({ status: "ok", product, entries });
 }
 
 export async function POST(request: Request) {
-  const session = await requireParentOrgOwner();
+  const session = await requireParentOrgOwner({ requirePage: "decisionLog" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "decisionLog")) {
+    return NextResponse.json({ status: "error", message: "Decision Log is not enabled for this account" }, { status: 403 });
+  }
 
   await connectToDatabase();
 
@@ -30,8 +40,12 @@ export async function POST(request: Request) {
     }
   }
 
+  const product: Product = typeof body?.product === "string" && PRODUCT_SET.includes(body.product) ? (body.product as Product) : "customer_experience";
+
   const entry = await DecisionLogEntry.create({
     parentOrgId: session.org._id,
+    product,
+    linkedInitiativeId: typeof body?.linkedInitiativeId === "string" ? body.linkedInitiativeId : null,
     title,
     trigger: typeof body?.trigger === "string" ? body.trigger : "",
     linkedActionIds: Array.isArray(body?.linkedActionIds) ? body.linkedActionIds : [],

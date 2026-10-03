@@ -9,7 +9,14 @@ const METRIC_LABELS: Record<DecisionOutcomeMetric, string> = {
   starAverage: "Star average",
   nps: "NPS",
   categoryAverage: "Category average",
+  csat: "CSAT",
+  ces: "CES (low-effort %)",
 };
+
+// Same convention as compare-client.tsx's LOW_SAMPLE_THRESHOLD — a before
+// or after window built from fewer than this many responses is flagged as
+// low-confidence rather than shown as a bare verdict.
+const LOW_SAMPLE_THRESHOLD = 10;
 
 const BEFORE_WINDOW_DAYS = 30;
 // Give a change time to show up in real feedback before calling it either
@@ -35,6 +42,12 @@ export interface DecisionOutcomeResult {
   // or no responses in one of the windows) — never guess past this.
   verdict: "not_ready" | "positive" | "negative" | "no_change" | "insufficient_data";
   daysSinceImplementation: number | null;
+  // Response counts behind outcomeBefore/outcomeAfter, so a caller can flag
+  // a verdict built from a handful of responses as low-confidence instead of
+  // showing it with the same weight as one built from hundreds.
+  sampleSizeBefore: number | null;
+  sampleSizeAfter: number | null;
+  lowConfidence: boolean;
 }
 
 /**
@@ -44,12 +57,18 @@ export interface DecisionOutcomeResult {
  * in by hand. Pure computation — no AI call.
  */
 export async function computeDecisionOutcome(entry: DecisionOutcomeRef, now: Date = new Date()): Promise<DecisionOutcomeResult> {
-  if (!entry.implementationDate || !entry.outcomeMetric) {
-    return { outcomeBefore: null, outcomeAfter: null, verdict: "insufficient_data", daysSinceImplementation: null };
-  }
-  if (entry.outcomeMetric === "categoryAverage" && !entry.outcomeCategoryId) {
-    return { outcomeBefore: null, outcomeAfter: null, verdict: "insufficient_data", daysSinceImplementation: null };
-  }
+  const empty: DecisionOutcomeResult = {
+    outcomeBefore: null,
+    outcomeAfter: null,
+    verdict: "insufficient_data",
+    daysSinceImplementation: null,
+    sampleSizeBefore: null,
+    sampleSizeAfter: null,
+    lowConfidence: false,
+  };
+
+  if (!entry.implementationDate || !entry.outcomeMetric) return empty;
+  if (entry.outcomeMetric === "categoryAverage" && !entry.outcomeCategoryId) return empty;
 
   let businessIds: Types.ObjectId[];
   if (entry.affectedBusinessIds.length > 0) businessIds = entry.affectedBusinessIds;
@@ -57,41 +76,82 @@ export async function computeDecisionOutcome(entry: DecisionOutcomeRef, now: Dat
   else if (entry.parentOrgId) businessIds = (await Business.find({ parentOrgId: entry.parentOrgId }).select("_id")).map((b) => b._id);
   else businessIds = [];
 
-  if (businessIds.length === 0) {
-    return { outcomeBefore: null, outcomeAfter: null, verdict: "insufficient_data", daysSinceImplementation: null };
-  }
+  if (businessIds.length === 0) return empty;
 
-  async function metricValue(from: Date, to: Date): Promise<number | null> {
-    if (entry.outcomeMetric === "starAverage") return (await computeStarAndNps(businessIds, from, to)).starAverage;
-    if (entry.outcomeMetric === "nps") return (await computeStarAndNps(businessIds, from, to)).npsScore;
-    if (entry.outcomeMetric === "categoryAverage" && entry.outcomeCategoryId) {
-      return computeCategoryAverage(businessIds, entry.outcomeCategoryId, from, to);
+  async function metricValue(from: Date, to: Date): Promise<{ value: number | null; sampleSize: number }> {
+    if (entry.outcomeMetric === "starAverage") {
+      const m = await computeStarAndNps(businessIds, from, to);
+      return { value: m.starAverage, sampleSize: m.starCount };
     }
-    return null;
+    if (entry.outcomeMetric === "nps") {
+      const m = await computeStarAndNps(businessIds, from, to);
+      return { value: m.npsScore, sampleSize: m.npsCount };
+    }
+    if (entry.outcomeMetric === "csat") {
+      const m = await computeStarAndNps(businessIds, from, to);
+      return { value: m.csatPercent, sampleSize: m.starCount };
+    }
+    if (entry.outcomeMetric === "ces") {
+      // Higher is better here too: cesLowEffortPercent is a "good outcome %"
+      // (like CSAT's top-box), not the raw 1-5 effort average, so the same
+      // delta > 0 = positive logic below applies unchanged.
+      const m = await computeStarAndNps(businessIds, from, to);
+      return { value: m.cesLowEffortPercent, sampleSize: m.cesCount };
+    }
+    if (entry.outcomeMetric === "categoryAverage" && entry.outcomeCategoryId) {
+      const value = await computeCategoryAverage(businessIds, entry.outcomeCategoryId, from, to);
+      return { value, sampleSize: value === null ? 0 : 1 }; // computeCategoryAverage doesn't expose a count; treat any real value as present
+    }
+    return { value: null, sampleSize: 0 };
   }
 
   const implementationDate = entry.implementationDate;
   const beforeFrom = new Date(implementationDate.getTime() - BEFORE_WINDOW_DAYS * DAY_MS);
   const daysSinceImplementation = Math.floor((now.getTime() - implementationDate.getTime()) / DAY_MS);
 
-  const outcomeBefore = await metricValue(beforeFrom, implementationDate);
+  const before = await metricValue(beforeFrom, implementationDate);
 
   if (daysSinceImplementation < MIN_DAYS_AFTER) {
-    return { outcomeBefore, outcomeAfter: null, verdict: "not_ready", daysSinceImplementation };
+    return {
+      outcomeBefore: before.value,
+      outcomeAfter: null,
+      verdict: "not_ready",
+      daysSinceImplementation,
+      sampleSizeBefore: before.sampleSize,
+      sampleSizeAfter: null,
+      lowConfidence: before.value !== null && before.sampleSize < LOW_SAMPLE_THRESHOLD,
+    };
   }
 
-  const outcomeAfter = await metricValue(implementationDate, now);
+  const after = await metricValue(implementationDate, now);
 
-  if (outcomeBefore === null || outcomeAfter === null) {
-    return { outcomeBefore, outcomeAfter, verdict: "insufficient_data", daysSinceImplementation };
+  if (before.value === null || after.value === null) {
+    return {
+      outcomeBefore: before.value,
+      outcomeAfter: after.value,
+      verdict: "insufficient_data",
+      daysSinceImplementation,
+      sampleSizeBefore: before.sampleSize,
+      sampleSizeAfter: after.sampleSize,
+      lowConfidence: false,
+    };
   }
 
   // A small dead-zone so ordinary noise doesn't read as "improved" or "got worse".
   const deadZone = entry.outcomeMetric === "nps" ? 3 : 0.1;
-  const delta = outcomeAfter - outcomeBefore;
+  const delta = after.value - before.value;
   const verdict = delta > deadZone ? "positive" : delta < -deadZone ? "negative" : "no_change";
+  const lowConfidence = before.sampleSize < LOW_SAMPLE_THRESHOLD || after.sampleSize < LOW_SAMPLE_THRESHOLD;
 
-  return { outcomeBefore, outcomeAfter, verdict, daysSinceImplementation };
+  return {
+    outcomeBefore: before.value,
+    outcomeAfter: after.value,
+    verdict,
+    daysSinceImplementation,
+    sampleSizeBefore: before.sampleSize,
+    sampleSizeAfter: after.sampleSize,
+    lowConfidence,
+  };
 }
 
 /**
@@ -192,6 +252,9 @@ export async function autoMeasurePendingDecisions(now: Date = new Date()): Promi
     entry.outcomeBefore = result.outcomeBefore;
     entry.outcomeAfter = result.outcomeAfter;
     entry.outcomeMeasuredAt = now;
+    entry.outcomeSampleSizeBefore = result.sampleSizeBefore;
+    entry.outcomeSampleSizeAfter = result.sampleSizeAfter;
+    entry.outcomeLowConfidence = result.lowConfidence;
     await entry.save();
     measured++;
 
