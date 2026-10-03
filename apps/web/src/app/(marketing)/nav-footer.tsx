@@ -30,7 +30,7 @@ export function MarketingNav({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Build a map for quick lookup
-  const itemsByKey = Object.fromEntries(navItems.map((item) => [item.key, item]));
+  const itemsByKey: Record<string, INavItem> = Object.fromEntries(navItems.map((item) => [item.key, item]));
 
   // Check if parent has any visible children
   function hasVisibleChildren(item: INavItem): boolean {

@@ -21,7 +21,7 @@ export interface INavItem {
   visible: boolean;
   order: number;
   parentKey?: string; // key of parent menu item, if any
-  children?: INavItem[]; // child menu items (nested)
+  children?: string[]; // array of child keys
 }
 
 export interface ISiteSection {
