@@ -109,19 +109,20 @@ function MegaMenu({
 
 function MobileNavItem({
   item,
-  active,
+  activeKey,
   section,
   onNavigate,
   itemsByKey,
 }: {
   item: INavItem;
-  active: boolean;
+  activeKey: string;
   section: MegaMenuSection | null;
   onNavigate: () => void;
   itemsByKey: Record<string, INavItem>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasContent = !!section && section.columns.some((col) => col.items.length > 0);
+  const isActive = activeKey === item.key;
 
   // Check for hierarchy children when no mega-menu section
   const childKeys = item.children || [];
@@ -130,7 +131,7 @@ function MobileNavItem({
   // Render as simple link if no mega-menu content and no hierarchy children
   if (!hasContent && hierarchyChildren.length === 0) {
     return (
-      <Link href={PATH_BY_KEY[item.key] ?? "/"} className={active ? "active" : ""} onClick={onNavigate}>
+      <Link href={PATH_BY_KEY[item.key] ?? "/"} className={isActive ? "active" : ""} onClick={onNavigate}>
         {item.label}
       </Link>
     );
@@ -139,7 +140,7 @@ function MobileNavItem({
   return (
     <div className={`nav-mobile-group${expanded ? " open" : ""}`}>
       <div className="nav-mobile-group-head">
-        <Link href={PATH_BY_KEY[item.key] ?? "/"} className={active ? "active" : ""} onClick={onNavigate}>
+        <Link href={PATH_BY_KEY[item.key] ?? "/"} className={isActive ? "active" : ""} onClick={onNavigate}>
           {item.label}
         </Link>
         <button
@@ -180,7 +181,7 @@ function MobileNavItem({
                 <Link
                   key={child.key}
                   href={PATH_BY_KEY[child.key] ?? "/"}
-                  className={active === child.key ? "active" : ""}
+                  className={activeKey === child.key ? "active" : ""}
                   onClick={onNavigate}
                   style={{ fontSize: 14 }}
                 >
@@ -307,7 +308,7 @@ export function MarketingNav({
             <MobileNavItem
               key={item.key}
               item={item}
-              active={active === item.key}
+              activeKey={active}
               section={MEGA_MENU_KEYS.has(item.key) && megaData ? megaData[item.key as "product" | "colleague-pulse" | "solutions"] : null}
               onNavigate={() => setMobileOpen(false)}
               itemsByKey={itemsByKey}
