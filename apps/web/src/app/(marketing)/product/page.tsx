@@ -24,13 +24,13 @@ function featureSlug(tag: string): string {
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const product = await getSiteContent("product");
+  const product = await getSiteContent("customer-x");
   const description = product.fields.metaDescription;
   return {
-    title: "The Platform",
+    title: "Customer X",
     description,
-    openGraph: { title: "The Platform", description, url: "/product", images: ["/og-image.png"] },
-    twitter: { title: "The Platform", description, images: ["/og-image.png"] },
+    openGraph: { title: "Customer X", description, url: "/customer-x", images: ["/og-image.png"] },
+    twitter: { title: "Customer X", description, images: ["/og-image.png"] },
   };
 }
 
@@ -205,14 +205,14 @@ function FeatureVisual({ tag }: { tag: string }) {
 }
 
 export default async function ProductPage() {
-  const [menu, product] = await Promise.all([getSiteContent("menu"), getSiteContent("product")]);
-  if (menu.navItems.find((n) => n.key === "product")?.visible === false) notFound();
+  const [menu, product] = await Promise.all([getSiteContent("menu"), getSiteContent("customer-x")]);
+  if (menu.navItems.find((n) => n.key === "customer-x")?.visible === false) notFound();
   const f = product.fields;
   const features = parseJsonArray<Feature>(f.features);
 
   return (
     <>
-      <MarketingNav active="product" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
+      <MarketingNav active="customer-x" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="product-intro">
         <div className="wrap">

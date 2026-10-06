@@ -24,13 +24,13 @@ function featureSlug(tag: string): string {
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const colleaguePulse = await getSiteContent("colleague-pulse");
+  const colleaguePulse = await getSiteContent("colleague-x");
   const description = colleaguePulse.fields.metaDescription;
   return {
-    title: "Colleague Pulse",
+    title: "Colleague X",
     description,
-    openGraph: { title: "Colleague Pulse", description, url: "/colleague-pulse", images: ["/og-image.png"] },
-    twitter: { title: "Colleague Pulse", description, images: ["/og-image.png"] },
+    openGraph: { title: "Colleague X", description, url: "/colleague-x", images: ["/og-image.png"] },
+    twitter: { title: "Colleague X", description, images: ["/og-image.png"] },
   };
 }
 
@@ -191,14 +191,14 @@ function FeatureVisual({ tag }: { tag: string }) {
 }
 
 export default async function ColleaguePulsePage() {
-  const [menu, colleaguePulse] = await Promise.all([getSiteContent("menu"), getSiteContent("colleague-pulse")]);
-  if (menu.navItems.find((n) => n.key === "colleague-pulse")?.visible === false) notFound();
+  const [menu, colleaguePulse] = await Promise.all([getSiteContent("menu"), getSiteContent("colleague-x")]);
+  if (menu.navItems.find((n) => n.key === "colleague-x")?.visible === false) notFound();
   const f = colleaguePulse.fields;
   const features = parseJsonArray<Feature>(f.features);
 
   return (
     <>
-      <MarketingNav active="colleague-pulse" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
+      <MarketingNav active="colleague-x" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <section className="product-intro">
         <div className="wrap">
