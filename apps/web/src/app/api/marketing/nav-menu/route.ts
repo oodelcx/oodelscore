@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { SEED_SITE_CONTENT } from "@oodelscore/shared";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 
-const SEED_PRODUCT = SEED_SITE_CONTENT.find((s) => s.page === "product")!;
-const SEED_COLLEAGUE_PULSE = SEED_SITE_CONTENT.find((s) => s.page === "colleague-pulse")!;
+const SEED_PRODUCT = SEED_SITE_CONTENT.find((s) => s.page === "customer-x")!;
+const SEED_COLLEAGUE_PULSE = SEED_SITE_CONTENT.find((s) => s.page === "colleague-x")!;
 const SEED_SOLUTIONS = SEED_SITE_CONTENT.find((s) => s.page === "solutions")!;
 
 interface Feature {
@@ -45,7 +45,7 @@ interface MegaSection {
   seeAllLabel?: string;
 }
 
-async function buildProductMenu(page: "product" | "colleague-pulse", seed: (typeof SEED_SITE_CONTENT)[number]): Promise<MegaSection> {
+async function buildProductMenu(page: "customer-x" | "colleague-x", seed: (typeof SEED_SITE_CONTENT)[number]): Promise<MegaSection> {
   const content = await getSiteContent(page);
   let features = parseJsonArray<Feature>(content.fields.features);
   // A DB doc saved before feature/product `group` tagging existed still has
@@ -87,8 +87,8 @@ export const revalidate = 60;
 
 export async function GET() {
   const [product, colleaguePulse, solutions] = await Promise.all([
-    buildProductMenu("product", SEED_PRODUCT),
-    buildProductMenu("colleague-pulse", SEED_COLLEAGUE_PULSE),
+    buildProductMenu("customer-x", SEED_PRODUCT),
+    buildProductMenu("colleague-x", SEED_COLLEAGUE_PULSE),
     getSiteContent("solutions"),
   ]);
 
@@ -106,8 +106,8 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
-    product,
-    "colleague-pulse": colleaguePulse,
+    "customer-x": product,
+    "colleague-x": colleaguePulse,
     solutions: {
       columns: [
         { label: "By Industry", items: industryLinks },
