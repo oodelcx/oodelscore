@@ -16,8 +16,8 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
   {
     page: "menu",
     navItems: [
-      { key: "product", label: "Customer Experience", visible: true, order: 0 },
-      { key: "colleague-pulse", label: "Colleague Pulse", visible: true, order: 1 },
+      { key: "customer-x", label: "Customer X", visible: true, order: 0 },
+      { key: "colleague-x", label: "Colleague X", visible: true, order: 1 },
       { key: "solutions", label: "Solutions", visible: true, order: 2 },
       { key: "pricing", label: "Pricing", visible: true, order: 3 },
       { key: "how-it-works", label: "How it works", visible: true, order: 4 },
@@ -28,11 +28,11 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       siteName: "OodelCX",
       footerDescription:
-        "One platform, two ways to listen: Customer Experience and Colleague Pulse. Feedback collection, AI Insights, and the tools to actually act on both — for one location or a thousand.",
-      footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Colleague Pulse", "Pricing"]),
+        "One platform, two ways to listen: Customer X and Colleague X. Feedback collection, AI Insights, and the tools to actually act on both — for one location or a thousand.",
+      footerProductLinks: JSON.stringify(["How it works", "CX Pulse", "Colleague X", "Pricing"]),
       footerSolutionsLinks: JSON.stringify(["Solutions", "The mechanism", "Pricing"]),
       footerCompanyLinks: JSON.stringify(["About", "Contact", "Privacy policy", "Terms"]),
-      footerProductHeading: "Customer Experience",
+      footerProductHeading: "Customer X",
       footerSolutionsHeading: "Solutions",
       footerCompanyHeading: "Company",
       copyrightText: "© OodelCX. All rights reserved.",
@@ -63,15 +63,15 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroBuiltForLine: "bank branch networks, retail chains, school trusts, and healthcare groups",
       heroTwoProductsHeadline: "Two ways to listen, one platform to act on both.",
       heroTwoProductsBody:
-        "Customer Experience and Colleague Pulse run on the exact same engine — QR feedback, AI Insights, Case Management, and a maturity score — pointed at two different audiences. Run one or both.",
-      heroTwoProductsCxLabel: "Customer Experience",
-      heroTwoProductsCxHeading: "Customer Experience",
+        "Customer X and Colleague X run on the exact same engine — QR feedback, AI Insights, Case Management, and a maturity score — pointed at two different audiences. Run one or both.",
+      heroTwoProductsCxLabel: "Customer X",
+      heroTwoProductsCxHeading: "Customer X",
       heroTwoProductsCxBody: "What customers, clients, or patients tell you after an interaction.",
-      heroTwoProductsCxCta: "Explore Customer Experience →",
-      heroTwoProductsCeLabel: "Colleague Pulse",
-      heroTwoProductsCeHeading: "Colleague Pulse",
+      heroTwoProductsCxCta: "Explore Customer X →",
+      heroTwoProductsCeLabel: "Colleague X",
+      heroTwoProductsCeHeading: "Colleague X",
       heroTwoProductsCeBody: "What your own staff tell you, including what routes straight to HR, not their manager.",
-      heroTwoProductsCeCta: "Explore Colleague Pulse →",
+      heroTwoProductsCeCta: "Explore Colleague X →",
       narrativeHeadline: "Most tools stop at Capture. We built Clarify, Claim, Close, and Confirm too.",
       narrativeSubhead: "A score with nowhere to go is just a number.",
       narrativeSteps: JSON.stringify([
@@ -242,15 +242,15 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     },
   },
   {
-    page: "product",
+    page: "customer-x",
     navItems: [],
     sections: [],
     fields: {
-      heroHeadline: "Customer Experience: everything from a QR scan to a resolved decision.",
+      heroHeadline: "Customer X: everything from a QR scan to a resolved decision.",
       heroSubheadline:
-        "The whole loop for feedback from customers, clients, or patients — collecting it, turning it into owned work, and proving whether that work is actually changing anything. Listening to your own staff instead? See Colleague Pulse.",
+        "The whole loop for feedback from customers, clients, or patients — collecting it, turning it into owned work, and proving whether that work is actually changing anything. Listening to your own staff instead? See Colleague X.",
       metaDescription:
-        "See how OodelCX's Customer Experience product collects feedback, turns it into owned work with Case Management, and measures real improvement with CX Pulse.",
+        "See how OodelCX's Customer X product collects feedback, turns it into owned work with Case Management, and measures real improvement with CX Pulse.",
       features: JSON.stringify([
         {
           tag: "Feedback Collection",
@@ -358,15 +358,15 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     },
   },
   {
-    page: "colleague-pulse",
+    page: "colleague-x",
     navItems: [],
     sections: [],
     fields: {
-      heroHeadline: "Colleague Pulse: the same rigor, pointed at your own team.",
+      heroHeadline: "Colleague X: the same rigor, pointed at your own team.",
       heroSubheadline:
-        "Staff hear about a broken process, a bad rota, or a manager problem long before it shows up as a resignation letter. Colleague Pulse gives that feedback the same QR-to-case pipeline as your customers get — including a route that bypasses the manager entirely when it needs to.",
+        "Staff hear about a broken process, a bad rota, or a manager problem long before it shows up as a resignation letter. Colleague X gives that feedback the same QR-to-case pipeline as your customers get — including a route that bypasses the manager entirely when it needs to.",
       metaDescription:
-        "Colleague Pulse: internal feedback for staff, built on the same engine as OodelCX's Customer Experience product — QR surveys, AI Insights, sensitive-category routing to HR, Case Management, and eNPS.",
+        "Colleague X: internal feedback for staff, built on the same engine as OodelCX's Customer Experience product — QR surveys, AI Insights, sensitive-category routing to HR, Case Management, and eNPS.",
       features: JSON.stringify([
         {
           tag: "Colleague Feedback Collection",

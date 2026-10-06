@@ -7,8 +7,8 @@ import { BookDemoButton } from "./demo-modal";
 import { ManageCookiesLink } from "./cookie-consent";
 
 const PATH_BY_KEY: Record<string, string> = {
-  product: "/product",
-  "colleague-pulse": "/colleague-pulse",
+  "customer-x": "/customer-x",
+  "colleague-x": "/colleague-x",
   solutions: "/solutions",
   "how-it-works": "/how-it-works",
   pricing: "/pricing",
@@ -30,18 +30,18 @@ interface MegaMenuSection {
   seeAllLabel?: string;
 }
 interface MegaMenuData {
-  product: MegaMenuSection;
-  "colleague-pulse": MegaMenuSection;
+  "customer-x": MegaMenuSection;
+  "colleague-x": MegaMenuSection;
   solutions: MegaMenuSection;
 }
 
-/** "Customer Experience," "Colleague Pulse," and "Solutions" each open as a
+/** "Customer X," "Colleague X," and "Solutions" each open as a
  * mega-menu instead of a plain link — content is fetched from
  * /api/marketing/nav-menu, itself built from the same admin-editable Site
  * Content fields their own pages render (features, industries), so the
  * menu can never drift out of sync with what those pages actually say.
  * Every other nav item stays a plain link. */
-const MEGA_MENU_KEYS = new Set(["product", "colleague-pulse", "solutions"]);
+const MEGA_MENU_KEYS = new Set(["customer-x", "colleague-x", "solutions"]);
 
 function MegaMenu({
   menuKey,
@@ -49,7 +49,7 @@ function MegaMenu({
   section,
   active,
 }: {
-  menuKey: "product" | "colleague-pulse" | "solutions";
+  menuKey: "customer-x" | "colleague-x" | "solutions";
   label: string;
   section: MegaMenuSection;
   active: boolean;
@@ -276,10 +276,10 @@ export function MarketingNav({
             MEGA_MENU_KEYS.has(item.key) && megaData ? (
               <MegaMenu
                 key={item.key}
-                menuKey={item.key as "product" | "colleague-pulse" | "solutions"}
+                menuKey={item.key as "customer-x" | "colleague-x" | "solutions"}
                 label={item.label}
                 active={active === item.key}
-                section={megaData[item.key as "product" | "colleague-pulse" | "solutions"]}
+                section={megaData[item.key as "customer-x" | "colleague-x" | "solutions"]}
               />
             ) : (
               renderNavItem(item, false)
@@ -309,7 +309,7 @@ export function MarketingNav({
               key={item.key}
               item={item}
               activeKey={active}
-              section={MEGA_MENU_KEYS.has(item.key) && megaData ? megaData[item.key as "product" | "colleague-pulse" | "solutions"] : null}
+              section={MEGA_MENU_KEYS.has(item.key) && megaData ? megaData[item.key as "customer-x" | "colleague-x" | "solutions"] : null}
               onNavigate={() => setMobileOpen(false)}
               itemsByKey={itemsByKey}
             />
@@ -343,14 +343,14 @@ function parseList(value: string | undefined): string[] {
 
 // Every footer link routes to a real page — nothing here is a dead anchor.
 // "How it works" (Product column) is a distinct, older link straight to
-// /product's overview — not the same thing as the "The mechanism" link
+// /customer-x's overview — not the same thing as the "The mechanism" link
 // below, which points at the deeper step-by-step /how-it-works page. Two
 // different labels, two different URLs, on purpose.
 const FOOTER_LINK_HREF: Record<string, string> = {
-  "How it works": "/product",
+  "How it works": "/customer-x",
   "The mechanism": "/how-it-works",
   "CX Pulse": "/#cx-pulse",
-  "Colleague Pulse": "/colleague-pulse",
+  "Colleague Pulse": "/colleague-x",
   Pricing: "/pricing",
   Solutions: "/solutions",
   Industries: "/how-it-works",

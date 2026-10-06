@@ -22,8 +22,8 @@ const TABS: { id: string; label: string }[] = [
   { id: "menu", label: "Menu & Footer" },
   { id: "home", label: "Home" },
   { id: "pricing", label: "Pricing" },
-  { id: "product", label: "Customer Experience" },
-  { id: "colleague-pulse", label: "Colleague Pulse" },
+  { id: "customer-x", label: "Customer X" },
+  { id: "colleague-x", label: "Colleague X" },
   { id: "solutions", label: "Solutions" },
   { id: "how-it-works", label: "How it works" },
   { id: "company", label: "Company" },
@@ -145,8 +145,8 @@ export default function SiteContentPage() {
       {current && activeTab === "menu" && <MenuPanel content={current} onFieldChange={updateField} onNavItemsChange={updateNavItems} />}
       {current && activeTab === "home" && <HomePanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "pricing" && <PricingPanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "product" && <ProductPanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "colleague-pulse" && <ColleaguePulsePanel content={current} onFieldChange={updateField} />}
+      {current && activeTab === "customer-x" && <ProductPanel content={current} onFieldChange={updateField} />}
+      {current && activeTab === "colleague-x" && <ColleaguePulsePanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "solutions" && <SolutionsPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "how-it-works" && <HowItWorksPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "company" && <CompanyPanel content={current} onFieldChange={updateField} />}
@@ -408,25 +408,6 @@ function MenuPanel({
               value={item.label}
               onChange={(e) => updateItem(item.key, { label: e.target.value })}
             />
-            {depth === 0 && (
-              <>
-                <select
-                  value={item.parentKey || ""}
-                  onChange={(e) => updateItem(item.key, { parentKey: e.target.value || undefined })}
-                  style={{ marginRight: 8, fontSize: 12, width: 140 }}
-                  title="Set this as a child of another menu item"
-                >
-                  <option value="">No parent</option>
-                  {content.navItems
-                    .filter((n) => n.key !== item.key && !n.parentKey && !(n.children || []).includes(item.key))
-                    .map((n) => (
-                      <option key={n.key} value={n.key}>
-                        {n.label}
-                      </option>
-                    ))}
-                </select>
-              </>
-            )}
             <span
               className={`toggle ${item.visible ? "on" : ""}`}
               onClick={() => updateItem(item.key, { visible: !item.visible })}
