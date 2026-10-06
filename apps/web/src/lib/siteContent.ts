@@ -26,9 +26,15 @@ function fromSeed(page: SiteContentPage): ResolvedSiteContent {
  * exactly as the admin set it.
  */
 export function mergeNavItems(dbItems: INavItem[], seedItems: INavItem[]): INavItem[] {
-  const present = new Set(dbItems.map((item) => item.key));
+  const deduped: INavItem[] = [];
+  for (const item of dbItems) {
+    const existing = deduped.find((d) => d.key === item.key);
+    if (existing) existing.visible = existing.visible || item.visible;
+    else deduped.push({ ...item });
+  }
+  const present = new Set(deduped.map((item) => item.key));
   const missing = seedItems.filter((item) => !present.has(item.key));
-  return [...dbItems, ...missing];
+  return [...deduped, ...missing];
 }
 
 /**

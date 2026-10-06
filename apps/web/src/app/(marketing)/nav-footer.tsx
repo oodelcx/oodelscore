@@ -351,6 +351,7 @@ const FOOTER_LINK_HREF: Record<string, string> = {
   "The mechanism": "/how-it-works",
   "CX Pulse": "/#cx-pulse",
   "Colleague Pulse": "/colleague-x",
+  "Colleague X": "/colleague-x",
   Pricing: "/pricing",
   Solutions: "/solutions",
   Industries: "/how-it-works",

@@ -53,4 +53,14 @@ describe("mergeNavItems", () => {
     const merged = mergeNavItems(dbItems, seedItems);
     expect(merged).toEqual(dbItems);
   });
+
+  it("collapses duplicate keys, visible if any copy is visible (a hidden first copy must not 404 the page)", () => {
+    const dbItems: INavItem[] = [
+      { key: "customer-x", label: "Customer X", visible: false, order: 0 },
+      { key: "customer-x", label: "Customer X", visible: true, order: 1 },
+    ];
+    const merged = mergeNavItems(dbItems, []);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].visible).toBe(true);
+  });
 });

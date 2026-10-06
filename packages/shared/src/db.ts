@@ -54,23 +54,40 @@ async function migrateLegacySiteContentKeys(): Promise<void> {
     await col.updateOne({ _id: legacy._id }, { $set: { page: newKey } });
   }
   const menu = await col.findOne({ page: "menu" });
-  if (!menu || !Array.isArray(menu.navItems)) return;
-  let changed = false;
-  const remap = (k: unknown) => LEGACY_PAGE_KEYS[k as string] ?? k;
-  const navItems = menu.navItems.map((item: Record<string, unknown>) => {
-    const isLegacy = item.key !== remap(item.key);
-    const label = isLegacy ? (LEGACY_LABELS[item.label as string] ?? item.label) : item.label;
-    const next = {
-      ...item,
-      key: remap(item.key),
-      label,
-      ...(item.parentKey ? { parentKey: remap(item.parentKey) } : {}),
-      ...(Array.isArray(item.children) ? { children: item.children.map(remap) } : {}),
-    };
-    if (JSON.stringify(next) !== JSON.stringify(item)) changed = true;
-    return next;
-  });
-  if (changed) await col.updateOne({ _id: menu._id }, { $set: { navItems } });
+  if (!menu) return;
+  const $set: Record<string, unknown> = {};
+  if (Array.isArray(menu.navItems)) {
+    const remap = (k: unknown) => LEGACY_PAGE_KEYS[k as string] ?? k;
+    const mapped: Record<string, unknown>[] = menu.navItems.map((item: Record<string, unknown>) => {
+      const isLegacy = item.key !== remap(item.key);
+      return {
+        ...item,
+        key: remap(item.key),
+        label: isLegacy ? (LEGACY_LABELS[item.label as string] ?? item.label) : item.label,
+        ...(item.parentKey ? { parentKey: remap(item.parentKey) } : {}),
+        ...(Array.isArray(item.children) ? { children: item.children.map(remap) } : {}),
+      };
+    });
+    // A page can end up listed twice (the old entry plus one merged in from
+    // the seed and saved) — keep one per key, visible if either was.
+    const seen = new Map<string, Record<string, unknown>>();
+    const navItems: Record<string, unknown>[] = [];
+    for (const item of mapped) {
+      const existing = seen.get(item.key as string);
+      if (existing) existing.visible = Boolean(existing.visible) || Boolean(item.visible);
+      else {
+        seen.set(item.key as string, item);
+        navItems.push(item);
+      }
+    }
+    if (JSON.stringify(navItems) !== JSON.stringify(menu.navItems)) $set.navItems = navItems;
+  }
+  const fields = (menu.fields ?? {}) as Record<string, string>;
+  const rename = (v: string) => v.replace(/Customer Experience/g, "Customer X").replace(/Colleague Pulse(?! Score)/g, "Colleague X");
+  for (const key of ["footerDescription", "footerProductHeading", "footerProductLinks"]) {
+    if (typeof fields[key] === "string" && rename(fields[key]) !== fields[key]) $set[`fields.${key}`] = rename(fields[key]);
+  }
+  if (Object.keys($set).length) await col.updateOne({ _id: menu._id }, { $set });
 }
 
 function runLegacyMigration(): Promise<void> {

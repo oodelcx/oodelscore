@@ -77,14 +77,23 @@ export default function SiteContentPage() {
   async function save(page: string) {
     setSaving(page);
     setSavedMsg(null);
-    const content = pages[page];
-    const res = await fetch(`/api/admin/site-content/${page}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ navItems: content.navItems, sections: content.sections, fields: content.fields }),
-    });
+    // Submenu toggles on the Menu tab edit the Customer X / Colleague X /
+    // Solutions content, so saving the menu saves those too.
+    const targets = page === "menu" ? ["menu", "customer-x", "colleague-x", "solutions"] : [page];
+    const results = await Promise.all(
+      targets
+        .filter((t) => pages[t])
+        .map((t) =>
+          fetch(`/api/admin/site-content/${t}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ navItems: pages[t].navItems, sections: pages[t].sections, fields: pages[t].fields }),
+          })
+        )
+    );
     setSaving(null);
-    if (res.ok) setSavedMsg(`${page} saved — live on oodelscore.com`);
+    if (results.every((r) => r.ok)) setSavedMsg(`${page} saved — live on oodelscore.com`);
+    else setSavedMsg(`Failed to save ${page}`);
   }
 
   /**
@@ -142,7 +151,7 @@ export default function SiteContentPage() {
         ))}
       </div>
 
-      {current && activeTab === "menu" && <MenuPanel content={current} onFieldChange={updateField} onNavItemsChange={updateNavItems} />}
+      {current && activeTab === "menu" && <MenuPanel content={current} pages={pages} onFieldChange={updateField} onNavItemsChange={updateNavItems} />}
       {current && activeTab === "home" && <HomePanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "pricing" && <PricingPanel content={current} onFieldChange={updateField} />}
       {current && activeTab === "customer-x" && <ProductPanel content={current} onFieldChange={updateField} />}
@@ -324,12 +333,24 @@ function StringListEditor({ items, onChange }: { items: string[]; onChange: (ite
   );
 }
 
+const SOLUTIONS_STRUCTURE_LABELS = ["Single-location businesses", "Multi-branch groups", "Enterprise"];
+
+interface SubmenuEntry {
+  id: string;
+  label: string;
+  group?: string;
+  on: boolean;
+  toggle: () => void;
+}
+
 function MenuPanel({
   content,
+  pages,
   onFieldChange,
   onNavItemsChange,
 }: {
   content: PageContent;
+  pages: Record<string, PageContent>;
   onFieldChange: (page: string, key: string, value: string) => void;
   onNavItemsChange: (page: string, navItems: NavItem[]) => void;
 }) {
@@ -368,8 +389,52 @@ function MenuPanel({
     onNavItemsChange("menu", next);
   }
 
+  function submenusFor(key: string): SubmenuEntry[] {
+    if (key === "customer-x" || key === "colleague-x") {
+      const features = parseJsonArray<Feature>(pages[key]?.fields.features);
+      // No "In menu" box ever touched = everything shows (see nav-menu route).
+      const everConfigured = features.some((f) => f.menuFeatured !== undefined);
+      return features.map((f, i) => {
+        const on = everConfigured ? !!f.menuFeatured : true;
+        return {
+          id: `${key}-${i}`,
+          label: f.tag,
+          group: f.group === "act" ? "Act" : "Understand",
+          on,
+          toggle: () =>
+            onFieldChange(
+              key,
+              "features",
+              JSON.stringify(features.map((x, idx) => ({ ...x, menuFeatured: idx === i ? !on : everConfigured ? !!x.menuFeatured : true })))
+            ),
+        };
+      });
+    }
+    if (key === "solutions") {
+      const solutions = pages.solutions;
+      if (!solutions) return [];
+      const hidden = parseJsonArray<string>(solutions.fields.hiddenSubmenus);
+      const industries = parseJsonArray<{ name: string }>(solutions.fields.industryDetails).map((i) => i.name);
+      const entry = (label: string, group: string): SubmenuEntry => ({
+        id: `solutions-${label}`,
+        label,
+        group,
+        on: !hidden.includes(label),
+        toggle: () =>
+          onFieldChange(
+            "solutions",
+            "hiddenSubmenus",
+            JSON.stringify(hidden.includes(label) ? hidden.filter((h) => h !== label) : [...hidden, label])
+          ),
+      });
+      return [...industries.map((n) => entry(n, "By Industry")), ...SOLUTIONS_STRUCTURE_LABELS.map((n) => entry(n, "By Structure"))];
+    }
+    return [];
+  }
+
   function renderNavItem(item: NavItem, depth: number = 0) {
     const childKeys = item.children || [];
+    const submenus = submenusFor(item.key);
     const children = childKeys.map((k) => itemsByKey[k]).filter(Boolean);
 
     return (
@@ -414,6 +479,20 @@ function MenuPanel({
             />
           </div>
         </div>
+        {submenus.length > 0 && (
+          <div style={{ margin: "4px 0 10px 34px", borderLeft: "2px solid var(--line, #e4e2dc)", paddingLeft: 12 }}>
+            {submenus.map((sub) => (
+              <div
+                key={sub.id}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0", opacity: item.visible ? 1 : 0.55 }}
+              >
+                <span style={{ flex: 1, fontSize: 13 }}>{sub.label}</span>
+                <span style={{ fontSize: 11, color: "#8b8d87" }}>{sub.group}</span>
+                <span className={`toggle ${sub.on ? "on" : ""}`} onClick={sub.toggle} />
+              </div>
+            ))}
+          </div>
+        )}
         {children.map((child) => renderNavItem(child, depth + 1))}
       </div>
     );
@@ -425,7 +504,7 @@ function MenuPanel({
     <div className="grid grid-2">
       <div className="card">
         <h3>Navigation</h3>
-        <p className="card-sub">Reorder, rename, set parents, or hide. Matches the live nav exactly.</p>
+        <p className="card-sub">Reorder, rename, or hide each menu. Customer X, Colleague X and Solutions list their submenus underneath — hide any one individually. Hiding a parent hides it (and its dropdown) whatever its submenus are set to; hiding every submenu leaves the parent as a plain link.</p>
         {rootItems.map((item) => renderNavItem(item))}
         <button
           className="btn btn-sm"
@@ -444,12 +523,12 @@ function MenuPanel({
         <p className="card-sub">Tagline and each column&rsquo;s links, matching the live footer.</p>
         <Field label="Tagline" value={content.fields.footerDescription} onChange={(v) => onFieldChange("menu", "footerDescription", v)} />
         <div style={{ marginBottom: 14 }}>
-          <b style={{ fontSize: 12.5 }}>Product links</b>
+          <b style={{ fontSize: 12.5 }}>Footer column 1 links</b>
           <Field
             label="Column heading"
             value={content.fields.footerProductHeading}
             onChange={(v) => onFieldChange("menu", "footerProductHeading", v)}
-            placeholder="Product"
+            placeholder="Customer X"
           />
           <StringListEditor
             items={parseJsonArray<string>(content.fields.footerProductLinks)}
@@ -457,7 +536,7 @@ function MenuPanel({
           />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <b style={{ fontSize: 12.5 }}>Solutions links</b>
+          <b style={{ fontSize: 12.5 }}>Footer column 2 links</b>
           <Field
             label="Column heading"
             value={content.fields.footerSolutionsHeading}
@@ -470,7 +549,7 @@ function MenuPanel({
           />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <b style={{ fontSize: 12.5 }}>Company links</b>
+          <b style={{ fontSize: 12.5 }}>Footer column 3 links</b>
           <Field
             label="Column heading"
             value={content.fields.footerCompanyHeading}

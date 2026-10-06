@@ -97,12 +97,13 @@ export async function GET() {
   // Each industry now has its own page (see solutions/[slug]) — no more
   // routing every industry to the same shared anchor, which is what made
   // this column read as "no data" (every link went to the same place).
-  const industryLinks: NavLink[] = industries.map((i) => ({ label: i.name, href: `/solutions/${i.slug}` }));
+  const hidden = new Set(parseJsonArray<string>(solutions.fields.hiddenSubmenus));
+  const industryLinks: NavLink[] = industries.filter((i) => !hidden.has(i.name)).map((i) => ({ label: i.name, href: `/solutions/${i.slug}` }));
   const structureLinks: NavLink[] = [
     { label: "Single-location businesses", href: "/solutions#standalone" },
     { label: "Multi-branch groups", href: "/solutions#group" },
     { label: "Enterprise", href: "/solutions#enterprise" },
-  ];
+  ].filter((l) => !hidden.has(l.label));
 
   return NextResponse.json({
     status: "ok",
