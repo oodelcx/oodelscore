@@ -4,8 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
-import { BookDemoButton } from "../demo-modal";
 import { Reveal } from "../scroll-reveal";
+import { DemoForm } from "../ds/demo-form";
 import { BeliefIcon, SectorIcon, StoryIllustration } from "./icons";
 
 interface Belief {
@@ -61,7 +61,7 @@ export default async function CompanyPage() {
 
   return (
     <>
-      <MarketingNav active="company" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
+      <MarketingNav active="company" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} navLabels={menu.fields} />
 
       <section className="quiet-hero">
         <div className="wrap quiet-hero-grid">
@@ -133,30 +133,32 @@ export default async function CompanyPage() {
             </div>
             <Reveal as="div" delay={240}>
               <Link href="/solutions" className="company-audience-link">
-                See how it works for your industry →
+                {f.audienceLinkLabel || "See how it works for your industry →"}
               </Link>
             </Reveal>
           </div>
         </section>
       )}
 
-      <section className="final-cta">
-        <div className="wrap">
-          <Reveal as="div">
-            <h2>{f.finalCtaHeadline || "Let’s talk."}</h2>
-            <p>
-              {f.finalCtaSubhead ||
-                "Questions about the product, a specific industry, or how this would fit your organization — a person who knows it answers."}
-            </p>
-            <div className="hero-ctas" style={{ justifyContent: "center" }}>
-              <BookDemoButton className="btn-primary hover-lift">{f.finalCtaPrimaryButton || "Book a demo"}</BookDemoButton>
-              <a className="btn-ghost hover-lift" href={`mailto:${f.contactEmail}`}>
-                {f.contactEmail}
-              </a>
+      <div className="ds-root">
+        <section className="ds-sec ds-band-alt" id="demo">
+          <div className="ds-wrap ds-contact">
+            <div>
+              <div className="ds-eyebrow">{f.demoEyebrow}</div>
+              <h2 className="ds-h2" style={{ margin: "10px 0 14px" }}>
+                {f.demoHeadline || f.finalCtaHeadline}
+              </h2>
+              <p className="ds-lead">{f.demoBody || f.finalCtaSubhead}</p>
+              {f.contactEmail && (
+                <p className="ds-lead" style={{ marginTop: 14, fontSize: 15 }}>
+                  {f.demoEmailPrefix} <a href={`mailto:${f.contactEmail}`} style={{ color: "var(--acc-d)", fontWeight: 650 }}>{f.contactEmail}</a>
+                </p>
+              )}
             </div>
-          </Reveal>
-        </div>
-      </section>
+            <DemoForm labels={{ ...menu.fields, demoProductLabel: f.demoProductLabel }} options={parseJsonArray<string>(f.demoProductOptions)} />
+          </div>
+        </section>
+      </div>
 
       <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>

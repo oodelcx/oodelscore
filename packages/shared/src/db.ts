@@ -90,9 +90,53 @@ async function migrateLegacySiteContentKeys(): Promise<void> {
   if (Object.keys($set).length) await col.updateOne({ _id: menu._id }, { $set });
 }
 
+// Seed wording that changed with the site redesign (QR-or-link, product
+// renames). Each entry only rewrites a field whose stored value is *exactly*
+// the old default, so anything an admin has edited is left alone.
+const COPY_UPDATES: { page: string; key: string; from: string; to: string; partial?: boolean }[] = [
+  { page: "customer-x", key: "heroHeadline", from: "Customer X: everything from a QR scan to a resolved decision.", to: "Everything from a QR code or link to a resolved decision." },
+  { page: "colleague-x", key: "heroHeadline", from: "Colleague X: the same rigor, pointed at your own team.", to: "The same rigor, pointed at your own team." },
+  { page: "customer-x", key: "finalCtaSecondaryButton", from: "Sign in", to: "See pricing" },
+  { page: "colleague-x", key: "finalCtaSecondaryButton", from: "Sign in", to: "See pricing" },
+  { page: "home", key: "finalCtaSecondaryButton", from: "Sign in", to: "See pricing" },
+  { page: "home", key: "heroTwoProductsCxLabel", from: "Customer X", to: "For customers, clients, patients" },
+  { page: "home", key: "heroTwoProductsCeLabel", from: "Colleague X", to: "For your own people" },
+  { page: "home", key: "heroSubheadline", from: "OodelCX turns every QR scan — from a customer or a colleague — into tracked, owned work, not another number on a dashboard nobody opens. Built for one location or a thousand.", to: "OodelCX turns every response — a QR scan or a shared link, from a customer or a colleague — into tracked, owned work, not another number on a dashboard nobody opens. Built for one location or a thousand." },
+  { page: "home", key: "loopStages", from: "A QR scan, a short survey, no app or login.", to: "A QR code or a link, a short survey, no app or login.", partial: true },
+  { page: "pricing", key: "heroSubhead", from: "Customer Experience and Colleague Pulse are priced and billed separately", to: "Customer X and Colleague X are priced and billed separately", partial: true },
+  { page: "pricing", key: "metaDescription", from: "OodelCX pricing for Customer Experience and Colleague Pulse", to: "OodelCX pricing for Customer X and Colleague X", partial: true },
+  { page: "pricing", key: "cePlansSubhead", from: "Already running Customer Experience? Adding Colleague Pulse", to: "Already running Customer X? Adding Colleague X", partial: true },
+  { page: "pricing", key: "cxPlansHeading", from: "Customer Experience", to: "Customer X" },
+  { page: "pricing", key: "cePlansHeading", from: "Colleague Pulse", to: "Colleague X" },
+  { page: "pricing", key: "loopStripItems", from: "Unlimited QR feedback points and responses", to: "Unlimited feedback points (QR or link) and responses", partial: true },
+];
+
+async function applyRedesignMigrations(): Promise<void> {
+  const col = SiteContent.collection;
+  for (const u of COPY_UPDATES) {
+    const doc = await col.findOne({ page: u.page });
+    const value = (doc?.fields as Record<string, string> | undefined)?.[u.key];
+    if (!doc || typeof value !== "string") continue;
+    if (u.partial ? value.includes(u.from) : value === u.from) {
+      await col.updateOne({ _id: doc._id }, { $set: { [`fields.${u.key}`]: u.partial ? value.split(u.from).join(u.to) : u.to } });
+    }
+  }
+  // The redesigned nav has no How it works / Contact entries (the loop lives on
+  // Home, the demo form on Company). Hide them once, then leave the admin's
+  // choice alone.
+  const menu = await col.findOne({ page: "menu" });
+  const fields = (menu?.fields ?? {}) as Record<string, string>;
+  if (menu && fields.navV2 !== "1" && Array.isArray(menu.navItems)) {
+    const navItems = menu.navItems.map((item: Record<string, unknown>) =>
+      item.key === "how-it-works" || item.key === "contact" ? { ...item, visible: false } : item
+    );
+    await col.updateOne({ _id: menu._id }, { $set: { navItems, "fields.navV2": "1" } });
+  }
+}
+
 function runLegacyMigration(): Promise<void> {
   if (!legacyKeyMigrationPromise) {
-    legacyKeyMigrationPromise = migrateLegacySiteContentKeys().catch((err) => {
+    legacyKeyMigrationPromise = migrateLegacySiteContentKeys().then(applyRedesignMigrations).catch((err) => {
       legacyKeyMigrationPromise = null;
       throw err;
     });

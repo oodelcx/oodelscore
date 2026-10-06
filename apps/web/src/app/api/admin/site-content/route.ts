@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, SiteContent, SITE_CONTENT_PAGES, SEED_SITE_CONTENT } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
-import { mergeNavItems, mergeFields } from "@/lib/siteContent";
+import { mergeNavItems, mergeFields, normalizePageFields } from "@/lib/siteContent";
 
 export async function GET() {
   const session = await requireStaffSession();
@@ -40,7 +40,7 @@ export async function GET() {
       // empty state would $set a real-but-empty key into the DB doc,
       // permanently wiping the live seed-backed content the next reader
       // would otherwise have fallen back to.
-      const fields = doc ? (seed ? mergeFields(Object.fromEntries(doc.fields), seed.fields) : Object.fromEntries(doc.fields)) : (seed?.fields ?? {});
+      const fields = normalizePageFields(page, doc ? (seed ? mergeFields(Object.fromEntries(doc.fields), seed.fields) : Object.fromEntries(doc.fields)) : (seed?.fields ?? {}));
       return {
         page,
         navItems,

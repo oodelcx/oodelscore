@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import "./marketing.css";
+import "./ds.css";
+import { getSiteContent } from "@/lib/siteContent";
 import { DemoModalProvider } from "./demo-modal";
 import { CookieConsentBanner } from "./cookie-consent";
 
@@ -9,11 +11,14 @@ import { CookieConsentBanner } from "./cookie-consent";
 // here. This route group used to load its own Fraunces/Public Sans/IBM
 // Plex Mono webfonts, which didn't match the OodelCX logo (a geometric
 // grotesque sans close to Inter) — removed, no font loading here anymore.
-export default function MarketingLayout({ children }: { children: ReactNode }) {
+export default async function MarketingLayout({ children }: { children: ReactNode }) {
+  // The demo form and cookie banner appear on every page, so their wording
+  // lives with the shared "menu" Site Content (Admin -> Site Content -> Menu & Footer).
+  const menu = await getSiteContent("menu");
   return (
     <div className="mkt">
-      <DemoModalProvider>{children}</DemoModalProvider>
-      <CookieConsentBanner />
+      <DemoModalProvider labels={menu.fields}>{children}</DemoModalProvider>
+      <CookieConsentBanner labels={menu.fields} />
     </div>
   );
 }

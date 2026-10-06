@@ -33,7 +33,7 @@ export default async function HowItWorksPage() {
 
   return (
     <>
-      <MarketingNav active="how-it-works" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
+      <MarketingNav active="how-it-works" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} navLabels={menu.fields} />
 
       <section className="inner-hero">
         <div className="wrap">

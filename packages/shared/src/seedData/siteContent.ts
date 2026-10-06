@@ -1,4 +1,5 @@
 import type { SiteContentPage, INavItem, ISiteSection } from "../models/SiteContent";
+import { DESIGN_FIELDS, withStages } from "./siteDesign";
 
 interface SeedSiteContent {
   page: SiteContentPage;
@@ -12,7 +13,7 @@ interface SeedSiteContent {
 // can't represent structurally is stored as JSON-encoded strings inside
 // `fields` — the CMS UI parses/re-serializes it, the marketing site does the
 // same. Final wording is edited from Admin -> Site Content, not here.
-export const SEED_SITE_CONTENT: SeedSiteContent[] = [
+const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
   {
     page: "menu",
     navItems: [
@@ -20,9 +21,9 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
       { key: "colleague-x", label: "Colleague X", visible: true, order: 1 },
       { key: "solutions", label: "Solutions", visible: true, order: 2 },
       { key: "pricing", label: "Pricing", visible: true, order: 3 },
-      { key: "how-it-works", label: "How it works", visible: true, order: 4 },
+      { key: "how-it-works", label: "How it works", visible: false, order: 4 },
       { key: "company", label: "Company", visible: true, order: 5 },
-      { key: "contact", label: "Contact", visible: true, order: 6 },
+      { key: "contact", label: "Contact", visible: false, order: 6 },
     ],
     sections: [],
     fields: {
@@ -142,21 +143,21 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heroHeadline: "Straightforward pricing, for either product — or both.",
       heroSubhead:
-        "Customer Experience and Colleague Pulse are priced and billed separately, so you only pay for what you actually run. Every plan includes AI Insights reporting and unlimited responses.",
+        "Customer X and Colleague X are priced and billed separately, so you only pay for what you actually run. Every plan includes AI Insights reporting and unlimited responses.",
       metaDescription:
-        "OodelCX pricing for Customer Experience and Colleague Pulse — single locations and multi-branch groups, every plan includes AI Insights reporting, Case Management, and unlimited responses.",
+        "OodelCX pricing for Customer X and Colleague X — single locations and multi-branch groups, every plan includes AI Insights reporting, Case Management, and unlimited responses.",
       loopStripHeadline: "Every plan is the whole loop, not a slice of it.",
       loopStripItems: JSON.stringify([
-        { label: "Capture", body: "Unlimited QR feedback points and responses" },
+        { label: "Capture", body: "Unlimited feedback points (QR or link) and responses" },
         { label: "Clarify", body: "Themes and root causes surfaced automatically" },
         { label: "Claim", body: "Case Management and owned cases included" },
         { label: "Close", body: "Decision Log, Closing the Loop, and Playbooks included" },
         { label: "Confirm", body: "A maturity score on every plan tier" },
       ]),
-      cxPlansHeading: "Customer Experience",
-      cePlansHeading: "Colleague Pulse",
+      cxPlansHeading: "Customer X",
+      cePlansHeading: "Colleague X",
       cePlansSubhead:
-        "Already running Customer Experience? Adding Colleague Pulse is a second line item on the same account — one login, one AI Insights pipeline, no new dashboard to learn.",
+        "Already running Customer X? Adding Colleague X is a second line item on the same account — one login, one AI Insights pipeline, no new dashboard to learn.",
       plans: JSON.stringify([
         {
           product: "customer_experience",
@@ -761,3 +762,14 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
     },
   },
 ];
+
+/** The redesigned pages' fields (see siteDesign.ts) layered over the older per-page copy above. */
+export const SEED_SITE_CONTENT: SeedSiteContent[] = RAW_SEED_SITE_CONTENT.map((entry) => {
+  const extra = DESIGN_FIELDS[entry.page];
+  if (!extra) return entry;
+  const fields = { ...entry.fields, ...extra };
+  if ((entry.page === "customer-x" || entry.page === "colleague-x") && entry.fields.features) {
+    fields.features = withStages(entry.fields.features);
+  }
+  return { ...entry, fields };
+});

@@ -47,7 +47,8 @@ function setCookieConsent(analytics: boolean) {
  * optional category (Analytics) — no dark pattern where "Reject" is hidden
  * behind a second click.
  */
-export function CookieConsentBanner() {
+export function CookieConsentBanner({ labels }: { labels?: Record<string, string | undefined> }) {
+  const L = (key: string, fallback: string) => labels?.[key] || fallback;
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -68,18 +69,18 @@ export function CookieConsentBanner() {
     <div className="cookie-banner" role="dialog" aria-label="Cookie preferences" aria-modal="false">
       <div className="cookie-banner-inner">
         <div className="cookie-banner-text">
-          <strong>Cookies, kept minimal.</strong>
+          <strong>{L("cookieTitle", "Cookies, kept minimal.")}</strong>
           <span>
-            We use a necessary session cookie to keep you signed in — nothing else runs unless you allow it. See our{" "}
-            <a href="/privacy">Privacy policy</a>.
+            {L("cookieBody", "We use a necessary session cookie to keep you signed in — nothing else runs unless you allow it. See our")}{" "}
+            <a href="/privacy">{L("cookiePrivacyLabel", "Privacy policy")}</a>.
           </span>
         </div>
         <div className="cookie-banner-actions">
           <button type="button" className="cookie-btn cookie-btn-ghost" onClick={() => decide(false)}>
-            Necessary only
+            {L("cookieNecessaryButton", "Necessary only")}
           </button>
           <button type="button" className="cookie-btn cookie-btn-primary" onClick={() => decide(true)}>
-            Accept all
+            {L("cookieAcceptButton", "Accept all")}
           </button>
         </div>
       </div>

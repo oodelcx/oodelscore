@@ -31,7 +31,8 @@ export function BookDemoButton({
   );
 }
 
-export function DemoModalProvider({ children }: { children: ReactNode }) {
+export function DemoModalProvider({ children, labels }: { children: ReactNode; labels?: Record<string, string | undefined> }) {
+  const L = (key: string, fallback: string) => labels?.[key] || fallback;
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -65,7 +66,7 @@ export function DemoModalProvider({ children }: { children: ReactNode }) {
     setSubmitting(false);
     if (!res.ok) {
       const data = await res.json().catch(() => null);
-      setError(data?.message ?? "Something went wrong — try again.");
+      setError(data?.message ?? L("demoError", "Something went wrong — try again."));
       return;
     }
     setSubmitted(true);
@@ -82,33 +83,33 @@ export function DemoModalProvider({ children }: { children: ReactNode }) {
             </button>
             {submitted ? (
               <div className="demo-modal-success">
-                <h3>Thanks — we&rsquo;ll be in touch.</h3>
-                <p>Someone from our team will reach out at {email} to set up a time.</p>
+                <h3>{L("demoSuccessTitle", "Thanks — we’ll be in touch.")}</h3>
+                <p>{L("demoSuccessBody", "Someone from our team will reach out at {email} to set up a time.").replace("{email}", email)}</p>
               </div>
             ) : (
               <>
-                <h3>Book a demo</h3>
-                <p className="demo-modal-sub">Twenty minutes, a live walkthrough of real workflows — not a canned script.</p>
+                <h3>{L("demoTitle", "Book a demo")}</h3>
+                <p className="demo-modal-sub">{L("demoSub", "Twenty minutes, a live walkthrough of real workflows — not a canned script.")}</p>
                 <form onSubmit={handleSubmit}>
                   <div className="demo-field">
-                    <label>Name</label>
+                    <label>{L("demoLabelName", "Name")}</label>
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
                   </div>
                   <div className="demo-field">
-                    <label>Work email</label>
+                    <label>{L("demoLabelEmail", "Work email")}</label>
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                   <div className="demo-field">
-                    <label>Company</label>
+                    <label>{L("demoLabelCompany", "Company")}</label>
                     <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} />
                   </div>
                   <div className="demo-field">
-                    <label>What would you like to see?</label>
+                    <label>{L("demoLabelMessage", "What would you like to see?")}</label>
                     <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} />
                   </div>
                   {error && <p className="demo-modal-error">{error}</p>}
                   <button type="submit" className="btn-primary" disabled={submitting} style={{ width: "100%", border: "none" }}>
-                    {submitting ? "Sending…" : "Request a demo"}
+                    {submitting ? L("demoSubmitting", "Sending…") : L("demoSubmit", "Request a demo")}
                   </button>
                 </form>
               </>

@@ -6,7 +6,8 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-export function ContactForm({ successHeadline, successBody }: { successHeadline: string; successBody: string }) {
+export function ContactForm({ successHeadline, successBody, labels }: { successHeadline: string; successBody: string; labels?: Record<string, string | undefined> }) {
+  const L = (key: string, fallback: string) => labels?.[key] || fallback;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
@@ -25,9 +26,9 @@ export function ContactForm({ successHeadline, successBody }: { successHeadline:
   const [submitted, setSubmitted] = useState(false);
 
   function validate(): string | null {
-    if (!name.trim()) return "Name is required.";
-    if (!email.trim() || !isValidEmail(email.trim())) return "A valid email is required.";
-    if (!message.trim()) return "Message is required.";
+    if (!name.trim()) return L("formErrName", "Name is required.");
+    if (!email.trim() || !isValidEmail(email.trim())) return L("formErrEmail", "A valid email is required.");
+    if (!message.trim()) return L("formErrMessage", "Message is required.");
     return null;
   }
 
@@ -48,7 +49,7 @@ export function ContactForm({ successHeadline, successBody }: { successHeadline:
     setSubmitting(false);
     if (!res.ok) {
       const data = await res.json().catch(() => null);
-      setError(data?.message ?? "Something went wrong — try again.");
+      setError(data?.message ?? L("formErrGeneric", "Something went wrong — try again."));
       return;
     }
     setSubmitted(true);
@@ -66,19 +67,19 @@ export function ContactForm({ successHeadline, successBody }: { successHeadline:
   return (
     <form onSubmit={handleSubmit}>
       <div className="demo-field">
-        <label>Name</label>
+        <label>{L("formLabelName", "Name")}</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
       </div>
       <div className="demo-field">
-        <label>Email</label>
+        <label>{L("formLabelEmail", "Email")}</label>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       <div className="demo-field">
-        <label>Company (optional)</label>
+        <label>{L("formLabelCompany", "Company (optional)")}</label>
         <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} />
       </div>
       <div className="demo-field">
-        <label>Message</label>
+        <label>{L("formLabelMessage", "Message")}</label>
         <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={5} required />
       </div>
 
@@ -100,7 +101,7 @@ export function ContactForm({ successHeadline, successBody }: { successHeadline:
 
       {error && <p className="demo-modal-error">{error}</p>}
       <button type="submit" className="btn-primary" disabled={submitting} style={{ width: "100%", border: "none" }}>
-        {submitting ? "Sending…" : "Send message"}
+        {submitting ? L("formSubmitting", "Sending…") : L("formSubmit", "Send message")}
       </button>
     </form>
   );

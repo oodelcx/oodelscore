@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type TextareaHTMLAttributes } from "react";
+import { SchemaPanel, SchemaCards } from "./schema-editor";
+import { HOME_SCHEMA, PRODUCT_SCHEMA, SOLUTIONS_SCHEMA, SHARED_TEXT_SCHEMA, COMPANY_EXTRA_SCHEMA, PRICING_EXTRA_SCHEMA, CONTACT_EXTRA_SCHEMA } from "./schema";
 
 interface NavItem {
   key: string;
@@ -77,11 +79,8 @@ export default function SiteContentPage() {
   async function save(page: string) {
     setSaving(page);
     setSavedMsg(null);
-    // Submenu toggles on the Menu tab edit the Customer X / Colleague X /
-    // Solutions content, so saving the menu saves those too.
-    const targets = page === "menu" ? ["menu", "customer-x", "colleague-x", "solutions"] : [page];
     const results = await Promise.all(
-      targets
+      [page]
         .filter((t) => pages[t])
         .map((t) =>
           fetch(`/api/admin/site-content/${t}`, {
@@ -151,15 +150,36 @@ export default function SiteContentPage() {
         ))}
       </div>
 
-      {current && activeTab === "menu" && <MenuPanel content={current} pages={pages} onFieldChange={updateField} onNavItemsChange={updateNavItems} />}
-      {current && activeTab === "home" && <HomePanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "pricing" && <PricingPanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "customer-x" && <ProductPanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "colleague-x" && <ColleaguePulsePanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "solutions" && <SolutionsPanel content={current} onFieldChange={updateField} />}
+      {current && activeTab === "menu" && <MenuPanel content={current} onFieldChange={updateField} onNavItemsChange={updateNavItems} />}
+      {current && activeTab === "home" && <SchemaPanel schema={HOME_SCHEMA} page="home" fields={current.fields} onFieldChange={updateField} />}
+      {current && activeTab === "pricing" && (
+        <>
+          <PricingPanel content={current} onFieldChange={updateField} />
+          <div className="grid grid-2" style={{ marginTop: 16 }}>
+            <SchemaCards schema={PRICING_EXTRA_SCHEMA} page="pricing" fields={current.fields} onFieldChange={updateField} />
+          </div>
+        </>
+      )}
+      {current && activeTab === "customer-x" && <SchemaPanel schema={PRODUCT_SCHEMA} page="customer-x" fields={current.fields} onFieldChange={updateField} />}
+      {current && activeTab === "colleague-x" && <SchemaPanel schema={PRODUCT_SCHEMA} page="colleague-x" fields={current.fields} onFieldChange={updateField} />}
+      {current && activeTab === "solutions" && <SchemaPanel schema={SOLUTIONS_SCHEMA} page="solutions" fields={current.fields} onFieldChange={updateField} />}
       {current && activeTab === "how-it-works" && <HowItWorksPanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "company" && <CompanyPanel content={current} onFieldChange={updateField} />}
-      {current && activeTab === "contact" && <ContactPanel content={current} onFieldChange={updateField} />}
+      {current && activeTab === "company" && (
+        <>
+          <CompanyPanel content={current} onFieldChange={updateField} />
+          <div className="grid grid-2" style={{ marginTop: 16 }}>
+            <SchemaCards schema={COMPANY_EXTRA_SCHEMA} page="company" fields={current.fields} onFieldChange={updateField} />
+          </div>
+        </>
+      )}
+      {current && activeTab === "contact" && (
+        <>
+          <ContactPanel content={current} onFieldChange={updateField} />
+          <div className="grid grid-2" style={{ marginTop: 16 }}>
+            <SchemaCards schema={CONTACT_EXTRA_SCHEMA} page="contact" fields={current.fields} onFieldChange={updateField} />
+          </div>
+        </>
+      )}
       {current && (activeTab === "privacy" || activeTab === "terms") && (
         <LegalPanel content={current} page={activeTab} onFieldChange={updateField} />
       )}
@@ -333,24 +353,12 @@ function StringListEditor({ items, onChange }: { items: string[]; onChange: (ite
   );
 }
 
-const SOLUTIONS_STRUCTURE_LABELS = ["Single-location businesses", "Multi-branch groups", "Enterprise"];
-
-interface SubmenuEntry {
-  id: string;
-  label: string;
-  group?: string;
-  on: boolean;
-  toggle: () => void;
-}
-
 function MenuPanel({
   content,
-  pages,
   onFieldChange,
   onNavItemsChange,
 }: {
   content: PageContent;
-  pages: Record<string, PageContent>;
   onFieldChange: (page: string, key: string, value: string) => void;
   onNavItemsChange: (page: string, navItems: NavItem[]) => void;
 }) {
@@ -389,52 +397,8 @@ function MenuPanel({
     onNavItemsChange("menu", next);
   }
 
-  function submenusFor(key: string): SubmenuEntry[] {
-    if (key === "customer-x" || key === "colleague-x") {
-      const features = parseJsonArray<Feature>(pages[key]?.fields.features);
-      // No "In menu" box ever touched = everything shows (see nav-menu route).
-      const everConfigured = features.some((f) => f.menuFeatured !== undefined);
-      return features.map((f, i) => {
-        const on = everConfigured ? !!f.menuFeatured : true;
-        return {
-          id: `${key}-${i}`,
-          label: f.tag,
-          group: f.group === "act" ? "Act" : "Understand",
-          on,
-          toggle: () =>
-            onFieldChange(
-              key,
-              "features",
-              JSON.stringify(features.map((x, idx) => ({ ...x, menuFeatured: idx === i ? !on : everConfigured ? !!x.menuFeatured : true })))
-            ),
-        };
-      });
-    }
-    if (key === "solutions") {
-      const solutions = pages.solutions;
-      if (!solutions) return [];
-      const hidden = parseJsonArray<string>(solutions.fields.hiddenSubmenus);
-      const industries = parseJsonArray<{ name: string }>(solutions.fields.industryDetails).map((i) => i.name);
-      const entry = (label: string, group: string): SubmenuEntry => ({
-        id: `solutions-${label}`,
-        label,
-        group,
-        on: !hidden.includes(label),
-        toggle: () =>
-          onFieldChange(
-            "solutions",
-            "hiddenSubmenus",
-            JSON.stringify(hidden.includes(label) ? hidden.filter((h) => h !== label) : [...hidden, label])
-          ),
-      });
-      return [...industries.map((n) => entry(n, "By Industry")), ...SOLUTIONS_STRUCTURE_LABELS.map((n) => entry(n, "By Structure"))];
-    }
-    return [];
-  }
-
   function renderNavItem(item: NavItem, depth: number = 0) {
     const childKeys = item.children || [];
-    const submenus = submenusFor(item.key);
     const children = childKeys.map((k) => itemsByKey[k]).filter(Boolean);
 
     return (
@@ -479,20 +443,6 @@ function MenuPanel({
             />
           </div>
         </div>
-        {submenus.length > 0 && (
-          <div style={{ margin: "4px 0 10px 34px", borderLeft: "2px solid var(--line, #e4e2dc)", paddingLeft: 12 }}>
-            {submenus.map((sub) => (
-              <div
-                key={sub.id}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0", opacity: item.visible ? 1 : 0.55 }}
-              >
-                <span style={{ flex: 1, fontSize: 13 }}>{sub.label}</span>
-                <span style={{ fontSize: 11, color: "#8b8d87" }}>{sub.group}</span>
-                <span className={`toggle ${sub.on ? "on" : ""}`} onClick={sub.toggle} />
-              </div>
-            ))}
-          </div>
-        )}
         {children.map((child) => renderNavItem(child, depth + 1))}
       </div>
     );
@@ -504,7 +454,7 @@ function MenuPanel({
     <div className="grid grid-2">
       <div className="card">
         <h3>Navigation</h3>
-        <p className="card-sub">Reorder, rename, or hide each menu. Customer X, Colleague X and Solutions list their submenus underneath — hide any one individually. Hiding a parent hides it (and its dropdown) whatever its submenus are set to; hiding every submenu leaves the parent as a plain link.</p>
+        <p className="card-sub">Reorder, rename or hide each menu item. The menu is a single flat row of links.</p>
         {rootItems.map((item) => renderNavItem(item))}
         <button
           className="btn btn-sm"
@@ -579,6 +529,7 @@ function MenuPanel({
           {content.fields.headerStyle === "dark" ? "Dark background" : "Light background"}
         </label>
       </div>
+      <SchemaCards schema={SHARED_TEXT_SCHEMA} page="menu" fields={content.fields} onFieldChange={onFieldChange} />
     </div>
   );
 }
@@ -613,425 +564,6 @@ const DEFAULT_LOOP_STAGES: NarrativeStep[] = [
 function withDefaultLoopStages(stages: NarrativeStep[]): NarrativeStep[] {
   if (stages.length >= DEFAULT_LOOP_STAGES.length) return stages;
   return [...stages, ...DEFAULT_LOOP_STAGES.slice(stages.length)];
-}
-
-function HomePanel({
-  content,
-  onFieldChange,
-}: {
-  content: PageContent;
-  onFieldChange: (page: string, key: string, value: string) => void;
-}) {
-  const steps = parseJsonArray<NarrativeStep>(content.fields.narrativeSteps);
-  const levels = parseJsonArray<CxLevel>(content.fields.cxPulseLevels);
-  const whyItems = parseJsonArray<TitleBodyItem>(content.fields.whyItems);
-  const storedLoopStages = parseJsonArray<NarrativeStep>(content.fields.loopStages);
-  const loopStages = withDefaultLoopStages(storedLoopStages);
-
-  // Self-heals a doc saved before the 5C rename shipped (still holding only
-  // 4 stages) the moment this page loads — pushes the padded array into
-  // state so "Save" writes back all 5 even if the admin never touches a
-  // field, instead of leaving a stage permanently un-addable through the UI.
-  useEffect(() => {
-    if (storedLoopStages.length < DEFAULT_LOOP_STAGES.length) {
-      onFieldChange("home", "loopStages", JSON.stringify(loopStages));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storedLoopStages.length]);
-
-  return (
-    <>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Search &amp; social</h3>
-        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
-        <Field
-          label="Meta description"
-          textarea
-          value={content.fields.metaDescription}
-          onChange={(v) => onFieldChange("home", "metaDescription", v)}
-        />
-      </div>
-
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Hero</h3>
-        <p className="card-sub">The first thing every visitor sees.</p>
-        <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("home", "heroHeadline", v)} />
-        <Field
-          label="Subheadline"
-          textarea
-          value={content.fields.heroSubheadline}
-          onChange={(v) => onFieldChange("home", "heroSubheadline", v)}
-        />
-        <div className="field-row">
-          <Field
-            label="Primary button label"
-            value={content.fields.heroPrimaryButton}
-            onChange={(v) => onFieldChange("home", "heroPrimaryButton", v)}
-          />
-          <Field
-            label="Secondary button label"
-            value={content.fields.heroSecondaryButton}
-            onChange={(v) => onFieldChange("home", "heroSecondaryButton", v)}
-          />
-        </div>
-        <Field
-          label={'"Built for" line'}
-          value={content.fields.heroBuiltForLine}
-          onChange={(v) => onFieldChange("home", "heroBuiltForLine", v)}
-        />
-        <Field
-          label="Example card rotation speed (seconds)"
-          value={content.fields.heroCarouselIntervalSeconds}
-          onChange={(v) => onFieldChange("home", "heroCarouselIntervalSeconds", v)}
-          placeholder="3"
-        />
-      </div>
-
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>The 5C loop strip</h3>
-        <p className="card-sub">The five boxes under the hero — Capture, Clarify, Claim, Close, Confirm.</p>
-        <Field
-          label="Eyebrow label"
-          value={content.fields.loopEyebrow}
-          onChange={(v) => onFieldChange("home", "loopEyebrow", v)}
-          placeholder="The 5C Framework"
-        />
-        <Field
-          label="Loop headline"
-          value={content.fields.loopHeadline}
-          onChange={(v) => onFieldChange("home", "loopHeadline", v)}
-        />
-        {loopStages.map((stage, i) => (
-          <div className="qrow" key={i}>
-            <div className="qrow-top">
-              <input
-                type="text"
-                style={{ width: 110, fontWeight: 600 }}
-                value={stage.label}
-                onChange={(e) => {
-                  const next = [...loopStages];
-                  next[i] = { ...next[i], label: e.target.value };
-                  onFieldChange("home", "loopStages", JSON.stringify(next));
-                }}
-              />
-              <input
-                type="text"
-                style={{ flex: 1 }}
-                value={stage.title}
-                onChange={(e) => {
-                  const next = [...loopStages];
-                  next[i] = { ...next[i], title: e.target.value };
-                  onFieldChange("home", "loopStages", JSON.stringify(next));
-                }}
-              />
-            </div>
-            <AutoTextarea
-              value={stage.body}
-              onChange={(e) => {
-                const next = [...loopStages];
-                next[i] = { ...next[i], body: e.target.value };
-                onFieldChange("home", "loopStages", JSON.stringify(next));
-              }}
-            />
-          </div>
-        ))}
-        <p className="field-hint" style={{ marginTop: 4 }}>
-          Stage count is fixed at five to match the 5C framework — edit the wording, not how many there are.
-        </p>
-      </div>
-
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Narrative — Capture / Claim / Confirm</h3>
-        <div className="field-row">
-          <Field
-            label="Section headline"
-            value={content.fields.narrativeHeadline}
-            onChange={(v) => onFieldChange("home", "narrativeHeadline", v)}
-          />
-        </div>
-        <Field
-          label="Section subhead"
-          value={content.fields.narrativeSubhead}
-          onChange={(v) => onFieldChange("home", "narrativeSubhead", v)}
-        />
-        {steps.map((step, i) => (
-          <div className="qrow" key={i}>
-            <div className="qrow-top">
-              <input
-                type="text"
-                style={{ width: 110, fontWeight: 600 }}
-                value={step.label}
-                onChange={(e) => {
-                  const next = [...steps];
-                  next[i] = { ...next[i], label: e.target.value };
-                  onFieldChange("home", "narrativeSteps", JSON.stringify(next));
-                }}
-              />
-              <input
-                type="text"
-                style={{ flex: 1 }}
-                value={step.title}
-                onChange={(e) => {
-                  const next = [...steps];
-                  next[i] = { ...next[i], title: e.target.value };
-                  onFieldChange("home", "narrativeSteps", JSON.stringify(next));
-                }}
-              />
-              <span
-                className="icon-btn btn-danger"
-                onClick={() => onFieldChange("home", "narrativeSteps", JSON.stringify(steps.filter((_, idx) => idx !== i)))}
-              >
-                🗑
-              </span>
-            </div>
-            <AutoTextarea
-              value={step.body}
-              onChange={(e) => {
-                const next = [...steps];
-                next[i] = { ...next[i], body: e.target.value };
-                onFieldChange("home", "narrativeSteps", JSON.stringify(next));
-              }}
-            />
-          </div>
-        ))}
-        <button
-          className="btn"
-          onClick={() => onFieldChange("home", "narrativeSteps", JSON.stringify([...steps, { label: "", title: "", body: "" }]))}
-        >
-          + Add step
-        </button>
-      </div>
-
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Two products</h3>
-        <p className="card-sub">The section introducing Customer Experience and Colleague Pulse side by side.</p>
-        <div className="field-row">
-          <Field
-            label="Section headline"
-            value={content.fields.heroTwoProductsHeadline}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsHeadline", v)}
-          />
-        </div>
-        <Field
-          label="Section body"
-          value={content.fields.heroTwoProductsBody}
-          onChange={(v) => onFieldChange("home", "heroTwoProductsBody", v)}
-        />
-        <div className="field-row">
-          <Field
-            label="Customer Experience card eyebrow"
-            value={content.fields.heroTwoProductsCxLabel}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsCxLabel", v)}
-          />
-          <Field
-            label="Colleague Pulse card eyebrow"
-            value={content.fields.heroTwoProductsCeLabel}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsCeLabel", v)}
-          />
-        </div>
-        <div className="field-row">
-          <Field
-            label="Customer Experience card heading"
-            value={content.fields.heroTwoProductsCxHeading}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsCxHeading", v)}
-            placeholder="Customer Experience"
-          />
-          <Field
-            label="Colleague Pulse card heading"
-            value={content.fields.heroTwoProductsCeHeading}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsCeHeading", v)}
-            placeholder="Colleague Pulse"
-          />
-        </div>
-        <div className="field-row">
-          <Field
-            label="Customer Experience card body"
-            value={content.fields.heroTwoProductsCxBody}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsCxBody", v)}
-          />
-          <Field
-            label="Colleague Pulse card body"
-            value={content.fields.heroTwoProductsCeBody}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsCeBody", v)}
-          />
-        </div>
-        <div className="field-row">
-          <Field
-            label="Customer Experience card link text"
-            value={content.fields.heroTwoProductsCxCta}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsCxCta", v)}
-            placeholder="Explore Customer Experience →"
-          />
-          <Field
-            label="Colleague Pulse card link text"
-            value={content.fields.heroTwoProductsCeCta}
-            onChange={(v) => onFieldChange("home", "heroTwoProductsCeCta", v)}
-            placeholder="Explore Colleague Pulse →"
-          />
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Scale split</h3>
-        <div className="field-row">
-          <Field
-            label="Section headline"
-            value={content.fields.scaleHeadline}
-            onChange={(v) => onFieldChange("home", "scaleHeadline", v)}
-          />
-          <Field label="Section subhead" value={content.fields.scaleSubhead} onChange={(v) => onFieldChange("home", "scaleSubhead", v)} />
-        </div>
-        <div className="field-row">
-          <Field label="Panel 1 tag" value={content.fields.scalePanel1Tag} onChange={(v) => onFieldChange("home", "scalePanel1Tag", v)} />
-          <Field label="Panel 2 tag" value={content.fields.scalePanel2Tag} onChange={(v) => onFieldChange("home", "scalePanel2Tag", v)} />
-        </div>
-        <div className="field-row">
-          <Field
-            label="Panel 1 title"
-            value={content.fields.scalePanel1Title}
-            onChange={(v) => onFieldChange("home", "scalePanel1Title", v)}
-            placeholder="Everything in one view"
-          />
-          <Field
-            label="Panel 2 title"
-            value={content.fields.scalePanel2Title}
-            onChange={(v) => onFieldChange("home", "scalePanel2Title", v)}
-            placeholder="Compare every branch, act across all of them"
-          />
-        </div>
-        <div className="field-row">
-          <Field
-            label="Panel 1 body"
-            value={content.fields.scalePanel1Body}
-            onChange={(v) => onFieldChange("home", "scalePanel1Body", v)}
-            placeholder="Every response, every trend, every flagged issue — one dashboard, no setup required beyond your QR code."
-          />
-          <Field
-            label="Panel 2 body"
-            value={content.fields.scalePanel2Body}
-            onChange={(v) => onFieldChange("home", "scalePanel2Body", v)}
-            placeholder="Regional rollups, branch-vs-branch comparison, and shared Case Management so nothing falls through the cracks between locations."
-          />
-        </div>
-        <div className="field-row">
-          <Field
-            label="Panel 1 chips (comma-separated)"
-            value={content.fields.scalePanel1Chips}
-            onChange={(v) => onFieldChange("home", "scalePanel1Chips", v)}
-            placeholder="Feedback points, AI Insights, Alert rules"
-          />
-          <Field
-            label="Panel 2 chips (comma-separated)"
-            value={content.fields.scalePanel2Chips}
-            onChange={(v) => onFieldChange("home", "scalePanel2Chips", v)}
-            placeholder="Regional benchmarks, Shared playbooks, Role-based access"
-          />
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>CX Pulse feature</h3>
-        <p className="card-sub">
-          The 5 levels shown on the site — should match the CX Pulse framework under Configuration, or the marketing site will
-          describe a different scale than the product actually uses.
-        </p>
-        <Field label="Headline" value={content.fields.cxPulseHeadline} onChange={(v) => onFieldChange("home", "cxPulseHeadline", v)} />
-        <Field
-          label="Body"
-          value={content.fields.cxPulseBody}
-          onChange={(v) => onFieldChange("home", "cxPulseBody", v)}
-          placeholder="CX Pulse measures whether feedback is actually shaping decisions — awareness, response speed, ownership, culture, and measured outcomes, rolled into one score your whole team can rally around."
-        />
-        <Field
-          label="Button text"
-          value={content.fields.cxPulseButton}
-          onChange={(v) => onFieldChange("home", "cxPulseButton", v)}
-          placeholder="See CX Pulse in a demo"
-        />
-        {levels.map((lvl, i) => (
-          <div className="qrow" key={i}>
-            <div className="qrow-top">
-              <input
-                type="text"
-                style={{ width: 40 }}
-                value={lvl.level}
-                onChange={(e) => {
-                  const next = [...levels];
-                  next[i] = { ...next[i], level: e.target.value };
-                  onFieldChange("home", "cxPulseLevels", JSON.stringify(next));
-                }}
-              />
-              <input
-                type="text"
-                style={{ width: 140, fontWeight: 600 }}
-                value={lvl.name}
-                onChange={(e) => {
-                  const next = [...levels];
-                  next[i] = { ...next[i], name: e.target.value };
-                  onFieldChange("home", "cxPulseLevels", JSON.stringify(next));
-                }}
-              />
-              <input
-                type="text"
-                style={{ flex: 1 }}
-                value={lvl.desc}
-                onChange={(e) => {
-                  const next = [...levels];
-                  next[i] = { ...next[i], desc: e.target.value };
-                  onFieldChange("home", "cxPulseLevels", JSON.stringify(next));
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Why teams choose us</h3>
-        <Field
-          label="Section headline"
-          value={content.fields.whyHeadline}
-          onChange={(v) => onFieldChange("home", "whyHeadline", v)}
-          placeholder="Why teams choose OodelCX"
-        />
-        {whyItems.map((item, i) => (
-          <div className="qrow" key={i}>
-            <div className="qrow-top">
-              <input
-                type="text"
-                style={{ flex: 1, fontWeight: 600 }}
-                value={item.title}
-                onChange={(e) => {
-                  const next = [...whyItems];
-                  next[i] = { ...next[i], title: e.target.value };
-                  onFieldChange("home", "whyItems", JSON.stringify(next));
-                }}
-              />
-              <span
-                className="icon-btn btn-danger"
-                onClick={() => onFieldChange("home", "whyItems", JSON.stringify(whyItems.filter((_, idx) => idx !== i)))}
-              >
-                🗑
-              </span>
-            </div>
-            <AutoTextarea
-              value={item.body}
-              onChange={(e) => {
-                const next = [...whyItems];
-                next[i] = { ...next[i], body: e.target.value };
-                onFieldChange("home", "whyItems", JSON.stringify(next));
-              }}
-            />
-          </div>
-        ))}
-        <button className="btn" onClick={() => onFieldChange("home", "whyItems", JSON.stringify([...whyItems, { title: "", body: "" }]))}>
-          + Add item
-        </button>
-      </div>
-
-      <FinalCtaCard page="home" content={content} onFieldChange={onFieldChange} />
-    </>
-  );
 }
 
 interface Plan {
@@ -1243,291 +775,6 @@ interface Feature {
   menuFeatured?: boolean;
 }
 
-function ProductPanel({
-  content,
-  onFieldChange,
-}: {
-  content: PageContent;
-  onFieldChange: (page: string, key: string, value: string) => void;
-}) {
-  const features = parseJsonArray<Feature>(content.fields.features);
-
-  function updateFeature(i: number, patch: Partial<Feature>) {
-    const next = [...features];
-    next[i] = { ...next[i], ...patch };
-    onFieldChange("customer-x", "features", JSON.stringify(next));
-  }
-
-  return (
-    <>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Search &amp; social</h3>
-        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
-        <Field
-          label="Meta description"
-          textarea
-          value={content.fields.metaDescription}
-          onChange={(v) => onFieldChange("customer-x", "metaDescription", v)}
-        />
-      </div>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Intro</h3>
-        <p className="card-sub">Replaces the old big hero band — a slim headline leading straight into the feature sections below.</p>
-        <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("customer-x", "heroHeadline", v)} />
-        <Field
-          label="Subheadline"
-          textarea
-          value={content.fields.heroSubheadline}
-          onChange={(v) => onFieldChange("customer-x", "heroSubheadline", v)}
-        />
-      </div>
-      <div className="card">
-        <h3>Feature sections</h3>
-        <p className="card-sub">
-          Each renders as an alternating text/visual row on this page, in this order. Only real, shipped capabilities
-          belong here — this list is what prospects use to self-qualify before a sales call, so it should never claim
-          more than the product actually does. Tick &quot;In menu&quot; on a handful of headline features to keep the
-          &quot;Platform&quot; mega-menu short (a proper SaaS nav lists a few things, not every feature) — the rest
-          still appear on this page with a &quot;See every feature&quot; link at the bottom of the menu. Untick every
-          box and the nav item stops showing a dropdown at all — it becomes a plain link with no arrow, straight to
-          this page.
-        </p>
-        {features.map((feature, i) => (
-          <div className="qrow" key={i}>
-            <div className="qrow-top">
-              <input
-                type="text"
-                style={{ width: 160, fontWeight: 600 }}
-                placeholder="Tag"
-                value={feature.tag}
-                onChange={(e) => updateFeature(i, { tag: e.target.value })}
-              />
-              <select
-                value={feature.group ?? "understand"}
-                onChange={(e) => updateFeature(i, { group: e.target.value as Feature["group"] })}
-                style={{ width: 130 }}
-              >
-                <option value="understand">Understand</option>
-                <option value="act">Act</option>
-              </select>
-              <input
-                type="text"
-                style={{ flex: 1 }}
-                placeholder="Headline"
-                value={feature.headline}
-                onChange={(e) => updateFeature(i, { headline: e.target.value })}
-              />
-              <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, whiteSpace: "nowrap" }}>
-                <input
-                  type="checkbox"
-                  checked={feature.menuFeatured ?? false}
-                  onChange={(e) => updateFeature(i, { menuFeatured: e.target.checked })}
-                />
-                In menu
-              </label>
-              <span
-                className="icon-btn btn-danger"
-                onClick={() => onFieldChange("customer-x", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}
-              >
-                🗑
-              </span>
-            </div>
-            <AutoTextarea placeholder="Body" value={feature.body} onChange={(e) => updateFeature(i, { body: e.target.value })} />
-          </div>
-        ))}
-        <button
-          className="btn"
-          onClick={() => onFieldChange("customer-x", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))}
-        >
-          + Add feature
-        </button>
-      </div>
-      <div style={{ marginTop: 20 }}>
-        <FinalCtaCard page="customer-x" content={content} onFieldChange={onFieldChange} />
-      </div>
-    </>
-  );
-}
-
-function ColleaguePulsePanel({
-  content,
-  onFieldChange,
-}: {
-  content: PageContent;
-  onFieldChange: (page: string, key: string, value: string) => void;
-}) {
-  const features = parseJsonArray<Feature>(content.fields.features);
-
-  function updateFeature(i: number, patch: Partial<Feature>) {
-    const next = [...features];
-    next[i] = { ...next[i], ...patch };
-    onFieldChange("colleague-x", "features", JSON.stringify(next));
-  }
-
-  return (
-    <>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Search &amp; social</h3>
-        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
-        <Field
-          label="Meta description"
-          textarea
-          value={content.fields.metaDescription}
-          onChange={(v) => onFieldChange("colleague-x", "metaDescription", v)}
-        />
-      </div>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Intro</h3>
-        <Field
-          label="Headline"
-          value={content.fields.heroHeadline}
-          onChange={(v) => onFieldChange("colleague-x", "heroHeadline", v)}
-        />
-        <Field
-          label="Subheadline"
-          textarea
-          value={content.fields.heroSubheadline}
-          onChange={(v) => onFieldChange("colleague-x", "heroSubheadline", v)}
-        />
-      </div>
-      <div className="card">
-        <h3>Feature sections</h3>
-        <p className="card-sub">
-          Same convention as Customer Experience&apos;s Feature sections — each renders as an alternating text/visual
-          row on this page, in this order. Only real, shipped capabilities belong here. Tick &quot;In menu&quot; on a
-          handful of headline features to keep the &quot;Colleague Pulse&quot; mega-menu short. Untick every box and
-          the nav item stops showing a dropdown at all — it becomes a plain link with no arrow.
-        </p>
-        {features.map((feature, i) => (
-          <div className="qrow" key={i}>
-            <div className="qrow-top">
-              <input
-                type="text"
-                style={{ width: 160, fontWeight: 600 }}
-                placeholder="Tag"
-                value={feature.tag}
-                onChange={(e) => updateFeature(i, { tag: e.target.value })}
-              />
-              <select
-                value={feature.group ?? "understand"}
-                onChange={(e) => updateFeature(i, { group: e.target.value as Feature["group"] })}
-                style={{ width: 130 }}
-              >
-                <option value="understand">Understand</option>
-                <option value="act">Act</option>
-              </select>
-              <input
-                type="text"
-                style={{ flex: 1 }}
-                placeholder="Headline"
-                value={feature.headline}
-                onChange={(e) => updateFeature(i, { headline: e.target.value })}
-              />
-              <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, whiteSpace: "nowrap" }}>
-                <input
-                  type="checkbox"
-                  checked={feature.menuFeatured ?? false}
-                  onChange={(e) => updateFeature(i, { menuFeatured: e.target.checked })}
-                />
-                In menu
-              </label>
-              <span
-                className="icon-btn btn-danger"
-                onClick={() => onFieldChange("colleague-x", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}
-              >
-                🗑
-              </span>
-            </div>
-            <AutoTextarea placeholder="Body" value={feature.body} onChange={(e) => updateFeature(i, { body: e.target.value })} />
-          </div>
-        ))}
-        <button
-          className="btn"
-          onClick={() =>
-            onFieldChange("colleague-x", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))
-          }
-        >
-          + Add feature
-        </button>
-      </div>
-      <div style={{ marginTop: 20 }}>
-        <FinalCtaCard page="colleague-x" content={content} onFieldChange={onFieldChange} />
-      </div>
-    </>
-  );
-}
-
-function SolutionsPanel({
-  content,
-  onFieldChange,
-}: {
-  content: PageContent;
-  onFieldChange: (page: string, key: string, value: string) => void;
-}) {
-  return (
-    <>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Search &amp; social</h3>
-        <p className="card-sub">Shown in Google results and link previews (WhatsApp, Slack, iMessage, etc).</p>
-        <Field
-          label="Meta description"
-          textarea
-          value={content.fields.metaDescription}
-          onChange={(v) => onFieldChange("solutions", "metaDescription", v)}
-        />
-      </div>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Hero</h3>
-        <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("solutions", "heroHeadline", v)} />
-        <Field label="Body" textarea value={content.fields.heroBody} onChange={(v) => onFieldChange("solutions", "heroBody", v)} />
-      </div>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Single business panel</h3>
-        <Field label="Title" value={content.fields.singleTitle} onChange={(v) => onFieldChange("solutions", "singleTitle", v)} />
-        <StringListEditor
-          items={parseJsonArray<string>(content.fields.singlePoints)}
-          onChange={(items) => onFieldChange("solutions", "singlePoints", JSON.stringify(items))}
-        />
-      </div>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Multi-location groups panel</h3>
-        <Field label="Title" value={content.fields.groupTitle} onChange={(v) => onFieldChange("solutions", "groupTitle", v)} />
-        <StringListEditor
-          items={parseJsonArray<string>(content.fields.groupPoints)}
-          onChange={(items) => onFieldChange("solutions", "groupPoints", JSON.stringify(items))}
-        />
-      </div>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <h3>Enterprise panel</h3>
-        <Field label="Title" value={content.fields.entTitle} onChange={(v) => onFieldChange("solutions", "entTitle", v)} />
-        <StringListEditor
-          items={parseJsonArray<string>(content.fields.entPoints)}
-          onChange={(items) => onFieldChange("solutions", "entPoints", JSON.stringify(items))}
-        />
-      </div>
-      <div className="card">
-        <h3>Industries</h3>
-        <p className="card-sub">
-          Shown as a chip grid on this page and as the &quot;By Industry&quot; column in the Solutions mega-menu. Each
-          industry gets its own page at /solutions/[slug] — the chip and the mega-menu link both go there.
-        </p>
-        <Field label="Title" value={content.fields.industriesTitle} onChange={(v) => onFieldChange("solutions", "industriesTitle", v)} />
-        <Field
-          label="Subtitle"
-          textarea
-          value={content.fields.industriesBody}
-          onChange={(v) => onFieldChange("solutions", "industriesBody", v)}
-        />
-        <IndustryDetailsEditor
-          items={parseJsonArray<IndustryDetail>(content.fields.industryDetails)}
-          onChange={(items) => onFieldChange("solutions", "industryDetails", JSON.stringify(items))}
-        />
-      </div>
-      <FinalCtaCard page="solutions" content={content} onFieldChange={onFieldChange} />
-    </>
-  );
-}
-
 interface IndustryDetail {
   slug: string;
   name: string;
@@ -1544,76 +791,6 @@ function slugify(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-}
-
-function IndustryDetailsEditor({ items, onChange }: { items: IndustryDetail[]; onChange: (items: IndustryDetail[]) => void }) {
-  function update(i: number, patch: Partial<IndustryDetail>) {
-    const next = [...items];
-    next[i] = { ...next[i], ...patch };
-    onChange(next);
-  }
-
-  return (
-    <div>
-      {items.map((industry, i) => (
-        <div className="card" style={{ marginBottom: 14, background: "var(--surface-2, #fafaf8)" }} key={i}>
-          <div className="qrow-top">
-            <input
-              type="text"
-              style={{ flex: 1, fontWeight: 600 }}
-              placeholder="Industry name (e.g. Banking & Financial Services)"
-              value={industry.name}
-              onChange={(e) => update(i, { name: e.target.value, slug: industry.slug || slugify(e.target.value) })}
-            />
-            <span className="icon-btn btn-danger" onClick={() => onChange(items.filter((_, idx) => idx !== i))}>
-              🗑
-            </span>
-          </div>
-          <div className="field-row">
-            <div className="field" style={{ flex: 1 }}>
-              <label>URL slug (/solutions/…)</label>
-              <input type="text" value={industry.slug} onChange={(e) => update(i, { slug: slugify(e.target.value) })} />
-            </div>
-            <div className="field" style={{ flex: 1 }}>
-              <label>What one location is called (branch, campus, store…)</label>
-              <input type="text" value={industry.locationNoun} onChange={(e) => update(i, { locationNoun: e.target.value })} />
-            </div>
-          </div>
-          <div className="field">
-            <label>Tagline (page headline)</label>
-            <AutoTextarea value={industry.tagline} onChange={(e) => update(i, { tagline: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Hero body</label>
-            <AutoTextarea value={industry.heroBody} onChange={(e) => update(i, { heroBody: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Standalone (single location) copy</label>
-            <AutoTextarea value={industry.standaloneBody} onChange={(e) => update(i, { standaloneBody: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Multi-branch / group copy</label>
-            <AutoTextarea value={industry.groupBody} onChange={(e) => update(i, { groupBody: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Benefits</label>
-            <StringListEditor items={industry.benefits} onChange={(benefits) => update(i, { benefits })} />
-          </div>
-        </div>
-      ))}
-      <button
-        className="btn"
-        onClick={() =>
-          onChange([
-            ...items,
-            { slug: "", name: "", tagline: "", heroBody: "", locationNoun: "location", standaloneBody: "", groupBody: "", benefits: [] },
-          ])
-        }
-      >
-        + Add industry
-      </button>
-    </div>
-  );
 }
 
 interface HowItWorksStep {

@@ -14,6 +14,7 @@ export * from "./email/resend";
 export * from "./seedData/demoAccounts";
 export * from "./seedData/platformDefaults";
 export * from "./seedData/siteContent";
+export { defaultStageForFeature, SOLUTION_INDUSTRIES, type StageId } from "./seedData/siteDesign";
 export * from "./seedData/tooltips";
 export * from "./seedData/tours";
 export * from "./seedData/compassQuestions";

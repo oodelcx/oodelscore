@@ -1,5 +1,6 @@
 import { cache } from "react";
-import { connectToDatabase, SiteContent, SEED_SITE_CONTENT, type SiteContentPage, type INavItem } from "@oodelscore/shared";
+import { connectToDatabase, SiteContent, SEED_SITE_CONTENT, defaultStageForFeature, type SiteContentPage, type INavItem } from "@oodelscore/shared";
+import { mergeIndustries } from "./industries";
 
 export interface ResolvedSiteContent {
   page: SiteContentPage;
@@ -59,6 +60,24 @@ export function mergeFields(dbFields: Record<string, string>, seedFields: Record
 }
 
 /**
+ * Brings a stored page up to the redesigned shape: every feature gets the C
+ * it belongs to (derived from its name when the stored record predates the
+ * field), and each industry borrows per-product copy for any field it lacks.
+ * Used by the public site and by the Admin editor, so what an admin sees —
+ * and saves — is exactly what visitors see.
+ */
+export function normalizePageFields(page: string, fields: Record<string, string>): Record<string, string> {
+  if ((page === "customer-x" || page === "colleague-x") && fields.features) {
+    const list = parseJsonArray<{ tag?: string; group?: string; stage?: string }>(fields.features);
+    return { ...fields, features: JSON.stringify(list.map((f) => ({ ...f, stage: f.stage ?? defaultStageForFeature(f) }))) };
+  }
+  if (page === "solutions") {
+    return { ...fields, industryDetails: JSON.stringify(mergeIndustries(fields.industryDetails)) };
+  }
+  return fields;
+}
+
+/**
  * Marketing pages must never 500 for a visitor over this — falls back to the
  * seed defaults (same copy `seedPlatformDefaults()` writes on boot) if the
  * DB is unreachable or the page hasn't been seeded yet.
@@ -73,7 +92,7 @@ export const getSiteContent = cache(async function getSiteContent(
     const seed = SEED_SITE_CONTENT.find((s) => s.page === page);
     const navItems = seed ? mergeNavItems(doc.navItems, seed.navItems) : doc.navItems;
     const dbFields = Object.fromEntries(doc.fields);
-    const fields = seed ? mergeFields(dbFields, seed.fields) : dbFields;
+    const fields = normalizePageFields(page, seed ? mergeFields(dbFields, seed.fields) : dbFields);
     return { page, navItems, fields };
   } catch {
     return fromSeed(page);

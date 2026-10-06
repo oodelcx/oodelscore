@@ -27,7 +27,7 @@ export default async function ContactPage() {
 
   return (
     <>
-      <MarketingNav active="contact" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
+      <MarketingNav active="contact" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} navLabels={menu.fields} />
 
       <section className="inner-hero">
         <div className="wrap">
@@ -39,7 +39,7 @@ export default async function ContactPage() {
       <section className="contact-form-section">
         <div className="wrap">
           <Reveal as="div" className="contact-form-card">
-            <ContactForm successHeadline={f.successHeadline} successBody={f.successBody} />
+            <ContactForm successHeadline={f.successHeadline} successBody={f.successBody} labels={f} />
           </Reveal>
         </div>
       </section>
