@@ -1093,8 +1093,8 @@ function PricingPanel({
                 onChange={(e) => updatePlan(i, { product: e.target.value as Plan["product"] })}
                 style={{ width: 150 }}
               >
-                <option value="customer_experience">Customer Experience</option>
-                <option value="colleague_experience">Colleague Pulse</option>
+                <option value="customer_experience">Customer X</option>
+                <option value="colleague_experience">Colleague X</option>
               </select>
               <input type="text" style={{ width: 140, fontWeight: 600 }} value={plan.name} onChange={(e) => updatePlan(i, { name: e.target.value })} />
               <input type="text" style={{ width: 80 }} value={plan.price} onChange={(e) => updatePlan(i, { price: e.target.value })} />
@@ -1176,7 +1176,7 @@ function ProductPanel({
   function updateFeature(i: number, patch: Partial<Feature>) {
     const next = [...features];
     next[i] = { ...next[i], ...patch };
-    onFieldChange("product", "features", JSON.stringify(next));
+    onFieldChange("customer-x", "features", JSON.stringify(next));
   }
 
   return (
@@ -1188,18 +1188,18 @@ function ProductPanel({
           label="Meta description"
           textarea
           value={content.fields.metaDescription}
-          onChange={(v) => onFieldChange("product", "metaDescription", v)}
+          onChange={(v) => onFieldChange("customer-x", "metaDescription", v)}
         />
       </div>
       <div className="card" style={{ marginBottom: 20 }}>
         <h3>Intro</h3>
         <p className="card-sub">Replaces the old big hero band — a slim headline leading straight into the feature sections below.</p>
-        <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("product", "heroHeadline", v)} />
+        <Field label="Headline" value={content.fields.heroHeadline} onChange={(v) => onFieldChange("customer-x", "heroHeadline", v)} />
         <Field
           label="Subheadline"
           textarea
           value={content.fields.heroSubheadline}
-          onChange={(v) => onFieldChange("product", "heroSubheadline", v)}
+          onChange={(v) => onFieldChange("customer-x", "heroSubheadline", v)}
         />
       </div>
       <div className="card">
@@ -1248,7 +1248,7 @@ function ProductPanel({
               </label>
               <span
                 className="icon-btn btn-danger"
-                onClick={() => onFieldChange("product", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}
+                onClick={() => onFieldChange("customer-x", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}
               >
                 🗑
               </span>
@@ -1258,13 +1258,13 @@ function ProductPanel({
         ))}
         <button
           className="btn"
-          onClick={() => onFieldChange("product", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))}
+          onClick={() => onFieldChange("customer-x", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))}
         >
           + Add feature
         </button>
       </div>
       <div style={{ marginTop: 20 }}>
-        <FinalCtaCard page="product" content={content} onFieldChange={onFieldChange} />
+        <FinalCtaCard page="customer-x" content={content} onFieldChange={onFieldChange} />
       </div>
     </>
   );
@@ -1282,7 +1282,7 @@ function ColleaguePulsePanel({
   function updateFeature(i: number, patch: Partial<Feature>) {
     const next = [...features];
     next[i] = { ...next[i], ...patch };
-    onFieldChange("colleague-pulse", "features", JSON.stringify(next));
+    onFieldChange("colleague-x", "features", JSON.stringify(next));
   }
 
   return (
@@ -1294,7 +1294,7 @@ function ColleaguePulsePanel({
           label="Meta description"
           textarea
           value={content.fields.metaDescription}
-          onChange={(v) => onFieldChange("colleague-pulse", "metaDescription", v)}
+          onChange={(v) => onFieldChange("colleague-x", "metaDescription", v)}
         />
       </div>
       <div className="card" style={{ marginBottom: 20 }}>
@@ -1302,13 +1302,13 @@ function ColleaguePulsePanel({
         <Field
           label="Headline"
           value={content.fields.heroHeadline}
-          onChange={(v) => onFieldChange("colleague-pulse", "heroHeadline", v)}
+          onChange={(v) => onFieldChange("colleague-x", "heroHeadline", v)}
         />
         <Field
           label="Subheadline"
           textarea
           value={content.fields.heroSubheadline}
-          onChange={(v) => onFieldChange("colleague-pulse", "heroSubheadline", v)}
+          onChange={(v) => onFieldChange("colleague-x", "heroSubheadline", v)}
         />
       </div>
       <div className="card">
@@ -1354,7 +1354,7 @@ function ColleaguePulsePanel({
               </label>
               <span
                 className="icon-btn btn-danger"
-                onClick={() => onFieldChange("colleague-pulse", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}
+                onClick={() => onFieldChange("colleague-x", "features", JSON.stringify(features.filter((_, idx) => idx !== i)))}
               >
                 🗑
               </span>
@@ -1365,14 +1365,14 @@ function ColleaguePulsePanel({
         <button
           className="btn"
           onClick={() =>
-            onFieldChange("colleague-pulse", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))
+            onFieldChange("colleague-x", "features", JSON.stringify([...features, { tag: "", headline: "", body: "", group: "understand" }]))
           }
         >
           + Add feature
         </button>
       </div>
       <div style={{ marginTop: 20 }}>
-        <FinalCtaCard page="colleague-pulse" content={content} onFieldChange={onFieldChange} />
+        <FinalCtaCard page="colleague-x" content={content} onFieldChange={onFieldChange} />
       </div>
     </>
   );

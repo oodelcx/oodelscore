@@ -201,7 +201,7 @@ export default async function MarketingHomePage() {
                 <div className="fork-eyebrow">{f.heroTwoProductsCxLabel}</div>
                 <h2>{f.heroTwoProductsCxHeading || "Customer Experience"}</h2>
                 <p>{f.heroTwoProductsCxBody}</p>
-                <a href="/product" className="fork-cta">
+                <a href="/customer-x" className="fork-cta">
                   {f.heroTwoProductsCxCta || "Explore Customer Experience →"}
                 </a>
               </div>
@@ -211,7 +211,7 @@ export default async function MarketingHomePage() {
                 <div className="fork-eyebrow">{f.heroTwoProductsCeLabel}</div>
                 <h2>{f.heroTwoProductsCeHeading || "Colleague Pulse"}</h2>
                 <p>{f.heroTwoProductsCeBody}</p>
-                <a href="/colleague-pulse" className="fork-cta">
+                <a href="/colleague-x" className="fork-cta">
                   {f.heroTwoProductsCeCta || "Explore Colleague Pulse →"}
                 </a>
               </div>

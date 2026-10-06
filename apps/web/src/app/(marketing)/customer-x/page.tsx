@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { getSiteContent, parseJsonArray } from "@/lib/siteContent";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
-import { Reveal } from "../scroll-reveal";
 
 interface Feature {
   tag: string;
@@ -204,43 +203,63 @@ function FeatureVisual({ tag }: { tag: string }) {
   );
 }
 
-export default async function ProductPage() {
+export default async function CustomerXPage() {
   const [menu, product] = await Promise.all([getSiteContent("menu"), getSiteContent("customer-x")]);
   if (menu.navItems.find((n) => n.key === "customer-x")?.visible === false) notFound();
   const f = product.fields;
   const features = parseJsonArray<Feature>(f.features);
+  const groups: { id: "understand" | "act"; label: string; note: string }[] = [
+    { id: "understand", label: "Understand", note: "Hear it, read it, find the cause" },
+    { id: "act", label: "Act", note: "Own it, fix it, prove it worked" },
+  ];
 
   return (
     <>
       <MarketingNav active="customer-x" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
       <div className="page-customer-x">
-        <section className="product-intro">
-          <div className="wrap">
-            <h1>{f.heroHeadline}</h1>
-            <p>{f.heroSubheadline}</p>
+        <section className="cx-hero">
+          <div className="wrap cx-hero-grid">
+            <div>
+              <span className="cx-chip">Customer X</span>
+              <h1>{f.heroHeadline}</h1>
+              <p>{f.heroSubheadline}</p>
+              <div className="hero-ctas">
+                <BookDemoButton className="btn-primary hover-lift">{f.finalCtaPrimaryButton || "Book a demo"}</BookDemoButton>
+                <a className="btn-ghost hover-lift" href="/colleague-x">
+                  See Colleague X
+                </a>
+              </div>
+            </div>
+            <div className="cx-hero-visual">
+              <FeatureVisual tag="CX Pulse" />
+            </div>
           </div>
         </section>
 
-        {features.map((feature, i) => (
-          <section
-            id={featureSlug(feature.tag)}
-            className={`feature-row${i % 2 === 1 ? " reverse" : ""}`}
-            key={feature.tag}
-            style={i % 2 === 1 ? { background: "var(--paper-alt)" } : undefined}
-          >
-            <div className="wrap">
-              <Reveal>
-                <div className="feature-tag">{feature.tag}</div>
-                <h2>{feature.headline}</h2>
-                <p>{feature.body}</p>
-              </Reveal>
-              <Reveal delay={80}>
-                <FeatureVisual tag={feature.tag} />
-              </Reveal>
-            </div>
-          </section>
-        ))}
+        {groups.map((g) => {
+          const items = features.filter((feat) => (feat.group === "act" ? "act" : "understand") === g.id);
+          if (items.length === 0) return null;
+          return (
+            <section className={`cx-group cx-group-${g.id}`} key={g.id}>
+              <div className="wrap">
+                <div className="cx-group-head">
+                  <h2>{g.label}</h2>
+                  <span>{g.note}</span>
+                </div>
+                <div className="cx-grid">
+                  {items.map((feature) => (
+                    <article className="cx-card" id={featureSlug(feature.tag)} key={feature.tag}>
+                      <div className="feature-tag">{feature.tag}</div>
+                      <h3>{feature.headline}</h3>
+                      <p>{feature.body}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        })}
 
         <section className="final-cta">
           <div className="wrap">

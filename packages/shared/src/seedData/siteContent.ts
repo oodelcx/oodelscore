@@ -447,7 +447,7 @@ export const SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "A Colleague Pulse dip, a sudden eNPS drop, or an outlier branch triggers an alert to the right person immediately — same mechanism as Customer Experience's alert rules.",
         },
       ]),
-      finalCtaHeadline: "See Colleague Pulse running on real data.",
+      finalCtaHeadline: "See Colleague X running on real data.",
       finalCtaSubhead: "Twenty minutes, a live walkthrough of real workflows — not a canned script.",
       finalCtaPrimaryButton: "Book a demo",
       finalCtaSecondaryButton: "Sign in",

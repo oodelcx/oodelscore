@@ -15,8 +15,8 @@ const PAGE_SET: readonly string[] = SITE_CONTENT_PAGES;
 const MARKETING_ROUTES_BY_PAGE: Record<string, string[]> = {
   menu: [
     "/",
-    "/product",
-    "/colleague-pulse",
+    "/customer-x",
+    "/colleague-x",
     "/solutions",
     "/how-it-works",
     "/pricing",
@@ -27,8 +27,8 @@ const MARKETING_ROUTES_BY_PAGE: Record<string, string[]> = {
   ],
   home: ["/"],
   pricing: ["/pricing"],
-  product: ["/product"],
-  "colleague-pulse": ["/colleague-pulse"],
+  "customer-x": ["/customer-x"],
+  "colleague-x": ["/colleague-x"],
   solutions: ["/solutions"],
   company: ["/company"],
   contact: ["/contact"],

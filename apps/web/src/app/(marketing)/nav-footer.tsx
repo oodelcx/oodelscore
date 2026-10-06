@@ -398,7 +398,7 @@ export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; nav
           <div className="foot-col">
             <h4>{fields?.footerProductHeading || "Product"}</h4>
             {parseList(fields?.footerProductLinks).map((label, i) => (
-              <FooterLink key={i} label={label} fallback="/product" navItems={navItems} />
+              <FooterLink key={i} label={label} fallback="/customer-x" navItems={navItems} />
             ))}
           </div>
           <div className="foot-col">

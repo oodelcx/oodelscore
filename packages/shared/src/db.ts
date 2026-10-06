@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Category } from "./models/Category";
 import { CxPulseScore } from "./models/CxPulseScore";
+import { SiteContent } from "./models/SiteContent";
 
 let connectPromise: Promise<typeof mongoose> | null = null;
 let staleIndexSyncPromise: Promise<void> | null = null;
@@ -30,6 +31,58 @@ function syncStaleIndexes(): Promise<void> {
   return staleIndexSyncPromise;
 }
 
+const LEGACY_PAGE_KEYS: Record<string, string> = { product: "customer-x", "colleague-pulse": "colleague-x" };
+const LEGACY_LABELS: Record<string, string> = {
+  "Customer Experience": "Customer X",
+  Product: "Customer X",
+  "Colleague Pulse": "Colleague X",
+  "Colleague Experience": "Colleague X",
+};
+
+let legacyKeyMigrationPromise: Promise<void> | null = null;
+
+// The pages were renamed product -> customer-x and colleague-pulse ->
+// colleague-x, but live SiteContent docs (and the menu doc's navItems) are
+// still stored under the old keys, so the nav never matched and the admin
+// editor saw nothing. Idempotent: renames in place on first connection.
+async function migrateLegacySiteContentKeys(): Promise<void> {
+  const col = SiteContent.collection;
+  for (const [oldKey, newKey] of Object.entries(LEGACY_PAGE_KEYS)) {
+    const legacy = await col.findOne({ page: oldKey });
+    if (!legacy) continue;
+    await col.deleteMany({ page: newKey });
+    await col.updateOne({ _id: legacy._id }, { $set: { page: newKey } });
+  }
+  const menu = await col.findOne({ page: "menu" });
+  if (!menu || !Array.isArray(menu.navItems)) return;
+  let changed = false;
+  const remap = (k: unknown) => LEGACY_PAGE_KEYS[k as string] ?? k;
+  const navItems = menu.navItems.map((item: Record<string, unknown>) => {
+    const isLegacy = item.key !== remap(item.key);
+    const label = isLegacy ? (LEGACY_LABELS[item.label as string] ?? item.label) : item.label;
+    const next = {
+      ...item,
+      key: remap(item.key),
+      label,
+      ...(item.parentKey ? { parentKey: remap(item.parentKey) } : {}),
+      ...(Array.isArray(item.children) ? { children: item.children.map(remap) } : {}),
+    };
+    if (JSON.stringify(next) !== JSON.stringify(item)) changed = true;
+    return next;
+  });
+  if (changed) await col.updateOne({ _id: menu._id }, { $set: { navItems } });
+}
+
+function runLegacyMigration(): Promise<void> {
+  if (!legacyKeyMigrationPromise) {
+    legacyKeyMigrationPromise = migrateLegacySiteContentKeys().catch((err) => {
+      legacyKeyMigrationPromise = null;
+      throw err;
+    });
+  }
+  return legacyKeyMigrationPromise;
+}
+
 /**
  * Reuses a single connection across hot reloads / serverless invocations
  * instead of opening a new one per call.
@@ -41,6 +94,7 @@ export async function connectToDatabase(uri: string = process.env.MONGODB_URI ??
 
   if (mongoose.connection.readyState === 1) {
     await syncStaleIndexes();
+    await runLegacyMigration();
     return mongoose;
   }
 
@@ -53,6 +107,7 @@ export async function connectToDatabase(uri: string = process.env.MONGODB_URI ??
 
   const connection = await connectPromise;
   await syncStaleIndexes();
+  await runLegacyMigration();
   return connection;
 }
 
