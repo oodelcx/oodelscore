@@ -30,7 +30,12 @@ export function mergeNavItems(dbItems: INavItem[], seedItems: INavItem[]): INavI
   for (const item of dbItems) {
     const existing = deduped.find((d) => d.key === item.key);
     if (existing) existing.visible = existing.visible || item.visible;
-    else deduped.push({ ...item });
+    else {
+      // DB items are Mongoose subdocuments — spreading one copies its
+      // circular internals, so flatten to a plain object first.
+      const plain = typeof (item as { toObject?: () => INavItem }).toObject === "function" ? (item as unknown as { toObject: () => INavItem }).toObject() : item;
+      deduped.push({ ...plain });
+    }
   }
   const present = new Set(deduped.map((item) => item.key));
   const missing = seedItems.filter((item) => !present.has(item.key));

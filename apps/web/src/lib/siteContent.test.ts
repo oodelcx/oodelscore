@@ -63,4 +63,13 @@ describe("mergeNavItems", () => {
     expect(merged).toHaveLength(1);
     expect(merged[0].visible).toBe(true);
   });
+
+  it("flattens Mongoose-style subdocuments instead of copying their circular internals", () => {
+    const sub: Record<string, unknown> = { key: "home", label: "Home", visible: true, order: 0 };
+    sub.$__ = { owner: sub };
+    sub.toObject = () => ({ key: "home", label: "Home", visible: true, order: 0 });
+    const merged = mergeNavItems([sub as unknown as INavItem], []);
+    expect(() => JSON.stringify(merged)).not.toThrow();
+    expect(merged[0].label).toBe("Home");
+  });
 });
