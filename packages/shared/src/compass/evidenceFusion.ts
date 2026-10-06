@@ -253,7 +253,7 @@ const INDICATOR_RESOLVERS: Record<AnchorDimension, (scope: OwnerScope, product: 
   rhythm: (scope) => rhythmIndicators(scope),
 };
 
-function statusFor(selfScore: LadderValue, evidenceScore: LadderValue, hasAnyActivity: boolean): EvidenceStatus {
+export function statusFor(selfScore: LadderValue, evidenceScore: LadderValue, hasAnyActivity: boolean): EvidenceStatus {
   if (!hasAnyActivity) return "insufficient_data";
   if (selfScore >= evidenceScore + 2) return "overstated";
   if (evidenceScore >= selfScore + 2) return "understated";

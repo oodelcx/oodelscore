@@ -183,13 +183,13 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     Alerts
                   </a>
                 )}
-                {hasFeature(org.enabledFeatures, "businessValue") && teamMemberCanAccess(user, "businessValue") && (
+                {hasProduct(org, "customer_experience") && showCx && hasFeature(org.enabledFeatures, "businessValue") && teamMemberCanAccess(user, "businessValue") && (
                   <a href="/group/business-value">
                     <NavIcon name="business-value" />
                     Business Value
                   </a>
                 )}
-                {teamMemberCanAccess(user, "programEvaluation") && (
+                {hasProduct(org, "customer_experience") && showCx && hasFeature(org.enabledFeatures, "programEvaluation") && teamMemberCanAccess(user, "programEvaluation") && (
                   <a href="/group/program-evaluation">
                     <NavIcon name="program-evaluation" />
                     Program Evaluation

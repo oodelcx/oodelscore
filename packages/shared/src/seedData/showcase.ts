@@ -33,6 +33,12 @@ import { SupportTicket, type SupportTicketCategory, type SupportTicketStatus } f
 import { Event as TrainingEvent } from "../models/Event";
 import { ClosingLoopUpdate } from "../models/ClosingLoopUpdate";
 import { RosterEntry } from "../models/RosterEntry";
+import { ProgramEvaluationReport } from "../models/ProgramEvaluationReport";
+import { CompassAssessment } from "../models/CompassAssessment";
+import { CompassAssessmentHistory } from "../models/CompassAssessmentHistory";
+import { seedAmaniPrograms } from "./amaniPrograms";
+import { seedCompassDemo, type CompassDemoOwner, type CompassDemoProfile } from "./compassDemo";
+import { generateProgramEvaluationForEvent } from "../scoring/programEvaluation";
 import { hashPassword } from "../auth/password";
 import { markOwnerComp } from "../stripe/billing";
 import { recomputeAllCxPulseScores } from "../cxpulse/compute";
@@ -1588,7 +1594,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
         maxFeedbackPoints: 10,
         questionTemplateId: templateBySector.get("training")!._id,
         enabledProducts: ["customer_experience"],
-        demographicConfig: { name: "optional", email: "off", phone: "off", ageGroup: "off", gender: "off" },
+        demographicConfig: { name: "optional", email: "off", phone: "off", ageGroup: "optional", gender: "off" },
         accountManagerId: adminUserId ?? null,
         active: true,
         businessValueInputs: { avgTransactionValue: 180, visitsPerYear: 1, acquisitionCost: 300, atRiskStarThreshold: 2, currencySymbol: "$" },
@@ -1608,66 +1614,14 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     lastLoginDaysAgo: 2,
   });
   result.users++;
-  await FeedbackPoint.deleteMany({ businessId: amaniBusiness._id });
   result.businesses++;
 
-  const amaniTemplate = templateBySector.get("training")!;
-  const amaniRuns = [
-    { courseName: "Women's Economic Empowerment Workshop", seriesKey: "womens-empowerment", location: "Nairobi", facilitator: "F. Wanjiru", startsAgo: 50, durationDays: 2, responseCount: 24 },
-    { courseName: "Women's Economic Empowerment Workshop", seriesKey: "womens-empowerment", location: "Kampala", facilitator: "F. Wanjiru", startsAgo: 25, durationDays: 2, responseCount: 20 },
-    { courseName: "Community Peacebuilding Dialogue", seriesKey: "peacebuilding", location: "Juba", facilitator: "T. Achieng", startsAgo: 38, durationDays: 3, responseCount: 16 },
-    { courseName: "Community Peacebuilding Dialogue", seriesKey: "peacebuilding", location: "Bujumbura", facilitator: "T. Achieng", startsAgo: 15, durationDays: 3, responseCount: 14 },
-    { courseName: "Women's Economic Empowerment Workshop", seriesKey: "womens-empowerment", location: "Kigali", facilitator: "F. Wanjiru", startsAgo: -4, durationDays: 2, responseCount: 6 },
-  ];
-  let amaniLowScoreEvents: LowScoreEvent[] = [];
-  const amaniFeedbackPoints: InstanceType<typeof FeedbackPoint>[] = [];
-  for (const run of amaniRuns) {
-    const startsAt = daysAgo(run.startsAgo);
-    const endsAt = new Date(startsAt.getTime() + run.durationDays * 24 * 60 * 60 * 1000);
-    const event = await TrainingEvent.findOneAndUpdate(
-      { businessId: amaniBusiness._id, name: run.courseName, location: run.location, startsAt },
-      {
-        $set: {
-          businessId: amaniBusiness._id,
-          name: run.courseName,
-          seriesKey: run.seriesKey,
-          facilitator: run.facilitator,
-          location: run.location,
-          startsAt,
-          endsAt,
-          expectedAttendees: run.responseCount + randomInt(3, 10),
-        },
-      },
-      { upsert: true, new: true }
-    );
-    result.events++;
-
-    const point = await FeedbackPoint.create({
-      businessId: amaniBusiness._id,
-      product: "customer_experience",
-      eventId: event._id,
-      name: `${run.courseName} — ${run.location}`,
-      description: `Post-session feedback for ${run.courseName} in ${run.location}`,
-      qrToken: randomBytes(16).toString("hex"),
-      scans: run.responseCount + randomInt(2, 8),
-      active: true,
-      startsAt,
-      endsAt: run.startsAgo >= 0 ? endsAt : null,
-    });
-    result.feedbackPoints++;
-    amaniFeedbackPoints.push(point);
-
-    const lowScoreEvents = await generateResponses({
-      feedbackPoint: point,
-      businessId: amaniBusiness._id,
-      parentOrgId: null,
-      questions: amaniTemplate.questions,
-      product: "customer_experience",
-      count: run.responseCount,
-      dayWindow: Math.max(1, run.startsAgo),
-    });
-    amaniLowScoreEvents = amaniLowScoreEvents.concat(lowScoreEvents);
-  }
+  // Programmes, QR codes, links, objective-tied questions and responses (see amaniPrograms.ts).
+  const amaniPrograms = await seedAmaniPrograms({ businessId: amaniBusiness._id, categoryByName });
+  result.events += amaniPrograms.eventIds.length;
+  result.feedbackPoints += amaniPrograms.qrPoints.length + amaniPrograms.followUpPoints;
+  const amaniLowScoreEvents: LowScoreEvent[] = amaniPrograms.lowScoreEvents;
+  const amaniFeedbackPoints = amaniPrograms.qrPoints;
   const amaniAlertRule = await AlertRule.findOneAndUpdate(
     { scope: "business", ownerId: amaniBusiness._id, ruleType: "fixed_threshold", metric: "star_average" },
     { $set: { threshold: 3.5, product: "customer_experience", recipients: [amaniOwner.email], active: true } },
@@ -2482,6 +2436,67 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   void stAugustineCases;
   void amaniCases;
 
+  // ---------------------------------------------------------------------
+  // OodelCX Compass history + Evidence Fusion, then Program Evaluation runs
+  // ---------------------------------------------------------------------
+  const allProducts = (b: InstanceType<typeof Business>, o?: InstanceType<typeof ParentOrganization>): Product[] =>
+    ((b.enabledProducts ?? o?.enabledProducts ?? ["customer_experience"]) as Product[]);
+  const compassOwners: CompassDemoOwner[] = [];
+  const orgProfiles: CompassDemoProfile[] = [
+    { pattern: "cococo", stage: "established", retakes: 3, currentDaysAgo: 40 },
+    { pattern: "ocucco", stage: "emerging", capped: { rhythm: 1 }, retakes: 2, currentDaysAgo: 120 },
+    { pattern: "ccouuc", stage: "established", retakes: 2, currentDaysAgo: 60 },
+    { pattern: "uccocc", stage: "emerging", capped: { ownership: 1 }, retakes: 1, currentDaysAgo: 30 },
+    { pattern: "cccccc", stage: "established", retakes: 2, currentDaysAgo: 75 },
+  ];
+  allOrgs.forEach((o, i) => {
+    compassOwners.push({
+      ownerType: "parentOrg",
+      ownerId: o.org._id,
+      name: o.org.name,
+      industry: o.org.industry,
+      products: allProducts(o.branches[0].business, o.org),
+      profile: orgProfiles[i % orgProfiles.length],
+    });
+    for (const br of o.branches) {
+      compassOwners.push({
+        ownerType: "business",
+        ownerId: br.business._id,
+        name: br.business.name,
+        industry: br.business.industry || o.org.industry,
+        products: allProducts(br.business, o.org),
+      });
+    }
+  });
+  compassOwners.push({
+    ownerType: "business",
+    ownerId: olive.business._id,
+    name: olive.business.name,
+    industry: olive.business.industry,
+    products: allProducts(olive.business),
+    profile: { pattern: "coccuc", stage: "emerging", capped: { hearing: 1 }, retakes: 2, currentDaysAgo: 100 },
+  });
+  compassOwners.push({
+    ownerType: "business",
+    ownerId: amaniBusiness._id,
+    name: amaniBusiness.name,
+    industry: amaniBusiness.industry,
+    products: allProducts(amaniBusiness),
+    profile: { pattern: "ccucoc", stage: "established", retakes: 2, currentDaysAgo: 55 },
+  });
+  const compassSeeded = await seedCompassDemo(compassOwners);
+  console.log(`[showcase] compass: ${compassSeeded.assessments} assessments, ${compassSeeded.history} history rows`);
+
+  // Run the evaluation for every programme session that has finished.
+  for (const evt of amaniPrograms.eventIds) {
+    if (!evt.ended) continue;
+    try {
+      await generateProgramEvaluationForEvent(evt.id);
+    } catch (err) {
+      console.error(`[showcase] program evaluation failed for ${evt.name} — ${evt.location}`, err);
+    }
+  }
+
   return result;
 }
 
@@ -2526,6 +2541,9 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("industries", () => Industry.deleteMany({}));
   await del("demoRequests", () => DemoRequest.deleteMany({}));
   await del("aiInsightReports", () => AiInsightReport.deleteMany({}));
+  await del("programEvaluationReports", () => ProgramEvaluationReport.deleteMany({}));
+  await del("compassAssessments", () => CompassAssessment.deleteMany({}));
+  await del("compassAssessmentHistory", () => CompassAssessmentHistory.deleteMany({}));
   await del("businesses", () => Business.deleteMany({}));
   await del("parentOrgs", () => ParentOrganization.deleteMany({}));
   await del("users", () => User.deleteMany({ accountType: { $ne: "admin_staff" } }));

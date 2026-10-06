@@ -6,6 +6,7 @@ import type { BillingOwnerType } from "../models/BillingSubscription";
 import type { Product } from "../models/products";
 import { questionsForProducts, type AnchorDimension } from "./questionBank";
 import { computeCompassResult, type LadderValue } from "./scoring";
+import { computeEvidenceFusion } from "./evidenceFusion";
 
 /**
  * Owner-agnostic OodelCX Compass assessment logic — identical for a
@@ -68,6 +69,7 @@ export async function getCompassView(
             stage: assessment.stage,
             gatingDimensions: assessment.gatingDimensions,
             index: assessment.index,
+            evidence: assessment.evidence ?? [],
             completedAt: assessment.completedAt,
           }
         : null,
@@ -116,6 +118,7 @@ export async function submitCompassAnswer(
     assessment.stage = null;
     assessment.gatingDimensions = [];
     assessment.index = null;
+    assessment.evidence = [];
     assessment.completedAt = null;
   }
   await assessment.save();
@@ -151,6 +154,24 @@ export async function completeCompassAssessment(
   assessment.gatingDimensions = result.gatingDimensions;
   assessment.index = result.index;
   assessment.completedAt = new Date();
+  // Keep the "claimed vs proven" picture as it stands today, so the next retake can be compared with it.
+  try {
+    const fusion = await computeEvidenceFusion(
+      ownerType,
+      ownerId,
+      result.dimensionScores.map((d) => ({ dimension: d.dimension, score: d.score })),
+      products
+    );
+    assessment.evidence = fusion.dimensions.map((d) => ({
+      dimension: d.dimension,
+      selfScore: d.selfScore,
+      evidenceScore: d.evidenceScore,
+      status: d.status,
+    }));
+  } catch (err) {
+    console.error("[compass] could not snapshot evidence at completion", err);
+    assessment.evidence = [];
+  }
   await assessment.save();
 
   return { ok: true };
@@ -183,6 +204,7 @@ export async function restartCompassAssessment(ownerType: BillingOwnerType, owne
       stage: assessment.stage,
       gatingDimensions: assessment.gatingDimensions,
       index: assessment.index,
+      evidence: assessment.evidence ?? [],
       completedAt: assessment.completedAt,
     });
   }
@@ -198,6 +220,7 @@ export async function restartCompassAssessment(ownerType: BillingOwnerType, owne
         stage: null,
         gatingDimensions: [],
         index: null,
+        evidence: [],
         completedAt: null,
       },
     }

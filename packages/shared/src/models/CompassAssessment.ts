@@ -44,6 +44,8 @@ export interface ICompassAssessment {
   stage: CompassStage | null;
   gatingDimensions: AnchorDimension[];
   index: number | null;
+  // Claimed-vs-proven snapshot taken when the assessment was completed (may be empty on older records).
+  evidence: ICompassEvidenceEntry[];
   completedAt: Date | null;
   createdBy: Types.ObjectId | null;
   createdAt: Date;
@@ -56,6 +58,30 @@ const CompassAnswerSchema = new Schema<ICompassAnswer>(
     dimension: { type: String, enum: ANCHOR_DIMENSIONS, required: true },
     value: { type: Number, min: 0, max: 3, required: true },
     questionText: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
+/**
+ * "Claimed vs proven" for one dimension at the moment an assessment was
+ * completed: the self-reported ladder score next to what the account's real
+ * activity showed (see compass/evidenceFusion.ts). Stored so a retake can be
+ * compared with the reality that stood behind it at the time; activity of
+ * the past can't be reconstructed later, so this is the only honest history.
+ */
+export interface ICompassEvidenceEntry {
+  dimension: AnchorDimension;
+  selfScore: LadderValue;
+  evidenceScore: LadderValue;
+  status: "confirmed" | "overstated" | "understated" | "insufficient_data";
+}
+
+export const CompassEvidenceEntrySchema = new Schema<ICompassEvidenceEntry>(
+  {
+    dimension: { type: String, enum: ANCHOR_DIMENSIONS, required: true },
+    selfScore: { type: Number, min: 0, max: 3, required: true },
+    evidenceScore: { type: Number, min: 0, max: 3, required: true },
+    status: { type: String, enum: ["confirmed", "overstated", "understated", "insufficient_data"], required: true },
   },
   { _id: false }
 );
@@ -80,6 +106,7 @@ const CompassAssessmentSchema = new Schema<ICompassAssessment>(
     stage: { type: String, enum: COMPASS_STAGES, default: null },
     gatingDimensions: { type: [String], enum: ANCHOR_DIMENSIONS, default: [] },
     index: { type: Number, min: 0, max: 100, default: null },
+    evidence: { type: [CompassEvidenceEntrySchema], default: [] },
     completedAt: { type: Date, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },

@@ -31,16 +31,18 @@ export async function analyzeProgramEvaluation(evidence: ProgramEvaluationEviden
     const client = new Anthropic({ apiKey });
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1200,
+      max_tokens: 4096,
       system:
         "You evaluate a training/program's feedback against the objectives its own organizers stated — using ONLY the evidence given to you, never inventing a fact, number, or quote not present in it. " +
         "Respond with ONLY a JSON object: " +
         '{"summary": string, "objectiveMatches": [{"objective": string, "verdict": "met"|"partially_met"|"not_supported", "evidence": string}], "suggestions": string[], "newAreasToExplore": string[]} — no other text. ' +
         "objectiveMatches must have exactly one entry per objective given, in the same order. " +
+        "questionStats lists each survey question with its average (1-5 ratings, 0-10 recommend score) or its answer counts: match each objective to the question(s) that actually asked about it and cite that figure (e.g. \"4.3/5 agreed they can prepare a budget\"). A rating of 4 or more on the matching question usually supports \"met\", about 3 to 4 \"partially_met\", and lower \"not_supported\", unless comments clearly say otherwise. " +
         '"evidence" must cite a specific number, demographic cut, or direct comment from the evidence bundle — never a vague restatement. ' +
         'Use "not_supported" honestly whenever the evidence doesn\'t actually speak to that objective (e.g. no relevant comments or scores) — do not stretch weak evidence into "met" to sound more conclusive than the data supports. ' +
         "suggestions are concrete program changes grounded in what the evidence actually shows (a specific theme, a specific demographic gap) — never generic training advice. " +
-        "newAreasToExplore are specific follow-up questions or angles the current feedback doesn't cover but the evidence suggests would be worth asking next time.",
+        "Keep it tight: summary at most 4 sentences, each evidence at most 2 sentences, at most 4 suggestions and 3 newAreasToExplore. "
+        + "newAreasToExplore are specific follow-up questions or angles the current feedback doesn't cover but the evidence suggests would be worth asking next time.",
       messages: [{ role: "user", content: `Evidence:\n${JSON.stringify(evidence, null, 2)}` }],
     });
 

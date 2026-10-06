@@ -2,7 +2,7 @@ import mongoose, { Schema, model, type Model, type Types } from "mongoose";
 import { BILLING_OWNER_TYPES, type BillingOwnerType } from "./BillingSubscription";
 import { ANCHOR_DIMENSIONS, type AnchorDimension } from "../compass/questionBank";
 import { COMPASS_STAGES, type CompassStage, type LadderValue } from "../compass/scoring";
-import type { ICompassDimensionScore } from "./CompassAssessment";
+import { CompassEvidenceEntrySchema, type ICompassDimensionScore, type ICompassEvidenceEntry } from "./CompassAssessment";
 
 /**
  * Append-only snapshot of a completed OodelCX Compass assessment cycle,
@@ -21,6 +21,8 @@ export interface ICompassAssessmentHistory {
   stage: CompassStage;
   gatingDimensions: AnchorDimension[];
   index: number;
+  // Claimed-vs-proven snapshot from when this cycle was completed (empty on records that predate it).
+  evidence: ICompassEvidenceEntry[];
   completedAt: Date;
   archivedAt: Date;
 }
@@ -42,6 +44,7 @@ const CompassAssessmentHistorySchema = new Schema<ICompassAssessmentHistory>({
   stage: { type: String, enum: COMPASS_STAGES, required: true },
   gatingDimensions: { type: [String], enum: ANCHOR_DIMENSIONS, default: [] },
   index: { type: Number, min: 0, max: 100, required: true },
+  evidence: { type: [CompassEvidenceEntrySchema], default: [] },
   completedAt: { type: Date, required: true },
   archivedAt: { type: Date, required: true, default: () => new Date() },
 });

@@ -35,13 +35,23 @@ interface CompassResultView {
   stage: "established" | "emerging";
   gatingDimensions: string[];
   index: number;
+  evidence?: CompassEvidenceEntry[];
   completedAt: string;
+}
+
+interface CompassEvidenceEntry {
+  dimension: string;
+  selfScore: 0 | 1 | 2 | 3;
+  evidenceScore: 0 | 1 | 2 | 3;
+  status: "confirmed" | "overstated" | "understated" | "insufficient_data";
 }
 
 interface CompassHistoryEntry {
   overallScore: 0 | 1 | 2 | 3;
   stage: "established" | "emerging";
   index: number;
+  dimensionScores?: { dimension: string; score: 0 | 1 | 2 | 3 }[];
+  evidence?: CompassEvidenceEntry[];
   completedAt: string;
   archivedAt: string;
 }
@@ -289,6 +299,114 @@ function EvidenceFusionCard({ evidenceFusion }: { evidenceFusion: EvidenceFusion
   );
 }
 
+
+interface ProgressRow {
+  key: string;
+  completedAt: string;
+  stage: "established" | "emerging";
+  index: number;
+  isCurrent: boolean;
+  selfByDim: Record<string, number>;
+  evidenceByDim: Record<string, CompassEvidenceEntry | undefined>;
+}
+
+/**
+ * Every completed assessment, oldest first, with the self-reported score next
+ * to what real activity showed at the time ("claimed / proven"). The point is
+ * to see whether the two move together: a rising claim with flat evidence is
+ * a warning, a rising claim followed by rising evidence is real progress.
+ */
+function ProgressOverTime({
+  history,
+  result,
+  evidenceFusion,
+}: {
+  history: CompassHistoryEntry[];
+  result: CompassResultView;
+  evidenceFusion: EvidenceFusionView | null;
+}) {
+  const rows: ProgressRow[] = [...history].reverse().map((h) => ({
+    key: h.completedAt,
+    completedAt: h.completedAt,
+    stage: h.stage,
+    index: h.index,
+    isCurrent: false,
+    selfByDim: Object.fromEntries((h.dimensionScores ?? []).map((d) => [d.dimension, d.score])),
+    evidenceByDim: Object.fromEntries((h.evidence ?? []).map((e) => [e.dimension, e])),
+  }));
+  rows.push({
+    key: "current",
+    completedAt: result.completedAt,
+    stage: result.stage,
+    index: result.index,
+    isCurrent: true,
+    selfByDim: Object.fromEntries(result.dimensionScores.map((d) => [d.dimension, d.score])),
+    evidenceByDim: Object.fromEntries(
+      (evidenceFusion
+        ? evidenceFusion.dimensions.map((d) => ({ dimension: d.dimension, selfScore: d.selfScore, evidenceScore: d.evidenceScore, status: d.status }))
+        : (result.evidence ?? [])
+      ).map((e) => [e.dimension, e as CompassEvidenceEntry])
+    ),
+  });
+  if (rows.length < 2) return null;
+
+  return (
+    <div className="card" style={{ marginTop: 20 }}>
+      <h3 style={{ marginTop: 0 }}>Progress over time</h3>
+      <p className="card-sub" style={{ margin: "0 0 14px" }}>
+        Each cell shows <b>what you reported</b> and <b>what your activity showed</b> at the time (reported / shown, on the
+        0&ndash;3 ladder). Progress is real when both numbers rise together.
+      </p>
+      <div style={{ overflowX: "auto" }}>
+        <table className="clean">
+          <thead>
+            <tr>
+              <th>Completed</th>
+              <th>Stage</th>
+              <th>Index</th>
+              {DIMENSION_ORDER.map((d) => (
+                <th key={d}>{DIMENSION_LABELS[d]}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.key}>
+                <td>
+                  {new Date(r.completedAt).toLocaleDateString()}
+                  {r.isCurrent && <span className="pill" style={{ marginLeft: 8 }}>Current</span>}
+                </td>
+                <td>{stageLabel(r.stage)}</td>
+                <td>{r.index} / 100</td>
+                {DIMENSION_ORDER.map((d) => {
+                  const ev = r.evidenceByDim[d];
+                  const meta = ev ? EVIDENCE_STATUS_META[ev.status] : null;
+                  return (
+                    <td key={d} style={{ whiteSpace: "nowrap" }}>
+                      <b>{r.selfByDim[d] ?? "–"}</b>
+                      {ev ? (
+                        <span style={{ color: meta?.color }}> / {ev.evidenceScore}</span>
+                      ) : (
+                        <span style={{ color: "var(--text-3)" }}> / –</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="card-sub" style={{ margin: "10px 0 0", fontSize: 12 }}>
+        <span style={{ color: "var(--green)" }}>Green</span>: confirmed by activity &middot;{" "}
+        <span style={{ color: "var(--red)" }}>red</span>: reported higher than activity showed &middot;{" "}
+        <span style={{ color: "#5DA5D6" }}>blue</span>: activity showed more than reported. Dashes mean no activity
+        snapshot was kept for that assessment.
+      </p>
+    </div>
+  );
+}
+
 function CompassResultsView({
   result,
   onRestart,
@@ -401,29 +519,7 @@ function CompassResultsView({
         })}
       </div>
 
-      {history.length > 0 && (
-        <div className="card" style={{ marginTop: 20 }}>
-          <h3 style={{ marginTop: 0 }}>Previous assessments</h3>
-          <table className="clean">
-            <thead>
-              <tr>
-                <th>Completed</th>
-                <th>Stage</th>
-                <th>Index</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((h) => (
-                <tr key={h.completedAt}>
-                  <td>{new Date(h.completedAt).toLocaleDateString()}</td>
-                  <td>{stageLabel(h.stage)}</td>
-                  <td>{h.index} / 100</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {history.length > 0 && <ProgressOverTime history={history} result={result} evidenceFusion={evidenceFusion} />}
 
       {evidenceFusion && <EvidenceFusionCard evidenceFusion={evidenceFusion} />}
     </div>
