@@ -184,22 +184,22 @@ export const SOLUTION_INDUSTRIES = [
     name: "Banking & Finance",
     tileBody: "Branch networks and conduct-sensitive complaints",
     cx: {
-      h: "Complaints routed correctly, every time.",
-      s: "Branch networks need conduct-sensitive feedback in front of the right person fast, with a record of what was done.",
+      h: "Branch feedback, routed and recorded properly.",
+      s: "Complaints about advice or fees need to reach the right function quickly, and the handling needs to be on record. Feedback held in branch inboxes does neither.",
       uses: [
-        ["pin", "Branch-level visibility", "A branch dips below its threshold and the regional lead knows the same day."],
+        ["pin", "Branch-level visibility", "When a branch falls below its threshold, the regional lead is notified the same day."],
         ["shield", "Conduct-sensitive routing", "Complaints about advice or fees go to compliance, not the branch queue."],
-        ["log", "An audit trail by default", "Every case keeps its owner, replies and decision history."],
+        ["log", "A record for every case", "Every case keeps its owner, replies and decision history."],
       ],
-      scene: "Branch 14: mis-sold product complaint",
+      scene: "Branch 14: complaint about a product sale",
       steps: ["Feedback arrives by QR code or link", "Routed to Compliance", "Owner assigned, outcome measured"],
     },
     ex: {
-      h: "Hear branch staff before they resign.",
-      s: "Front-line teams see process failures first. Give them a safe route that bypasses the branch manager.",
+      h: "Branch colleagues need a route that does not run through the branch.",
+      s: "Front-line teams see process failures first, but raising a concern with a line manager is often not an option. A separate route changes what gets reported.",
       uses: [
         ["shield", "Speak-up route", "Concerns about a manager go straight to HR."],
-        ["pin", "Branch comparison", "See which branches have a morale problem early."],
+        ["pin", "Branch comparison", "Identify branches with a morale concern early."],
         ["log", "Fixes with outcomes", "Log the rota or process change and measure the effect."],
       ],
       scene: "Branch 14: rota concern, anonymous",
@@ -211,10 +211,10 @@ export const SOLUTION_INDUSTRIES = [
     name: "Education",
     tileBody: "Multi-campus trusts comparing term over term",
     cx: {
-      h: "Compare every campus, every term.",
-      s: "Trusts want facilities, communication and pastoral scores side by side, term over term.",
+      h: "Comparing campuses on a consistent basis.",
+      s: "Trusts need facilities, communication and pastoral measures from each site on the same scale, term by term, to see where support is needed.",
       uses: [
-        ["pin", "Campus comparison", "See which site is slipping before the term review."],
+        ["pin", "Campus comparison", "See which site is declining before the term review."],
         ["log", "Term-over-term trends", "Every score against its own history."],
         ["shield", "Safeguarding-aware routing", "Sensitive reports reach the right lead."],
       ],
@@ -222,8 +222,8 @@ export const SOLUTION_INDUSTRIES = [
       steps: ["Feedback arrives by QR code or link", "Down 0.4 this term", "Owner assigned, outcome measured"],
     },
     ex: {
-      h: "Know how your staff are really doing.",
-      s: "Teaching staff rarely get a safe way to raise workload and leadership concerns.",
+      h: "Understanding staff experience across a trust.",
+      s: "Teaching staff seldom have a confidential way to raise workload or leadership concerns, so these tend to surface late, often as resignations.",
       uses: [
         ["shield", "Confidential routing", "Concerns about leadership reach the trust, not the head."],
         ["pin", "Department pulse", "Read patterns by department without naming anyone."],
@@ -238,8 +238,8 @@ export const SOLUTION_INDUSTRIES = [
     name: "Retail",
     tileBody: "Which store and which shift, not a blended average",
     cx: {
-      h: "Which store, which shift, which fix.",
-      s: "A chain average hides the one store and the one Saturday shift that need attention.",
+      h: "Finding the store and the shift behind the average.",
+      s: "A chain-wide average can conceal the single store or shift pattern where service falls short. Responses need to be traceable to both.",
       uses: [
         ["pin", "Store and shift view", "Find the exact window where complaints cluster."],
         ["log", "Playbooks for repeat issues", "Queue times get the same agreed response everywhere."],
@@ -249,8 +249,8 @@ export const SOLUTION_INDUSTRIES = [
       steps: ["Feedback arrives by QR code or link", "5 responses, same window", "Owner assigned, outcome measured"],
     },
     ex: {
-      h: "Keep store teams, not just hire them.",
-      s: "High churn makes colleague feedback urgent. Short surveys, by QR code or link, fit the shift pattern.",
+      h: "Retention starts with hearing colleagues early.",
+      s: "Turnover is high in retail, so concerns need to be raised through short surveys that suit shift patterns, by QR code or link.",
       uses: [
         ["pin", "Store comparison", "Compare morale across the estate."],
         ["shield", "Manager-safe reporting", "Concerns about a store manager skip the store."],
@@ -265,8 +265,8 @@ export const SOLUTION_INDUSTRIES = [
     name: "Healthcare",
     tileBody: "Wait-time complaints into a measured fix",
     cx: {
-      h: "Wait-time complaints, turned into a tracked fix.",
-      s: "Facility networks need patient feedback to become owned work, not a monthly PDF.",
+      h: "Turning patient feedback into tracked operational work.",
+      s: "Patient comments often reach clinical operations as a periodic report. Facility networks need them to become owned cases with a measured result.",
       uses: [
         ["pin", "Facility comparison", "See which site has the longest waits."],
         ["log", "Before and after", "Measure whether the new triage flow worked."],
@@ -276,11 +276,11 @@ export const SOLUTION_INDUSTRIES = [
       steps: ["Feedback arrives by QR code or link", "Case assigned, due in 2 days", "Owner assigned, outcome measured"],
     },
     ex: {
-      h: "Support the people providing the care.",
-      s: "Burnout shows up in small, repeated signals long before it shows up in turnover.",
+      h: "Supporting the people who provide care.",
+      s: "Pressure on clinical teams appears first as small, repeated signals. Identifying them early supports retention and continuity of care.",
       uses: [
         ["shield", "Confidential escalation", "Concerns bypass the line manager."],
-        ["pin", "Ward-level pulse", "Spot pressure before it becomes absence."],
+        ["pin", "Ward-level pulse", "Identify pressure before it becomes absence."],
         ["log", "Staffing decisions, measured", "Log the change and track the result."],
       ],
       scene: "Ward 3: understaffing theme",

@@ -1,5 +1,6 @@
 import type { SiteContentPage, INavItem, ISiteSection } from "../models/SiteContent";
 import { DESIGN_FIELDS, withStages } from "./siteDesign";
+import { COPY_V2 } from "./siteCopy";
 
 interface SeedSiteContent {
   page: SiteContentPage;
@@ -766,9 +767,10 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
 /** The redesigned pages' fields (see siteDesign.ts) layered over the older per-page copy above. */
 export const SEED_SITE_CONTENT: SeedSiteContent[] = RAW_SEED_SITE_CONTENT.map((entry) => {
   const extra = DESIGN_FIELDS[entry.page];
-  if (!extra) return entry;
-  const fields = { ...entry.fields, ...extra };
-  if ((entry.page === "customer-x" || entry.page === "colleague-x") && entry.fields.features) {
+  const copy = COPY_V2[entry.page];
+  if (!extra && !copy) return entry;
+  const fields = { ...entry.fields, ...extra, ...copy };
+  if ((entry.page === "customer-x" || entry.page === "colleague-x") && entry.fields.features && !copy?.features) {
     fields.features = withStages(entry.fields.features);
   }
   return { ...entry, fields };

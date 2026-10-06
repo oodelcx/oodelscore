@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Category } from "./models/Category";
 import { CxPulseScore } from "./models/CxPulseScore";
 import { SiteContent } from "./models/SiteContent";
+import { COPY_V2 } from "./seedData/siteCopy";
 
 let connectPromise: Promise<typeof mongoose> | null = null;
 let staleIndexSyncPromise: Promise<void> | null = null;
@@ -121,6 +122,7 @@ async function applyRedesignMigrations(): Promise<void> {
       await col.updateOne({ _id: doc._id }, { $set: { [`fields.${u.key}`]: u.partial ? value.split(u.from).join(u.to) : u.to } });
     }
   }
+  await applyCopyV2Migration(col);
   // The redesigned nav has no How it works / Contact entries (the loop lives on
   // Home, the demo form on Company). Hide them once, then leave the admin's
   // choice alone.
@@ -131,6 +133,20 @@ async function applyRedesignMigrations(): Promise<void> {
       item.key === "how-it-works" || item.key === "contact" ? { ...item, visible: false } : item
     );
     await col.updateOne({ _id: menu._id }, { $set: { navItems, "fields.navV2": "1" } });
+  }
+}
+
+// One-time rewrite of the marketing copy (see seedData/siteCopy.ts). Each page
+// is stamped with `fields.copyV2` so later admin edits are never overwritten.
+async function applyCopyV2Migration(col: typeof SiteContent.collection): Promise<void> {
+  for (const [page, copy] of Object.entries(COPY_V2)) {
+    const doc = await col.findOne({ page });
+    if (!doc) continue;
+    const fields = (doc.fields ?? {}) as Record<string, string>;
+    if (fields.copyV2 === "1") continue;
+    const $set: Record<string, string> = { "fields.copyV2": "1" };
+    for (const [key, value] of Object.entries(copy)) $set[`fields.${key}`] = value;
+    await col.updateOne({ _id: doc._id }, { $set });
   }
 }
 
