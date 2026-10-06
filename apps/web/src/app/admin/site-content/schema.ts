@@ -282,6 +282,15 @@ export const SOLUTIONS_SCHEMA: SectionDef[] = [
         type: "objectList",
         itemLabel: "Industry",
         item: [
+          {
+            key: "visible",
+            label: "Show on the website",
+            type: "select",
+            options: [
+              { value: "yes", label: "Shown" },
+              { value: "no", label: "Hidden everywhere (Solutions page, home tiles, sector page, footer link)" },
+            ],
+          },
           t("slug", "URL slug"),
           t("name", "Name"),
           t("tileBody", "Tile description"),

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSiteContent } from "@/lib/siteContent";
-import { mergeIndustries } from "@/lib/industries";
+import { visibleIndustries } from "@/lib/industries";
 import { MarketingNav, MarketingFooter } from "../../nav-footer";
 import { SolutionsView } from "../../ds/solutions-view";
 
@@ -12,7 +12,7 @@ type RouteParams = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {
   const { slug } = await params;
   const solutions = await getSiteContent("solutions");
-  const industry = mergeIndustries(solutions.fields.industryDetails).find((i) => i.slug === slug);
+  const industry = visibleIndustries(solutions.fields.industryDetails).find((i) => i.slug === slug);
   if (!industry) return {};
   const title = industry.name;
   const description = industry.cxSub || industry.tileBody || "";
@@ -28,7 +28,7 @@ export default async function IndustryPage({ params }: RouteParams) {
   const { slug } = await params;
   const [menu, solutions] = await Promise.all([getSiteContent("menu"), getSiteContent("solutions")]);
   if (menu.navItems.find((n) => n.key === "solutions")?.visible === false) notFound();
-  const industries = mergeIndustries(solutions.fields.industryDetails);
+  const industries = visibleIndustries(solutions.fields.industryDetails);
   if (!industries.some((i) => i.slug === slug)) notFound();
   const f = solutions.fields;
   return (

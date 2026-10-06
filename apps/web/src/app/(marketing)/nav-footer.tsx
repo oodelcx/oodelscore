@@ -108,6 +108,7 @@ interface MenuFields {
   footerColumns?: string;
   copyrightText?: string;
   navDemoLabel?: string;
+  hiddenSolutionSlugs?: string;
 }
 
 function parseColumns(value: string | undefined): FooterColumn[] {
@@ -141,8 +142,10 @@ function isHiddenByNav(href: string, navItems: INavItem[]): boolean {
   return item?.visible === false;
 }
 
-function FooterLink({ link, navItems }: { link: FooterLinkDef; navItems: INavItem[] }) {
+function FooterLink({ link, navItems, hiddenSlugs }: { link: FooterLinkDef; navItems: INavItem[]; hiddenSlugs: string[] }) {
   const { label, href } = link;
+  const sector = href.match(/^\/solutions\/([^/#?]+)/);
+  if (sector && hiddenSlugs.includes(sector[1])) return null;
   if (/^(https?:|mailto:)/i.test(href)) {
     return (
       <a href={href} {...(href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>
@@ -157,6 +160,13 @@ function FooterLink({ link, navItems }: { link: FooterLinkDef; navItems: INavIte
 /** Same footer on every marketing page: brand block plus any number of link columns, all Site Content. */
 export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; navItems: INavItem[] }) {
   const columns = parseColumns(fields?.footerColumns);
+  let hiddenSlugs: string[] = [];
+  try {
+    const parsed = JSON.parse(fields?.hiddenSolutionSlugs ?? "[]");
+    if (Array.isArray(parsed)) hiddenSlugs = parsed.map(String);
+  } catch {
+    hiddenSlugs = [];
+  }
   return (
     <footer>
       <div className="wrap">
@@ -176,7 +186,7 @@ export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; nav
             <div className="foot-col" key={i}>
               <h4>{col.heading}</h4>
               {col.links.map((l, j) => (
-                <FooterLink key={j} link={l} navItems={navItems} />
+                <FooterLink key={j} link={l} navItems={navItems} hiddenSlugs={hiddenSlugs} />
               ))}
             </div>
           ))}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSiteContent } from "@/lib/siteContent";
-import { mergeIndustries } from "@/lib/industries";
+import { visibleIndustries } from "@/lib/industries";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { SolutionsView } from "../ds/solutions-view";
 
@@ -28,7 +28,7 @@ export default async function SolutionsPage() {
   return (
     <>
       <MarketingNav active="solutions" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} navLabels={menu.fields} />
-      <SolutionsView industries={mergeIndustries(f.industryDetails)} labels={f} ctaHeadline={f.finalCtaHeadline} ctaSub={f.finalCtaSubhead} />
+      <SolutionsView industries={visibleIndustries(f.industryDetails)} labels={f} ctaHeadline={f.finalCtaHeadline} ctaSub={f.finalCtaSubhead} />
       <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
   );

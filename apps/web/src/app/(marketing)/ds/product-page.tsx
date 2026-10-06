@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { defaultStageForFeature } from "@oodelscore/shared";
 import { getSiteContent } from "@/lib/siteContent";
-import { mergeIndustries, type IndustryDetail } from "@/lib/industries";
+import { visibleIndustries, type IndustryDetail } from "@/lib/industries";
 import { MarketingNav, MarketingFooter } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
 import { ChapterRail } from "./chapter-rail";
@@ -24,7 +24,7 @@ export async function ProductPage({ page }: { page: "customer-x" | "colleague-x"
   const features = list<Feature>(f.features);
   const stageDefs = list<StageDef>(f.stageDefs);
   const chips = list<string>(f.heroChips);
-  const industries: IndustryDetail[] = mergeIndustries(solutions.fields.industryDetails);
+  const industries: IndustryDetail[] = visibleIndustries(solutions.fields.industryDetails);
   const other = ex ? "colleague-x" : "customer-x";
   void other;
 

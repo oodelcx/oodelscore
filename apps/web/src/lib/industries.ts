@@ -9,6 +9,8 @@ export interface IndustryUse {
 export interface IndustryDetail {
   slug: string;
   name: string;
+  /** "no" hides the sector everywhere on the public site; anything else shows it. */
+  visible?: string;
   tileBody?: string;
   cxHeadline?: string;
   cxSub?: string;
@@ -48,4 +50,13 @@ export function mergeIndustries(stored: string | undefined): IndustryDetail[] {
     for (const [k, v] of Object.entries(ind)) if (v !== undefined && v !== null && v !== "" ) merged[k] = v;
     return merged as unknown as IndustryDetail;
   });
+}
+
+export function isIndustryVisible(i: { visible?: string }): boolean {
+  return i.visible !== "no";
+}
+
+/** The sectors a visitor should see: everything the admin has not hidden. */
+export function visibleIndustries(stored: string | undefined): IndustryDetail[] {
+  return mergeIndustries(stored).filter(isIndustryVisible);
 }

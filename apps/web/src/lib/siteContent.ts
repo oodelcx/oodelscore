@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { connectToDatabase, SiteContent, SEED_SITE_CONTENT, defaultStageForFeature, type SiteContentPage, type INavItem } from "@oodelscore/shared";
-import { mergeIndustries } from "./industries";
+import { mergeIndustries, isIndustryVisible } from "./industries";
 
 export interface ResolvedSiteContent {
   page: SiteContentPage;
@@ -93,6 +93,12 @@ export const getSiteContent = cache(async function getSiteContent(
     const navItems = seed ? mergeNavItems(doc.navItems, seed.navItems) : doc.navItems;
     const dbFields = Object.fromEntries(doc.fields);
     const fields = normalizePageFields(page, seed ? mergeFields(dbFields, seed.fields) : dbFields);
+    if (page === "menu") {
+      // The footer's sector links follow the Solutions page's per-sector visibility.
+      const solutions = await getSiteContent("solutions");
+      const hidden = mergeIndustries(solutions.fields.industryDetails).filter((i) => !isIndustryVisible(i)).map((i) => i.slug);
+      if (hidden.length) fields.hiddenSolutionSlugs = JSON.stringify(hidden);
+    }
     return { page, navItems, fields };
   } catch {
     return fromSeed(page);

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getSiteContent } from "@/lib/siteContent";
-import { mergeIndustries } from "@/lib/industries";
+import { visibleIndustries } from "@/lib/industries";
 import { MarketingNav, MarketingFooter } from "./nav-footer";
 import { BookDemoButton } from "./demo-modal";
 import { FiveCLoop } from "./ds/five-c-loop";
@@ -42,7 +42,7 @@ export default async function MarketingHomePage() {
   // The stage illustrations on Home are the Customer X ones; their text is edited under Customer X.
   const v = readViz(cx.fields);
   const loopStages = list<LoopStage>(f.loopStages);
-  const industries = mergeIndustries(solutions.fields.industryDetails);
+  const industries = visibleIndustries(solutions.fields.industryDetails);
   const builtFor = (f.heroBuiltForLine ?? "")
     .split(",")
     .map((s) => s.trim())
