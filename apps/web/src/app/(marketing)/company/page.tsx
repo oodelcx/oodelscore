@@ -14,9 +14,9 @@ interface Belief {
   body: string;
 }
 
-interface FuncRow {
+interface Pillar {
   label: string;
-  cells: string[];
+  body: string;
 }
 
 interface TrustItem {
@@ -59,8 +59,7 @@ export default async function CompanyPage() {
   const f = company.fields;
   const storyParagraphs = parseJsonArray<string>(f.storyParagraphs);
   const beliefs = parseJsonArray<Belief>(f.beliefs);
-  const funcColumns = parseJsonArray<string>(f.funcColumns);
-  const funcRows = parseJsonArray<FuncRow>(f.funcRows);
+  const pillars = parseJsonArray<Pillar>(f.pillars);
   const trustItems = parseJsonArray<TrustItem>(f.trustItems);
 
   return (
@@ -88,25 +87,21 @@ export default async function CompanyPage() {
               </div>
             </div>
 
-            {funcRows.length > 0 && funcColumns.length > 0 && (
-              <div className="ds-func" role="table" aria-label={f.funcTitle}>
-                {f.funcTitle && <div className="ds-func-title">{f.funcTitle}</div>}
-                <div className="ds-func-row ds-func-head" role="row" style={{ gridTemplateColumns: `1fr repeat(${funcColumns.length}, 1.3fr)` }}>
-                  <span />
-                  {funcColumns.map((c, i) => (
-                    <b key={i} className={i === funcColumns.length - 1 ? "us" : ""} role="columnheader">
-                      {c}
-                    </b>
-                  ))}
-                </div>
-                {funcRows.map((row, i) => (
-                  <div className="ds-func-row" key={i} role="row" style={{ gridTemplateColumns: `1fr repeat(${funcColumns.length}, 1.3fr)` }}>
-                    <b role="rowheader">{row.label}</b>
-                    {(row.cells ?? []).slice(0, funcColumns.length).map((cell, j) => (
-                      <span key={j} className={j === funcColumns.length - 1 ? "us" : ""} role="cell">
-                        {cell}
-                      </span>
-                    ))}
+            {pillars.length > 0 && (
+              <div className="ds-pillars">
+                {f.pillarsTitle && <div className="ds-pillars-title">{f.pillarsTitle}</div>}
+                {f.pillarsIntro && <p className="ds-pillars-intro">{f.pillarsIntro}</p>}
+                {pillars.map((p, i) => (
+                  <div className="ds-pillar" key={i}>
+                    <div className="ds-pillar-ic" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12.5l4.2 4.2L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <b>{p.label}</b>
+                      <p>{p.body}</p>
+                    </div>
                   </div>
                 ))}
               </div>

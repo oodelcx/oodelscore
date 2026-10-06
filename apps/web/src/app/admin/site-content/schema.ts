@@ -8,7 +8,9 @@ export type FieldDef =
   | { key: string; label: string; type: "textarea"; hint?: string }
   | { key: string; label: string; type: "select"; options: { value: string; label: string }[]; hint?: string }
   | { key: string; label: string; type: "stringList"; hint?: string }
-  | { key: string; label: string; type: "objectList"; itemLabel: string; item: FieldDef[]; hint?: string; fixedLength?: boolean };
+  | { key: string; label: string; type: "objectList"; itemLabel: string; item: FieldDef[]; hint?: string; fixedLength?: boolean }
+  /** A compact list of the items in another objectList, each with a show/hide switch. */
+  | { key: string; label: string; type: "visibilityList"; nameKey: string; visibleKey: string; hint?: string };
 
 export interface SectionDef {
   title: string;
@@ -258,6 +260,13 @@ const useItem: FieldDef[] = [
 
 export const SOLUTIONS_SCHEMA: SectionDef[] = [
   {
+    title: "Sectors on the website",
+    sub: "Switch a sector off to hide it everywhere: the Solutions page, the home page tiles, its own page, and the footer’s Solutions list. Switch it back on to show it again. Edit a sector’s text further down.",
+    fields: [
+      { key: "industryDetails", label: "Sectors", type: "visibilityList", nameKey: "name", visibleKey: "visible", hint: "The order here follows the list under “Industries”; use ▲ ▼ there to reorder." },
+    ],
+  },
+  {
     title: "Page text",
     fields: [
       t("eyebrow", "Eyebrow"),
@@ -282,15 +291,6 @@ export const SOLUTIONS_SCHEMA: SectionDef[] = [
         type: "objectList",
         itemLabel: "Industry",
         item: [
-          {
-            key: "visible",
-            label: "Show on the website",
-            type: "select",
-            options: [
-              { value: "yes", label: "Shown" },
-              { value: "no", label: "Hidden everywhere (Solutions page, home tiles, sector page, footer link)" },
-            ],
-          },
           t("slug", "URL slug"),
           t("name", "Name"),
           t("tileBody", "Tile description"),
@@ -334,6 +334,15 @@ export const SHARED_TEXT_SCHEMA: SectionDef[] = [
         itemLabel: "Column",
         item: [
           t("heading", "Column heading"),
+          {
+            key: "source",
+            label: "Where the links come from",
+            type: "select",
+            options: [
+              { value: "links", label: "Only the links listed below" },
+              { value: "sectors", label: "Sectors switched on under Solutions, then the links listed below" },
+            ],
+          },
           {
             key: "links",
             label: "Links",
@@ -391,14 +400,14 @@ export const COMPANY_EXTRA_SCHEMA: SectionDef[] = [
       t("heroEyebrow", "Small label above the headline"),
       t("heroSecondaryButton", "Second button text"),
       t("heroSecondaryHref", "Second button link"),
-      t("funcTitle", "Comparison table title"),
-      sl("funcColumns", "Comparison table columns", "Three columns; the last one is highlighted."),
+      t("pillarsTitle", "Card title"),
+      t("pillarsIntro", "Card intro line"),
       {
-        key: "funcRows",
-        label: "Comparison table rows",
+        key: "pillars",
+        label: "Card rows",
         type: "objectList",
         itemLabel: "Row",
-        item: [t("label", "Row label"), sl("cells", "Cell text, one per column")],
+        item: [t("label", "Label"), ta("body", "What OodelCX provides")],
       },
     ],
   },

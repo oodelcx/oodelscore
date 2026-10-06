@@ -8,8 +8,23 @@ export interface ResolvedSiteContent {
   fields: Record<string, string>;
 }
 
+/** The footer's automatic "sectors" column: every sector the admin has not switched off. */
+function withSectorLinks(fields: Record<string, string>, industryDetails: string | undefined): Record<string, string> {
+  const visible = mergeIndustries(industryDetails).filter(isIndustryVisible);
+  const hidden = mergeIndustries(industryDetails).filter((i) => !isIndustryVisible(i)).map((i) => i.slug);
+  return {
+    ...fields,
+    footerSectorLinks: JSON.stringify(visible.map((i) => ({ label: i.name, href: `/solutions/${i.slug}` }))),
+    ...(hidden.length ? { hiddenSolutionSlugs: JSON.stringify(hidden) } : {}),
+  };
+}
+
 function fromSeed(page: SiteContentPage): ResolvedSiteContent {
   const seed = SEED_SITE_CONTENT.find((s) => s.page === page)!;
+  if (page === "menu") {
+    const solutions = SEED_SITE_CONTENT.find((s) => s.page === "solutions");
+    return { page, navItems: seed.navItems, fields: withSectorLinks(seed.fields, solutions?.fields.industryDetails) };
+  }
   return { page, navItems: seed.navItems, fields: seed.fields };
 }
 
@@ -92,12 +107,11 @@ export const getSiteContent = cache(async function getSiteContent(
     const seed = SEED_SITE_CONTENT.find((s) => s.page === page);
     const navItems = seed ? mergeNavItems(doc.navItems, seed.navItems) : doc.navItems;
     const dbFields = Object.fromEntries(doc.fields);
-    const fields = normalizePageFields(page, seed ? mergeFields(dbFields, seed.fields) : dbFields);
+    let fields = normalizePageFields(page, seed ? mergeFields(dbFields, seed.fields) : dbFields);
     if (page === "menu") {
-      // The footer's sector links follow the Solutions page's per-sector visibility.
+      // The footer's sector links follow the Solutions page's per-sector switches.
       const solutions = await getSiteContent("solutions");
-      const hidden = mergeIndustries(solutions.fields.industryDetails).filter((i) => !isIndustryVisible(i)).map((i) => i.slug);
-      if (hidden.length) fields.hiddenSolutionSlugs = JSON.stringify(hidden);
+      fields = withSectorLinks(fields, solutions.fields.industryDetails);
     }
     return { page, navItems, fields };
   } catch {

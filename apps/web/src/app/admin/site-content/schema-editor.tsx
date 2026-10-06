@@ -65,6 +65,32 @@ function FieldEditor({ def, value, onChange }: { def: FieldDef; value: unknown; 
       </div>
     );
   }
+  if (def.type === "visibilityList") {
+    const rows = parseList(str) as Obj[];
+    const set = (i: number, on: boolean) => {
+      const next = [...rows];
+      next[i] = { ...rows[i], [def.visibleKey]: on ? "yes" : "no" };
+      onChange(JSON.stringify(next));
+    };
+    return (
+      <div className="field">
+        <label>{def.label}</label>
+        {rows.map((row, i) => {
+          const on = row[def.visibleKey] !== "no";
+          return (
+            <div className="nav-item-row" key={i}>
+              <div className="nav-item-top" style={{ alignItems: "center" }}>
+                <span style={{ flex: 1, fontSize: 13.5, opacity: on ? 1 : 0.55 }}>{String(row[def.nameKey] ?? `Sector ${i + 1}`)}</span>
+                <span style={{ fontSize: 12, marginRight: 8, opacity: 0.7 }}>{on ? "Shown" : "Hidden"}</span>
+                <span className={`toggle ${on ? "on" : ""}`} role="switch" aria-checked={on} onClick={() => set(i, !on)} />
+              </div>
+            </div>
+          );
+        })}
+        {def.hint && <small className="card-sub">{def.hint}</small>}
+      </div>
+    );
+  }
   if (def.type === "stringList") {
     const items = parseList(str).map((x) => String(x));
     return (

@@ -67,12 +67,12 @@ const VIZ_COMMON = {
   vizLadderDone: "Reached",
   vizLadderNext: "Next",
   vizRouteFrom: "Colleague",
-  vizRouteFromSub: "submits concern",
-  vizRouteManager: "Usual owner",
-  vizRouteBypassed: "bypassed",
+  vizRouteFromSub: "raises a concern",
+  vizRouteManager: "Usual category owner",
+  vizRouteBypassed: "not involved",
   vizRouteTo: "Designated contact",
-  vizRouteToSub: "owns the case",
-  vizRouteCaption: "Categories you mark as sensitive, such as HR or leadership concerns",
+  vizRouteToSub: "receives and owns the case",
+  vizRouteCaption: "For categories marked sensitive, a concern goes straight to a person you choose.",
 };
 
 export const CX_VIZ = {

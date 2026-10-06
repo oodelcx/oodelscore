@@ -98,6 +98,8 @@ interface FooterLinkDef {
 
 interface FooterColumn {
   heading: string;
+  /** "sectors": the links start with every sector switched on under Solutions. */
+  source?: string;
   links: FooterLinkDef[];
 }
 
@@ -106,9 +108,20 @@ interface MenuFields {
   footerEmail?: string;
   footerTagline?: string;
   footerColumns?: string;
+  footerSectorLinks?: string;
   copyrightText?: string;
   navDemoLabel?: string;
   hiddenSolutionSlugs?: string;
+}
+
+function parseLinkList(value: string | undefined): FooterLinkDef[] {
+  try {
+    const parsed = JSON.parse(value ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((l) => ({ label: String(l?.label ?? ""), href: String(l?.href ?? "") })).filter((l) => l.label);
+  } catch {
+    return [];
+  }
 }
 
 function parseColumns(value: string | undefined): FooterColumn[] {
@@ -119,6 +132,7 @@ function parseColumns(value: string | undefined): FooterColumn[] {
     return parsed
       .map((c) => ({
         heading: String(c?.heading ?? ""),
+        source: c?.source === "sectors" ? "sectors" : "links",
         links: Array.isArray(c?.links)
           ? c.links.map((l: Partial<FooterLinkDef>) => ({ label: String(l?.label ?? ""), href: String(l?.href ?? "") })).filter((l: FooterLinkDef) => l.label)
           : [],
@@ -159,7 +173,8 @@ function FooterLink({ link, navItems, hiddenSlugs }: { link: FooterLinkDef; navI
 
 /** Same footer on every marketing page: brand block plus any number of link columns, all Site Content. */
 export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; navItems: INavItem[] }) {
-  const columns = parseColumns(fields?.footerColumns);
+  const sectorLinks = parseLinkList(fields?.footerSectorLinks);
+  const columns = parseColumns(fields?.footerColumns).map((c) => (c.source === "sectors" ? { ...c, links: [...sectorLinks, ...c.links] } : c));
   let hiddenSlugs: string[] = [];
   try {
     const parsed = JSON.parse(fields?.hiddenSolutionSlugs ?? "[]");

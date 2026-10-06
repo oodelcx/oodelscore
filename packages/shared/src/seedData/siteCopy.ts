@@ -189,7 +189,7 @@ const EX_FEATURES: Feature[] = [
 ];
 
 /** Bump when the copy below changes, so each page is rewritten once more (and only once) per revision. */
-export const COPY_REV = "3";
+export const COPY_REV = "4";
 
 const FINAL_CTA_SUB = "A twenty-minute walkthrough using a scenario close to your own.";
 
@@ -205,16 +205,9 @@ const FOOTER_COLUMNS = j([
   },
   {
     heading: "Solutions",
-    links: [
-      { label: "Banking & Finance", href: "/solutions/banking" },
-      { label: "Education", href: "/solutions/education" },
-      { label: "Retail", href: "/solutions/retail" },
-      { label: "Healthcare", href: "/solutions/healthcare" },
-      { label: "Telecom", href: "/solutions/telecom" },
-      { label: "Airlines & Aviation", href: "/solutions/airlines" },
-      { label: "Non-profit & NGOs", href: "/solutions/nonprofit" },
-      { label: "Automotive", href: "/solutions/automotive" },
-    ],
+    // The sector links come automatically from the sectors switched on under Solutions.
+    source: "sectors",
+    links: [{ label: "All solutions", href: "/solutions" }],
   },
   {
     heading: "Company",
@@ -349,13 +342,13 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     heroEyebrow: "Company",
     heroSecondaryButton: "See solutions by sector",
     heroSecondaryHref: "/solutions",
-    funcTitle: "What an organisational function has",
-    funcColumns: j(["Finance or HR", "Customer experience, often", "With OodelCX"]),
-    funcRows: j([
-      { label: "Owner", cells: ["A named lead", "Shared across several teams", "A named owner for every issue"] },
-      { label: "Process", cells: ["A defined cycle", "Varies by team and site", "The 5C Framework at every location"] },
-      { label: "Reporting", cells: ["Regular, comparable reports", "Survey results, compiled when time allows", "Scheduled AI Insights reports and exports"] },
-      { label: "Evidence", cells: ["A record of decisions", "Scores, with little record of what changed", "A Decision Log with before and after results"] },
+    pillarsTitle: "What every function needs",
+    pillarsIntro: "OodelCX provides each of these for customer and colleague experience.",
+    pillars: j([
+      { label: "An owner", body: "A named owner and a due date for every issue." },
+      { label: "A process", body: "The 5C Framework, from first response to measured outcome." },
+      { label: "Reporting", body: "Scheduled AI Insights reports, with exports for meetings." },
+      { label: "Evidence", body: "A Decision Log that records what changed and what happened next." },
     ]),
     trustEyebrow: "How the platform handles responsibility",
     trustHeadline: "Built to be used carefully.",
@@ -371,11 +364,11 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     metaDescription:
       "OodelCX exists to give customer and colleague experience the ownership, process and measurement that other organisational functions already have.",
     missionStatement:
-      "Finance has ledgers and controls. HR has policies and records. In many organisations, customer experience has a survey and a report. OodelCX provides the missing structure: a named owner for each issue, a defined process for resolving it, and a measure of whether the resolution worked.",
+      "Finance has ledgers and controls. HR has policies and records. Customer experience benefits from the same things: a named owner for each issue, a defined process for resolving it, and a measure of whether the resolution worked. OodelCX provides that structure.",
     storyHeadline: "Why OodelCX exists",
     storyParagraphs: j([
-      "Most organisations can collect feedback. Far fewer have an agreed process for what happens next: who is responsible for an issue, by when it should be resolved, who is told, and how anyone would know afterwards that it made a difference.",
-      "Where that process is missing, feedback is held in survey tools, inboxes and spreadsheets. Patterns are noticed late, responsibility is unclear, and the decisions that followed are rarely recorded, so they are difficult to evaluate or repeat.",
+      "Collecting feedback is the visible part. What follows needs an agreed process: who is responsible for an issue, by when it should be resolved, who is told, and how anyone would know afterwards that it made a difference.",
+      "When that process is written down and shared, patterns are noticed sooner, responsibility is clear, and the decisions that followed can be reviewed and repeated.",
       "OodelCX is built to supply that process, for both sides of an organisation. Every score on the dashboard traces to a case with an owner, and every case traces to a decision whose effect can be measured, for the customers an organisation serves and for the colleagues who serve them.",
     ]),
     beliefsHeadline: "The principles we build to",

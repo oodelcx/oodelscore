@@ -153,23 +153,24 @@ export function RouteDiagram({ v }: { v: VizContent }) {
   const r = v.route;
   return (
     <Win>
-      <svg className="ds-flow-svg" viewBox="0 0 320 170" role="img" aria-label={`${r.from} to ${r.to}, skipping ${r.manager}`}>
-        <g color="var(--ink)">
-          <rect x="8" y="64" width="84" height="42" rx="12" fill="var(--acc-soft)" />
-          <text x="50" y="82" textAnchor="middle" fontWeight="700">{r.from}</text>
-          <text x="50" y="97" textAnchor="middle" style={{ fontSize: 10.5, opacity: 0.7 }}>{r.fromSub}</text>
-          <rect x="118" y="10" width="92" height="38" rx="12" fill="none" stroke="var(--line)" strokeWidth="2" strokeDasharray="5 5" />
-          <text x="164" y="33" textAnchor="middle" style={{ opacity: 0.55 }}>{r.manager}</text>
-          <path d="M92 78 C 112 60, 124 40, 118 34" fill="none" stroke="var(--line)" strokeWidth="2" strokeDasharray="4 5" />
-          <text x="164" y="64" textAnchor="middle" style={{ fontSize: 10.5, fill: "var(--acc-d)", fontWeight: 700 }}>{r.bypassed}</text>
-          <path d="M92 90 H 232" fill="none" stroke="var(--acc)" strokeWidth="3.5" strokeLinecap="round" />
-          <path d="M224 83 L234 90 L224 97" fill="none" stroke="var(--acc)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-          <rect x="236" y="64" width="76" height="52" rx="12" fill="var(--acc)" />
-          <text x="274" y="86" textAnchor="middle" fontWeight="800" style={{ fill: "#1E0F00" }}>{r.to}</text>
-          <text x="274" y="102" textAnchor="middle" style={{ fontSize: 10.5, fill: "#1E0F00" }}>{r.toSub}</text>
-          <text x="160" y="148" textAnchor="middle" style={{ fontSize: 11.5, opacity: 0.7 }}>{r.caption}</text>
-        </g>
-      </svg>
+      <div className="ds-route">
+        <div className="ds-route-node">
+          <b>{r.from}</b>
+          <small>{r.fromSub}</small>
+        </div>
+        <svg className="ds-route-arrow" viewBox="0 0 48 14" fill="none" aria-hidden="true">
+          <path d="M2 7h40M36 1.5L43 7l-7 5.5" stroke="var(--acc)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <div className="ds-route-node to">
+          <b>{r.to}</b>
+          <small>{r.toSub}</small>
+        </div>
+      </div>
+      <div className="ds-route-skip">
+        <span className="ds-route-chip">{r.manager}</span>
+        <em>{r.bypassed}</em>
+      </div>
+      {r.caption && <p className="ds-route-cap">{r.caption}</p>}
       {v.cases[0] && <CaseRow c={v.cases[0]} />}
     </Win>
   );
