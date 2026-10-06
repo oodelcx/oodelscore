@@ -33,6 +33,25 @@ export interface IndustryDetail {
  * old tagline/benefits fields) borrows the defaults for its slug, field by
  * field — an admin's own edits to a field always win.
  */
+const LIST_KEYS = ["cxUses", "cxSteps", "cxMeasures", "exUses", "exSteps", "exMeasures"] as const;
+
+/** Lists saved as JSON text (older admin saves) become real arrays again. */
+function coerceLists(ind: IndustryDetail): IndustryDetail {
+  const out = { ...ind } as unknown as Record<string, unknown>;
+  for (const key of LIST_KEYS) {
+    const v = out[key];
+    if (typeof v === "string") {
+      try {
+        const parsed = JSON.parse(v);
+        out[key] = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        out[key] = [];
+      }
+    }
+  }
+  return out as unknown as IndustryDetail;
+}
+
 export function mergeIndustries(stored: string | undefined): IndustryDetail[] {
   let db: IndustryDetail[] = [];
   try {
@@ -43,7 +62,7 @@ export function mergeIndustries(stored: string | undefined): IndustryDetail[] {
   }
   const defaults = SOLUTION_INDUSTRIES as unknown as IndustryDetail[];
   if (db.length === 0) return defaults;
-  return db.map((ind) => {
+  return db.map(coerceLists).map((ind) => {
     const seed = defaults.find((d) => d.slug === ind.slug);
     if (!seed) return ind;
     const merged: Record<string, unknown> = { ...seed };

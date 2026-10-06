@@ -9,12 +9,14 @@ export type FieldDef =
   | { key: string; label: string; type: "select"; options: { value: string; label: string }[]; hint?: string }
   | { key: string; label: string; type: "stringList"; hint?: string }
   | { key: string; label: string; type: "objectList"; itemLabel: string; item: FieldDef[]; hint?: string; fixedLength?: boolean }
-  /** A compact list of the items in another objectList, each with a show/hide switch. */
-  | { key: string; label: string; type: "visibilityList"; nameKey: string; visibleKey: string; hint?: string };
+  /** Master/detail editor for a list of items: pick one on the left, edit it in tabs on the right. */
+  | { key: string; label: string; type: "sectorEditor"; nameKey: string; visibleKey: string; tabs: { label: string; fields: FieldDef[] }[]; hint?: string };
 
 export interface SectionDef {
   title: string;
   sub?: string;
+  /** Spans the full width of the page grid. */
+  wide?: boolean;
   fields: FieldDef[];
 }
 
@@ -260,10 +262,47 @@ const useItem: FieldDef[] = [
 
 export const SOLUTIONS_SCHEMA: SectionDef[] = [
   {
-    title: "Sectors on the website",
-    sub: "Switch a sector off to hide it everywhere: the Solutions page, the home page tiles, its own page, and the footer’s Solutions list. Switch it back on to show it again. Edit a sector’s text further down.",
+    title: "Sectors",
+    wide: true,
+    sub: "Pick a sector on the left to edit it. The switch shows or hides it everywhere: the Solutions page, the home page tiles, its own page, and the footer’s Solutions list. Changing a name here changes it everywhere, including the footer.",
     fields: [
-      { key: "industryDetails", label: "Sectors", type: "visibilityList", nameKey: "name", visibleKey: "visible", hint: "The order here follows the list under “Industries”; use ▲ ▼ there to reorder." },
+      {
+        key: "industryDetails",
+        label: "",
+        type: "sectorEditor",
+        nameKey: "name",
+        visibleKey: "visible",
+        tabs: [
+          {
+            label: "Overview",
+            fields: [t("slug", "Page address", "The sector’s page is /solutions/<this>. Changing it changes the address."), t("tileBody", "Short description (shown on the sector tile)")],
+          },
+          {
+            label: "Customer X",
+            fields: [
+              t("cxHeadline", "Headline"),
+              ta("cxSub", "Intro"),
+              ta("cxChallenge", "The challenge (paragraph)"),
+              sl("cxMeasures", "What can be measured"),
+              { key: "cxUses", label: "How it helps (four fit the layout)", type: "objectList", itemLabel: "Benefit", item: useItem },
+              t("cxScene", "Example title"),
+              sl("cxSteps", "Example steps (three fit the layout)"),
+            ],
+          },
+          {
+            label: "Colleague X",
+            fields: [
+              t("exHeadline", "Headline"),
+              ta("exSub", "Intro"),
+              ta("exChallenge", "The challenge (paragraph)"),
+              sl("exMeasures", "What can be measured"),
+              { key: "exUses", label: "How it helps (four fit the layout)", type: "objectList", itemLabel: "Benefit", item: useItem },
+              t("exScene", "Example title"),
+              sl("exSteps", "Example steps (three fit the layout)"),
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -279,37 +318,6 @@ export const SOLUTIONS_SCHEMA: SectionDef[] = [
       t("sceneNote", "Example card footnote"),
       t("otherEyebrow", "Other industries: eyebrow"),
       t("otherHeadline", "Other industries: headline"),
-    ],
-  },
-  {
-    title: "Industries",
-    sub: "Each industry has its own page (/solutions/<slug>) and separate copy for Customer X and Colleague X.",
-    fields: [
-      {
-        key: "industryDetails",
-        label: "Industries",
-        type: "objectList",
-        itemLabel: "Industry",
-        item: [
-          t("slug", "URL slug"),
-          t("name", "Name"),
-          t("tileBody", "Tile description"),
-          t("cxHeadline", "Customer X: headline"),
-          ta("cxSub", "Customer X: intro"),
-          ta("cxChallenge", "Customer X: the challenge (paragraph)"),
-          sl("cxMeasures", "Customer X: what can be measured"),
-          { key: "cxUses", label: "Customer X: benefits (four fit the layout)", type: "objectList", itemLabel: "Benefit", item: useItem },
-          t("cxScene", "Customer X: example title"),
-          sl("cxSteps", "Customer X: example steps"),
-          t("exHeadline", "Colleague X: headline"),
-          ta("exSub", "Colleague X: intro"),
-          ta("exChallenge", "Colleague X: the challenge (paragraph)"),
-          sl("exMeasures", "Colleague X: what can be measured"),
-          { key: "exUses", label: "Colleague X: benefits (four fit the layout)", type: "objectList", itemLabel: "Benefit", item: useItem },
-          t("exScene", "Colleague X: example title"),
-          sl("exSteps", "Colleague X: example steps"),
-        ],
-      },
     ],
   },
   {

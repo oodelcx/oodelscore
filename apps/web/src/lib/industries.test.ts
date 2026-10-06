@@ -20,3 +20,12 @@ describe("sector visibility", () => {
     expect(visibleIndustries(stored)).toHaveLength(2);
   });
 });
+
+describe("sector lists saved as text", () => {
+  it("turns JSON text lists back into arrays", () => {
+    const stored = JSON.stringify([{ slug: "retail", name: "Retail", cxMeasures: '["Queues","Stock"]', cxUses: "not json" }]);
+    const [retail] = mergeIndustries(stored);
+    expect(retail.cxMeasures).toEqual(["Queues", "Stock"]);
+    expect(Array.isArray(retail.cxUses)).toBe(true);
+  });
+});
