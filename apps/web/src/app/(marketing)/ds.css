@@ -104,7 +104,7 @@
 .mkt .ds-track { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 22px; }
 .mkt .ds-track::before, .mkt .ds-track::after { content: ""; position: absolute; top: 21px; left: 10%; height: 3px; border-radius: 3px; }
 .mkt .ds-track::before { right: 10%; background: var(--line); }
-.mkt .ds-track::after { width: var(--fill, 0%); background: var(--green); transition: width .6s cubic-bezier(.4,0,.2,1); max-width: 80%; }
+.mkt .ds-track::after { width: var(--fill, 0%); background: var(--green); max-width: 80%; }
 .mkt .ds-node { position: relative; z-index: 1; display: grid; justify-items: center; gap: 8px; text-align: center; font-weight: 700; font-size: 14px; color: var(--muted); transition: color .3s; padding: 0 2px; }
 .mkt .ds-node i { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 3px solid var(--line); font-style: normal; font-size: 15px; font-weight: 800; transition: all .35s; }
 .mkt .ds-node.on, .mkt .ds-node.past { color: var(--ink); }
@@ -113,7 +113,11 @@
 .mkt .ds-loop-panel { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 4vw, 48px); align-items: center; background: var(--surface); border-radius: 26px; padding: clamp(20px, 3.4vw, 40px); border: 1px solid var(--line); min-height: 300px; }
 .mkt .ds-loop-panel h3 { font-size: clamp(24px, 3vw, 34px); margin: 8px 0 10px; font-weight: 800; }
 .mkt .ds-loop-panel p { color: var(--muted); }
-.mkt .ds-loop-panel .ds-vis { animation: rise .5s both; }
+.mkt .ds-loop-stack { display: grid; }
+.mkt .ds-loop-stack > .ds-loop-panel { grid-area: 1 / 1; }
+.mkt .ds-loop-panel.off { visibility: hidden; pointer-events: none; }
+.mkt .ds-viz-note { margin: 10px 2px 0; font-size: 12px; color: var(--muted); }
+.mkt .ds-band-night .ds-viz-note { color: rgba(255,255,255,.6); }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (max-width: 760px) {
   .mkt .ds-track { grid-template-columns: 1fr; gap: 0; }
@@ -184,6 +188,7 @@
 .mkt .ds-ph-hero { padding-block: clamp(34px, 5vw, 64px); }
 .mkt .ds-ph-hero.cx { background: linear-gradient(180deg, var(--mint), var(--bg)); }
 .mkt .ds-ph-hero.ex { background: linear-gradient(180deg, var(--sand), var(--bg)); }
+.mkt .ds-ph-hero.neu { background: var(--surface); border-bottom: 1px solid var(--line); }
 .mkt .ds-ph-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(24px, 5vw, 60px); align-items: center; }
 .mkt .ds-ph-hero .ds-lead { margin-block: 18px 26px; }
 @media (max-width: 920px) { .ds-ph-grid { grid-template-columns: 1fr; } }
@@ -300,3 +305,47 @@
 .mkt .ds-demo-form label { font-size: 12.5px; font-weight: 650; color: var(--muted); display: grid; gap: 5px; }
 .mkt .ds-form-error { color: #b3261e; font-size: 13.5px; }
 @media (max-width: 860px) { .mkt .ds-contact { grid-template-columns: 1fr; } .mkt .ds-demo-form .ds-two { grid-template-columns: 1fr; } }
+
+/* Solutions: challenge / measures / benefits sections */
+.mkt .ds-sol-challenge { display: grid; grid-template-columns: 1.2fr 1fr; gap: clamp(24px, 5vw, 64px); align-items: start; }
+.mkt .ds-sol-challenge p { color: var(--muted); font-size: 17px; margin-top: 12px; max-width: 62ch; }
+.mkt .ds-measure-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.mkt .ds-measure-list span { padding: 9px 16px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); font-weight: 600; font-size: 14.5px; }
+.mkt .ds-measure-note { margin-top: 14px; font-size: 13px; color: var(--muted); }
+.mkt .ds-uses-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 22px; }
+.mkt .ds-uses-grid .ds-use { display: grid; align-content: start; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
+.mkt .ds-uses-grid .ds-use b { font-size: 16.5px; }
+.mkt .ds-uses-grid .ds-use p { color: var(--muted); font-size: 15px; margin-top: 4px; }
+@media (max-width: 1000px) { .mkt .ds-uses-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 860px) { .mkt .ds-sol-challenge { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .mkt .ds-uses-grid { grid-template-columns: 1fr; } }
+
+/* Company */
+.mkt .ds-hl { font-style: italic; color: var(--green-d); }
+.mkt .ds-co-hero { display: grid; grid-template-columns: 1fr 1.15fr; gap: clamp(24px, 4vw, 56px); align-items: center; }
+.mkt .ds-func { background: var(--bg); border: 1px solid var(--line); border-radius: 22px; padding: clamp(14px, 2vw, 22px); display: grid; gap: 4px; }
+.mkt .ds-func-title { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--green-d); padding: 2px 6px 10px; }
+.mkt .ds-func-row { display: grid; gap: 10px; align-items: start; padding: 12px 6px; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.4; }
+.mkt .ds-func-head { border-top: 0; padding-block: 4px 8px; font-size: 12.5px; }
+.mkt .ds-func-row > b { font-weight: 700; }
+.mkt .ds-func-row > span { color: var(--muted); }
+.mkt .ds-func-row > .us { color: var(--ink); font-weight: 600; background: var(--mint); border-radius: 10px; padding: 8px 10px; margin: -6px 0; }
+.mkt .ds-func-head > b.us { background: var(--green); color: #04130D; border-radius: 10px; padding: 6px 10px; margin: -2px 0; }
+.mkt .ds-co-story { display: grid; grid-template-columns: 1fr 1.4fr; gap: clamp(24px, 5vw, 72px); align-items: start; }
+.mkt .ds-co-prose { display: grid; gap: 16px; }
+.mkt .ds-co-prose p { color: var(--muted); font-size: 17.5px; line-height: 1.65; max-width: 64ch; }
+.mkt .ds-co-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 24px; }
+.mkt .ds-co-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; display: grid; gap: 10px; align-content: start; }
+.mkt .ds-co-card h3 { font-size: 18px; letter-spacing: -.01em; line-height: 1.2; }
+.mkt .ds-co-card p { color: var(--muted); font-size: 15px; }
+.mkt .ds-co-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--mint); color: var(--green-d); display: grid; place-items: center; }
+.mkt .ds-co-icon svg { width: 22px; height: 22px; }
+.mkt .ds-trust-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 24px; }
+.mkt .ds-trust-item { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+.mkt .ds-trust-item svg { color: var(--green-d); margin-top: 2px; }
+.mkt .ds-trust-item b { font-size: 16.5px; }
+.mkt .ds-trust-item p { color: var(--muted); font-size: 15px; margin-top: 4px; }
+@media (max-width: 1000px) { .mkt .ds-co-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 860px) { .mkt .ds-co-hero, .mkt .ds-co-story { grid-template-columns: 1fr; } .mkt .ds-trust-grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .mkt .ds-co-grid { grid-template-columns: 1fr; } .mkt .ds-func-row { font-size: 12.5px; gap: 6px; } }
+.mkt .ds-co-hero .ds-h1 { font-size: clamp(32px, 4.2vw, 52px); }

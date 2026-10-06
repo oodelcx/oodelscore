@@ -260,6 +260,7 @@ export function ConfirmVisual({ v }: { v: VizContent }) {
 export function DashVisual({ v }: { v: VizContent }) {
   const d = v.dash;
   return (
+    <>
     <Win>
       <div className="ds-kpis">
         {d.kpis.map((k, i) => (
@@ -284,22 +285,35 @@ export function DashVisual({ v }: { v: VizContent }) {
       <Chips items={d.chips} />
       <CaseRow c={{ initials: d.caseInitials, title: d.caseTitle, sub: d.caseSub, pill: d.casePill }} />
     </Win>
+    {v.note && <p className="ds-viz-note">{v.note}</p>}
+    </>
   );
 }
 
 export { Phone as PhoneMock };
 
 export function StageVisual({ stage, v }: { stage: string; v: VizContent }) {
+  let body: ReactNode;
   switch (stage) {
     case "capture":
-      return <CaptureVisual v={v} />;
+      body = <CaptureVisual v={v} />;
+      break;
     case "clarify":
-      return <ClarifyVisual v={v} />;
+      body = <ClarifyVisual v={v} />;
+      break;
     case "claim":
-      return <ClaimVisual v={v} />;
+      body = <ClaimVisual v={v} />;
+      break;
     case "close":
-      return <CloseVisual v={v} />;
+      body = <CloseVisual v={v} />;
+      break;
     default:
-      return <ConfirmVisual v={v} />;
+      body = <ConfirmVisual v={v} />;
   }
+  return (
+    <>
+      {body}
+      {v.note && <p className="ds-viz-note">{v.note}</p>}
+    </>
+  );
 }

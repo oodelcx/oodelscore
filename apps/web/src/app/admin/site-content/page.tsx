@@ -469,51 +469,6 @@ function MenuPanel({
         </button>
       </div>
       <div className="card">
-        <h3>Footer</h3>
-        <p className="card-sub">Tagline and each column&rsquo;s links, matching the live footer.</p>
-        <Field label="Tagline" value={content.fields.footerDescription} onChange={(v) => onFieldChange("menu", "footerDescription", v)} />
-        <div style={{ marginBottom: 14 }}>
-          <b style={{ fontSize: 12.5 }}>Footer column 1 links</b>
-          <Field
-            label="Column heading"
-            value={content.fields.footerProductHeading}
-            onChange={(v) => onFieldChange("menu", "footerProductHeading", v)}
-            placeholder="Customer X"
-          />
-          <StringListEditor
-            items={parseJsonArray<string>(content.fields.footerProductLinks)}
-            onChange={(items) => onFieldChange("menu", "footerProductLinks", JSON.stringify(items))}
-          />
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <b style={{ fontSize: 12.5 }}>Footer column 2 links</b>
-          <Field
-            label="Column heading"
-            value={content.fields.footerSolutionsHeading}
-            onChange={(v) => onFieldChange("menu", "footerSolutionsHeading", v)}
-            placeholder="Solutions"
-          />
-          <StringListEditor
-            items={parseJsonArray<string>(content.fields.footerSolutionsLinks)}
-            onChange={(items) => onFieldChange("menu", "footerSolutionsLinks", JSON.stringify(items))}
-          />
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <b style={{ fontSize: 12.5 }}>Footer column 3 links</b>
-          <Field
-            label="Column heading"
-            value={content.fields.footerCompanyHeading}
-            onChange={(v) => onFieldChange("menu", "footerCompanyHeading", v)}
-            placeholder="Company"
-          />
-          <StringListEditor
-            items={parseJsonArray<string>(content.fields.footerCompanyLinks)}
-            onChange={(items) => onFieldChange("menu", "footerCompanyLinks", JSON.stringify(items))}
-          />
-        </div>
-        <Field label="Copyright text" value={content.fields.copyrightText} onChange={(v) => onFieldChange("menu", "copyrightText", v)} />
-      </div>
-      <div className="card">
         <h3>Browser tab</h3>
         <p className="card-sub">The name shown in the browser tab and bookmarks, site-wide.</p>
         <Field label="Site name" value={content.fields.siteName} onChange={(v) => onFieldChange("menu", "siteName", v)} />

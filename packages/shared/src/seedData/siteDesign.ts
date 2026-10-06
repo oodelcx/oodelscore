@@ -57,7 +57,8 @@ const VIZ_COMMON = {
   vizCaptureComment: "Tell us more (optional)",
   vizCaptureQrTitle: "Scan a QR code",
   vizCaptureLinkTitle: "Or open a link",
-  vizTracedBadge: "AI",
+  vizTracedBadge: "Why",
+  vizNote: "Illustrative example. Figures are not real customer data.",
   vizBeforeLabel: "Before",
   vizAfterLabel: "After",
   vizLadder: j(LADDER),
@@ -67,14 +68,14 @@ const VIZ_COMMON = {
   vizLadderNext: "Next",
   vizRouteFrom: "Colleague",
   vizRouteFromSub: "submits concern",
-  vizRouteManager: "Line manager",
+  vizRouteManager: "Usual owner",
   vizRouteBypassed: "bypassed",
-  vizRouteTo: "HR lead",
+  vizRouteTo: "Designated contact",
   vizRouteToSub: "owns the case",
-  vizRouteCaption: "Sensitive categories: HR, leadership, harassment",
+  vizRouteCaption: "Categories you mark as sensitive, such as HR or leadership concerns",
 };
 
-const CX_VIZ = {
+export const CX_VIZ = {
   ...VIZ_COMMON,
   vizCaptureTitle: "How was your visit?",
   vizCaptureNps: "How likely are you to recommend us?",
@@ -86,13 +87,13 @@ const CX_VIZ = {
     { label: "Staff", count: "3" },
     { label: "Pricing", count: "2" },
   ]),
-  vizTracedTitle: "Traced to one shift",
-  vizTracedBody: "All 5 mentions fall in one 90-minute window, Downtown",
+  vizTracedTitle: "Concentrated in one time window",
+  vizTracedBody: "9 of 14 negative comments fall between 12:00 and 14:00",
   vizClaimStyle: "cases",
   vizCases: j([
     { initials: "!", title: "Star average below 3.5, Downtown", sub: "Alert sent to branch manager · 4 min ago", pill: "Alert", tone: "warn" },
-    { initials: "SK", title: "Cleanliness dip, morning shift", sub: "Owner Sam K. · due in 2 days", pill: "Claimed", tone: "ok" },
-    { initials: "RL", title: "Level 2: Regional lead", sub: "No movement for 48h, escalated", pill: "Escalated", tone: "ok" },
+    { initials: "SK", title: "Cleanliness dip, Downtown", sub: "Owner Sam K. · due in 2 days", pill: "Claimed", tone: "ok" },
+    { initials: "RL", title: "Level 2: Regional lead", sub: "No movement within the set time, escalated", pill: "Escalated", tone: "ok" },
   ]),
   vizPlaybookChips: j(["Playbook: Staff Friendliness Recovery", "Review responses", "Coach team"]),
   vizDecisionInitials: "DL",
@@ -101,7 +102,7 @@ const CX_VIZ = {
   vizBefore: "3.9",
   vizAfter: "4.6",
   vizReplyInitials: "✉",
-  vizReplyTitle: "Reply sent to the customer",
+  vizReplyTitle: "Reply sent where contact details were left",
   vizReplyQuote: "Thanks for telling us. The queue is fixed.",
   vizDashKpis: j([
     { label: "NPS", value: "42", delta: "+6" },
@@ -110,13 +111,13 @@ const CX_VIZ = {
   ]),
   vizDashChips: j(["Wait time · 14", "Cleanliness · 6", "Staff · 3"]),
   vizDashCaseInitials: "SK",
-  vizDashCaseTitle: "Cleanliness dip, morning shift",
+  vizDashCaseTitle: "Cleanliness dip, Downtown",
   vizDashCaseSub: "Owner Sam K. · due in 2 days",
   vizDashCasePill: "Claimed",
   vizLadderCaption: "CX Pulse maturity",
 };
 
-const EX_VIZ = {
+export const EX_VIZ = {
   ...VIZ_COMMON,
   vizCaptureTitle: "How was your shift?",
   vizCaptureNps: "How likely are you to recommend working here?",
@@ -128,8 +129,8 @@ const EX_VIZ = {
     { label: "Training", count: "3" },
     { label: "Pay clarity", count: "2" },
   ]),
-  vizTracedTitle: "Traced to one shift",
-  vizTracedBody: "All 9 mentions fall on Friday nights, Branch 4",
+  vizTracedTitle: "Concentrated in one time window",
+  vizTracedBody: "6 of 9 negative comments fall between 20:00 and 22:00",
   vizClaimStyle: "route",
   vizCases: j([
     { initials: "HR", title: "Case opened, anonymous", sub: "Owner Smith · due in 3 days", pill: "Sensitive", tone: "warn" },
@@ -141,153 +142,23 @@ const EX_VIZ = {
   vizBefore: "31",
   vizAfter: "52",
   vizReplyInitials: "✉",
-  vizReplyTitle: "Update sent to the team",
+  vizReplyTitle: "Update sent to the whole roster",
   vizReplyQuote: "You raised it, we changed the rota.",
   vizDashKpis: j([
     { label: "eNPS", value: "38", delta: "+6" },
-    { label: "Response rate", value: "71%", delta: "+4%" },
+    { label: "Open cases", value: "4", delta: "-2" },
     { label: "Colleague Pulse", value: "49", delta: "L3" },
   ]),
   vizDashChips: j(["Scheduling · 9", "Equipment · 6", "Training · 3"]),
   vizDashCaseInitials: "HR",
-  vizDashCaseTitle: "Rota change, night shift",
+  vizDashCaseTitle: "Rota concern, Branch 4",
   vizDashCaseSub: "Owner Smith · due in 3 days",
   vizDashCasePill: "Claimed",
   vizLadderCaption: "Colleague Pulse maturity",
 };
 
-const industry = (o: {
-  slug: string;
-  name: string;
-  tileBody: string;
-  cx: { h: string; s: string; uses: [string, string, string][]; scene: string; steps: [string, string, string] };
-  ex: { h: string; s: string; uses: [string, string, string][]; scene: string; steps: [string, string, string] };
-}) => ({
-  slug: o.slug,
-  name: o.name,
-  tileBody: o.tileBody,
-  cxHeadline: o.cx.h,
-  cxSub: o.cx.s,
-  cxUses: o.cx.uses.map(([icon, title, body]) => ({ icon, title, body })),
-  cxScene: o.cx.scene,
-  cxSteps: o.cx.steps,
-  exHeadline: o.ex.h,
-  exSub: o.ex.s,
-  exUses: o.ex.uses.map(([icon, title, body]) => ({ icon, title, body })),
-  exScene: o.ex.scene,
-  exSteps: o.ex.steps,
-});
-
-export const SOLUTION_INDUSTRIES = [
-  industry({
-    slug: "banking",
-    name: "Banking & Finance",
-    tileBody: "Branch networks and conduct-sensitive complaints",
-    cx: {
-      h: "Branch feedback, routed and recorded properly.",
-      s: "Complaints about advice or fees need to reach the right function quickly, and the handling needs to be on record. Feedback held in branch inboxes does neither.",
-      uses: [
-        ["pin", "Branch-level visibility", "When a branch falls below its threshold, the regional lead is notified the same day."],
-        ["shield", "Conduct-sensitive routing", "Complaints about advice or fees go to compliance, not the branch queue."],
-        ["log", "A record for every case", "Every case keeps its owner, replies and decision history."],
-      ],
-      scene: "Branch 14: complaint about a product sale",
-      steps: ["Feedback arrives by QR code or link", "Routed to Compliance", "Owner assigned, outcome measured"],
-    },
-    ex: {
-      h: "Branch colleagues need a route that does not run through the branch.",
-      s: "Front-line teams see process failures first, but raising a concern with a line manager is often not an option. A separate route changes what gets reported.",
-      uses: [
-        ["shield", "Speak-up route", "Concerns about a manager go straight to HR."],
-        ["pin", "Branch comparison", "Identify branches with a morale concern early."],
-        ["log", "Fixes with outcomes", "Log the rota or process change and measure the effect."],
-      ],
-      scene: "Branch 14: rota concern, anonymous",
-      steps: ["Concern arrives by QR code or link", "Routed to HR", "Owner assigned, outcome measured"],
-    },
-  }),
-  industry({
-    slug: "education",
-    name: "Education",
-    tileBody: "Multi-campus trusts comparing term over term",
-    cx: {
-      h: "Comparing campuses on a consistent basis.",
-      s: "Trusts need facilities, communication and pastoral measures from each site on the same scale, term by term, to see where support is needed.",
-      uses: [
-        ["pin", "Campus comparison", "See which site is declining before the term review."],
-        ["log", "Term-over-term trends", "Every score against its own history."],
-        ["shield", "Safeguarding-aware routing", "Sensitive reports reach the right lead."],
-      ],
-      scene: "North Campus: communication score",
-      steps: ["Feedback arrives by QR code or link", "Down 0.4 this term", "Owner assigned, outcome measured"],
-    },
-    ex: {
-      h: "Understanding staff experience across a trust.",
-      s: "Teaching staff seldom have a confidential way to raise workload or leadership concerns, so these tend to surface late, often as resignations.",
-      uses: [
-        ["shield", "Confidential routing", "Concerns about leadership reach the trust, not the head."],
-        ["pin", "Department pulse", "Read patterns by department without naming anyone."],
-        ["log", "eNPS each term", "A trend line for the board."],
-      ],
-      scene: "Science dept: workload theme",
-      steps: ["Concern arrives by QR code or link", "Recurring for 3 weeks", "Owner assigned, outcome measured"],
-    },
-  }),
-  industry({
-    slug: "retail",
-    name: "Retail",
-    tileBody: "Which store and which shift, not a blended average",
-    cx: {
-      h: "Finding the store and the shift behind the average.",
-      s: "A chain-wide average can conceal the single store or shift pattern where service falls short. Responses need to be traceable to both.",
-      uses: [
-        ["pin", "Store and shift view", "Find the exact window where complaints cluster."],
-        ["log", "Playbooks for repeat issues", "Queue times get the same agreed response everywhere."],
-        ["shield", "Alerts to the right manager", "A score drop notifies the store lead in minutes."],
-      ],
-      scene: "Downtown: wait time, Saturday AM",
-      steps: ["Feedback arrives by QR code or link", "5 responses, same window", "Owner assigned, outcome measured"],
-    },
-    ex: {
-      h: "Retention starts with hearing colleagues early.",
-      s: "Turnover is high in retail, so concerns need to be raised through short surveys that suit shift patterns, by QR code or link.",
-      uses: [
-        ["pin", "Store comparison", "Compare morale across the estate."],
-        ["shield", "Manager-safe reporting", "Concerns about a store manager skip the store."],
-        ["log", "Rota changes, measured", "See if a new scheduling policy moved the number."],
-      ],
-      scene: "Store 22: scheduling theme",
-      steps: ["Concern arrives by QR code or link", "eNPS 31 to 52 after fix", "Owner assigned, outcome measured"],
-    },
-  }),
-  industry({
-    slug: "healthcare",
-    name: "Healthcare",
-    tileBody: "Wait-time complaints into a measured fix",
-    cx: {
-      h: "Turning patient feedback into tracked operational work.",
-      s: "Patient comments often reach clinical operations as a periodic report. Facility networks need them to become owned cases with a measured result.",
-      uses: [
-        ["pin", "Facility comparison", "See which site has the longest waits."],
-        ["log", "Before and after", "Measure whether the new triage flow worked."],
-        ["shield", "Sensitive handling", "Clinical concerns route to the right lead."],
-      ],
-      scene: "Clinic B: wait-time complaint",
-      steps: ["Feedback arrives by QR code or link", "Case assigned, due in 2 days", "Owner assigned, outcome measured"],
-    },
-    ex: {
-      h: "Supporting the people who provide care.",
-      s: "Pressure on clinical teams appears first as small, repeated signals. Identifying them early supports retention and continuity of care.",
-      uses: [
-        ["shield", "Confidential escalation", "Concerns bypass the line manager."],
-        ["pin", "Ward-level pulse", "Identify pressure before it becomes absence."],
-        ["log", "Staffing decisions, measured", "Log the change and track the result."],
-      ],
-      scene: "Ward 3: understaffing theme",
-      steps: ["Concern arrives by QR code or link", "Alert sent to HR lead", "Owner assigned, outcome measured"],
-    },
-  }),
-];
+export { SOLUTION_INDUSTRIES } from "./siteIndustries";
+import { SOLUTION_INDUSTRIES } from "./siteIndustries";
 
 /** New/overridden fields per page. Merged over the older seed in siteContent.ts. */
 export const DESIGN_FIELDS: Record<string, Record<string, string>> = {
@@ -385,6 +256,10 @@ export const DESIGN_FIELDS: Record<string, Record<string, string>> = {
     secondaryButtonEx: "How Colleague X works",
     sceneEyebrow: "How it plays out",
     sceneNote: "Illustrative example.",
+    challengeLabel: "The challenge",
+    measuresLabel: "What you can measure",
+    usesLabel: "How OodelCX helps",
+    measuresNote: "Categories are set when the survey is built, so each organisation chooses its own.",
     otherEyebrow: "Other industries",
     otherHeadline: "Same engine, different context.",
     industryDetails: j(SOLUTION_INDUSTRIES),

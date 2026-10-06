@@ -29,7 +29,7 @@ const STAGE_OPTIONS = [
   { value: "none", label: "None (shown in the “Always on” strip)" },
 ];
 
-const ICON_OPTIONS = ["pin", "shield", "log", "bank", "cap", "bag", "cross"].map((v) => ({ value: v, label: v }));
+const ICON_OPTIONS = ["pin", "shield", "log", "bank", "cap", "bag", "cross", "signal", "plane", "heart", "car"].map((v) => ({ value: v, label: v }));
 
 const finalCta = (): SectionDef => ({
   title: "Closing call to action",
@@ -128,6 +128,7 @@ const illustrationSections = (): SectionDef[] => [
     fields: [
       { key: "vizThemes", label: "Themes (bars)", type: "objectList", itemLabel: "Theme", item: [t("label", "Theme"), t("count", "Mentions")] },
       t("vizTracedBadge", "Badge letters"),
+      t("vizNote", "Caption under every illustration", "Keep this: it tells visitors the figures are illustrative."),
       t("vizTracedTitle", "Finding: title"),
       t("vizTracedBody", "Finding: detail"),
     ],
@@ -286,12 +287,16 @@ export const SOLUTIONS_SCHEMA: SectionDef[] = [
           t("tileBody", "Tile description"),
           t("cxHeadline", "Customer X: headline"),
           ta("cxSub", "Customer X: intro"),
-          { key: "cxUses", label: "Customer X: three benefits", type: "objectList", itemLabel: "Benefit", item: useItem },
+          ta("cxChallenge", "Customer X: the challenge (paragraph)"),
+          sl("cxMeasures", "Customer X: what can be measured"),
+          { key: "cxUses", label: "Customer X: benefits (four fit the layout)", type: "objectList", itemLabel: "Benefit", item: useItem },
           t("cxScene", "Customer X: example title"),
           sl("cxSteps", "Customer X: example steps"),
           t("exHeadline", "Colleague X: headline"),
           ta("exSub", "Colleague X: intro"),
-          { key: "exUses", label: "Colleague X: three benefits", type: "objectList", itemLabel: "Benefit", item: useItem },
+          ta("exChallenge", "Colleague X: the challenge (paragraph)"),
+          sl("exMeasures", "Colleague X: what can be measured"),
+          { key: "exUses", label: "Colleague X: benefits (four fit the layout)", type: "objectList", itemLabel: "Benefit", item: useItem },
           t("exScene", "Colleague X: example title"),
           sl("exSteps", "Colleague X: example steps"),
         ],
@@ -305,6 +310,32 @@ export const SOLUTIONS_SCHEMA: SectionDef[] = [
 ];
 
 export const SHARED_TEXT_SCHEMA: SectionDef[] = [
+  {
+    title: "Footer",
+    sub: "The footer on every marketing page: a short description, an email, and any number of link columns.",
+    fields: [
+      ta("footerDescription", "Description under the logo"),
+      t("footerEmail", "Contact email (shown under the description)"),
+      t("footerTagline", "Line in the bottom bar", "Shown after the copyright text."),
+      t("copyrightText", "Copyright text"),
+      {
+        key: "footerColumns",
+        label: "Link columns",
+        type: "objectList",
+        itemLabel: "Column",
+        item: [
+          t("heading", "Column heading"),
+          {
+            key: "links",
+            label: "Links",
+            type: "objectList",
+            itemLabel: "Link",
+            item: [t("label", "Link text"), t("href", "Link address", "A page like /pricing, a section like /company#demo, or a full address.")],
+          },
+        ],
+      },
+    ],
+  },
   {
     title: "Header buttons",
     fields: [
@@ -345,6 +376,40 @@ export const SHARED_TEXT_SCHEMA: SectionDef[] = [
 
 export const COMPANY_EXTRA_SCHEMA: SectionDef[] = [
   {
+    title: "Hero extras",
+    sub: "Beside the headline: a label, a second button and the comparison table.",
+    fields: [
+      t("heroEyebrow", "Small label above the headline"),
+      t("heroSecondaryButton", "Second button text"),
+      t("heroSecondaryHref", "Second button link"),
+      t("funcTitle", "Comparison table title"),
+      sl("funcColumns", "Comparison table columns", "Three columns; the last one is highlighted."),
+      {
+        key: "funcRows",
+        label: "Comparison table rows",
+        type: "objectList",
+        itemLabel: "Row",
+        item: [t("label", "Row label"), sl("cells", "Cell text, one per column")],
+      },
+    ],
+  },
+  {
+    title: "How the platform handles responsibility",
+    sub: "Keep these limited to what the product actually does.",
+    fields: [
+      t("trustEyebrow", "Eyebrow"),
+      t("trustHeadline", "Headline"),
+      ta("trustIntro", "Intro"),
+      {
+        key: "trustItems",
+        label: "Points",
+        type: "objectList",
+        itemLabel: "Point",
+        item: [t("title", "Title"), ta("body", "Text")],
+      },
+    ],
+  },
+  {
     title: "Demo form section",
     sub: "The “Book a demo” form at the bottom of the Company page (labels are under Menu & Footer).",
     fields: [
@@ -354,7 +419,6 @@ export const COMPANY_EXTRA_SCHEMA: SectionDef[] = [
       t("demoEmailPrefix", "Text before the email address"),
       t("demoProductLabel", "Product dropdown label"),
       sl("demoProductOptions", "Product dropdown options"),
-      t("audienceLinkLabel", "Industries link text"),
     ],
   },
 ];

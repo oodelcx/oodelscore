@@ -11,7 +11,7 @@
  * applied once to existing databases (see `applyCopyV2Migration` in db.ts), so
  * every key here is still editable from Admin -> Site Content afterwards.
  */
-import { SOLUTION_INDUSTRIES, defaultStageForFeature } from "./siteDesign";
+import { SOLUTION_INDUSTRIES, CX_VIZ, EX_VIZ, defaultStageForFeature } from "./siteDesign";
 
 const j = (v: unknown): string => JSON.stringify(v);
 
@@ -43,7 +43,7 @@ const CX_FEATURES: Feature[] = [
     tag: "Root Cause Investigation",
     group: "understand",
     headline: "From symptom to underlying cause",
-    body: "Related responses are traced to a shared cause across shifts, branches or periods, so corrective action addresses the problem rather than its most visible symptom.",
+    body: "For a category that is falling, the platform gathers the evidence: change against the previous period, the two-hour windows where negative comments cluster, the branches with the lowest scores, and any earlier decision. It then explains that evidence, labelled likely, inferred or uncertain.",
   },
   {
     tag: "Driver Analysis",
@@ -73,7 +73,7 @@ const CX_FEATURES: Feature[] = [
     tag: "Case Management",
     group: "act",
     headline: "A defined place for corrective work",
-    body: "Flagged feedback becomes a case with a named owner, a due date and a status, so each issue has a clear line of responsibility.",
+    body: "Flagged feedback becomes a case with a named owner, a due date and a status. Every change is kept in one timeline, so each issue has a clear line of responsibility.",
   },
   {
     tag: "Automatic Alerts",
@@ -91,13 +91,13 @@ const CX_FEATURES: Feature[] = [
     tag: "Decision Log",
     group: "act",
     headline: "A record of what was changed and its effect",
-    body: "Significant changes are logged with the trigger, the owner and a measured before-and-after result, giving the organisation evidence of what worked.",
+    body: "Significant changes are logged with the trigger, the owner and a before-and-after comparison, marked with how much data sits behind it, so the organisation has evidence of what worked.",
   },
   {
     tag: "Escalation Workflows",
     group: "act",
     headline: "Escalation when a case is not progressing",
-    body: "A case with no movement is escalated along a chain you define, so the person with authority to act is informed in good time.",
+    body: "You define the escalation chain and the time allowed at each level. A case with no movement moves up to the next level, so the person with authority to act is informed in good time.",
   },
   {
     tag: "Downloadable Reports",
@@ -109,7 +109,7 @@ const CX_FEATURES: Feature[] = [
     tag: "Roles, Permissions & Security",
     group: "act",
     headline: "Access matched to responsibility",
-    body: "Custom roles limit each person to what their role requires: a shift lead sees their own cases, finance sees billing, a regional manager sees their region. Two-factor authentication protects every login.",
+    body: "Per-person permissions control which areas each team member can open, so access matches responsibility. Two-factor authentication protects every login, and sensitive account changes are recorded in an audit log.",
   },
 ];
 
@@ -136,13 +136,13 @@ const EX_FEATURES: Feature[] = [
     tag: "Sensitive-Category Routing",
     group: "understand",
     headline: "Concerns about a manager do not reach that manager",
-    body: "Categories marked sensitive, such as HR complaints, leadership concerns and harassment, bypass normal owner routing and go to a designated contact.",
+    body: "Categories you mark as sensitive, such as HR complaints or leadership concerns, skip the usual category owner and go to a designated contact. Comments that appear to concern a senior person are also screened.",
   },
   {
     tag: "Colleague Roster",
     group: "understand",
     headline: "Feedback linked to teams, not an anonymous pool",
-    body: "A roster by location and role lets patterns be read by shift, branch or department, while individual responses can remain anonymous.",
+    body: "A roster by location and role lets patterns be read by branch or team, while individual responses stay anonymous. Results for any group with fewer than five responses are never shown.",
   },
   {
     tag: "CX ↔ EX Correlation",
@@ -188,10 +188,51 @@ const EX_FEATURES: Feature[] = [
   },
 ];
 
+/** Bump when the copy below changes, so each page is rewritten once more (and only once) per revision. */
+export const COPY_REV = "3";
+
 const FINAL_CTA_SUB = "A twenty-minute walkthrough using a scenario close to your own.";
+
+const FOOTER_COLUMNS = j([
+  {
+    heading: "Products",
+    links: [
+      { label: "Customer X", href: "/customer-x" },
+      { label: "Colleague X", href: "/colleague-x" },
+      { label: "Pricing", href: "/pricing" },
+      { label: "The 5C Framework", href: "/#loop" },
+    ],
+  },
+  {
+    heading: "Solutions",
+    links: [
+      { label: "Banking & Finance", href: "/solutions/banking" },
+      { label: "Education", href: "/solutions/education" },
+      { label: "Retail", href: "/solutions/retail" },
+      { label: "Healthcare", href: "/solutions/healthcare" },
+      { label: "Telecom", href: "/solutions/telecom" },
+      { label: "Airlines & Aviation", href: "/solutions/airlines" },
+      { label: "Non-profit & NGOs", href: "/solutions/nonprofit" },
+      { label: "Automotive", href: "/solutions/automotive" },
+    ],
+  },
+  {
+    heading: "Company",
+    links: [
+      { label: "About", href: "/company" },
+      { label: "Book a demo", href: "/company#demo" },
+      { label: "Sign in", href: "/login" },
+      { label: "Privacy policy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+    ],
+  },
+]);
 
 export const COPY_V2: Record<string, Record<string, string>> = {
   menu: {
+    footerColumns: FOOTER_COLUMNS,
+    footerEmail: "hello@oodelscore.com",
+    footerTagline: "Customer X and Colleague X can each be used on their own, or together.",
     footerDescription:
       "OodelCX provides the structure to run customer and colleague experience as an organisational function: feedback captured at every location, issues assigned and resolved, and outcomes measured over time.",
     cookieBody: "We use a necessary session cookie to keep you signed in. Nothing else runs unless you allow it. See our",
@@ -221,7 +262,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     heroTwoProductsEyebrow: "Two products, one operating model",
     heroTwoProductsHeadline: "One operating model for the two groups every organisation depends on.",
     heroTwoProductsBody:
-      "Customer X covers the people an organisation serves. Colleague X covers the people who serve them. Both use the same framework, the same case management and the same maturity measure, so the two can be read together.",
+      "Customer X covers the people an organisation serves. Colleague X covers the people who serve them. Each can be used on its own, or both together. They share the same framework, case management and maturity measure, so the two can be read side by side.",
     heroTwoProductsCxLabel: "The people you serve",
     heroTwoProductsCxBody: "How customers, clients and patients experience the organisation after each interaction.",
     heroTwoProductsCeLabel: "The people who work for you",
@@ -269,6 +310,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     metaDescription:
       "Customer X from OodelCX: collect customer feedback by QR code or link, assign ownership with Case Management, and measure improvement with CX Pulse.",
     heroChips: j(["No app, no login", "Named owners", "Measured outcomes"]),
+    ...CX_VIZ,
     alwaysOnText: "Roles, permissions and two-factor authentication on every plan",
     industriesHeadline: "Used in the sectors where service quality matters.",
     features: withStage(CX_FEATURES),
@@ -282,6 +324,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     metaDescription:
       "Colleague X from OodelCX: internal feedback collected by QR code or link, with routing of sensitive concerns to HR, Case Management and eNPS.",
     alwaysOnText: "Anonymity controls, roles and two-factor authentication on every plan",
+    ...EX_VIZ,
     industriesHeadline: "Used in the sectors where retention and morale matter.",
     features: withStage(EX_FEATURES),
     finalCtaHeadline: "See Colleague X in operation.",
@@ -290,15 +333,39 @@ export const COPY_V2: Record<string, Record<string, string>> = {
   solutions: {
     heroHeadline: "Customer experience in the sectors where it carries the most weight.",
     heroBody:
-      "The pressures differ by sector, but the need is the same: feedback that has an owner, a record and a measurable result. These examples show how that applies in four sectors.",
+      "The pressures differ by sector, but the need is the same: feedback that has an owner, a record and a measurable result. These pages show how that applies in eight sectors, for customer feedback and for colleague feedback.",
     metaDescription:
-      "How OodelCX applies to banking, education, retail and healthcare, for customer feedback and colleague feedback.",
+      "How OodelCX applies to banking, education, retail, healthcare, telecom, airlines, non-profits and automotive, for customer feedback and colleague feedback.",
     otherHeadline: "Same framework, different context.",
+    challengeLabel: "The challenge",
+    measuresLabel: "What you can measure",
+    usesLabel: "How OodelCX helps",
+    measuresNote: "Categories are set when the survey is built, so each organisation chooses its own.",
     industryDetails: j(SOLUTION_INDUSTRIES),
     finalCtaHeadline: "Tell us how your organisation is structured.",
     finalCtaSubhead: "We will show how it maps onto the way you work.",
   },
   company: {
+    heroEyebrow: "Company",
+    heroSecondaryButton: "See solutions by sector",
+    heroSecondaryHref: "/solutions",
+    funcTitle: "What an organisational function has",
+    funcColumns: j(["Finance or HR", "Customer experience, often", "With OodelCX"]),
+    funcRows: j([
+      { label: "Owner", cells: ["A named lead", "Shared across several teams", "A named owner for every issue"] },
+      { label: "Process", cells: ["A defined cycle", "Varies by team and site", "The 5C Framework at every location"] },
+      { label: "Reporting", cells: ["Regular, comparable reports", "Survey results, compiled when time allows", "Scheduled AI Insights reports and exports"] },
+      { label: "Evidence", cells: ["A record of decisions", "Scores, with little record of what changed", "A Decision Log with before and after results"] },
+    ]),
+    trustEyebrow: "How the platform handles responsibility",
+    trustHeadline: "Built to be used carefully.",
+    trustIntro: "These describe how the product behaves today.",
+    trustItems: j([
+      { title: "Small groups stay anonymous", body: "Colleague results are never shown for a group of fewer than five responses, so no individual can be picked out." },
+      { title: "AI stays within the evidence", body: "Investigations are written only from figures the platform has computed, and each conclusion is labelled likely, inferred or uncertain." },
+      { title: "A person reviews reports", body: "AI Insights reports are reviewed before they are published to an account." },
+      { title: "Access is controlled", body: "Per-person permissions limit what each team member can open, two-factor authentication protects every login, and sensitive account changes are recorded in an audit log." },
+    ]),
     heroHeadline: "Customer experience deserves the same structure as any other function.",
     heroHighlight: "the same structure as any other function.",
     metaDescription:

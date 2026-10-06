@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { Category } from "./models/Category";
 import { CxPulseScore } from "./models/CxPulseScore";
 import { SiteContent } from "./models/SiteContent";
-import { COPY_V2 } from "./seedData/siteCopy";
+import { COPY_V2, COPY_REV } from "./seedData/siteCopy";
 
 let connectPromise: Promise<typeof mongoose> | null = null;
 let staleIndexSyncPromise: Promise<void> | null = null;
@@ -143,8 +143,8 @@ async function applyCopyV2Migration(col: typeof SiteContent.collection): Promise
     const doc = await col.findOne({ page });
     if (!doc) continue;
     const fields = (doc.fields ?? {}) as Record<string, string>;
-    if (fields.copyV2 === "1") continue;
-    const $set: Record<string, string> = { "fields.copyV2": "1" };
+    if (fields.copyRev === COPY_REV) continue;
+    const $set: Record<string, string> = { "fields.copyRev": COPY_REV };
     for (const [key, value] of Object.entries(copy)) $set[`fields.${key}`] = value;
     await col.updateOne({ _id: doc._id }, { $set });
   }

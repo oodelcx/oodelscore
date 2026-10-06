@@ -30,6 +30,8 @@ export function SolutionsView({
   const headline = ex ? ind.exHeadline : ind.cxHeadline;
   const sub = ex ? ind.exSub : ind.cxSub;
   const uses = (ex ? ind.exUses : ind.cxUses) ?? [];
+  const challenge = ex ? ind.exChallenge : ind.cxChallenge;
+  const measures = (ex ? ind.exMeasures : ind.cxMeasures) ?? [];
   const scene = ex ? ind.exScene : ind.cxScene;
   const steps = (ex ? ind.exSteps : ind.cxSteps) ?? [];
 
@@ -43,8 +45,8 @@ export function SolutionsView({
   }
 
   return (
-    <div className={`ds-root${ex ? " ds-theme-ex" : ""}`}>
-      <section className={`ds-ph-hero ${ex ? "ex" : "cx"}`}>
+    <div className="ds-root">
+      <section className="ds-ph-hero neu">
         <div className="ds-wrap">
           <div className="ds-sol-top">
             <div className="ds-eyebrow">{labels.eyebrow}</div>
@@ -70,17 +72,6 @@ export function SolutionsView({
               <p className="ds-lead" style={{ marginTop: 16 }}>
                 {sub}
               </p>
-              <div className="ds-uses">
-                {uses.map((u, i) => (
-                  <div className="ds-use" key={i}>
-                    <Icon name={u.icon} />
-                    <div>
-                      <b>{u.title}</b>
-                      <p>{u.body}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
               <div className="ds-row" style={{ marginTop: 26 }}>
                 <BookDemoButton className="ds-btn ds-btn-p">{labels.primaryButton}</BookDemoButton>
                 <Link className="ds-btn ds-btn-g" href={ex ? "/colleague-x" : "/customer-x"}>
@@ -105,7 +96,48 @@ export function SolutionsView({
         </div>
       </section>
 
-      <section className="ds-sec ds-band-alt">
+      {(challenge || measures.length > 0) && (
+        <section className="ds-sec">
+          <div className="ds-wrap ds-sol-challenge">
+            <div>
+              <div className="ds-eyebrow">{labels.challengeLabel}</div>
+              <p>{challenge}</p>
+            </div>
+            {measures.length > 0 && (
+              <div>
+                <div className="ds-eyebrow">{labels.measuresLabel}</div>
+                <div className="ds-measure-list">
+                  {measures.map((m, i) => (
+                    <span key={i}>{m}</span>
+                  ))}
+                </div>
+                {labels.measuresNote && <p className="ds-measure-note">{labels.measuresNote}</p>}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {uses.length > 0 && (
+        <section className="ds-sec ds-band-alt">
+          <div className="ds-wrap">
+            <div className="ds-eyebrow">{labels.usesLabel}</div>
+            <div className="ds-uses-grid">
+              {uses.map((u, i) => (
+                <div className="ds-use" key={i}>
+                  <Icon name={u.icon} />
+                  <div>
+                    <b>{u.title}</b>
+                    <p>{u.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="ds-sec">
         <div className="ds-wrap">
           <div className="ds-loop-head">
             <div>

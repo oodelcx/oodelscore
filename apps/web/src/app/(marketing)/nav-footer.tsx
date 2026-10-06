@@ -91,103 +91,99 @@ export function MarketingNav({
   );
 }
 
-interface MenuFields {
-  footerDescription?: string;
-  footerProductLinks?: string;
-  footerSolutionsLinks?: string;
-  footerCompanyLinks?: string;
-  footerProductHeading?: string;
-  footerSolutionsHeading?: string;
-  footerCompanyHeading?: string;
-  copyrightText?: string;
+interface FooterLinkDef {
+  label: string;
+  href: string;
 }
 
-function parseList(value: string | undefined): string[] {
+interface FooterColumn {
+  heading: string;
+  links: FooterLinkDef[];
+}
+
+interface MenuFields {
+  footerDescription?: string;
+  footerEmail?: string;
+  footerTagline?: string;
+  footerColumns?: string;
+  copyrightText?: string;
+  navDemoLabel?: string;
+}
+
+function parseColumns(value: string | undefined): FooterColumn[] {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((c) => ({
+        heading: String(c?.heading ?? ""),
+        links: Array.isArray(c?.links)
+          ? c.links.map((l: Partial<FooterLinkDef>) => ({ label: String(l?.label ?? ""), href: String(l?.href ?? "") })).filter((l: FooterLinkDef) => l.label)
+          : [],
+      }))
+      .filter((c: FooterColumn) => c.heading || c.links.length);
   } catch {
     return [];
   }
 }
 
-// Every footer link routes to a real page — nothing here is a dead anchor.
-// "How it works" (Product column) is a distinct, older link straight to
-// /customer-x's overview — not the same thing as the "The mechanism" link
-// below, which points at the deeper step-by-step /how-it-works page. Two
-// different labels, two different URLs, on purpose.
-const FOOTER_LINK_HREF: Record<string, string> = {
-  "How it works": "/customer-x",
-  "The mechanism": "/how-it-works",
-  "CX Pulse": "/#cx-pulse",
-  "Colleague Pulse": "/colleague-x",
-  "Colleague X": "/colleague-x",
-  Pricing: "/pricing",
-  Solutions: "/solutions",
-  Industries: "/how-it-works",
-  About: "/company",
-  Contact: "/contact",
-  "Privacy policy": "/privacy",
-  Terms: "/terms",
-};
-
-// Reverse of PATH_BY_KEY — lets a footer link's resolved href be matched
-// back to the nav item that gates the page it points to, so a footer link
-// can be skipped the same way the nav link already is when an admin hides
-// that page (Admin → Site Content → Menu & Footer).
+// Reverse of PATH_BY_KEY: lets a footer link be skipped the same way its nav
+// link is when an admin hides that page (Admin -> Site Content -> Menu & Footer).
 const NAV_KEY_BY_PATH: Record<string, string> = Object.fromEntries(
   Object.entries(PATH_BY_KEY).map(([key, path]) => [path, key])
 );
 
 function isHiddenByNav(href: string, navItems: INavItem[]): boolean {
   const navKey = NAV_KEY_BY_PATH[href];
-  if (!navKey) return false; // not a gated marketing page (About/Privacy/Terms/CX Pulse anchor, etc.) — always show
+  if (!navKey) return false; // not a gated marketing page (a sector page, Privacy, Terms, an anchor): always show
   const item = navItems.find((n) => n.key === navKey);
   return item?.visible === false;
 }
 
-function FooterLink({ label, fallback, navItems }: { label: string; fallback: string; navItems: INavItem[] }) {
-  if (label.includes("@")) return <a href={`mailto:${label}`}>{label}</a>;
-  const href = FOOTER_LINK_HREF[label] ?? fallback;
+function FooterLink({ link, navItems }: { link: FooterLinkDef; navItems: INavItem[] }) {
+  const { label, href } = link;
+  if (/^(https?:|mailto:)/i.test(href)) {
+    return (
+      <a href={href} {...(href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>
+        {label}
+      </a>
+    );
+  }
   if (isHiddenByNav(href, navItems)) return null;
-  return <Link href={href}>{label}</Link>;
+  return <Link href={href || "/"}>{label}</Link>;
 }
 
-/** Same full 4-column footer on every marketing page — this is the site's
- * one standard footer, not something that varies page to page. */
+/** Same footer on every marketing page: brand block plus any number of link columns, all Site Content. */
 export function MarketingFooter({ fields, navItems }: { fields?: MenuFields; navItems: INavItem[] }) {
+  const columns = parseColumns(fields?.footerColumns);
   return (
     <footer>
       <div className="wrap">
-        <div className="foot-grid">
+        <div className="foot-grid" style={{ gridTemplateColumns: `1.5fr repeat(${Math.max(columns.length, 1)}, 1fr)` }}>
           <div>
             <Link href="/" className="foot-logo">
               <img src="/oodelcx-logo-dark.webp" alt="OodelCX" />
             </Link>
             <div className="foot-desc">{fields?.footerDescription}</div>
+            {fields?.footerEmail && (
+              <a className="foot-mail" href={`mailto:${fields.footerEmail}`}>
+                {fields.footerEmail}
+              </a>
+            )}
           </div>
-          <div className="foot-col">
-            <h4>{fields?.footerProductHeading || "Product"}</h4>
-            {parseList(fields?.footerProductLinks).map((label, i) => (
-              <FooterLink key={i} label={label} fallback="/customer-x" navItems={navItems} />
-            ))}
-          </div>
-          <div className="foot-col">
-            <h4>{fields?.footerSolutionsHeading || "Solutions"}</h4>
-            {parseList(fields?.footerSolutionsLinks).map((label, i) => (
-              <FooterLink key={i} label={label} fallback="/solutions" navItems={navItems} />
-            ))}
-          </div>
-          <div className="foot-col">
-            <h4>{fields?.footerCompanyHeading || "Company"}</h4>
-            {parseList(fields?.footerCompanyLinks).map((label, i) => (
-              <FooterLink key={i} label={label} fallback="/company" navItems={navItems} />
-            ))}
-          </div>
+          {columns.map((col, i) => (
+            <div className="foot-col" key={i}>
+              <h4>{col.heading}</h4>
+              {col.links.map((l, j) => (
+                <FooterLink key={j} link={l} navItems={navItems} />
+              ))}
+            </div>
+          ))}
         </div>
         <div className="foot-bottom">
           <span>{fields?.copyrightText ?? "© OodelCX. All rights reserved."}</span>
+          {fields?.footerTagline && <span>{fields.footerTagline}</span>}
           <ManageCookiesLink />
         </div>
       </div>

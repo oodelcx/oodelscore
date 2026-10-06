@@ -40,6 +40,7 @@ export interface CaseItem {
 }
 
 export interface VizContent {
+  note: string;
   capture: { title: string; nps: string; comment: string; send: string; qrTitle: string; qrSub: string; linkTitle: string; linkSub: string };
   themes: { label: string; count: string }[];
   traced: { badge: string; title: string; body: string };
@@ -56,6 +57,7 @@ export interface VizContent {
 /** Everything the stage illustrations say, read from a page's `viz*` fields. */
 export function readViz(f: Fields): VizContent {
   return {
+    note: f.vizNote ?? "",
     capture: {
       title: f.vizCaptureTitle ?? "",
       nps: f.vizCaptureNps ?? "",

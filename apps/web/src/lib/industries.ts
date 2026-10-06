@@ -12,11 +12,15 @@ export interface IndustryDetail {
   tileBody?: string;
   cxHeadline?: string;
   cxSub?: string;
+  cxChallenge?: string;
+  cxMeasures?: string[];
   cxUses?: IndustryUse[];
   cxScene?: string;
   cxSteps?: string[];
   exHeadline?: string;
   exSub?: string;
+  exChallenge?: string;
+  exMeasures?: string[];
   exUses?: IndustryUse[];
   exScene?: string;
   exSteps?: string[];
