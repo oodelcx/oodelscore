@@ -61,6 +61,16 @@ import type { Product } from "../models/products";
  * to generate them live against this real data via the Claude API.
  */
 export const SHOWCASE_PASSWORD = "ocx123";
+
+/**
+ * Optional demo-volume knobs (the wipe-and-reseed CLI sets them; every other
+ * caller keeps the original small dataset). SCALE multiplies the number of
+ * responses per feedback point; HISTORY_DAYS spreads the extra responses back
+ * over that many days so the previous week, month, quarter and calendar year
+ * (the periods AI Insight Reports cover) all have real data behind them.
+ */
+const responseScale = (): number => Math.max(1, Number(process.env.SHOWCASE_RESPONSE_SCALE ?? 1) || 1);
+const historyDays = (): number => Math.max(0, Number(process.env.SHOWCASE_HISTORY_DAYS ?? 0) || 0);
 const EMAIL_DOMAIN = "showcase.oodel.test";
 
 function randomInt(min: number, max: number): number {
@@ -592,10 +602,25 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     const categoryNameById = params.product === "colleague_experience" ? categoryNameByIdCe : categoryNameByIdCx;
     const lowScoreEvents: LowScoreEvent[] = [];
 
-    for (let i = 0; i < params.count; i++) {
+    // Extra, history-spanning responses (demo volume). Never for event-linked
+    // points (training sessions have their own dated window), and they never
+    // feed the low-score case list below, so cases/alerts stay as before.
+    const HISTORY_DAYS = historyDays();
+    const extraCount = HISTORY_DAYS > 0 && !params.feedbackPoint.eventId ? Math.round(params.count * (responseScale() - 1)) : 0;
+
+    for (let i = 0; i < params.count + extraCount; i++) {
+      const isExtra = i >= params.count;
+      let ageDays = randomInt(0, params.dayWindow);
+      let badShare = 0.16;
+      if (isExtra) {
+        // 30% land in the last 60 days so the latest week is never empty;
+        // the rest spread over the full history with a gentle improvement trend.
+        ageDays = Math.random() < 0.3 ? randomInt(0, 60) : randomInt(0, HISTORY_DAYS);
+        badShare = 0.12 + 0.16 * (ageDays / HISTORY_DAYS);
+      }
       const roll = Math.random();
-      const mood: "bad" | "neutral" | "good" = roll < 0.16 ? "bad" : roll < 0.32 ? "neutral" : "good";
-      const submittedAt = daysAgo(randomInt(0, params.dayWindow));
+      const mood: "bad" | "neutral" | "good" = roll < badShare ? "bad" : roll < badShare + 0.16 ? "neutral" : "good";
+      const submittedAt = daysAgo(ageDays);
 
       let lowestStarCategoryId: Types.ObjectId | null = null;
       let lowestStarValue = 5;
@@ -635,7 +660,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       });
       result.responses++;
 
-      if (mood === "bad" && lowestStarValue <= 2) {
+      if (!isExtra && mood === "bad" && lowestStarValue <= 2) {
         lowScoreEvents.push({
           businessId: params.businessId,
           parentOrgId: params.parentOrgId,
