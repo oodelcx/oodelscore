@@ -214,45 +214,47 @@ export default async function ProductPage() {
     <>
       <MarketingNav active="customer-x" navItems={menu.navItems} headerStyle={menu.fields.headerStyle} />
 
-      <section className="product-intro">
-        <div className="wrap">
-          <h1>{f.heroHeadline}</h1>
-          <p>{f.heroSubheadline}</p>
-        </div>
-      </section>
-
-      {features.map((feature, i) => (
-        <section
-          id={featureSlug(feature.tag)}
-          className={`feature-row${i % 2 === 1 ? " reverse" : ""}`}
-          key={feature.tag}
-          style={i % 2 === 1 ? { background: "var(--paper-alt)" } : undefined}
-        >
+      <div className="page-customer-x">
+        <section className="product-intro">
           <div className="wrap">
-            <Reveal>
-              <div className="feature-tag">{feature.tag}</div>
-              <h2>{feature.headline}</h2>
-              <p>{feature.body}</p>
-            </Reveal>
-            <Reveal delay={80}>
-              <FeatureVisual tag={feature.tag} />
-            </Reveal>
+            <h1>{f.heroHeadline}</h1>
+            <p>{f.heroSubheadline}</p>
           </div>
         </section>
-      ))}
 
-      <section className="final-cta">
-        <div className="wrap">
-          <h2>{f.finalCtaHeadline || "See the whole loop, start to finish."}</h2>
-          <p>{f.finalCtaSubhead || "Twenty minutes, a live walkthrough of real workflows — not a canned script."}</p>
-          <div className="hero-ctas" style={{ justifyContent: "center" }}>
-            <BookDemoButton className="btn-primary hover-lift">{f.finalCtaPrimaryButton || "Book a demo"}</BookDemoButton>
-            <a className="btn-ghost hover-lift" href="/login">
-              {f.finalCtaSecondaryButton || "Sign in"}
-            </a>
+        {features.map((feature, i) => (
+          <section
+            id={featureSlug(feature.tag)}
+            className={`feature-row${i % 2 === 1 ? " reverse" : ""}`}
+            key={feature.tag}
+            style={i % 2 === 1 ? { background: "var(--paper-alt)" } : undefined}
+          >
+            <div className="wrap">
+              <Reveal>
+                <div className="feature-tag">{feature.tag}</div>
+                <h2>{feature.headline}</h2>
+                <p>{feature.body}</p>
+              </Reveal>
+              <Reveal delay={80}>
+                <FeatureVisual tag={feature.tag} />
+              </Reveal>
+            </div>
+          </section>
+        ))}
+
+        <section className="final-cta">
+          <div className="wrap">
+            <h2>{f.finalCtaHeadline || "See the whole loop, start to finish."}</h2>
+            <p>{f.finalCtaSubhead || "Twenty minutes, a live walkthrough of real workflows — not a canned script."}</p>
+            <div className="hero-ctas" style={{ justifyContent: "center" }}>
+              <BookDemoButton className="btn-primary hover-lift">{f.finalCtaPrimaryButton || "Book a demo"}</BookDemoButton>
+              <a className="btn-ghost hover-lift" href="/login">
+                {f.finalCtaSecondaryButton || "Sign in"}
+              </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <MarketingFooter fields={menu.fields} navItems={menu.navItems} />
     </>
