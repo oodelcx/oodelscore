@@ -232,9 +232,9 @@ export function MarketingNav({
   }
 
   // Get root items (no parent), filtered by visibility
-  // Parent is hidden if: not visible OR has no visible children
+  // Parent visibility is independent of children — admin can hide all submenus but keep parent visible
   const visible = navItems
-    .filter((item) => !item.parentKey && item.visible && (!(item.children && item.children.length > 0) || hasVisibleChildren(item)))
+    .filter((item) => !item.parentKey && item.visible)
     .sort((a, b) => a.order - b.order);
 
   function renderNavItem(item: INavItem, isMobile: boolean = false) {
