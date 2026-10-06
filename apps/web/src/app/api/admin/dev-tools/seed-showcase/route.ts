@@ -5,8 +5,15 @@ import {
   generateDueInsights,
   ALL_AI_REPORT_PERIODS,
   recomputeAllCxPulseScores,
+  AiInsightReport,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
+
+// Demo-sized dataset: ~5x the responses per feedback point, spread over ~22
+// months so last week / month / quarter / calendar year all have real data
+// for the AI Insight Reports. Override with these env vars if needed.
+process.env.SHOWCASE_RESPONSE_SCALE ??= "5";
+process.env.SHOWCASE_HISTORY_DAYS ??= "660";
 
 /**
  * Fills the database with a realistic multi-organization showcase (a bank
@@ -37,6 +44,8 @@ export async function POST() {
   await connectToDatabase();
   const result = await seedShowcaseData(session.user._id);
   const insights = await generateDueInsights(new Date(), [...ALL_AI_REPORT_PERIODS]);
+  // Demo data: publish the generated reports so they show on every dashboard.
+  const approved = await AiInsightReport.updateMany({ status: "pending" }, { $set: { status: "approved", reviewedAt: new Date() } });
   const cxPulse = await recomputeAllCxPulseScores();
-  return NextResponse.json({ status: "ok", result, insights, cxPulse });
+  return NextResponse.json({ status: "ok", result, insights, reportsApproved: approved.modifiedCount, cxPulse });
 }

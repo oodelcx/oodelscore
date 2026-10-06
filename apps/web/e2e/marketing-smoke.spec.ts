@@ -10,6 +10,9 @@ import { test, expect } from "@playwright/test";
  */
 const PUBLIC_PAGES = [
   "/",
+  "/customer-x",
+  "/colleague-x",
+  // Old URLs still resolve (permanent redirects).
   "/product",
   "/colleague-pulse",
   "/solutions",
@@ -18,9 +21,7 @@ const PUBLIC_PAGES = [
   "/solutions/retail",
   "/solutions/healthcare",
   "/pricing",
-  "/how-it-works",
   "/company",
-  "/contact",
   "/privacy",
   "/terms",
   "/login",
