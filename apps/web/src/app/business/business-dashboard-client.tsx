@@ -1,5 +1,6 @@
 "use client";
 
+import { makeWording } from "@/lib/wordingPick";
 import { useEffect, useState } from "react";
 import { PeriodComparisonCards } from "@/components/period-comparison-cards";
 import { InfoTip } from "@/components/info-tip";
@@ -35,6 +36,8 @@ interface HoldingBackDimension {
 }
 interface DashboardData {
   product: "customer_experience" | "colleague_experience";
+  wording?: Record<string, string> | null;
+  belowAnonymityFloor?: boolean;
   totalResponses: number;
   starAverage: number | null;
   npsScore: number | null;
@@ -154,7 +157,8 @@ export default function BusinessDashboardClient() {
 
   const isCe = data.product === "colleague_experience";
   const npsLabel = isCe ? "eNPS" : "NPS";
-  const pulseLabel = "CX Pulse";
+  const w = makeWording(isCe, data.wording);
+  const pulseLabel = w("pulse", "CX Pulse");
   const pulseHref = isCe ? "/business/ex-pulse" : "/business/cx-pulse";
 
   if (data.branch) {
@@ -167,6 +171,12 @@ export default function BusinessDashboardClient() {
         <p className="subtitle">
           {b.region ? `${b.region} region · ` : ""}Your feedback performance at a glance.
         </p>
+
+        {data.belowAnonymityFloor && (
+          <div className="callout-purple" style={{ marginBottom: 16 }}>
+          Scores, trends and comments are hidden until at least 5 colleagues have responded, so nobody can be identified from a small group.
+        </div>
+      )}
 
         <div className="grid grid-4" data-tour="dash-kpi-strip" style={{ marginBottom: 20 }}>
           <div className="card">
@@ -189,7 +199,7 @@ export default function BusinessDashboardClient() {
           </div>
           <div className="card">
             <div className="metric-label">
-              CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number." />
+              {w("csat", "CSAT")} <InfoTip text={w("csat-tip", "% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number.")} />
             </div>
             <div className="metric-val">{data.csatPercent !== null ? `${data.csatPercent}%` : "—"}</div>
             <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
@@ -198,7 +208,7 @@ export default function BusinessDashboardClient() {
           </div>
           <div className="card">
             <div className="metric-label">
-              CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome." />
+              {w("ces", "CES")} <InfoTip text={w("ces-tip", "% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome.")} />
             </div>
             <div className="metric-val">{data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}</div>
             <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
@@ -247,6 +257,12 @@ export default function BusinessDashboardClient() {
       <h1>Your Dashboard</h1>
       <p className="subtitle">Your feedback performance at a glance.</p>
 
+      {data.belowAnonymityFloor && (
+        <div className="callout-purple" style={{ marginBottom: 16 }}>
+          Scores, trends and comments are hidden until at least 5 colleagues have responded, so nobody can be identified from a small group.
+        </div>
+      )}
+
       <RecurringIssuesCard />
 
       <div className="grid grid-4" data-tour="dash-kpi-strip" style={{ marginBottom: 20 }}>
@@ -270,7 +286,7 @@ export default function BusinessDashboardClient() {
         </div>
         <div className="card">
           <div className="metric-label">
-            CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number." />
+            {w("csat", "CSAT")} <InfoTip text={w("csat-tip", "% of star-rating responses that are 4 or 5 out of 5 — the standard 'satisfied customers' number.")} />
           </div>
           <div className="metric-val">{data.csatPercent !== null ? `${data.csatPercent}%` : "—"}</div>
           <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
@@ -279,7 +295,7 @@ export default function BusinessDashboardClient() {
         </div>
         <div className="card">
           <div className="metric-label">
-            CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome." />
+            {w("ces", "CES")} <InfoTip text={w("ces-tip", "% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome.")} />
           </div>
           <div className="metric-val">{data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}</div>
           <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>

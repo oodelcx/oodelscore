@@ -28,6 +28,9 @@ interface EntryRow {
   outcomeLowConfidence: boolean;
   linkedInitiativeId: string | null;
   notes: { text: string; authorLabel: string; createdAt: string }[];
+  autoCreated?: boolean;
+  isDraft?: boolean;
+  sourceCaseId?: string | null;
 }
 interface BusinessRow {
   _id: string;
@@ -68,15 +71,15 @@ const VERDICT_LABELS: Record<string, string> = {
   insufficient_data: "Not enough response data to measure yet",
 };
 
-export default function DecisionLogClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function DecisionLogClient({ tooltips, wording }: { tooltips: Record<string, string>; wording: Record<string, string> }) {
   return (
     <Suspense fallback={<p className="subtitle">Loading…</p>}>
-      <DecisionLogInner tooltips={tooltips} />
+      <DecisionLogInner tooltips={tooltips} wording={wording} />
     </Suspense>
   );
 }
 
-function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
+function DecisionLogInner({ tooltips, wording }: { tooltips: Record<string, string>; wording: Record<string, string> }) {
   const searchParams = useSearchParams();
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
@@ -489,6 +492,7 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
                       {e.product === "colleague_experience" ? "Colleague" : "Customer"}
                     </span>
                   )}
+                  {e.isDraft && <span className="pill pill-amber">Auto-created draft</span>}
                   <span className={`pill ${e.status === "implemented" ? "pill-green" : e.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
                     {STATUS_LABELS[e.status] ?? e.status}
                   </span>
@@ -576,6 +580,15 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
                   </div>
                 ) : (
                   <>
+                    {e.isDraft && (
+                      <div className="ab-empty" style={{ textAlign: "left", marginBottom: 10 }}>
+                        <b>Auto-created draft.</b> This was created automatically when the linked case was resolved. It is not counted
+                        or measured as a decision until you confirm it. Edit the title and details first if needed.
+                        <div style={{ marginTop: 8 }}>
+                          <button className="btn btn-dark btn-sm" onClick={() => patch(e._id, { confirm: true })}>Confirm as a decision</button>
+                        </div>
+                      </div>
+                    )}
                     <div className="ab-meta-row" style={{ marginBottom: 10 }}>
                       <span>
                         Implemented: <b>{e.implementationDate ? new Date(e.implementationDate).toLocaleDateString() : "No date set"}</b>
@@ -673,7 +686,9 @@ function DecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
                             <select value={metricDraft} onChange={(ev) => setMetricDraft(ev.target.value as OutcomeMetric)}>
                               {Object.entries(METRIC_LABELS).map(([key, lbl]) => (
                                 <option key={key} value={key}>
-                                  {lbl}
+                                  {e.product === "colleague_experience" && (key === "csat" || key === "ces")
+                                    ? wording[`${key}-measure`] || lbl
+                                    : lbl}
                                 </option>
                               ))}
                             </select>

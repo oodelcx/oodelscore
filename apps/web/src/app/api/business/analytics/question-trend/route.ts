@@ -8,11 +8,15 @@ import {
   TREND_PERIODS,
   type TrendPeriod,
 } from "@oodelscore/shared";
+import { isCustomerViewProduct } from "@/lib/viewProduct";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 export async function GET(request: Request) {
   const session = await requireBusinessOwner({ requirePage: "analytics" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await isCustomerViewProduct(session.business))) {
+    return NextResponse.json({ status: "error", message: "This page is not available for Colleague Experience." }, { status: 403 });
+  }
   if (!hasFeature(session.business.enabledFeatures, "analytics")) {
     return NextResponse.json({ status: "error", message: "Analytics is not enabled for this account" }, { status: 403 });
   }

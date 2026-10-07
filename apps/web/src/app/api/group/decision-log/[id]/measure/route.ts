@@ -15,6 +15,13 @@ export async function POST(request: Request, { params }: RouteParams) {
   const entry = await DecisionLogEntry.findOne({ _id: id, parentOrgId: session.org._id });
   if (!entry) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
+  if (entry.isDraft) {
+    return NextResponse.json(
+      { status: "error", message: "This entry was created automatically from a resolved case. Confirm it before measuring an outcome." },
+      { status: 409 }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   if (DECISION_OUTCOME_METRICS.includes(body?.outcomeMetric)) entry.outcomeMetric = body.outcomeMetric;
   if (typeof body?.outcomeCategoryId === "string") entry.outcomeCategoryId = new Types.ObjectId(body.outcomeCategoryId);

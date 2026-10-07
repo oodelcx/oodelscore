@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, Response, type IResponse } from "@oodelscore/shared";
+import { isCustomerViewProduct } from "@/lib/viewProduct";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import type { FilterQuery } from "mongoose";
 
@@ -13,6 +14,9 @@ function csvEscape(value: string): string {
 export async function GET(request: Request) {
   const session = await requireBusinessOwner();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await isCustomerViewProduct(session.business))) {
+    return NextResponse.json({ status: "error", message: "This page is not available for Colleague Experience." }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const feedbackPointId = searchParams.get("feedbackPointId");

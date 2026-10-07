@@ -15,6 +15,35 @@ interface SeedTooltipScreen {
 // seed-fallback convention).
 export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
   {
+    screenKey: "colleague-wording",
+    screenLabel: "Colleague Experience wording",
+    tooltips: [
+      { key: "csat", label: "CSAT tile name", text: "Satisfaction" },
+      {
+        key: "csat-tip",
+        label: "CSAT tile info text",
+        text: "% of star-rating responses that are 4 or 5 out of 5 — the share of colleagues who rate their experience positively.",
+      },
+      { key: "ces", label: "CES tile name", text: "Ease of work" },
+      {
+        key: "ces-tip",
+        label: "CES tile info text",
+        text: "% of effort-question responses answering 1 or 2 out of 5 ('very easy'/'easy') — low effort is the good outcome.",
+      },
+      { key: "csat-measure", label: "Decision Log metric: CSAT", text: "Satisfaction (% satisfied)" },
+      { key: "ces-measure", label: "Decision Log metric: CES", text: "Ease of work (% low effort)" },
+      { key: "network-csat", label: "Group tile: network CSAT", text: "Group satisfaction" },
+      { key: "network-ces", label: "Group tile: network CES", text: "Group ease of work" },
+      { key: "pulse", label: "Pulse name (CX Pulse equivalent)", text: "Colleague Pulse" },
+      { key: "pulse-org", label: "Command Center: org pulse card title", text: "Colleague Pulse · Org" },
+      { key: "network-average", label: "Group tile: average rating", text: "Network average rating" },
+      { key: "responded-to", label: "Group tile: personally responded to", text: "Colleagues personally responded to" },
+      { key: "location", label: "Word for a branch (singular)", text: "location" },
+      { key: "locations", label: "Word for branches (plural)", text: "locations" },
+      { key: "branches-chip", label: "Command Center: branch count chip", text: "LOCATIONS" },
+    ],
+  },
+  {
     screenKey: "admin-command-center",
     screenLabel: "Admin Command Center",
     tooltips: [

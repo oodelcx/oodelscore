@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  maskPeriodComparisonsForAnonymity,
   connectToDatabase,
   Business,
   AlertActivity,
@@ -13,6 +14,7 @@ import {
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
+import { getColleagueWording } from "@/lib/wording";
 
 export async function GET() {
   const session = await requireParentOrgOwner();
@@ -29,11 +31,14 @@ export async function GET() {
     Business.find({ parentOrgId: session.org._id, active: true }).select("_id"),
     CxPulseScore.findOne({ ownerType: "parentOrg", ownerId: session.org._id, product }).sort({ period: -1 }).lean(),
   ]);
-  const comparisons = await computePeriodComparisons(
+  const rawComparisons = await computePeriodComparisons(
     businesses.map((b) => b._id),
     now,
     product
   );
+
+  // Colleague anonymity floor: a window with fewer responses than the floor keeps its count but loses its scores.
+  const comparisons = product === "colleague_experience" ? maskPeriodComparisonsForAnonymity(rawComparisons) : rawComparisons;
 
   const flaggedActivity = await AlertActivity.find({
     businessId: { $in: businesses.map((b) => b._id) },
@@ -130,6 +135,7 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     product,
+    wording: product === "colleague_experience" ? await getColleagueWording() : null,
     branchCount: businesses.length,
     networkAverage,
     networkNps,

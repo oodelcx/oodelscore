@@ -15,6 +15,7 @@ import {
   ACTION_STATUSES,
   CASE_TYPES,
   logCaseEvent,
+  ensureDraftDecisionForResolvedCase,
   buildCaseTimeline,
   CaseEventLogEntry,
   resolveQuestionTextByQuestionId,
@@ -156,6 +157,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (typeof body?.resolutionNote === "string") item.resolutionNote = body.resolutionNote;
     if (typeof body?.suggestedAction === "string") item.suggestedAction = body.suggestedAction;
     await item.save();
+    if (item.status === "resolved" && previousStatus !== "resolved") {
+      await ensureDraftDecisionForResolvedCase({ caseId: item._id, actorUserId: session.user._id, actorLabel: session.user.email });
+    }
     if (item.status !== previousStatus) {
       await logCaseEvent({
         actionBoardItemId: item._id,
@@ -207,6 +211,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await item.save();
+
+  if (item.status === "resolved" && previousStatus !== "resolved") {
+    await ensureDraftDecisionForResolvedCase({ caseId: item._id, actorUserId: session.user._id, actorLabel: session.user.email });
+  }
 
   if (item.status !== previousStatus) {
     await logCaseEvent({

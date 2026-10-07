@@ -10,6 +10,8 @@ import { hasProduct, type Product } from "../models/products";
 const RELIABLE_SAMPLE_SIZE = 20;
 const DIRECTIONAL_SAMPLE_SIZE = 5;
 
+import { maskBusinessMetricsForAnonymity } from "./anonymityMask";
+
 export type BenchmarkConfidence = "strong" | "directional" | "insufficient";
 
 export function confidenceForSampleSize(responseCount: number): BenchmarkConfidence {
@@ -47,7 +49,12 @@ export async function computeNetworkSummaries(
   const scoped = product === "customer_experience" ? businesses : businesses.filter((b) => hasProduct(b, product));
   return Promise.all(
     scoped.map(async (b) => {
-      const metrics = await computeBusinessMetrics(b._id, from, to, product);
+      const rawMetrics = await computeBusinessMetrics(b._id, from, to, product);
+      // Colleague Experience anonymity floor: a location with fewer than the
+      // minimum number of responses keeps its response count (so the screen
+      // can say why) but shows no scores anywhere that reads these summaries
+      // — Overview, Command Center, regions, rankings.
+      const metrics = maskBusinessMetricsForAnonymity(rawMetrics, product);
       return {
         businessId: b._id.toString(),
         name: b.name,

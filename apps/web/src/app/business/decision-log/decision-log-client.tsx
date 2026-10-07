@@ -25,6 +25,9 @@ interface EntryRow {
   ownerId: string | null;
   linkedInitiativeId: string | null;
   notes: { text: string; authorLabel: string; createdAt: string }[];
+  autoCreated?: boolean;
+  isDraft?: boolean;
+  sourceCaseId?: string | null;
 }
 
 interface CategoryOption {
@@ -66,15 +69,15 @@ function outcomeDelta(entry: EntryRow): string | null {
   return delta > 0 ? `+${delta}` : String(delta);
 }
 
-export default function BusinessDecisionLogClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function BusinessDecisionLogClient({ tooltips, wording }: { tooltips: Record<string, string>; wording: Record<string, string> }) {
   return (
     <Suspense fallback={<p className="subtitle">Loading…</p>}>
-      <BusinessDecisionLogInner tooltips={tooltips} />
+      <BusinessDecisionLogInner tooltips={tooltips} wording={wording} />
     </Suspense>
   );
 }
 
-function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, string> }) {
+function BusinessDecisionLogInner({ tooltips, wording }: { tooltips: Record<string, string>; wording: Record<string, string> }) {
   const searchParams = useSearchParams();
   const [entries, setEntries] = useState<EntryRow[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -199,6 +202,15 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
+    });
+    load();
+  }
+
+  async function confirmEntry(id: string) {
+    await fetch(`/api/business/decision-log/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: true }),
     });
     load();
   }
@@ -432,6 +444,7 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                       {e.product === "colleague_experience" ? "Colleague" : "Customer"}
                     </span>
                   )}
+                  {e.isDraft && <span className="pill pill-amber">Auto-created draft</span>}
                   <span className={`pill ${e.status === "implemented" ? "pill-green" : e.status === "in_progress" ? "pill-amber" : "pill-gray"}`}>
                     {STATUS_LABELS[e.status] ?? e.status}
                   </span>
@@ -494,6 +507,17 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                   </div>
                 ) : (
                   <>
+                    {e.isDraft && (
+                      <div className="ab-empty" style={{ textAlign: "left", marginBottom: 10 }}>
+                        <b>Auto-created draft.</b> This was created automatically when the linked case was resolved. It is not counted
+                        or measured as a decision until you confirm it. Edit the title and details first if needed.
+                        {!readOnly && (
+                          <div style={{ marginTop: 8 }}>
+                            <button className="btn btn-dark btn-sm" onClick={() => confirmEntry(e._id)}>Confirm as a decision</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="ab-meta-row" style={{ marginBottom: 10 }}>
                       <span>
                         Owner: <b>{ownerLabel(e.ownerId)}</b>
@@ -595,7 +619,9 @@ function BusinessDecisionLogInner({ tooltips }: { tooltips: Record<string, strin
                             <select value={metricDraft} onChange={(ev) => setMetricDraft(ev.target.value as OutcomeMetric)}>
                               {Object.entries(METRIC_LABELS).map(([key, lbl]) => (
                                 <option key={key} value={key}>
-                                  {lbl}
+                                  {e.product === "colleague_experience" && (key === "csat" || key === "ces")
+                                    ? wording[`${key}-measure`] || lbl
+                                    : lbl}
                                 </option>
                               ))}
                             </select>

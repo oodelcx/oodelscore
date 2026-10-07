@@ -1,5 +1,6 @@
 "use client";
 
+import { makeWording } from "@/lib/wordingPick";
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { QrModal } from "@/components/qr-modal";
@@ -10,6 +11,8 @@ interface FeedbackPointRow {
   qrToken: string;
 }
 interface BranchDetail {
+  product?: "customer_experience" | "colleague_experience";
+  wording?: Record<string, string> | null;
   business: { name: string; region: string; billingAssignment: string };
   metrics: { responseCount: number; starAverage: number | null; npsScore: number | null; csatPercent: number | null; cesAverage: number | null };
   openActionItems: { _id: string; title: string; status: string; overdue: boolean }[];
@@ -34,6 +37,8 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
 
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load this branch.</p>;
+
+  const w = makeWording(data.product === "colleague_experience", data.wording);
 
   return (
     <div>
@@ -68,11 +73,11 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
 
       <div className="grid grid-2" style={{ marginBottom: 20 }}>
         <div className="card">
-          <div className="metric-label">CSAT</div>
+          <div className="metric-label">{w("csat", "CSAT")}</div>
           <div className="metric-val">{data.metrics.csatPercent !== null ? `${data.metrics.csatPercent}%` : "—"}</div>
         </div>
         <div className="card">
-          <div className="metric-label">CES</div>
+          <div className="metric-label">{w("ces", "CES")}</div>
           <div className="metric-val">{data.metrics.cesAverage !== null ? `${data.metrics.cesAverage}/5` : "—"}</div>
         </div>
       </div>
@@ -102,7 +107,7 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
           </Link>
         </div>
         <div className="card">
-          <h3>CX Pulse</h3>
+          <h3>{w("pulse", "CX Pulse")}</h3>
           {data.cxPulse ? (
             <div className="level-badge">
               Level {data.cxPulse.level} · {LEVEL_LABELS[data.cxPulse.level]}

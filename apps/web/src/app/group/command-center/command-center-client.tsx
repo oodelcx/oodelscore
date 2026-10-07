@@ -1,5 +1,6 @@
 "use client";
 
+import { makeWording } from "@/lib/wordingPick";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
@@ -41,6 +42,7 @@ interface Sparkline {
 interface CommandCenterData {
   orgName: string;
   product: "customer_experience" | "colleague_experience";
+  wording?: Record<string, string> | null;
   branchTiles: BranchTile[];
   csatPercent: number | null;
   cesLowEffortPercent: number | null;
@@ -139,6 +141,9 @@ export default function GroupCommandCenterClient() {
 
   const branchCount = data.branchTiles.length;
   const npsLabel = data.product === "colleague_experience" ? "eNPS" : "NPS";
+  const w = makeWording(data.product === "colleague_experience", data.wording);
+  const csatName = w("csat", "CSAT");
+  const cesName = w("ces", "CES");
   const firingAlerts = data.feed.filter((f) => f.kind === "alert").length;
   const tickerItems = [...data.branchTiles, ...data.branchTiles];
   const totalOpenActions = data.branchTiles.reduce((sum, b) => sum + b.openActionItems, 0);
@@ -181,12 +186,12 @@ export default function GroupCommandCenterClient() {
           <div className="cc-clock">{now.toUTCString().slice(0, 22)} UTC</div>
           <div className="cc-chip-row">
             <div className="cc-chip live">● LIVE</div>
-            <div className="cc-chip">{branchCount} BRANCHES</div>
-            <div className="cc-chip" title="% of star-rating responses that are 4 or 5 out of 5">
-              CSAT {data.csatPercent !== null ? `${data.csatPercent}%` : "—"}
+            <div className="cc-chip">{branchCount} {w("branches-chip", "BRANCHES")}</div>
+            <div className="cc-chip" title={w("csat-tip", "% of star-rating responses that are 4 or 5 out of 5")}>
+              {csatName.toUpperCase()} {data.csatPercent !== null ? `${data.csatPercent}%` : "—"}
             </div>
-            <div className="cc-chip" title="% of effort-question responses answering 1 or 2 out of 5 (low effort = good)">
-              CES {data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}
+            <div className="cc-chip" title={w("ces-tip", "% of effort-question responses answering 1 or 2 out of 5 (low effort = good)")}>
+              {cesName.toUpperCase()} {data.cesLowEffortPercent !== null ? `${data.cesLowEffortPercent}%` : "—"}
             </div>
             {firingAlerts > 0 && <div className="cc-chip alert">{firingAlerts} ALERTS FIRING</div>}
             <button
@@ -246,11 +251,11 @@ export default function GroupCommandCenterClient() {
                         <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.npsScore ?? "—"}</span>
                       </div>
                       <div>
-                        <span className="cc-bm-label">CSAT</span>
+                        <span className="cc-bm-label">{csatName}</span>
                         <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.csatPercent !== null ? `${b.csatPercent}%` : "—"}</span>
                       </div>
                       <div>
-                        <span className="cc-bm-label">CES</span>
+                        <span className="cc-bm-label">{cesName}</span>
                         <span className={`cc-bm cc-band-${b.band ?? "amber"}`}>{b.cesLowEffortPercent !== null ? `${b.cesLowEffortPercent}%` : "—"}</span>
                       </div>
                     </div>
@@ -374,7 +379,7 @@ export default function GroupCommandCenterClient() {
               <div className="cc-card" style={{ marginBottom: 12 }}>
                 <div className="cc-card-head">
                   <div className="cc-card-title">
-                    CX Pulse · Org <InfoTip text={tooltips["cx-pulse-composite"]} />
+                    {w("pulse-org", "CX Pulse · Org")} <InfoTip text={tooltips["cx-pulse-composite"]} />
                   </div>
                 </div>
                 {data.cxPulse ? (

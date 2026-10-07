@@ -12,6 +12,7 @@ import {
   sendTemplatedEmail,
   ACTION_STATUSES,
   buildCaseTimeline,
+  ensureDraftDecisionForResolvedCase,
   CaseEventLogEntry,
   resolveQuestionTextByQuestionId,
   getEscalationConfig,
@@ -155,10 +156,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (item.ownerId?.toString() !== session.user._id.toString()) {
       return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
     }
+    const previousStatus = item.status;
     if (ACTION_STATUSES.includes(body?.status)) item.status = body.status;
     if (body?.status === "resolved") item.resolvedAt = new Date();
     if (typeof body?.resolutionNote === "string") item.resolutionNote = body.resolutionNote;
     await item.save();
+    if (item.status === "resolved" && previousStatus !== "resolved") {
+      await ensureDraftDecisionForResolvedCase({ caseId: item._id, actorUserId: session.user._id, actorLabel: session.user.email });
+    }
     return NextResponse.json({ status: "ok", item });
   }
 

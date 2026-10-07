@@ -19,6 +19,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!entry) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => null);
+  // An auto-created draft (from a resolved case) only becomes a real decision
+  // once a person confirms it; until then it can't be implemented or measured.
+  if (body?.confirm === true) entry.isDraft = false;
+  if (entry.isDraft && (body?.status === "implemented" || typeof body?.outcomeAfter === "number")) {
+    return NextResponse.json(
+      { status: "error", message: "This entry was created automatically from a resolved case. Confirm it first." },
+      { status: 409 }
+    );
+  }
   if (typeof body?.title === "string" && body.title.trim()) entry.title = body.title.trim();
   if (typeof body?.trigger === "string") entry.trigger = body.trigger.trim();
   if (DECISION_STATUSES.includes(body?.status)) {

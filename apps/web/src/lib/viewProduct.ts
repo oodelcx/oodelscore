@@ -21,3 +21,14 @@ export async function resolveViewProduct(entity: { enabledProducts?: Product[] |
   }
   return primaryProductFor(entity);
 }
+
+/**
+ * Analytics and Insights are Customer Experience pages (customer wording,
+ * CX goals, customer-effort boxes); the menu already hides them for
+ * Colleague Experience. This is the server-side half — without it a
+ * colleague user could still open them by typing the address. Returns true
+ * when the page/API may be used.
+ */
+export async function isCustomerViewProduct(entity: { enabledProducts?: Product[] | null }): Promise<boolean> {
+  return hasProduct(entity, "customer_experience") && (await resolveViewProduct(entity)) === "customer_experience";
+}

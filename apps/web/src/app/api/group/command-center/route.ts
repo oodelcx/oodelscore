@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  meetsAnonymityFloor,
   connectToDatabase,
   Business,
   AlertActivity,
@@ -21,6 +22,7 @@ import {
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
+import { getColleagueWording } from "@/lib/wording";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -84,6 +86,7 @@ export async function GET() {
     Promise.all(businessIds.map((id) => computeBusinessCategoryBreakdown(id, from30, now, product))),
   ]);
 
+  const responseCountByBusiness = new Map(summaries30d.map((s) => [s.businessId, s.responseCount]));
   const branchTiles = summaries30d.map((s, i) => {
     const lastWeek = lastWeekByBusiness.get(s.businessId);
     const prevWeek = prevWeekByBusiness.get(s.businessId);
@@ -111,7 +114,10 @@ export async function GET() {
     name: c.name,
     byBusiness: businesses.reduce<Record<string, { average: number; band: string | null }>>((acc, b, i) => {
       const entry = categoryBreakdowns[i].find((row) => row.categoryId === c._id.toString());
-      if (entry) acc[b._id.toString()] = { average: entry.average, band: ragBandForStar(entry.average, thresholds) };
+      // Colleague anonymity floor: no per-category figures for a location
+      // that has not reached the minimum number of responses.
+      const belowFloor = product === "colleague_experience" && !meetsAnonymityFloor(responseCountByBusiness.get(b._id.toString()) ?? 0);
+      if (entry && !belowFloor) acc[b._id.toString()] = { average: entry.average, band: ragBandForStar(entry.average, thresholds) };
       return acc;
     }, {}),
   }));
@@ -240,6 +246,7 @@ export async function GET() {
     status: "ok",
     orgName: org.name,
     product,
+    wording: product === "colleague_experience" ? await getColleagueWording() : null,
     ragThresholds: thresholds,
     branchTiles,
     csatPercent,

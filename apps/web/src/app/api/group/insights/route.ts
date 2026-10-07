@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, AiInsightReport , hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
-import { resolveViewProduct } from "@/lib/viewProduct";
+import { resolveViewProduct, isCustomerViewProduct } from "@/lib/viewProduct";
 
 export async function GET(request: Request) {
   const session = await requireParentOrgOwner({ requirePage: "insights" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await isCustomerViewProduct(session.org))) {
+    return NextResponse.json({ status: "error", message: "This page is not available for Colleague Experience." }, { status: 403 });
+  }
   if (!hasFeature(session.org.enabledFeatures, "insights")) {
     return NextResponse.json({ status: "error", message: "Insights is not enabled for this account" }, { status: 403 });
   }

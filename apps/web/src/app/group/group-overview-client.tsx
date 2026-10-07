@@ -1,5 +1,6 @@
 "use client";
 
+import { makeWording } from "@/lib/wordingPick";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -91,6 +92,7 @@ interface HoldingBackDimension {
 }
 interface OverviewData {
   product: "customer_experience" | "colleague_experience";
+  wording?: Record<string, string> | null;
   branchCount: number;
   networkAverage: number | null;
   networkNps: number | null;
@@ -168,12 +170,13 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
 
   const isCe = data.product === "colleague_experience";
   const npsLabel = isCe ? "eNPS" : "NPS";
-  const pulseLabel = isCe ? "Colleague Pulse" : "CX Pulse";
-  const averageLabel = isCe ? "Network average rating" : "Network average";
+  const w = makeWording(isCe, data.wording);
+  const pulseLabel = w("pulse", "CX Pulse");
+  const averageLabel = w("network-average", "Network average");
   const pulseHref = isCe ? "/group/ex-pulse" : "/group/maturity";
-  const respondedToLabel = isCe ? "Colleagues personally responded to" : "Customers personally responded to";
-  const branchNoun = isCe ? "location" : "branch";
-  const branchNounPlural = isCe ? "locations" : "branches";
+  const respondedToLabel = w("responded-to", "Customers personally responded to");
+  const branchNoun = w("location", "branch");
+  const branchNounPlural = w("locations", "branches");
 
   return (
     <div>
@@ -289,7 +292,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         </div>
         <div className="card">
           <div className="metric-label">
-            Network CSAT <InfoTip text="% of star-rating responses that are 4 or 5 out of 5, weighted across branches by their response count." />
+            {w("network-csat", "Network CSAT")} <InfoTip text={w("csat-tip", "% of star-rating responses that are 4 or 5 out of 5, weighted across branches by their response count.")} />
           </div>
           <div className="metric-val">{data.networkCsat !== null ? `${data.networkCsat}%` : "—"}</div>
           <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>
@@ -298,7 +301,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         </div>
         <div className="card">
           <div className="metric-label">
-            Network CES <InfoTip text="% of effort-question responses answering 1 or 2 out of 5 (low effort = good), weighted across branches by their response count." />
+            {w("network-ces", "Network CES")} <InfoTip text={w("ces-tip", "% of effort-question responses answering 1 or 2 out of 5 (low effort = good), weighted across branches by their response count.")} />
           </div>
           <div className="metric-val">{data.networkCesLowEffort !== null ? `${data.networkCesLowEffort}%` : "—"}</div>
           <p style={{ fontSize: 11.5, color: "var(--text-3)", margin: "2px 0 0" }}>

@@ -9,11 +9,15 @@ import {
   TREND_PERIODS,
   type TrendPeriod,
 } from "@oodelscore/shared";
+import { isCustomerViewProduct } from "@/lib/viewProduct";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 export async function GET(request: Request) {
   const session = await requireParentOrgOwner({ requirePage: "analytics" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  if (!(await isCustomerViewProduct(session.org))) {
+    return NextResponse.json({ status: "error", message: "This page is not available for Colleague Experience." }, { status: 403 });
+  }
   if (!hasFeature(session.org.enabledFeatures, "analytics")) {
     return NextResponse.json({ status: "error", message: "Analytics is not enabled for this account" }, { status: 403 });
   }

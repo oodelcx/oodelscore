@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import {
+  maskBusinessMetricsForAnonymity,
+  maskPeriodComparisonsForAnonymity,
+  meetsAnonymityFloor,
   connectToDatabase,
   Response,
   FeedbackPoint,
@@ -14,6 +17,7 @@ import {
 } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
+import { getColleagueWording } from "@/lib/wording";
 
 const TREND_DAYS = 14;
 
@@ -27,7 +31,7 @@ export async function GET() {
   const now = new Date();
   const from30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [overall, comparisons, trend, distribution, feedbackPoints, recentWithComments, ownCxPulseScore] = await Promise.all([
+  const [rawOverall, rawComparisons, rawTrend, rawDistribution, feedbackPoints, recentWithComments, ownCxPulseScore] = await Promise.all([
     computeBusinessMetrics(session.business._id, new Date(0), now, product),
     computePeriodComparisons(businessIds, now, product),
     computeDailyTrend(businessIds, TREND_DAYS, now, product),
@@ -36,6 +40,17 @@ export async function GET() {
     Response.find({ businessId: session.business._id, product }).sort({ submittedAt: -1 }).limit(20),
     CxPulseScore.findOne({ ownerType: "business", ownerId: session.business._id, product }).sort({ period: -1 }).lean(),
   ]);
+
+  // Colleague Experience anonymity floor: below the minimum number of
+  // responses the dashboard keeps counts but shows no scores, no trend line,
+  // no rating spread and no comment listing (they would identify the few
+  // people who answered). A no-op for the customer product.
+  const isColleague = product === "colleague_experience";
+  const overall = maskBusinessMetricsForAnonymity(rawOverall, product);
+  const belowFloor = isColleague && !meetsAnonymityFloor(rawOverall.responseCount);
+  const comparisons = isColleague ? maskPeriodComparisonsForAnonymity(rawComparisons) : rawComparisons;
+  const trend = belowFloor ? [] : rawTrend;
+  const distribution = belowFloor ? { highPercent: 0, midPercent: 0, lowPercent: 0 } : rawDistribution;
 
   // CX Pulse as an Overview widget, not a full section: the score plus the
   // 2-3 dimensions dragging it down most. The full 5-dimension drill-down
@@ -50,7 +65,7 @@ export async function GET() {
   const totalScans = feedbackPoints.reduce((sum, fp) => sum + fp.scans, 0);
   const conversionRate = totalScans === 0 ? null : Math.round((overall.responseCount / totalScans) * 1000) / 10;
 
-  const latestComments = recentWithComments
+  const latestComments = (belowFloor ? [] : recentWithComments)
     .map((r) => {
       const comment = r.answers.find((a) => a.type === "open_text" && typeof a.value === "string" && a.value.trim());
       const star = r.answers.find((a) => a.type === "star_1_5" && typeof a.value === "number");
@@ -83,7 +98,7 @@ export async function GET() {
     const siblingIds = siblingBusinesses.map((b) => b._id);
 
     const [siblingMetrics, decisions] = await Promise.all([
-      Promise.all(siblingIds.map((id) => computeBusinessMetrics(id, new Date(0), now, product))),
+      Promise.all(siblingIds.map(async (id) => maskBusinessMetricsForAnonymity(await computeBusinessMetrics(id, new Date(0), now, product), product))),
       DecisionLogEntry.find({ affectedBusinessIds: session.business._id, product }).sort({ createdAt: -1 }).limit(3),
     ]);
 
@@ -111,6 +126,8 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     product,
+    belowAnonymityFloor: belowFloor,
+    wording: product === "colleague_experience" ? await getColleagueWording() : null,
     totalResponses: overall.responseCount,
     starAverage: overall.starAverage,
     npsScore: overall.npsScore,

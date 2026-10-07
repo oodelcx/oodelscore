@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  maskBusinessMetricsForAnonymity,
   connectToDatabase,
   Business,
   ActionBoardItem,
@@ -9,6 +10,7 @@ import {
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
+import { getColleagueWording } from "@/lib/wording";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -29,7 +31,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const now = new Date();
   const from30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [metrics, openItems, score, feedbackPoints] = await Promise.all([
+  const [rawMetrics, openItems, score, feedbackPoints] = await Promise.all([
     computeBusinessMetrics(business._id, from30d, now, product),
     ActionBoardItem.find({ businessId: business._id, product, status: { $ne: "resolved" } }).sort({ dueDate: 1 }).limit(10),
     CxPulseScore.findOne({ ownerType: "business", ownerId: business._id, product }).sort({ period: -1 }),
@@ -41,9 +43,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     FeedbackPoint.find({ businessId: business._id, product, active: true }).select("name qrToken").sort({ name: 1 }),
   ]);
 
+  const metrics = maskBusinessMetricsForAnonymity(rawMetrics, product);
+
   return NextResponse.json({
     status: "ok",
     product,
+    wording: product === "colleague_experience" ? await getColleagueWording() : null,
     business: { name: business.name, region: business.region, billingAssignment: business.billingAssignment },
     metrics,
     openActionItems: openItems.map((item) => ({

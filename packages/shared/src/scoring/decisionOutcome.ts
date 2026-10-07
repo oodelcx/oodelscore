@@ -224,6 +224,8 @@ export async function autoMeasurePendingDecisions(now: Date = new Date()): Promi
     implementationDate: { $ne: null },
     outcomeMetric: { $ne: null },
     outcomeMeasuredAt: null,
+    // Auto-created drafts (from resolved cases) never count until confirmed.
+    isDraft: { $ne: true },
     // A decision only counts as real once it's actually marked
     // Implemented — without this, a "Planned" entry that already has an
     // implementation date and metric picked (e.g. someone planning ahead)

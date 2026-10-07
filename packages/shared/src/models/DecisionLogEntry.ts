@@ -23,6 +23,14 @@ export interface IDecisionLogEntry {
   // outcome" button — lets the initiative show its own decision log entry
   // rather than a user having to find it by title.
   linkedInitiativeId: Types.ObjectId | null;
+  // Auto-created from a resolved case (see decisionLog/fromCase.ts). Such an
+  // entry starts as a draft: it is clearly labelled, never measured, and
+  // never counted as a decision until a person confirms it. sourceCaseId is
+  // what keeps resolving the same case twice from creating two entries.
+  autoCreated: boolean;
+  isDraft: boolean;
+  sourceCaseId: Types.ObjectId | null;
+  sourceResponseIds: Types.ObjectId[];
   title: string;
   trigger: string;
   linkedActionIds: Types.ObjectId[];
@@ -61,6 +69,10 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
     businessId: { type: Schema.Types.ObjectId, ref: "Business", default: null },
     product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     linkedInitiativeId: { type: Schema.Types.ObjectId, ref: "ImprovementInitiative", default: null },
+    autoCreated: { type: Boolean, default: false },
+    isDraft: { type: Boolean, default: false },
+    sourceCaseId: { type: Schema.Types.ObjectId, ref: "ActionBoardItem", default: null },
+    sourceResponseIds: { type: [Schema.Types.ObjectId], ref: "Response", default: [] },
     title: { type: String, required: true },
     trigger: { type: String, default: "" },
     linkedActionIds: { type: [Schema.Types.ObjectId], ref: "ActionBoardItem", default: [] },
@@ -84,6 +96,7 @@ const DecisionLogEntrySchema = new Schema<IDecisionLogEntry>(
 
 DecisionLogEntrySchema.index({ parentOrgId: 1, affectedBusinessIds: 1 });
 DecisionLogEntrySchema.index({ businessId: 1 });
+DecisionLogEntrySchema.index({ sourceCaseId: 1 }, { unique: true, partialFilterExpression: { sourceCaseId: { $type: "objectId" } } });
 
 export const DecisionLogEntry: Model<IDecisionLogEntry> =
   mongoose.models.DecisionLogEntry ?? model<IDecisionLogEntry>("DecisionLogEntry", DecisionLogEntrySchema);
