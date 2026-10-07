@@ -64,6 +64,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<ResponseStats | null>(null);
+  const [belowFloor, setBelowFloor] = useState(false);
   const [product, setProduct] = useState<ProductId>("customer_experience");
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
@@ -85,6 +86,7 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
         setTotalPages(data.totalPages ?? 1);
         setTotal(data.total ?? 0);
         setStats(data.stats ?? null);
+        setBelowFloor(data.belowAnonymityFloor === true);
         setSelectedId((current) => (current && list.some((r) => r._id === current) ? current : (list[0]?._id ?? null)));
       })
       .finally(() => setLoading(false));
@@ -235,7 +237,13 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
       </div>
 
       {loading && <p className="subtitle">Loading…</p>}
-      {!loading && responses.length === 0 && <div className="ab-empty">No feedback matches this filter.</div>}
+      {!loading && responses.length === 0 && (
+        <div className="ab-empty">
+          {belowFloor
+            ? "To protect anonymity, individual colleague responses are not shown until at least 5 have been received."
+            : "No feedback matches this filter."}
+        </div>
+      )}
 
       {!loading && responses.length > 0 && (
         <div className="rf-layout">

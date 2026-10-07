@@ -16,6 +16,14 @@ import {
   logSystemHealthEvent,
   isValidFeatureKey,
   PRODUCTS,
+  FeedbackPoint,
+  Response,
+  ScanToken,
+  RosterEntry,
+  RosterSurveyToken,
+  ActionBoardItem,
+  AlertRule,
+  AiInsightReport,
 } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
@@ -48,6 +56,19 @@ export async function GET(_request: Request, { params }: RouteParams) {
   return NextResponse.json({ status: "ok", business });
 }
 
+
+/**
+ * Drops fields whose value is identical to what is already saved. The admin
+ * edit screens always send the whole form, so without this a staff member
+ * who may not change (say) the billing assignment would be refused on every
+ * save even though they did not touch it.
+ */
+function stripUnchangedFields(body: Record<string, unknown>, current: Record<string, unknown>): void {
+  for (const key of Object.keys(body)) {
+    if (JSON.stringify(body[key] ?? null) === JSON.stringify(current[key] ?? null)) delete body[key];
+  }
+}
+
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireStaffSession();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
@@ -71,6 +92,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!body || typeof body !== "object") {
     return NextResponse.json({ status: "error", message: "Invalid request body" }, { status: 400 });
   }
+
+  stripUnchangedFields(body, business.toObject() as unknown as Record<string, unknown>);
 
   try {
     assertStaffCanEditBusinessAdminFields(role, body);
@@ -224,6 +247,22 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   // Never leave an orphaned login behind — spec Section 13's orphaned-record
   // bug class applies here just as much as it did to billing subscriptions.
   await User.deleteOne({ accountType: "business", parentId: id });
+  await User.deleteMany({ accountType: "team_member", teamOfType: "business", parentId: id });
+
+  // Everything the warning promises is deleted: the survey points, every
+  // response, the colleague roster and its links, cases, the business's own
+  // alert rules and its AI insight reports.
+  const feedbackPointIds = (await FeedbackPoint.find({ businessId: id }).select("_id")).map((f) => f._id);
+  await Promise.all([
+    ScanToken.deleteMany({ feedbackPointId: { $in: feedbackPointIds } }),
+    Response.deleteMany({ businessId: id }),
+    FeedbackPoint.deleteMany({ businessId: id }),
+    RosterSurveyToken.deleteMany({ businessId: id }),
+    RosterEntry.deleteMany({ businessId: id }),
+    ActionBoardItem.deleteMany({ businessId: id }),
+    AlertRule.deleteMany({ scope: "business", ownerId: id }),
+    AiInsightReport.deleteMany({ ownerType: "business", ownerId: id }),
+  ]);
 
   // Spec Section 13, orphaned-billing-records bug: a deleted business used
   // to leave its BillingSubscription/Invoice/BillingCredit rows behind,

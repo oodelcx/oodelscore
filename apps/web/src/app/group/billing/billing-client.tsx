@@ -193,7 +193,7 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
       </div>
 
       <div className="section-title">Branch billing status</div>
-      <p className="section-sub">Search to check any branch. Assignment changes go through your account manager — use Messages.</p>
+      <p className="section-sub">Search to check any branch. Assignment changes go through your account manager — raise a ticket on the Support page.</p>
       <div className="filters">
         <input type="text" placeholder="Search branch…" style={{ width: 220 }} value={search} onChange={(e) => setSearch(e.target.value)} />
         <select value={filter} onChange={(e) => setFilter(e.target.value)}>

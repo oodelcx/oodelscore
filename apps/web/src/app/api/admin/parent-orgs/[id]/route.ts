@@ -47,6 +47,19 @@ export async function GET(_request: Request, { params }: RouteParams) {
   return NextResponse.json({ status: "ok", parentOrg, businesses });
 }
 
+
+/**
+ * Drops fields whose value is identical to what is already saved. The admin
+ * edit screens always send the whole form, so without this a staff member
+ * who may not change (say) the billing assignment would be refused on every
+ * save even though they did not touch it.
+ */
+function stripUnchangedFields(body: Record<string, unknown>, current: Record<string, unknown>): void {
+  for (const key of Object.keys(body)) {
+    if (JSON.stringify(body[key] ?? null) === JSON.stringify(current[key] ?? null)) delete body[key];
+  }
+}
+
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireStaffSession();
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
@@ -70,6 +83,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!body || typeof body !== "object") {
     return NextResponse.json({ status: "error", message: "Invalid request body" }, { status: 400 });
   }
+  stripUnchangedFields(body, parentOrg.toObject() as unknown as Record<string, unknown>);
   if (body.defaultBillingMode !== undefined && !BILLING_MODE_SET.includes(body.defaultBillingMode)) {
     return NextResponse.json({ status: "error", message: "Invalid defaultBillingMode" }, { status: 400 });
   }

@@ -69,13 +69,13 @@ export default function BusinessRosterClient() {
 
   useEffect(load, []);
 
-  async function sendLinks(feedbackPointId: string) {
+  async function sendLinks(feedbackPointId: string, newRound = false) {
     setSendingId(feedbackPointId);
     setSendStatus(null);
     const res = await fetch("/api/business/roster/send-links", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ feedbackPointId }),
+      body: JSON.stringify({ feedbackPointId, newRound }),
     });
     const data = await res.json();
     setSendingId(null);
@@ -211,8 +211,9 @@ export default function BusinessRosterClient() {
         <div className="callout" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0 }}>Roster-personalized surveys</h3>
           <p className="subtitle" style={{ marginTop: 0 }}>
-            One link per active roster entry. Sending resends to anyone who hasn&apos;t responded yet — it never
-            re-sends to someone who already did.
+            One link per active roster entry. &quot;Resend to people who haven&apos;t answered&quot; emails only people who
+            have a link they haven&apos;t used yet (and anyone who has never been sent one) — it never emails someone who already
+            answered. &quot;Start a new round&quot; gives everyone a fresh link, including people who already answered.
           </p>
           <table className="clean">
             <thead>
@@ -235,7 +236,18 @@ export default function BusinessRosterClient() {
                   <td>{sp.participationRate !== null ? `${sp.participationRate}%` : "—"}</td>
                   <td style={{ textAlign: "right" }}>
                     <button className="btn btn-sm" disabled={sendingId === sp._id} onClick={() => sendLinks(sp._id)}>
-                      {sendingId === sp._id ? "Sending…" : "Send / resend links"}
+                      {sendingId === sp._id ? "Sending…" : "Resend to people who haven't answered"}
+                    </button>{" "}
+                    <button
+                      className="btn btn-sm"
+                      disabled={sendingId === sp._id}
+                      onClick={() => {
+                        if (confirm("Start a new round? Everyone on the roster, including people who already answered, will be emailed a fresh link.")) {
+                          sendLinks(sp._id, true);
+                        }
+                      }}
+                    >
+                      Start a new round
                     </button>
                   </td>
                 </tr>

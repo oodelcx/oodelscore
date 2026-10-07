@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, Response, PRODUCTS, type Product } from "@oodelscore/shared";
+import { connectToDatabase, Business, Response, PRODUCTS, meetsAnonymityFloor, type Product } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { computeResponseStats } from "@/lib/responseStats";
 
@@ -36,6 +36,15 @@ export async function GET(request: Request) {
     branchId && businessIds.some((id) => id.toString() === branchId) ? businessIds.filter((id) => id.toString() === branchId) : businessIds;
 
   const match: Record<string, unknown> = { businessId: { $in: scopedBusinessIds }, product };
+  // Colleague Experience: withhold individual responses below the anonymity
+  // floor and never list comments routed to the sensitive contact.
+  if (product === "colleague_experience") {
+    match.sensitiveRouted = { $ne: true };
+    const totalForScope = await Response.countDocuments({ businessId: { $in: scopedBusinessIds }, product });
+    if (!meetsAnonymityFloor(totalForScope)) {
+      return NextResponse.json({ status: "ok", responses: [], feedbackPoints: [], page: 1, limit, total: 0, totalPages: 1, stats: null, belowAnonymityFloor: true });
+    }
+  }
   if (filter === "negative") {
     match.answers = { $elemMatch: { type: "star_1_5", value: { $lte: 2 } } };
   }

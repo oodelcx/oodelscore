@@ -7,6 +7,7 @@ import {
   ParentOrganization,
   QuestionTemplate,
   Response,
+  RosterSurveyToken,
   ScanToken,
   dedupCookieName,
   checkRateLimit,
@@ -67,6 +68,16 @@ async function handleGet(request: NextRequest, qrToken: string) {
     });
   }
 
+  // A personal (roster) link works once: if it was already used, show the
+  // same "already given feedback" screen instead of the form.
+  const rosterToken = request.nextUrl.searchParams.get("rt");
+  if (rosterToken) {
+    const used = await RosterSurveyToken.findOne({ token: rosterToken, feedbackPointId: feedbackPoint._id, usedAt: { $ne: null } }).select("_id");
+    if (used) {
+      return NextResponse.json({ status: "ok", alreadySubmitted: true, businessName: business.name });
+    }
+  }
+
   // A point built through the real survey builder carries its own fully
   // authored question set and needs no template at all — see
   // effectiveQuestions()'s own doc comment for the full priority order.
@@ -109,6 +120,7 @@ async function handleGet(request: NextRequest, qrToken: string) {
     scanToken,
     businessName: business.name,
     groupTag: groupTag ? `Part of ${groupTag}` : null,
+    isAnonymous: feedbackPoint.product === "colleague_experience",
     formLayout,
     demographicConfig,
     questions: effectiveQuestions(feedbackPoint, template ?? { questions: [] }).map((q, index) => ({

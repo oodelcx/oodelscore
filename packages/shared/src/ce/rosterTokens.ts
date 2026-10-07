@@ -53,7 +53,10 @@ export interface MintRosterSurveyTokensResult {
  * sent the ongoing pulse survey; exit surveys are a separate, lifecycle-
  * triggered path, not this bulk mint.
  */
-export async function mintRosterSurveyTokens(feedbackPointId: Types.ObjectId | string): Promise<MintRosterSurveyTokensResult> {
+export async function mintRosterSurveyTokens(
+  feedbackPointId: Types.ObjectId | string,
+  options: { newRound?: boolean } = {}
+): Promise<MintRosterSurveyTokensResult> {
   const feedbackPoint = await FeedbackPoint.findById(feedbackPointId);
   if (!feedbackPoint) throw new Error("Feedback point not found");
 
@@ -69,7 +72,21 @@ export async function mintRosterSurveyTokens(feedbackPointId: Types.ObjectId | s
   }).select("rosterEntryId");
   const alreadyIssuedIds = new Set(existingLiveTokens.map((t) => t.rosterEntryId.toString()));
 
-  const toMint = activeEntries.filter((e) => !alreadyIssuedIds.has(e._id.toString()));
+  // A new round gives everyone without a live link a fresh one (including
+  // people who answered last round). Otherwise (a plain resend) only people
+  // who have never been issued a link for this survey get one, so someone who
+  // already answered is never emailed again.
+  let everIssuedIds = new Set<string>();
+  if (!options.newRound) {
+    const everIssued = await RosterSurveyToken.find({
+      feedbackPointId: feedbackPoint._id,
+      rosterEntryId: { $in: activeEntries.map((e) => e._id) },
+    }).select("rosterEntryId");
+    everIssuedIds = new Set(everIssued.map((t) => t.rosterEntryId.toString()));
+  }
+  const toMint = activeEntries.filter(
+    (e) => !alreadyIssuedIds.has(e._id.toString()) && !everIssuedIds.has(e._id.toString())
+  );
   if (toMint.length > 0) {
     await RosterSurveyToken.insertMany(
       toMint.map((entry) => ({
@@ -100,11 +117,14 @@ export interface SendRosterSurveyLinksResult {
  * used, so this doubles as a "resend" action. Never touches an already-used
  * token; nothing here can re-send to someone who already responded.
  */
-export async function sendRosterSurveyLinks(feedbackPointId: Types.ObjectId | string): Promise<SendRosterSurveyLinksResult> {
+export async function sendRosterSurveyLinks(
+  feedbackPointId: Types.ObjectId | string,
+  options: { newRound?: boolean } = {}
+): Promise<SendRosterSurveyLinksResult> {
   const feedbackPoint = await FeedbackPoint.findById(feedbackPointId);
   if (!feedbackPoint) throw new Error("Feedback point not found");
 
-  await mintRosterSurveyTokens(feedbackPointId);
+  await mintRosterSurveyTokens(feedbackPointId, options);
 
   const liveTokens = await RosterSurveyToken.find({ feedbackPointId: feedbackPoint._id, usedAt: null });
   if (liveTokens.length === 0) return { sent: 0, failed: 0, totalLive: 0 };

@@ -49,6 +49,8 @@ export default function GroupCategoryOwnersPage() {
   const [escalationLevels, setEscalationLevels] = useState<EscalationLevelRow[]>([]);
   const [escalateDrafts, setEscalateDrafts] = useState<Record<string, { days: string; level: string }>>({});
   const [savingEscalateFor, setSavingEscalateFor] = useState<string | null>(null);
+  const [colleagueEnabled, setColleagueEnabled] = useState(false);
+  const [sensitiveContactId, setSensitiveContactId] = useState("");
 
   function load() {
     setLoading(true);
@@ -73,6 +75,8 @@ export default function GroupCategoryOwnersPage() {
         setRepeatDrafts(drafts);
         setEscalateDrafts(escalateDraftsNext);
         setEscalationLevels(data.escalationLevels ?? []);
+        setColleagueEnabled(data.colleagueEnabled === true);
+        setSensitiveContactId(data.sensitiveRoutingContactId ?? "");
         setTeam(teamData.team ?? []);
         setLoading(false);
       }
@@ -94,6 +98,15 @@ export default function GroupCategoryOwnersPage() {
     const data = await res.json().catch(() => null);
     setSavingPerm(null);
     if (res.ok) setBranchPerms(data.branchPermissions ?? null);
+  }
+
+  async function saveSensitiveContact(value: string) {
+    setSensitiveContactId(value);
+    await fetch("/api/group/category-owners", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sensitiveRoutingContactId: value || null }),
+    });
   }
 
   async function setOwner(categoryId: string, defaultOwnerId: string) {
@@ -190,6 +203,28 @@ export default function GroupCategoryOwnersPage() {
           </div>
         )}
       </div>
+
+      {colleagueEnabled && (
+        <div className="callout" style={{ marginBottom: 12 }}>
+          <h3 style={{ marginTop: 0 }}>Sensitive category routing</h3>
+          <p className="subtitle" style={{ marginTop: 0 }}>
+            A Colleague Experience category marked &quot;Sensitive&quot; (HR/leadership complaints) never goes to that
+            category&rsquo;s normal owner — it goes to this contact instead, for any branch that has not chosen its own, so a
+            complaint about HR never lands with HR.
+          </p>
+          <div className="field" style={{ maxWidth: 320 }}>
+            <label>Sensitive-category contact</label>
+            <select value={sensitiveContactId} onChange={(e) => saveSensitiveContact(e.target.value)}>
+              <option value="">Not set</option>
+              {team.map((t) => (
+                <option key={t.userId} value={t.userId}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       <div className="callout" style={{ marginBottom: 12 }}>
         This is the <b>default</b> owner for every branch in your organization. Any branch can set its own owner for a

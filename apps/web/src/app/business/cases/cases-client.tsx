@@ -651,6 +651,11 @@ export default function BusinessCasesClient() {
                           <span className="pill pill-amber">Escalation level {item.currentEscalationLevel}</span>
                         )}
                       </div>
+                      {item.status === "open" && resolvingId !== item._id && (
+                        <button className="btn btn-sm" onClick={() => updateItem(item._id, { status: "in_progress" })}>
+                          Start work
+                        </button>
+                      )}
                       {item.status !== "resolved" && resolvingId !== item._id && (
                         <button
                           className="btn btn-sm"

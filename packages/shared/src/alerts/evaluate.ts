@@ -51,7 +51,8 @@ export async function autoTriageAndCreateActionItem(
   business: HydratedDocument<IBusiness>,
   ruleDescription: string,
   triggeringComment: string | null,
-  product: Product
+  product: Product,
+  sourceResponseId: Types.ObjectId | string | null = null
 ) {
   // Guards against the same comment producing two cases: the submit-time
   // sensitive screen may have already routed this exact comment (see
@@ -152,6 +153,9 @@ export async function autoTriageAndCreateActionItem(
     source: ownerId ? "auto_assigned" : "auto_suggested",
     suggestedAction,
     sensitive: isSensitive,
+    // Links the case to the response that raised it, so the Response
+    // dimension of CX/EX Pulse can see that this feedback was acted on.
+    sourceResponseIds: sourceResponseId ? [new Types.ObjectId(sourceResponseId)] : [],
   });
 
   await autoAttachPlaybook(item).catch((err) => console.error("[alerts] auto-attach playbook failed", err));
@@ -178,7 +182,8 @@ async function recordFiringAndNotify(
   rule: IAlertRule & { _id: Types.ObjectId },
   businessId: Types.ObjectId,
   value: number,
-  triggeringComment: string | null = null
+  triggeringComment: string | null = null,
+  sourceResponseId: Types.ObjectId | string | null = null
 ): Promise<boolean> {
   if (await isInCooldown(rule._id, businessId)) return false;
 
@@ -199,7 +204,7 @@ async function recordFiringAndNotify(
   }
 
   if (business) {
-    await autoTriageAndCreateActionItem(business, ruleDescription, triggeringComment, rule.product).catch((err) =>
+    await autoTriageAndCreateActionItem(business, ruleDescription, triggeringComment, rule.product, sourceResponseId).catch((err) =>
       console.error("[alerts] AI-assisted triage failed", err)
     );
   }
@@ -216,7 +221,8 @@ async function recordFiringAndNotify(
 export async function evaluateRealTimeAlertsForBusiness(
   businessId: Types.ObjectId | string,
   triggeringComment: string | null = null,
-  product: Product = "customer_experience"
+  product: Product = "customer_experience",
+  sourceResponseId: Types.ObjectId | string | null = null
 ): Promise<void> {
   const business = await Business.findById(businessId);
   if (!business) return;
@@ -245,7 +251,7 @@ export async function evaluateRealTimeAlertsForBusiness(
     const value = metricValue(rule.metric, metrics);
     if (value === null || rule.threshold === null) continue;
     if (value < rule.threshold) {
-      await recordFiringAndNotify(rule, business._id, value, triggeringComment);
+      await recordFiringAndNotify(rule, business._id, value, triggeringComment, sourceResponseId);
     }
   }
 }

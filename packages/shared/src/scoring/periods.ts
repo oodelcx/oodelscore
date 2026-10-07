@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { Response } from "../models/Response";
 import { computeBusinessMetrics } from "./aggregate";
+import { MIN_ANONYMITY_GROUP_SIZE } from "../anonymity";
 import type { Product } from "../models/products";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -51,6 +52,21 @@ async function aggregateAcrossBusinesses(businessIds: Types.ObjectId[], from: Da
     starAverage: starResults.length === 0 ? null : starResults.reduce((s, r) => s + (r.starAverage as number), 0) / starResults.length,
     npsScore: npsResults.length === 0 ? null : Math.round(npsResults.reduce((s, r) => s + (r.npsScore as number), 0) / npsResults.length),
   };
+}
+
+/**
+ * Colleague Experience: a window with fewer responses than the anonymity floor
+ * keeps its response count (so the screen can say why) but loses every score.
+ */
+export function maskPeriodComparisonsForAnonymity<T extends Record<string, PeriodComparison>>(comparisons: T): T {
+  const out: Record<string, PeriodComparison> = {};
+  for (const [key, value] of Object.entries(comparisons)) {
+    out[key] =
+      value.responseCount >= MIN_ANONYMITY_GROUP_SIZE
+        ? value
+        : { ...value, starAverage: null, npsScore: null, changePercent: null, enpsPointChange: null };
+  }
+  return out as T;
 }
 
 /** Powers the "This week / month / quarter / year" comparison cards. */

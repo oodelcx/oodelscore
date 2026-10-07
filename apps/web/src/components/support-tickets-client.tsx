@@ -91,8 +91,8 @@ export default function SupportTicketsClient({ apiBase }: { apiBase: string }) {
         <div>
           <h1>Support</h1>
           <p className="subtitle" style={{ margin: 0 }}>
-            Report a problem with OodelCX itself — a billing question, a bug, or an access issue. For questions about
-            your own customers&apos; feedback, use Messages instead.
+            Ask us a question or report a problem with OodelCX itself — a billing question, a bug, or an access issue.
+            Questions about your own customers&apos; feedback are handled in Case Management.
           </p>
         </div>
       </div>

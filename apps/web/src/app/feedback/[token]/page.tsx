@@ -21,6 +21,7 @@ interface FormData {
   scanToken: string;
   businessName: string;
   groupTag: string | null;
+  isAnonymous?: boolean;
   formLayout: "single_page" | "one_per_screen";
   demographicConfig: DemographicConfig;
   questions: Question[];
@@ -58,7 +59,7 @@ export default function FeedbackFormPage({ params }: { params: Promise<{ token: 
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/feedback/${token}`)
+    fetch(`/api/feedback/${token}${typeof window !== "undefined" ? window.location.search : ""}`)
       .then((res) => res.json())
       .then((result) => {
         if (result.status !== "ok") {
@@ -127,6 +128,7 @@ export default function FeedbackFormPage({ params }: { params: Promise<{ token: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         scanToken: data?.scanToken ?? "",
+        rosterToken: new URLSearchParams(window.location.search).get("rt") ?? "",
         answers: Object.entries(answers).map(([index, value]) => ({ index: Number(index), value })),
         respondentName: demographics.name || null,
         respondentEmail: demographics.email || null,
@@ -201,6 +203,9 @@ function Header({ data }: { data: FormData }) {
     <div className="ff-header">
       <div className="ff-biz-name">{data.businessName}</div>
       {data.groupTag && <div className="ff-group-tag">{data.groupTag}</div>}
+      {data.isAnonymous && (
+        <div className="ff-group-tag">This survey is anonymous: it never asks for your name, email or phone.</div>
+      )}
     </div>
   );
 }

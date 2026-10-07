@@ -62,6 +62,8 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "compass", label: "OodelCX Compass", description: "ANCHOR six-dimension maturity diagnostic assessment." },
   { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes." },
   { key: "programEvaluation", label: "Program Evaluation", description: "AI evaluation of a training Event's feedback against the business's own stated objectives." },
+  { key: "closingLoop", label: "Closing the Loop", description: "\"You said, we did\" broadcast updates to the Colleague Experience roster." },
+  { key: "businessValue", label: "Business Value", description: "Translates at-risk feedback into a commercial exposure figure." },
 ];
 
 // Keep in sync with packages/shared/src/features/teamPermissions.ts — same
@@ -684,7 +686,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
     if (isNew) return;
     if (
       !confirm(
-        `Permanently delete ${form.name || "this business"}? This deletes all its feedback points, responses, and insight history. This cannot be undone.`
+        `Permanently delete ${form.name || "this business"}? This deletes its login and team logins, feedback points, responses, cases, colleague roster, alert rules and insight reports, and its billing records in OodelCX. It does NOT cancel a live Stripe subscription — cancel that in Stripe first. This cannot be undone.`
       )
     )
       return;

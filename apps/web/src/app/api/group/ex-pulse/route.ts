@@ -8,6 +8,8 @@ import {
   computePeriodComparisons,
   computeDailyENPSTrend,
   computeColleagueDemographicBreakdown,
+  maskPeriodComparisonsForAnonymity,
+  meetsAnonymityFloor,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
@@ -61,5 +63,10 @@ export async function GET() {
     computeColleagueDemographicBreakdown(ceBusinessIds, windowFrom, now),
   ]);
 
-  return NextResponse.json({ status: "ok", score, history, branches, periodComparisons, dailyTrend, demographics });
+    // Anonymity floor: windows (and the headline eNPS) built on fewer than
+  // the minimum number of responses show their count but no score.
+  const maskedComparisons = maskPeriodComparisonsForAnonymity(periodComparisons);
+  const scoreObj = score ? score.toObject() : null;
+  const maskedScore = scoreObj && !meetsAnonymityFloor(periodComparisons.month.responseCount) ? { ...scoreObj, enps: null } : scoreObj;
+  return NextResponse.json({ status: "ok", maskedScore, history, branches, periodComparisons: maskedComparisons, dailyTrend: [], demographics });
 }

@@ -95,17 +95,24 @@ export async function POST(request: NextRequest) {
         skipped++;
         continue;
       }
-      const startDate = raw.startDate ? new Date(raw.startDate) : null;
-      const endDate = raw.endDate ? new Date(raw.endDate) : null;
+      // Only overwrite a date when the row actually carries one, so adding or
+      // re-uploading someone without a date never wipes a date already saved
+      // (and a re-upload can never silently bring a leaver back to active).
+      const set: Record<string, Date> = {};
+      if (raw.startDate) {
+        const startDate = new Date(raw.startDate);
+        if (!isNaN(startDate.getTime())) set.startDate = startDate;
+      }
+      if (raw.endDate) {
+        const endDate = new Date(raw.endDate);
+        if (!isNaN(endDate.getTime())) set.endDate = endDate;
+      }
       operations.push({
         updateOne: {
           filter: { businessId: session.business._id, email },
           update: {
-            $set: {
-              startDate: startDate && !isNaN(startDate.getTime()) ? startDate : null,
-              endDate: endDate && !isNaN(endDate.getTime()) ? endDate : null,
-            },
-            $setOnInsert: { triggeredStages: [] },
+            ...(Object.keys(set).length > 0 ? { $set: set } : {}),
+            $setOnInsert: { triggeredStages: [], ...(set.startDate ? {} : { startDate: null }), ...(set.endDate ? {} : { endDate: null }) },
           },
           upsert: true,
         },

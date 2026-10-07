@@ -237,7 +237,7 @@ async function handlePost(request: NextRequest, qrToken: string) {
   const openTextAnswer = responseAnswers.find((a) => a.type === "open_text" && typeof a.value === "string" && a.value.trim());
   const triggeringComment = typeof openTextAnswer?.value === "string" ? openTextAnswer.value : null;
 
-  await evaluateRealTimeAlertsForBusiness(business._id, triggeringComment, feedbackPoint.product).catch((err) =>
+  await evaluateRealTimeAlertsForBusiness(business._id, triggeringComment, feedbackPoint.product, createdResponse._id).catch((err) =>
     console.error("[feedback] real-time alert evaluation failed", err)
   );
 
@@ -259,7 +259,8 @@ async function handlePost(request: NextRequest, qrToken: string) {
           business,
           "Directly reported via a Colleague Experience response",
           triggeringComment,
-          "colleague_experience"
+          "colleague_experience",
+          createdResponse._id
         );
         await Response.findByIdAndUpdate(createdResponse._id, { sensitiveRouted: true });
       }

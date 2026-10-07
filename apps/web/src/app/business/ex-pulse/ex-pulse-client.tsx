@@ -194,6 +194,7 @@ export default function BusinessExPulseClient() {
                       </div>
                       <div className="subtitle" style={{ margin: 0 }}>
                         {label} ({p.responseCount} response{p.responseCount === 1 ? "" : "s"})
+                        {p.responseCount < 5 && " · not enough responses yet to show a score"}
                       </div>
                     </div>
                   );

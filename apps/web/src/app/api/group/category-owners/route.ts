@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Types } from "mongoose";
 import { connectToDatabase, Category, CategoryOwnerMapping, getCategoriesInUseForParentOrg, getEnabledProducts } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
@@ -22,7 +23,40 @@ export async function GET() {
     ? await Category.find({ _id: { $in: [...inUseIds] } }).sort({ name: 1 })
     : [];
 
-  return NextResponse.json({ status: "ok", categories, allCategories, mappings, escalationLevels: session.org.escalationLevels });
+  return NextResponse.json({
+    status: "ok",
+    categories,
+    allCategories,
+    mappings,
+    escalationLevels: session.org.escalationLevels,
+    sensitiveRoutingContactId: session.org.sensitiveRoutingContactId ? session.org.sensitiveRoutingContactId.toString() : null,
+    colleagueEnabled: getEnabledProducts(session.org).includes("colleague_experience"),
+  });
+}
+
+/**
+ * Group-wide sensitive-category contact (Colleague Experience): used for any
+ * branch that has not set its own, so a complaint about HR or leadership never
+ * lands with the people it is about.
+ */
+export async function PATCH(request: Request) {
+  const session = await requireParentOrgOwner();
+  if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  const body = await request.json().catch(() => null);
+  if (!body || !("sensitiveRoutingContactId" in body)) {
+    return NextResponse.json({ status: "error", message: "sensitiveRoutingContactId is required" }, { status: 400 });
+  }
+  await connectToDatabase();
+  let contactId: Types.ObjectId | null = null;
+  if (typeof body.sensitiveRoutingContactId === "string" && body.sensitiveRoutingContactId) {
+    if (!Types.ObjectId.isValid(body.sensitiveRoutingContactId)) {
+      return NextResponse.json({ status: "error", message: "Invalid contact" }, { status: 400 });
+    }
+    contactId = new Types.ObjectId(body.sensitiveRoutingContactId);
+  }
+  session.org.sensitiveRoutingContactId = contactId;
+  await session.org.save();
+  return NextResponse.json({ status: "ok" });
 }
 
 export async function PUT(request: Request) {

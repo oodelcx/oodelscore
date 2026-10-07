@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { connectToDatabase, Response, FeedbackPoint, PRODUCTS, type Product } from "@oodelscore/shared";
+import { connectToDatabase, Response, FeedbackPoint, PRODUCTS, meetsAnonymityFloor, type Product } from "@oodelscore/shared";
 
 const PRODUCT_SET: readonly string[] = PRODUCTS;
 import { requireBusinessOwner } from "@/lib/ownerAuth";
@@ -54,7 +54,28 @@ export async function GET(request: Request) {
   const to = toParam ? new Date(toParam) : null;
 
   await connectToDatabase();
+  // Colleague Experience protection: individual responses are withheld until
+  // at least MIN_ANONYMITY_GROUP_SIZE exist for this business, and comments
+  // the safety check routed to the sensitive contact are never listed here.
+  if (product === "colleague_experience") {
+    const totalForBusiness = await Response.countDocuments({ businessId: session.business._id, product });
+    if (!meetsAnonymityFloor(totalForBusiness)) {
+      return NextResponse.json({
+        status: "ok",
+        responses: [],
+        feedbackPoints: [],
+        page: 1,
+        limit,
+        total: 0,
+        totalPages: 1,
+        stats: null,
+        belowAnonymityFloor: true,
+      });
+    }
+  }
+
   const match = buildMatch(session.business._id, filter, product, from && !Number.isNaN(from.getTime()) ? from : null, to && !Number.isNaN(to.getTime()) ? to : null);
+  if (product === "colleague_experience") match.sensitiveRouted = { $ne: true };
 
   const [total, rows, feedbackPoints, stats] = await Promise.all([
     Response.countDocuments(match),

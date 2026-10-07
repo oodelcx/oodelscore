@@ -54,6 +54,9 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
   { key: "compass", label: "OodelCX Compass", description: "ANCHOR six-dimension maturity diagnostic assessment." },
   { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes." },
+  { key: "closingLoop", label: "Closing the Loop", description: "\"You said, we did\" broadcast updates to the Colleague Experience roster." },
+  { key: "businessValue", label: "Business Value", description: "Translates at-risk feedback into a commercial exposure figure." },
+  { key: "programEvaluation", label: "Program Evaluation", description: "AI evaluation of a training Event's feedback against the business's own stated objectives." },
 ];
 // Keep in sync with packages/shared/src/features/teamPermissions.ts — same
 // reason as FEATURE_TOGGLES above.

@@ -1,3 +1,4 @@
+import { meetsAnonymityFloor } from "../anonymity";
 import { Types } from "mongoose";
 import { Response, type Sentiment } from "../models/Response";
 import { Business } from "../models/Business";
@@ -74,12 +75,26 @@ export async function computeHighlights(
     return { quotes: [], topThemes: [], positiveResponseCount: 0, totalResponseCount: 0 };
   }
 
-  const [responses, businesses] = await Promise.all([
-    Response.find({ businessId: { $in: businessIds }, product, submittedAt: { $gte: from, $lte: to } })
+  const [allResponses, businesses] = await Promise.all([
+    Response.find({
+      businessId: { $in: businessIds },
+      product,
+      submittedAt: { $gte: from, $lte: to },
+      // Comments routed to the sensitive contact never appear in a listing.
+      ...(product === "colleague_experience" ? { sensitiveRouted: { $ne: true } } : {}),
+    })
       .select("businessId answers sentiment themes submittedAt")
       .lean(),
     Business.find({ _id: { $in: businessIds } }).select("name").lean(),
   ]);
+  // Colleague Experience: a branch with fewer than the anonymity floor of
+  // responses contributes nothing, so a small team's comment can't be singled out.
+  let responses = allResponses;
+  if (product === "colleague_experience") {
+    const countByBusiness = new Map<string, number>();
+    for (const r of allResponses) countByBusiness.set(r.businessId.toString(), (countByBusiness.get(r.businessId.toString()) ?? 0) + 1);
+    responses = allResponses.filter((r) => meetsAnonymityFloor(countByBusiness.get(r.businessId.toString()) ?? 0));
+  }
   const businessNameById = new Map(businesses.map((b) => [b._id.toString(), b.name]));
 
   interface ThemeAgg {

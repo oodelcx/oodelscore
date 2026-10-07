@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "error", message: "Feedback point not found" }, { status: 404 });
     }
 
-    const result = await sendRosterSurveyLinks(feedbackPoint._id);
+    const result = await sendRosterSurveyLinks(feedbackPoint._id, { newRound: body?.newRound === true });
     return NextResponse.json({ status: "ok", ...result });
   } catch (err) {
     await logApiRouteError("business/roster/send-links POST", err);

@@ -45,7 +45,7 @@ export async function runColleagueRosterPulseCadence(now: Date = new Date()): Pr
     }
 
     try {
-      await sendRosterSurveyLinks(point._id);
+      await sendRosterSurveyLinks(point._id, { newRound: true });
       point.lastSentAt = now;
       await point.save();
       result.sent++;
