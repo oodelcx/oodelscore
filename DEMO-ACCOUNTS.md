@@ -129,3 +129,10 @@ The other built-in demo logins (`group.demo@`, `business.demo@`, `branch.demo@oo
 | Team member | The Olive Table | ops.olivetable@showcase.oodel.test |
 | Team member | The Olive Table | shiftlead.olivetable@showcase.oodel.test |
 
+
+## What the demo data does and does not show
+
+- **Amani Women's Empowerment & Peacebuilding Institute** (non-profit, stand-alone): three training programmes (women's empowerment, peacebuilding, Sufi peace), each with objective-tied survey questions, an in-session QR survey, a 30-day follow-up sent by link, and about 170 responses. Program Evaluation reports exist for the sessions that have ended. Sign in as `amani@showcase.oodel.test` and open **Program Evaluation**.
+- **Colleague Experience** is on for Meridian Bank branches, St. Augustine, Skyline Telecom and Aurora Airlines. Each branch has a shared-link pulse survey ("Team Pulse", "Crew Pulse" or "Staff Pulse"), about 20 to 35 responses, and a small roster of five people (one marked as exited).
+- The colleague demo does **not** include a roster-personalized (personal link) survey, a lifecycle (30-day, 90-day or exit) survey, or a colleague category marked Sensitive. Those flows cannot be shown from the seed data; set them up in Admin on a test account first.
+- Skyline Telecom and Aurora Airlines have Colleague Experience only (no switch in the menu). Meridian Bank and St. Augustine have both products (use the Customer / Colleague switch).
