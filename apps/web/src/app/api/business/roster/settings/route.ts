@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest) {
     await Business.updateOne({ _id: session.business._id }, { $set: { exitSurveyPersonalEmailEnabled: body.exitSurveyPersonalEmailEnabled } });
     let cleared = 0;
     if (!body.exitSurveyPersonalEmailEnabled) {
-      const res = await RosterEntry.updateMany({ businessId: session.business._id, personalEmail: { $ne: "" } }, { $set: { personalEmail: "" } });
+      const res = await RosterEntry.updateMany({ businessId: session.business._id, personalEmail: { $exists: true, $nin: ["", null] } }, { $set: { personalEmail: "" } });
       cleared = res.modifiedCount ?? 0;
     }
     return NextResponse.json({ status: "ok", exitSurveyPersonalEmailEnabled: body.exitSurveyPersonalEmailEnabled, cleared });

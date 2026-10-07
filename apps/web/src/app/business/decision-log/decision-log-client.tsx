@@ -1,5 +1,6 @@
 "use client";
 
+import { makeWording } from "@/lib/wordingPick";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
@@ -109,6 +110,7 @@ function BusinessDecisionLogInner({ tooltips, wording }: { tooltips: Record<stri
   const [showForm, setShowForm] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const w = makeWording(product === "colleague_experience", wording);
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
 
@@ -597,8 +599,8 @@ function BusinessDecisionLogInner({ tooltips, wording }: { tooltips: Record<stri
                         <p className="card-sub" style={{ marginTop: 0 }}>
                           Pick what to measure — OodelCX compares the average across everyone who responded in the 30
                           days before implementation to everyone who&apos;s responded since, using your real feedback
-                          data. This tracks whether the metric moved overall, not whether any one customer&apos;s
-                          complaint was personally resolved — most feedback is anonymous. Needs at least 14 days since
+                          data.{" "}
+                          {w("decision-log-measure-note", "This tracks whether the metric moved overall, not whether any one customer's complaint was personally resolved — most feedback is anonymous.")} Needs at least 14 days since
                           implementation; once eligible, this also gets checked automatically once a day, so you
                           don&apos;t have to remember to come back and click it.
                         </p>

@@ -488,7 +488,8 @@ export default function BusinessCasesClient() {
             <div className="field">
               <label>Type</label>
               <select value={caseType} onChange={(e) => setCaseType(e.target.value)}>
-                <option value="customer_recovery">Customer recovery — reach out and make it right</option>
+                {/* Colleague feedback is anonymous, so there is nobody to reach out to. */}
+                {product !== "colleague_experience" && <option value="customer_recovery">Customer recovery — reach out and make it right</option>}
                 <option value="operational_fix">Operational fix — fix the problem</option>
                 <option value="investigation">Investigation — figure out what's happening</option>
               </select>

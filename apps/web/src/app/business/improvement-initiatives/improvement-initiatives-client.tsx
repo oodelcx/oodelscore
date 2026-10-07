@@ -1,5 +1,6 @@
 "use client";
 
+import { makeWording } from "@/lib/wordingPick";
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
 import { DetailDrawer, NotesThread } from "@/components/detail-drawer";
@@ -65,7 +66,7 @@ function progressLabel(row: InitiativeRow): string | null {
  * progress toward a baseline/target — but this is the thing with an owner
  * and a target, kept separate from the routine cases that revealed it.
  */
-export default function BusinessImprovementInitiativesClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function BusinessImprovementInitiativesClient({ tooltips, wording }: { tooltips: Record<string, string>; wording: Record<string, string> }) {
   const [initiatives, setInitiatives] = useState<InitiativeRow[]>([]);
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,6 +96,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
   const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
   const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const w = makeWording(product === "colleague_experience", wording);
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
 
@@ -277,7 +279,7 @@ export default function BusinessImprovementInitiativesClient({ tooltips }: { too
           <p className="subtitle">
             {readOnly
               ? "Managed by your parent organization — shown here read-only when it affects this branch."
-              : "For a pattern across several cases, not one customer's complaint — a systemic fix with its own owner, baseline, and target. Individual cases stay in Case Management; link them here once you spot the pattern."}
+              : w("initiatives-intro", "For a pattern across several cases, not one customer's complaint — a systemic fix with its own owner, baseline, and target. Individual cases stay in Case Management; link them here once you spot the pattern.")}
           </p>
         </div>
         {!readOnly && (

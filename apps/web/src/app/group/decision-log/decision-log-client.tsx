@@ -1,5 +1,6 @@
 "use client";
 
+import { makeWording } from "@/lib/wordingPick";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
@@ -118,6 +119,7 @@ function DecisionLogInner({ tooltips, wording }: { tooltips: Record<string, stri
   const [statusFilter, setStatusFilter] = useState<"all" | "planned" | "in_progress" | "implemented">("all");
   const [showForm, setShowForm] = useState(false);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const w = makeWording(product === "colleague_experience", wording);
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
 
@@ -348,9 +350,10 @@ function DecisionLogInner({ tooltips, wording }: { tooltips: Record<string, stri
             <InfoTip text={tooltips["decision-log"]} />
           </h1>
           <p className="subtitle">
-            What actually changed because of what customers told you, and whether it worked. For a genuine management
-            decision, not a routine case — a recurring pattern across several branches belongs in Improvement
-            Initiatives instead.
+            {w(
+              "decision-log-intro",
+              "What actually changed because of what customers told you, and whether it worked. For a genuine management decision, not a routine case — a recurring pattern across several branches belongs in Improvement Initiatives instead."
+            )}
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -675,9 +678,8 @@ function DecisionLogInner({ tooltips, wording }: { tooltips: Record<string, stri
                       <div className="ab-panel">
                         <p className="card-sub" style={{ marginTop: 0 }}>
                           Pick what to measure — OodelCX compares the average across everyone who responded in the 30 days
-                          before implementation to everyone who&apos;s responded since, using real feedback data. This
-                          tracks whether the metric moved overall, not whether any one customer&apos;s complaint was
-                          personally resolved — most feedback is anonymous. Needs at least 14 days since implementation;
+                          before implementation to everyone who&apos;s responded since, using real feedback data.{" "}
+                          {w("decision-log-measure-note", "This tracks whether the metric moved overall, not whether any one customer's complaint was personally resolved — most feedback is anonymous.")} Needs at least 14 days since implementation;
                           once eligible, this also gets checked automatically once a day.
                         </p>
                         <div className="field-row">

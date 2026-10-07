@@ -41,6 +41,21 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
       { key: "location", label: "Word for a branch (singular)", text: "location" },
       { key: "locations", label: "Word for branches (plural)", text: "locations" },
       { key: "branches-chip", label: "Command Center: branch count chip", text: "LOCATIONS" },
+      {
+        key: "decision-log-intro",
+        label: "Decision Log: intro line",
+        text: "What actually changed because of what colleagues told you, and whether it worked. For a genuine management decision, not a routine case — a recurring pattern across several locations belongs in Improvement Initiatives instead.",
+      },
+      {
+        key: "decision-log-measure-note",
+        label: "Decision Log: measuring-an-outcome note (replaces the customer-complaint sentence)",
+        text: "This tracks whether the metric moved overall, not whether any one colleague's concern was personally resolved — most feedback is anonymous.",
+      },
+      {
+        key: "initiatives-intro",
+        label: "Improvement Initiatives: intro line",
+        text: "For a pattern across several cases, not one colleague's concern — a systemic fix with its own owner, baseline, and target. Individual cases stay in Case Management; link them here once you spot the pattern.",
+      },
     ],
   },
   {

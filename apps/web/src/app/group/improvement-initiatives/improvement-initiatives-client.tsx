@@ -1,5 +1,6 @@
 "use client";
 
+import { makeWording } from "@/lib/wordingPick";
 import { useEffect, useState } from "react";
 import { InfoTip } from "@/components/info-tip";
 import { DetailDrawer, NotesThread } from "@/components/detail-drawer";
@@ -66,7 +67,7 @@ function progressLabel(row: InitiativeRow): string | null {
  * from the Decision Log, which records that management chose a change, not
  * the operational program behind it.
  */
-export default function GroupImprovementInitiativesClient({ tooltips }: { tooltips: Record<string, string> }) {
+export default function GroupImprovementInitiativesClient({ tooltips, wording }: { tooltips: Record<string, string>; wording: Record<string, string> }) {
   const [initiatives, setInitiatives] = useState<InitiativeRow[]>([]);
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [team, setTeam] = useState<TeamRow[]>([]);
@@ -95,6 +96,7 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
   const [flags, setFlags] = useState<RecurringFlagRow[]>([]);
   const [convertingFlagId, setConvertingFlagId] = useState<string | null>(null);
   const [product, setProduct] = useState<"customer_experience" | "colleague_experience">("customer_experience");
+  const w = makeWording(product === "colleague_experience", wording);
   const [cxEnabled, setCxEnabled] = useState(true);
   const [ceEnabled, setCeEnabled] = useState(false);
 
@@ -275,9 +277,10 @@ export default function GroupImprovementInitiativesClient({ tooltips }: { toolti
             <InfoTip text={tooltips["improvement-initiatives"]} />
           </h1>
           <p className="subtitle">
-            For a pattern across several branches' cases, not one customer's complaint — a systemic fix with its own
-            owner, baseline, and target. Individual cases stay in each branch's Case Management; link them here once
-            you spot the pattern.
+            {w(
+              "initiatives-intro",
+              "For a pattern across several branches' cases, not one customer's complaint — a systemic fix with its own owner, baseline, and target. Individual cases stay in each branch's Case Management; link them here once you spot the pattern."
+            )}
           </p>
         </div>
         <button className="btn btn-dark" onClick={() => setShowForm((v) => !v)}>
