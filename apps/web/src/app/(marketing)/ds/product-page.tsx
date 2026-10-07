@@ -18,6 +18,7 @@ import { fill, list, readViz, STAGE_IDS, type Feature, type StageDef } from "./c
 export async function ProductPage({ page }: { page: "customer-x" | "colleague-x" }) {
   const [menu, content, solutions] = await Promise.all([getSiteContent("menu"), getSiteContent(page), getSiteContent("solutions")]);
   if (menu.navItems.find((n) => n.key === page)?.visible === false) notFound();
+  const pricingHidden = menu.navItems.find((n) => n.key === "pricing")?.visible === false;
   const f = content.fields;
   const ex = page === "colleague-x";
   const v = readViz(f);
@@ -137,9 +138,13 @@ export async function ProductPage({ page }: { page: "customer-x" | "colleague-x"
             <p className="ds-lead">{f.finalCtaSubhead}</p>
             <div className="ds-row">
               <BookDemoButton className="ds-btn ds-btn-p">{f.finalCtaPrimaryButton}</BookDemoButton>
-              <a className="ds-btn ds-btn-g" href={f.finalCtaSecondaryHref || "/pricing"}>
-                {f.finalCtaSecondaryButton}
-              </a>
+              {pricingHidden && (f.finalCtaSecondaryHref || "/pricing") === "/pricing" ? (
+                <BookDemoButton className="ds-btn ds-btn-g">{menu.fields.navDemoLabel || "Book a demo"}</BookDemoButton>
+              ) : (
+                <a className="ds-btn ds-btn-g" href={f.finalCtaSecondaryHref || "/pricing"}>
+                  {f.finalCtaSecondaryButton}
+                </a>
+              )}
             </div>
           </div>
         </section>

@@ -40,6 +40,7 @@ export default async function MarketingHomePage() {
     getSiteContent("solutions"),
   ]);
   const f = home.fields;
+  const pricingHidden = menu.navItems.find((n) => n.key === "pricing")?.visible === false;
   // The stage illustrations on Home are the Customer X ones; their text is edited under Customer X.
   const v = readViz(cx.fields);
   const loopStages = list<LoopStage>(f.loopStages);
@@ -185,9 +186,13 @@ export default async function MarketingHomePage() {
             <p className="ds-lead">{f.finalCtaSubhead}</p>
             <div className="ds-row">
               <BookDemoButton className="ds-btn ds-btn-p">{f.finalCtaPrimaryButton}</BookDemoButton>
-              <a className="ds-btn ds-btn-g" href={f.finalCtaSecondaryHref || "/pricing"}>
-                {f.finalCtaSecondaryButton}
-              </a>
+              {pricingHidden && (f.finalCtaSecondaryHref || "/pricing") === "/pricing" ? (
+                <BookDemoButton className="ds-btn ds-btn-g">{menu.fields.navDemoLabel || "Book a demo"}</BookDemoButton>
+              ) : (
+                <a className="ds-btn ds-btn-g" href={f.finalCtaSecondaryHref || "/pricing"}>
+                  {f.finalCtaSecondaryButton}
+                </a>
+              )}
             </div>
           </div>
         </section>
