@@ -11,6 +11,12 @@ export async function GET() {
   }
 
   await connectToDatabase();
-  const items = await ActionBoardItem.find().sort({ createdAt: -1 }).limit(200);
+  const rows = await ActionBoardItem.find().sort({ createdAt: -1 }).limit(200);
+  // Admin may see that a Sensitive case exists, never what it says.
+  const items = rows.map((row) => {
+    if (!row.sensitive) return row;
+    const o = row.toObject();
+    return { ...o, title: "Confidential concern", description: "", suggestedAction: "", resolutionNote: "", sourceResponseIds: [], escalationNote: "" };
+  });
   return NextResponse.json({ status: "ok", items });
 }

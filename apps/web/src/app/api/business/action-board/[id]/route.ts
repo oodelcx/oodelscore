@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { Types } from "mongoose";
 import {
+  canViewCase,
+  logAuditEvent,
   connectToDatabase,
   ActionBoardItem,
   ActionItemComment,
@@ -22,7 +24,7 @@ import {
   getEscalationConfig,
   resolveEscalationAssignee,
 } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, caseViewerForBusiness } from "@/lib/ownerAuth";
 import { attachPlaybookRunsToItems } from "@/lib/caseStats";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -40,8 +42,19 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   await connectToDatabase();
   const { id } = await params;
+  const viewer = caseViewerForBusiness(session);
   const item = await ActionBoardItem.findOne({ _id: id, businessId: session.business._id });
-  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (!item || !canViewCase(item, viewer)) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  // Opening a Sensitive case is recorded: who looked, and when.
+  if (item.sensitive) {
+    await logAuditEvent({
+      actor: session.user,
+      action: "sensitive_case.viewed",
+      targetType: "action_board_item",
+      targetId: item._id.toString(),
+      targetLabel: "Sensitive case",
+    });
+  }
   if (session.tier === "limited" && item.ownerId?.toString() !== session.user._id.toString()) {
     return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   }
@@ -142,8 +155,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   await connectToDatabase();
 
   const { id } = await params;
+  const viewer = caseViewerForBusiness(session);
   const item = await ActionBoardItem.findOne({ _id: id, businessId: session.business._id });
-  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (!item || !canViewCase(item, viewer)) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => null);
 
@@ -287,8 +301,11 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   await connectToDatabase();
 
   const { id } = await params;
-  const removed = await ActionBoardItem.findOneAndDelete({ _id: id, businessId: session.business._id });
-  if (!removed) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  const toRemove = await ActionBoardItem.findOne({ _id: id, businessId: session.business._id });
+  if (!toRemove || !canViewCase(toRemove, caseViewerForBusiness(session))) {
+    return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  }
+  await ActionBoardItem.deleteOne({ _id: toRemove._id });
 
   return NextResponse.json({ status: "ok" });
 }

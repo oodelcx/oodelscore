@@ -227,7 +227,7 @@ export async function GET() {
   // ---- Live platform feed ----
   const [recentAlertActivity, resolvedItems, recentComments, recentDecisions, failedInvoices] = await Promise.all([
     AlertActivity.find({ businessId: { $in: allBusinessIds } }).sort({ triggeredAt: -1 }).limit(15),
-    ActionBoardItem.find({ businessId: { $in: allBusinessIds }, status: "resolved" }).sort({ resolvedAt: -1 }).limit(10),
+    ActionBoardItem.find({ businessId: { $in: allBusinessIds }, status: "resolved", sensitive: { $ne: true } }).sort({ resolvedAt: -1 }).limit(10),
     ActionItemComment.find({}).sort({ createdAt: -1 }).limit(30),
     DecisionLogEntry.find({ isDraft: { $ne: true } }).sort({ createdAt: -1 }).limit(10),
     Invoice.find({ status: "failed" }).sort({ issuedAt: -1 }).limit(8),
@@ -237,7 +237,7 @@ export async function GET() {
   const rules = await AlertRule.find({ _id: { $in: ruleIds } }).select("ruleType");
   const ruleTypeById = new Map(rules.map((r) => [r._id.toString(), r.ruleType]));
 
-  const allItemsForComments = await ActionBoardItem.find({}).select("_id businessId title");
+  const allItemsForComments = await ActionBoardItem.find({ sensitive: { $ne: true } }).select("_id businessId title");
   const itemById = new Map(allItemsForComments.map((i) => [i._id.toString(), i]));
 
   const feed: FeedEntry[] = [];

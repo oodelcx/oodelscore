@@ -228,8 +228,10 @@ export default function BusinessRosterClient() {
       )}
 
       <div className="callout" style={{ marginBottom: 16 }}>
-        <strong>Note:</strong> a due count only clears once a lifecycle-trigger survey is configured for that stage
-        (Admin sets this per Feedback Point) and the daily sweep has run.
+        <strong>Next send preview:</strong> the three counts above are exactly how many people the next daily run will email.
+        Nobody is emailed about a milestone that passed before that survey went live, and long-serving staff never get new-starter
+        check-ins. A count stays at 0 until Admin has set up that survey (a Feedback Point with a lifecycle stage). To stop a send,
+        ask Admin to switch that survey off before the next run.
       </div>
 
       {surveyPoints.length > 0 && (

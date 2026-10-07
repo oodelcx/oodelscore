@@ -36,8 +36,10 @@ export async function ensureDraftDecisionForResolvedCase(params: {
     // which a wider group of people can read.
     const responseIds = item.sensitive ? [] : item.sourceResponseIds;
 
+    // A sensitive case's description IS the confidential comment: it must
+    // never be copied into the Decision Log, which more people can read.
     const triggerParts = [
-      item.description?.trim() || item.title,
+      item.sensitive ? "A confidential concern was raised and resolved by its designated contact." : item.description?.trim() || item.title,
       category ? `Category: ${category.name}.` : "",
       responseIds.length > 0 ? `Based on ${responseIds.length} piece${responseIds.length === 1 ? "" : "s"} of feedback.` : "",
       item.sensitive ? "Raised from a sensitive comment; the feedback is not linked here." : "",
@@ -52,13 +54,13 @@ export async function ensureDraftDecisionForResolvedCase(params: {
       isDraft: true,
       sourceCaseId: item._id,
       sourceResponseIds: responseIds,
-      title: `Resolved: ${item.title}`,
+      title: item.sensitive ? "Resolved: a confidential concern" : `Resolved: ${item.title}`,
       trigger: triggerParts.join(" "),
       linkedActionIds: [item._id],
       affectedBusinessIds: [item.businessId],
       ownerId: item.ownerId ?? params.actorUserId,
       status: "planned",
-      notes: item.resolutionNote?.trim()
+      notes: item.resolutionNote?.trim() && !item.sensitive
         ? [{ text: `Resolution note: ${item.resolutionNote.trim()}`, authorLabel: params.actorLabel || "System", createdAt: new Date() }]
         : [],
     });

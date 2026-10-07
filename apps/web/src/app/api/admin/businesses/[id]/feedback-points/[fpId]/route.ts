@@ -36,6 +36,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   // deliberately not editable here.
   if (feedbackPoint.product === "colleague_experience") {
     if (body?.lifecycleTrigger === null || (LIFECYCLE_STAGES as readonly string[]).includes(body?.lifecycleTrigger)) {
+      // Newly assigning a lifecycle stage starts its go-live clock; clearing it resets it.
+      if (body.lifecycleTrigger && feedbackPoint.lifecycleTrigger !== body.lifecycleTrigger) feedbackPoint.lifecycleGoLiveAt = new Date();
+      if (!body.lifecycleTrigger) feedbackPoint.lifecycleGoLiveAt = null;
       feedbackPoint.lifecycleTrigger = body.lifecycleTrigger;
     }
     if (body?.distributionMode === null || (DISTRIBUTION_MODES as readonly string[]).includes(body?.distributionMode)) {

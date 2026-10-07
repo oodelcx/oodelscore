@@ -10,9 +10,10 @@ import {
   CASE_TYPES,
   autoAttachPlaybook,
   PRODUCTS,
+  sensitiveVisibilityClause,
   type Product,
 } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, caseViewerForBusiness } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
 import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/lib/caseStats";
 
@@ -32,6 +33,8 @@ export async function GET() {
 
   const filter: Record<string, unknown> = { businessId: session.business._id, product };
   if (session.tier === "limited") filter.ownerId = session.user._id;
+  // Sensitive cases are visible only to the confidential contact (see canViewCase).
+  filter.$and = [sensitiveVisibilityClause(caseViewerForBusiness(session))];
 
   const scope = session.business.parentOrgId
     ? { parentOrgId: session.business.parentOrgId }

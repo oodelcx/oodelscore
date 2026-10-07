@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, computeAttentionCentre, hasFeature, type AttentionItem, type FeatureKey } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, caseViewerForBusiness } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
 
 // Which Attention Centre item kinds depend on an account-level feature flag
@@ -33,6 +33,7 @@ export async function GET() {
   const isBranch = !!business.parentOrgId;
 
   const items = await computeAttentionCentre({
+    caseViewer: caseViewerForBusiness(session),
     businessIds: [business._id],
     decisionLogFilter: isBranch
       ? { parentOrgId: business.parentOrgId, affectedBusinessIds: business._id }

@@ -1,3 +1,4 @@
+import { sensitiveVisibilityClause, type CaseViewer } from "../cases/sensitiveAccess";
 import { Types, type FilterQuery } from "mongoose";
 import { ActionBoardItem } from "../models/ActionBoardItem";
 import { AlertActivity } from "../models/AlertActivity";
@@ -76,6 +77,8 @@ function daysAgo(iso: string, now: Date): number {
 }
 
 export interface AttentionCentreParams {
+  // Who is looking: Sensitive cases appear only for their confidential contact (see cases/sensitiveAccess).
+  caseViewer: CaseViewer;
   // Cases and Alerts always live on the businesses themselves — every
   // business this owner can see them for (just [businessId] for a
   // standalone business or a single branch; every branch's id for a group).
@@ -110,6 +113,7 @@ export interface AttentionCentreParams {
 
 export async function computeAttentionCentre(params: AttentionCentreParams): Promise<AttentionItem[]> {
   const {
+    caseViewer,
     businessIds,
     decisionLogFilter,
     initiativeFilter,
@@ -148,6 +152,7 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
 
   // ---- Cases: overdue, split by whether they're already escalated -------
   const openOverdueCases = await ActionBoardItem.find({
+    $and: [sensitiveVisibilityClause(caseViewer)],
     businessId: { $in: businessIds },
     product,
     status: { $ne: "resolved" },
@@ -166,6 +171,7 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
   // same "nothing configured yet" case autoEscalateOverdueCases itself
   // skips silently.
   const openCasesForSla = await ActionBoardItem.find({
+    $and: [sensitiveVisibilityClause(caseViewer)],
     businessId: { $in: businessIds },
     product,
     status: { $ne: "resolved" },
@@ -188,6 +194,7 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
   // ---- Cases: sensitive-routed and still untouched after 48h ------------
   const staleSensitiveThreshold = new Date(now.getTime() - SENSITIVE_STALE_HOURS * 60 * 60 * 1000);
   const staleSensitiveCases = await ActionBoardItem.find({
+    $and: [sensitiveVisibilityClause(caseViewer)],
     businessId: { $in: businessIds },
     product,
     status: "open",
@@ -218,6 +225,7 @@ export async function computeAttentionCentre(params: AttentionCentreParams): Pro
   // — someone sends the reply (customerNotifiedAt gets set) or the case is
   // otherwise resolved.
   const candidateCases = await ActionBoardItem.find({
+    $and: [sensitiveVisibilityClause(caseViewer)],
     businessId: { $in: businessIds },
     product: "customer_experience",
     status: { $ne: "resolved" },

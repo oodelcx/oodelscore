@@ -226,7 +226,8 @@ export async function autoEscalateOverdueCases(): Promise<{ escalated: number; s
   let skipped = 0;
   let failed = 0;
 
-  const items = await ActionBoardItem.find({ status: { $ne: "resolved" } });
+  // Sensitive cases stay with their confidential contact: never auto-moved up or down a chain.
+  const items = await ActionBoardItem.find({ status: { $ne: "resolved" }, sensitive: { $ne: true } });
   for (const item of items) {
     try {
       const business = await Business.findById(item.businessId);

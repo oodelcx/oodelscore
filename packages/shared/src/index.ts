@@ -9,6 +9,7 @@ export * from "./auth/jwt";
 export * from "./auth/twoFactor";
 export * from "./audit/log";
 export * from "./cases/eventLog";
+export * from "./cases/sensitiveAccess";
 export * from "./decisionLog/fromCase";
 export * from "./auth/permissions";
 export * from "./email/resend";

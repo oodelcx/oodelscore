@@ -100,6 +100,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     eventId,
     product,
     lifecycleTrigger,
+    lifecycleGoLiveAt: lifecycleTrigger ? new Date() : null,
     distributionMode,
     name,
     description: typeof body?.description === "string" ? body.description : "",

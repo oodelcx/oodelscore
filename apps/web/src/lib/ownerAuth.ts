@@ -3,6 +3,7 @@ import {
   ParentOrganization,
   teamMemberCanAccess,
   branchPermissionAllowed,
+  type CaseViewer,
   type IBusiness,
   type IParentOrganization,
   type TeamMemberTier,
@@ -113,4 +114,18 @@ export async function requireParentOrgOwner(options: OwnerAuthOptions = {}): Pro
   }
 
   return null;
+}
+
+/** Who a business-portal session is, for Sensitive-case visibility (see canViewCase). */
+export function caseViewerForBusiness(session: BusinessOwnerSession): CaseViewer {
+  return {
+    userId: session.user._id.toString(),
+    // A branch never sees an unassigned sensitive case; a standalone business's own owner login does.
+    seesUnassignedSensitive: !session.isTeamMember && !session.business.parentOrgId,
+  };
+}
+
+/** Same, for a group-portal session: only the group's top owner login sees an unassigned one. */
+export function caseViewerForGroup(session: ParentOrgOwnerSession): CaseViewer {
+  return { userId: session.user._id.toString(), seesUnassignedSensitive: !session.isTeamMember };
 }

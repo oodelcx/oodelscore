@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import {
+  canViewCase,
+  logAuditEvent,
   connectToDatabase,
   ActionBoardItem,
   ActionItemComment,
@@ -18,7 +20,7 @@ import {
   getEscalationConfig,
   resolveEscalationAssignee,
 } from "@oodelscore/shared";
-import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { requireParentOrgOwner, caseViewerForGroup } from "@/lib/ownerAuth";
 import { attachPlaybookRunsToItems } from "@/lib/caseStats";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -30,8 +32,19 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   await connectToDatabase();
   const { id } = await params;
+  const viewer = caseViewerForGroup(session);
   const item = await ActionBoardItem.findOne({ _id: id, parentOrgId: session.org._id });
-  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (!item || !canViewCase(item, viewer)) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  // Opening a Sensitive case is recorded: who looked, and when.
+  if (item.sensitive) {
+    await logAuditEvent({
+      actor: session.user,
+      action: "sensitive_case.viewed",
+      targetType: "action_board_item",
+      targetId: item._id.toString(),
+      targetLabel: "Sensitive case",
+    });
+  }
   if (session.tier === "limited" && item.ownerId?.toString() !== session.user._id.toString()) {
     return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   }
@@ -147,8 +160,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   await connectToDatabase();
 
   const { id } = await params;
+  const viewer = caseViewerForGroup(session);
   const item = await ActionBoardItem.findOne({ _id: id, parentOrgId: session.org._id });
-  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (!item || !canViewCase(item, viewer)) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => null);
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  sensitiveVisibilityClause,
   maskPeriodComparisonsForAnonymity,
   connectToDatabase,
   Business,
@@ -12,7 +13,7 @@ import {
   groupByRegion,
   findNeedsAttention,
 } from "@oodelscore/shared";
-import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { requireParentOrgOwner, caseViewerForGroup } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
 import { getColleagueWording } from "@/lib/wording";
 
@@ -98,6 +99,7 @@ export async function GET() {
           product,
           status: { $ne: "resolved" },
           currentEscalationLevel: topLevel,
+          $and: [sensitiveVisibilityClause(caseViewerForGroup(session))],
         })
           .select("title businessId currentEscalationLevel")
           .limit(10)

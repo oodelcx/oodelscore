@@ -1,3 +1,4 @@
+import { logSystemHealthEvent } from "../observability/systemHealth";
 import { Types, type HydratedDocument } from "mongoose";
 import { AlertRule, type IAlertRule } from "../models/AlertRule";
 import type { Product } from "../models/products";
@@ -140,6 +141,15 @@ export async function autoTriageAndCreateActionItem(
         }
       })()
     : "";
+
+  // A sensitive case with nobody to receive it is visible only to the group's (or standalone business's)
+  // top owner login, never to a branch. Tell Admin so a contact gets configured.
+  if (isSensitive && !ownerId) {
+    await logSystemHealthEvent("api_route_error", "A sensitive case was created but no confidential contact is configured for this account", {
+      businessId: business._id.toString(),
+      route: "alerts/sensitive-case-without-contact",
+    });
+  }
 
   const item = await ActionBoardItem.create({
     parentOrgId: business.parentOrgId ?? null,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  sensitiveVisibilityClause,
   maskBusinessMetricsForAnonymity,
   connectToDatabase,
   Business,
@@ -8,7 +9,7 @@ import {
   FeedbackPoint,
   computeBusinessMetrics,
 } from "@oodelscore/shared";
-import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { requireParentOrgOwner, caseViewerForGroup } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
 import { getColleagueWording } from "@/lib/wording";
 
@@ -33,7 +34,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const [rawMetrics, openItems, score, feedbackPoints] = await Promise.all([
     computeBusinessMetrics(business._id, from30d, now, product),
-    ActionBoardItem.find({ businessId: business._id, product, status: { $ne: "resolved" } }).sort({ dueDate: 1 }).limit(10),
+    ActionBoardItem.find({ businessId: business._id, product, status: { $ne: "resolved" }, $and: [sensitiveVisibilityClause(caseViewerForGroup(session))] }).sort({ dueDate: 1 }).limit(10),
     CxPulseScore.findOne({ ownerType: "business", ownerId: business._id, product }).sort({ period: -1 }),
     // A Parent-Org owner has no other way to reach a branch's own QR link —
     // this dashboard is otherwise read-only ("Same dashboard the branch

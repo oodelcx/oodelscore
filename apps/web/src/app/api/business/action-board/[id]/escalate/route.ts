@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { canViewCase } from "@oodelscore/shared";
 import { connectToDatabase, ActionBoardItem, escalateActionBoardItem, EscalationError } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, caseViewerForBusiness } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -17,8 +18,13 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   await connectToDatabase();
   const { id } = await params;
+  const viewer = caseViewerForBusiness(session);
   const item = await ActionBoardItem.findOne({ _id: id, businessId: session.business._id });
-  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (!item || !canViewCase(item, viewer)) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  // A Sensitive case stays with its confidential contact; moving it up or down a chain could hand it to the person it concerns.
+  if (item.sensitive) {
+    return NextResponse.json({ status: "error", message: "A sensitive case is handled by its confidential contact and cannot be escalated or de-escalated." }, { status: 409 });
+  }
 
   const body = await request.json().catch(() => null);
   const note = typeof body?.note === "string" ? body.note.trim() : "";

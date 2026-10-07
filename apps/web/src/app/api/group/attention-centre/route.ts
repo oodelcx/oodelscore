@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase, Business, computeAttentionCentre, hasFeature, type AttentionItem, type FeatureKey } from "@oodelscore/shared";
-import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { requireParentOrgOwner, caseViewerForGroup } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
 
 // Mirrors /api/business/attention-centre's KIND_FEATURE gate.
@@ -23,6 +23,7 @@ export async function GET() {
   const businessIds = businesses.map((b) => b._id);
 
   const items = await computeAttentionCentre({
+    caseViewer: caseViewerForGroup(session),
     businessIds,
     decisionLogFilter: { parentOrgId: org._id },
     initiativeFilter: { parentOrgId: org._id },

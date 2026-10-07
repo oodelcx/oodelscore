@@ -43,6 +43,8 @@ async function evaluateOneMapping(mapping: ICategoryOwnerMapping & { _id: Types.
   const cases = await ActionBoardItem.find({
     ...businessFilter,
     categoryId: mapping.categoryId,
+    // A sensitive case must never feed a pattern that other people can read.
+    sensitive: { $ne: true },
     createdAt: { $gte: since },
   })
     .select("_id businessId createdAt")

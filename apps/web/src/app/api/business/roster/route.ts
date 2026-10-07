@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, RosterEntry, onboardingDueWindow, hasProduct, getTeamMemberProducts, logApiRouteError } from "@oodelscore/shared";
+import { connectToDatabase, RosterEntry, countLifecycleDueForBusiness, hasProduct, getTeamMemberProducts, logApiRouteError } from "@oodelscore/shared";
 import { requireBusinessOwner, type BusinessOwnerSession } from "@/lib/ownerAuth";
 
 const MAX_BULK_ENTRIES = 1000;
@@ -27,26 +27,15 @@ export async function GET() {
     await connectToDatabase();
     const businessId = session.business._id;
     const now = new Date();
-    const window30 = onboardingDueWindow(30, now);
-    const window90 = onboardingDueWindow(90, now);
-
-    const [totalEnrolled, totalActive, dueOnboarding30, dueOnboarding90, dueExit] = await Promise.all([
+    const [totalEnrolled, totalActive, due] = await Promise.all([
       RosterEntry.countDocuments({ businessId }),
       RosterEntry.countDocuments({ businessId, endDate: null }),
-      RosterEntry.countDocuments({
-        businessId,
-        startDate: { $ne: null, $gte: window30.from, $lte: window30.to },
-        endDate: null,
-        triggeredStages: { $ne: "onboarding_30" },
-      }),
-      RosterEntry.countDocuments({
-        businessId,
-        startDate: { $ne: null, $gte: window90.from, $lte: window90.to },
-        endDate: null,
-        triggeredStages: { $ne: "onboarding_90" },
-      }),
-      RosterEntry.countDocuments({ businessId, endDate: { $ne: null, $lte: now }, triggeredStages: { $ne: "exit" } }),
+      // Exactly who the next daily run would email, by the same rules it uses (window, go-live date, live survey).
+      countLifecycleDueForBusiness(businessId, now),
     ]);
+    const dueOnboarding30 = due.onboarding_30;
+    const dueOnboarding90 = due.onboarding_90;
+    const dueExit = due.exit;
 
     return NextResponse.json({
       status: "ok",

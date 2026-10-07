@@ -20,3 +20,11 @@ describe("onboarding due window", () => {
   });
   it("does not send the 90-day check-in to someone 60 days in", () => expect(isDue(60, 90)).toBe(false));
 });
+
+import { milestoneDate } from "./lifecycleTriggers";
+describe("milestoneDate", () => {
+  const start = new Date("2026-01-01T00:00:00Z");
+  it("day 30 is start + 30 days", () => expect(milestoneDate("onboarding_30", { startDate: start, endDate: null }).toISOString()).toBe("2026-01-31T00:00:00.000Z"));
+  it("day 90 is start + 90 days", () => expect(milestoneDate("onboarding_90", { startDate: start, endDate: null }).toISOString()).toBe("2026-04-01T00:00:00.000Z"));
+  it("exit is the end date", () => expect(milestoneDate("exit", { startDate: start, endDate: new Date("2026-03-05T00:00:00Z") }).toISOString()).toBe("2026-03-05T00:00:00.000Z"));
+});

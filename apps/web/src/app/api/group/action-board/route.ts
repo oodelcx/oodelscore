@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ActionBoardItem, Playbook } from "@oodelscore/shared";
-import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { connectToDatabase, ActionBoardItem, Playbook, sensitiveVisibilityClause } from "@oodelscore/shared";
+import { requireParentOrgOwner, caseViewerForGroup } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
 import { buildCaseStats, attachPlaybookRunsToItems, ratingsForItems } from "@/lib/caseStats";
 
@@ -23,6 +23,8 @@ export async function GET() {
 
   const filter: Record<string, unknown> = { parentOrgId: session.org._id, product };
   if (session.tier === "limited") filter.ownerId = session.user._id;
+  // Sensitive cases are visible only to the confidential contact (see canViewCase).
+  filter.$and = [sensitiveVisibilityClause(caseViewerForGroup(session))];
 
   const [items, playbooks] = await Promise.all([
     ActionBoardItem.find(filter).sort({ createdAt: -1 }),

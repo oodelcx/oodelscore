@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { canViewCase } from "@oodelscore/shared";
 import { connectToDatabase, ActionBoardItem, ActionItemComment, User, sendTemplatedEmail, logCaseEvent } from "@oodelscore/shared";
-import { requireBusinessOwner } from "@/lib/ownerAuth";
+import { requireBusinessOwner, caseViewerForBusiness } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -19,8 +20,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   await connectToDatabase();
   const { id } = await params;
+  const viewer = caseViewerForBusiness(session);
   const item = await ActionBoardItem.findOne({ _id: id, businessId: session.business._id });
-  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (!item || !canViewCase(item, viewer)) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
   if (session.tier === "limited" && item.ownerId?.toString() !== session.user._id.toString()) {
     return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   }
@@ -35,8 +37,9 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   await connectToDatabase();
   const { id } = await params;
+  const viewer = caseViewerForBusiness(session);
   const item = await ActionBoardItem.findOne({ _id: id, businessId: session.business._id });
-  if (!item) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
+  if (!item || !canViewCase(item, viewer)) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
   if (session.tier === "limited" && item.ownerId?.toString() !== session.user._id.toString()) {
     return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   }

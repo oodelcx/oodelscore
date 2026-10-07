@@ -1,3 +1,4 @@
+import type { Types } from "mongoose";
 import { FeedbackPoint } from "../models/FeedbackPoint";
 import { RosterEntry, type LifecycleStage } from "../models/RosterEntry";
 import { ensureRosterSurveyToken } from "./rosterTokens";
@@ -24,6 +25,7 @@ export function onboardingDueWindow(days: number, now: Date): { from: Date; to: 
 export interface LifecycleTriggerResult {
   sent: number;
   skippedLongServing: number; // start date long past the stage's window — marked handled, not emailed
+  skippedBeforeGoLive: number; // milestone fell before the survey went live — marked handled, not emailed
   skippedNoSurvey: number; // roster entry was due, but its business has no feedback point set up for that stage
   failed: number; // sendTemplatedEmail threw (e.g. RESEND_API_KEY not configured) — logged, not fatal to the run
 }
@@ -44,7 +46,7 @@ export interface LifecycleTriggerResult {
  * the next day's run instead of silently losing that person's survey.
  */
 export async function runColleagueLifecycleTriggers(now: Date = new Date()): Promise<LifecycleTriggerResult> {
-  const result: LifecycleTriggerResult = { sent: 0, skippedLongServing: 0, skippedNoSurvey: 0, failed: 0 };
+  const result: LifecycleTriggerResult = { sent: 0, skippedLongServing: 0, skippedBeforeGoLive: 0, skippedNoSurvey: 0, failed: 0 };
 
   await markLongServingHandled(30, now, result);
   await markLongServingHandled(90, now, result);
@@ -53,6 +55,13 @@ export async function runColleagueLifecycleTriggers(now: Date = new Date()): Pro
   await fireStage("exit", await dueForExit(now), result);
 
   return result;
+}
+
+/** The moment a stage became due for this person: day 30/90 after they started, or their exit date. */
+export function milestoneDate(stage: LifecycleStage, entry: { startDate: Date | null; endDate: Date | null }): Date {
+  if (stage === "exit") return entry.endDate ?? new Date(0);
+  const days = stage === "onboarding_30" ? 30 : 90;
+  return new Date((entry.startDate ?? new Date(0)).getTime() + days * DAY_MS);
 }
 
 async function dueForOnboarding(days: number, now: Date) {
@@ -113,7 +122,21 @@ async function fireStage(
       continue;
     }
 
+    // First time the job sees this survey without a go-live date: start the clock now, so
+    // nobody whose milestone has already passed gets a surprise email.
+    if (!feedbackPoint.lifecycleGoLiveAt) {
+      feedbackPoint.lifecycleGoLiveAt = new Date();
+      await feedbackPoint.save();
+    }
+    const goLiveAt = feedbackPoint.lifecycleGoLiveAt;
+
     for (const entry of entries) {
+      if (milestoneDate(stage, entry) < goLiveAt) {
+        entry.triggeredStages.push(stage);
+        await entry.save();
+        result.skippedBeforeGoLive++;
+        continue;
+      }
       try {
         const token = await ensureRosterSurveyToken(feedbackPoint._id, entry);
         const appUrl = process.env.APP_URL ?? "";
@@ -135,3 +158,37 @@ async function fireStage(
     }
   }
 }
+
+export interface LifecycleDueCounts {
+  onboarding_30: number;
+  onboarding_90: number;
+  exit: number;
+}
+
+/**
+ * How many people the next daily run WOULD email for one business, with exactly the same
+ * rules the run uses: inside the stage's window, not already handled, a live survey exists
+ * for that stage, and the milestone is on or after the survey's go-live date. Counts only:
+ * the roster is write-only by design, so it never lists who.
+ */
+export async function countLifecycleDueForBusiness(businessId: Types.ObjectId | string, now: Date = new Date()): Promise<LifecycleDueCounts> {
+  const counts: LifecycleDueCounts = { onboarding_30: 0, onboarding_90: 0, exit: 0 };
+  const points = await FeedbackPoint.find({ businessId, product: "colleague_experience", lifecycleTrigger: { $ne: null }, active: true });
+  for (const stage of LIFECYCLE_STAGE_LIST) {
+    const point = points.find((p) => p.lifecycleTrigger === stage);
+    if (!point) continue;
+    const goLive = point.lifecycleGoLiveAt ?? now;
+    const query =
+      stage === "exit"
+        ? { businessId, endDate: { $ne: null, $lte: now }, triggeredStages: { $ne: stage } }
+        : (() => {
+            const { from, to } = onboardingDueWindow(stage === "onboarding_30" ? 30 : 90, now);
+            return { businessId, startDate: { $ne: null, $gte: from, $lte: to }, endDate: null, triggeredStages: { $ne: stage } };
+          })();
+    const entries = await RosterEntry.find(query).select("startDate endDate");
+    counts[stage] = entries.filter((e) => milestoneDate(stage, e) >= goLive).length;
+  }
+  return counts;
+}
+
+const LIFECYCLE_STAGE_LIST: LifecycleStage[] = ["onboarding_30", "onboarding_90", "exit"];

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { canViewCase } from "@oodelscore/shared";
 import { connectToDatabase, Playbook, PlaybookRun, ActionBoardItem } from "@oodelscore/shared";
-import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { requireParentOrgOwner, caseViewerForGroup } from "@/lib/ownerAuth";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -23,7 +24,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   if (actionBoardItemId) {
     const item = await ActionBoardItem.findOne({ _id: actionBoardItemId, parentOrgId: session.org._id });
-    if (!item) return NextResponse.json({ status: "error", message: "Case not found" }, { status: 404 });
+    if (!item || !canViewCase(item, caseViewerForGroup(session))) return NextResponse.json({ status: "error", message: "Case not found" }, { status: 404 });
 
     const existing = await PlaybookRun.findOne({ playbookId: playbook._id, actionBoardItemId: item._id, status: "active" });
     if (existing) return NextResponse.json({ status: "ok", run: existing });

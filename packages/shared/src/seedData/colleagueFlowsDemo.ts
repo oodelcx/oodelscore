@@ -93,7 +93,13 @@ async function ensurePoint(params: {
   lastSentAt: Date | null;
 }) {
   const existing = await FeedbackPoint.findOne({ businessId: params.businessId, product: "colleague_experience", name: params.name });
-  if (existing) return existing;
+  if (existing) {
+    if (params.lifecycleTrigger && !existing.lifecycleGoLiveAt) {
+      existing.lifecycleGoLiveAt = daysAgo(200);
+      await existing.save();
+    }
+    return existing;
+  }
   return FeedbackPoint.create({
     businessId: params.businessId,
     product: "colleague_experience",
@@ -103,6 +109,8 @@ async function ensurePoint(params: {
     qrToken: randomBytes(16).toString("hex"),
     distributionMode: "roster_personalized",
     lifecycleTrigger: params.lifecycleTrigger,
+    // Demo lifecycle surveys went live long ago, so the seeded roster states are not skipped as pre-go-live.
+    lifecycleGoLiveAt: params.lifecycleTrigger ? daysAgo(200) : null,
     pulseCadence: params.pulseCadence,
     lastSentAt: params.lastSentAt,
     scans: 0,

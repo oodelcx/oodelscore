@@ -59,6 +59,11 @@ export interface IFeedbackPoint {
   // <stage>) to know which survey to send someone — a business that hasn't
   // set one up for a given stage is simply skipped, not an error.
   lifecycleTrigger: LifecycleStage | null;
+  // When this lifecycle survey went live. Only people whose milestone (day 30, day 90, or
+  // their exit date) falls on or after this moment are ever emailed, so switching a survey on
+  // never sends a surprise email to someone whose milestone was already in the past. Set when
+  // lifecycleTrigger is first assigned; the daily job sets it on first sight if it is missing.
+  lifecycleGoLiveAt: Date | null;
   // Colleague Experience only (see DISTRIBUTION_MODES above). null behaves
   // as "qr_open" — kept nullable rather than defaulted in the schema so a
   // pre-existing point (all customer_experience) is unambiguously "never
@@ -145,6 +150,7 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     product: { type: String, enum: PRODUCTS, default: "customer_experience" },
     eventId: { type: Schema.Types.ObjectId, ref: "Event", default: null },
     lifecycleTrigger: { type: String, enum: LIFECYCLE_STAGES, default: null },
+    lifecycleGoLiveAt: { type: Date, default: null },
     distributionMode: { type: String, enum: DISTRIBUTION_MODES, default: null },
     pulseCadence: { type: String, enum: PULSE_CADENCES, default: null },
     lastSentAt: { type: Date, default: null },

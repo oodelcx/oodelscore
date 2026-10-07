@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  sensitiveVisibilityClause,
   meetsAnonymityFloor,
   connectToDatabase,
   Business,
@@ -20,7 +21,7 @@ import {
   ragBandForNps,
   type IRagThresholds,
 } from "@oodelscore/shared";
-import { requireParentOrgOwner } from "@/lib/ownerAuth";
+import { requireParentOrgOwner, caseViewerForGroup } from "@/lib/ownerAuth";
 import { resolveViewProduct } from "@/lib/viewProduct";
 import { getColleagueWording } from "@/lib/wording";
 
@@ -123,9 +124,11 @@ export async function GET() {
   }));
 
   // ---- Live alert & action feed ----
+  // Sensitive cases are visible only to their confidential contact, so they never appear in this feed for anyone else.
+  const sensitiveFilter = { $and: [sensitiveVisibilityClause(caseViewerForGroup(session))] };
   const [recentAlertActivity, resolvedItems, recentComments, recentDecisions, failedInvoices] = await Promise.all([
     AlertActivity.find({ businessId: { $in: businessIds } }).sort({ triggeredAt: -1 }).limit(10),
-    ActionBoardItem.find({ businessId: { $in: businessIds }, status: "resolved" }).sort({ resolvedAt: -1 }).limit(8),
+    ActionBoardItem.find({ businessId: { $in: businessIds }, status: "resolved", ...sensitiveFilter }).sort({ resolvedAt: -1 }).limit(8),
     ActionItemComment.find({}).sort({ createdAt: -1 }).limit(30), // filtered against this org's items below
     DecisionLogEntry.find({ parentOrgId: org._id, isDraft: { $ne: true } }).sort({ createdAt: -1 }).limit(8),
     Invoice.find({ ownerType: "parentOrg", ownerId: org._id, status: "failed" }).sort({ issuedAt: -1 }).limit(5),
@@ -137,10 +140,10 @@ export async function GET() {
   const ruleTypeById = new Map(rules.map((r) => [r._id.toString(), r.ruleType]));
 
   const orgItemIds = new Set(
-    (await ActionBoardItem.find({ businessId: { $in: businessIds } }).select("_id businessId")).map((i) => i._id.toString())
+    (await ActionBoardItem.find({ businessId: { $in: businessIds }, ...sensitiveFilter }).select("_id businessId")).map((i) => i._id.toString())
   );
   const itemBusinessById = new Map(
-    (await ActionBoardItem.find({ businessId: { $in: businessIds } }).select("_id businessId title")).map((i) => [
+    (await ActionBoardItem.find({ businessId: { $in: businessIds }, ...sensitiveFilter }).select("_id businessId title")).map((i) => [
       i._id.toString(),
       i,
     ])
