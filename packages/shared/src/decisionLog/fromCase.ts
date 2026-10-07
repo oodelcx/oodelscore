@@ -57,7 +57,8 @@ export async function ensureDraftDecisionForResolvedCase(params: {
       title: item.sensitive ? "Resolved: a confidential concern" : `Resolved: ${item.title}`,
       trigger: triggerParts.join(" "),
       linkedActionIds: [item._id],
-      affectedBusinessIds: [item.businessId],
+      // A sensitive case's draft names no branch, so a confirmed entry can never tell that branch a confidential concern was raised.
+      affectedBusinessIds: item.sensitive ? [] : [item.businessId],
       ownerId: item.ownerId ?? params.actorUserId,
       status: "planned",
       notes: item.resolutionNote?.trim() && !item.sensitive

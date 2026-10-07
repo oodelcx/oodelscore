@@ -166,7 +166,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const body = await request.json().catch(() => null);
 
-  if (session.tier === "limited") {
+  // The confidential contact works a Sensitive case from here (it is not in any branch's list), so they may
+  // set its status and resolution note like an assigned limited-tier member. Other group cases stay read-only.
+  const isSensitiveContact = item.sensitive && item.ownerId?.toString() === session.user._id.toString();
+  if (session.tier === "limited" || isSensitiveContact) {
     if (item.ownerId?.toString() !== session.user._id.toString()) {
       return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
     }
