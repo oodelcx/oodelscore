@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   sensitiveVisibilityClause,
   maskBusinessMetricsForAnonymity,
+  MIN_ANONYMITY_GROUP_SIZE,
   connectToDatabase,
   Business,
   ActionBoardItem,
@@ -52,6 +53,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     wording: product === "colleague_experience" ? await getColleagueWording() : null,
     business: { name: business.name, region: business.region, billingAssignment: business.billingAssignment },
     metrics,
+    belowAnonymityFloor: product === "colleague_experience" && rawMetrics.responseCount < MIN_ANONYMITY_GROUP_SIZE,
     openActionItems: openItems.map((item) => ({
       _id: item._id.toString(),
       title: item.title,

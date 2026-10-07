@@ -291,11 +291,15 @@ export default function BusinessCasesClient() {
   }
 
   async function updateItem(id: string, patch: Record<string, unknown>) {
-    await fetch(`/api/business/action-board/${id}`, {
+    const res = await fetch(`/api/business/action-board/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      alert(data?.message ?? "That change could not be saved.");
+    }
     load();
   }
 
@@ -593,7 +597,7 @@ export default function BusinessCasesClient() {
                           )}
                           {item.sensitive && (
                             <span className="pill pill-red" title="Routed via sensitive-category handling">
-                              Sensitive
+                              Confidential
                             </span>
                           )}
                           <span>

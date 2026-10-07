@@ -216,6 +216,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   // to escalate to, so the field is silently ignored for it rather than
   // erroring (keeps this one PATCH handler shared instead of forking it).
   if (typeof body?.escalatedToOrg === "boolean" && session.business.parentOrgId) {
+    if (item.sensitive) return NextResponse.json({ status: "error", message: "A confidential case is handled only by its confidential contact and cannot be escalated." }, { status: 409 });
     item.escalatedToOrg = body.escalatedToOrg;
     item.escalatedToOrgAt = body.escalatedToOrg ? new Date() : null;
     if (body.escalatedToOrg && typeof body?.escalatedToOrgNote === "string") {

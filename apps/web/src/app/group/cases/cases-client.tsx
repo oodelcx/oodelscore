@@ -40,6 +40,7 @@ interface ItemRow {
   resolutionNote: string;
   resolvedAt: string | null;
   escalated: boolean;
+  sensitive?: boolean;
   escalationNote: string;
   escalatedToOrg: boolean;
   escalatedToOrgNote: string;
@@ -250,11 +251,15 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
   }
 
   async function updateItem(id: string, patch: Record<string, unknown>) {
-    await fetch(`/api/group/action-board/${id}`, {
+    const res = await fetch(`/api/group/action-board/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      alert(data?.message ?? "That change could not be saved.");
+    }
     load();
   }
 
@@ -519,6 +524,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
                           Business: <b>{businessName(item.businessId)}</b>
                         </span>
                       )}
+                      {item.sensitive && <span className="pill pill-red" title="Visible only to the confidential contact">Confidential</span>}
                       {item.categoryId && (
                         <span className="pill pill-gray">{categoryName(item.categoryId)}</span>
                       )}

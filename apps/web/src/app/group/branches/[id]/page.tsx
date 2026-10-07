@@ -14,6 +14,7 @@ interface BranchDetail {
   product?: "customer_experience" | "colleague_experience";
   wording?: Record<string, string> | null;
   business: { name: string; region: string; billingAssignment: string };
+  belowAnonymityFloor?: boolean;
   metrics: { responseCount: number; starAverage: number | null; npsScore: number | null; csatPercent: number | null; cesAverage: number | null };
   openActionItems: { _id: string; title: string; status: string; overdue: boolean }[];
   cxPulse: { level: number; compositeScore: number } | null;
@@ -49,6 +50,12 @@ export default function BranchDetailPage({ params }: { params: Promise<{ id: str
         {data.business.name} <span className="pill pill-gray">Read-only</span>
       </h1>
       <p className="subtitle">Same dashboard the branch manager sees — this is where every number traces back to.</p>
+
+      {data.belowAnonymityFloor && (
+        <div className="callout-purple" style={{ marginBottom: 16 }}>
+          Scores and trends are hidden until at least 5 colleagues have responded here, so nobody can be identified from a small group.
+        </div>
+      )}
 
       <div className="grid grid-4" style={{ marginBottom: 20 }}>
         <div className="card">

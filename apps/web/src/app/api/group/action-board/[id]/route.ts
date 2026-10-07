@@ -185,6 +185,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   if (typeof body?.escalated === "boolean") {
+    if (item.sensitive) return NextResponse.json({ status: "error", message: "A confidential case is handled only by its confidential contact and cannot be escalated." }, { status: 409 });
     item.escalated = body.escalated;
     item.escalatedAt = body.escalated ? new Date() : null;
     if (body.escalated && typeof body?.escalationNote === "string") item.escalationNote = body.escalationNote.trim();
