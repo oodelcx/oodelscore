@@ -9,6 +9,7 @@
     "seed": "tsx scripts/seed.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:colleague-flows": "tsx scripts/seed-colleague-flows.ts",
+    "seed:polish": "tsx scripts/seed-polish.ts",
     "setup:stripe-prices": "tsx scripts/setup-stripe-prices.ts",
     "check:billing-integrity": "tsx scripts/check-billing-integrity.ts",
     "backfill:subscription-mrr": "tsx scripts/backfill-subscription-mrr.ts",

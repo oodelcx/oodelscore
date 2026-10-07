@@ -38,6 +38,7 @@ import { CompassAssessment } from "../models/CompassAssessment";
 import { CompassAssessmentHistory } from "../models/CompassAssessmentHistory";
 import { seedAmaniPrograms } from "./amaniPrograms";
 import { seedColleagueFlowsDemo } from "./colleagueFlowsDemo";
+import { seedShowcasePolish } from "./showcasePolish";
 import { RosterSurveyToken } from "../models/RosterSurveyToken";
 import { seedCompassDemo, type CompassDemoOwner, type CompassDemoProfile } from "./compassDemo";
 import { generateProgramEvaluationForEvent } from "../scoring/programEvaluation";
@@ -2495,6 +2496,9 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   console.log(
     `[showcase] colleague flows: ${colleagueFlows.locations} locations, ${colleagueFlows.tokensMinted} tokens (${colleagueFlows.tokensUsed} used), ${colleagueFlows.responses} responses, ${colleagueFlows.sensitiveCases} sensitive cases`
   );
+
+  const polish = await seedShowcasePolish();
+  console.log(`[showcase] polish: ${JSON.stringify(polish)}`);
 
   // Run the evaluation for every programme session that has finished.
   for (const evt of amaniPrograms.eventIds) {
