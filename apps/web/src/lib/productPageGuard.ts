@@ -14,5 +14,7 @@ export async function redirectUnlessProduct(portal: "business" | "group", need: 
   const entity = portal === "business" ? (await requireBusinessOwner({ allowLimitedTeamMember: true }))?.business : (await requireParentOrgOwner({ allowLimitedTeamMember: true }))?.org;
   if (!entity) return;
   const ok = need === "colleague" ? hasProduct(entity, "colleague_experience") : hasProduct(entity, "colleague_experience") && hasProduct(entity, "customer_experience");
-  if (!ok) redirect(portal === "business" ? "/business" : "/group");
+  // A branch has no CX↔EX page of its own (the group compares across locations).
+  const branchWithoutPage = portal === "business" && need === "both" && !!(entity as { parentOrgId?: unknown }).parentOrgId;
+  if (!ok || branchWithoutPage) redirect(portal === "business" ? "/business" : "/group");
 }
