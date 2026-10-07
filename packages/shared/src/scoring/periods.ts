@@ -54,6 +54,28 @@ async function aggregateAcrossBusinesses(businessIds: Types.ObjectId[], from: Da
   };
 }
 
+// Single-location windows come straight from computeBusinessMetrics, so at
+// runtime they also carry csat/ces fields the PeriodComparison type does not
+// declare. Zero those too — a masked window must not leak any score.
+function maskedWindow(value: PeriodComparison): PeriodComparison {
+  return {
+    ...value,
+    starAverage: null,
+    npsScore: null,
+    changePercent: null,
+    enpsPointChange: null,
+    ...({
+      csatPercent: null,
+      cesAverage: null,
+      cesLowEffortPercent: null,
+      starCount: 0,
+      npsCount: 0,
+      csatCount: 0,
+      cesCount: 0,
+    } as object),
+  };
+}
+
 /**
  * Colleague Experience: a window with fewer responses than the anonymity floor
  * keeps its response count (so the screen can say why) but loses every score.
@@ -62,9 +84,7 @@ export function maskPeriodComparisonsForAnonymity<T extends Record<string, Perio
   const out: Record<string, PeriodComparison> = {};
   for (const [key, value] of Object.entries(comparisons)) {
     out[key] =
-      value.responseCount >= MIN_ANONYMITY_GROUP_SIZE
-        ? value
-        : { ...value, starAverage: null, npsScore: null, changePercent: null, enpsPointChange: null };
+      value.responseCount >= MIN_ANONYMITY_GROUP_SIZE ? value : maskedWindow(value);
   }
   return out as T;
 }

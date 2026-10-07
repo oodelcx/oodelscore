@@ -169,7 +169,7 @@
 .cc-root[data-theme="dark"] .cc-branch-tile.red { background: linear-gradient(155deg, #2a0f12, #14181c); border-color: #4a1c22; }
 .cc-branch-name { font-size: 12px; font-weight: 600; }
 .cc-branch-region { font-size: 9.5px; color: var(--cc-dim); margin-top: 1px; }
-.cc-branch-metrics { display: flex; gap: 12px; margin-top: 9px; }
+.cc-branch-metrics { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 9px; }
 .cc-bm-label { font-size: 8.5px; color: var(--cc-dim); letter-spacing: 0.03em; text-transform: uppercase; display: block; margin-bottom: 2px; font-weight: 500; }
 .cc-bm { font-size: 14px; font-weight: 600; }
 .cc-branch-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 9.5px; color: var(--cc-dim); }

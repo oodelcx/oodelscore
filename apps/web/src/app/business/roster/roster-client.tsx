@@ -55,19 +55,43 @@ export default function BusinessRosterClient() {
   const [removeStatus, setRemoveStatus] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
 
+  const [personalEmailEnabled, setPersonalEmailEnabled] = useState(false);
+  const [settingsStatus, setSettingsStatus] = useState<string | null>(null);
+  const [exitPersonalEmail, setExitPersonalEmail] = useState("");
+
   function load() {
     setLoading(true);
     Promise.all([
       fetch("/api/business/roster").then((r) => r.json()),
       fetch("/api/business/roster/send-links").then((r) => r.json()),
     ]).then(([rosterData, linksData]) => {
-      if (rosterData.status === "ok") setStats(rosterData.stats);
+      if (rosterData.status === "ok") {
+        setStats(rosterData.stats);
+        setPersonalEmailEnabled(!!rosterData.settings?.exitSurveyPersonalEmailEnabled);
+      }
       if (linksData.status === "ok") setSurveyPoints(linksData.feedbackPoints ?? []);
       setLoading(false);
     });
   }
 
   useEffect(load, []);
+
+  async function togglePersonalEmail(next: boolean) {
+    if (!next && !confirm("Turn this off? Every personal email address stored for leavers will be deleted.")) return;
+    setSettingsStatus(null);
+    const res = await fetch("/api/business/roster/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exitSurveyPersonalEmailEnabled: next }),
+    });
+    const data = await res.json();
+    if (data.status === "ok") {
+      setPersonalEmailEnabled(next);
+      setSettingsStatus(next ? "On. You can now add a personal email when marking someone exited." : `Off. ${data.cleared} stored personal email(s) deleted.`);
+    } else {
+      setSettingsStatus(data.message ?? "Something went wrong.");
+    }
+  }
 
   async function sendLinks(feedbackPointId: string, newRound = false) {
     setSendingId(feedbackPointId);
@@ -115,8 +139,8 @@ export default function BusinessRosterClient() {
       .map((l) => l.trim())
       .filter(Boolean);
     const entries = lines.map((line) => {
-      const [email, startDate] = line.split(",").map((p) => p.trim());
-      return { email, startDate: startDate || null };
+      const [email, startDate, personalEmail] = line.split(",").map((p) => p.trim());
+      return { email, startDate: startDate || null, personalEmail: personalEmail || null };
     });
     if (entries.length === 0) {
       setBulkStatus("Paste at least one row (email, start date).");
@@ -149,7 +173,7 @@ export default function BusinessRosterClient() {
     const res = await fetch("/api/business/roster", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: exitEmail, endDate: exitDate || null }),
+      body: JSON.stringify({ email: exitEmail, endDate: exitDate || null, personalEmail: exitPersonalEmail || null }),
     });
     const data = await res.json();
     setExiting(false);
@@ -157,6 +181,7 @@ export default function BusinessRosterClient() {
       setExitStatus("Marked exited — the exit survey will go out on the next daily run.");
       setExitEmail("");
       setExitDate("");
+      setExitPersonalEmail("");
       load();
     } else {
       setExitStatus(data.message ?? "Something went wrong.");
@@ -258,6 +283,20 @@ export default function BusinessRosterClient() {
         </div>
       )}
 
+      <div className="callout" style={{ marginBottom: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Exit surveys to a personal email</h3>
+        <p className="subtitle" style={{ marginTop: 0 }}>
+          Off by default. A leaver&apos;s work mailbox is usually closed by their last day, so the exit survey may never arrive. When this is on you can
+          record an optional personal email for each leaver and the exit survey goes there instead. The address is deleted as soon as the survey has been
+          sent, and all stored addresses are deleted if you turn this off. Check that your own policies allow contacting leavers this way.
+        </p>
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input type="checkbox" checked={personalEmailEnabled} onChange={(e) => togglePersonalEmail(e.target.checked)} />
+          Send exit surveys to a personal email when one is recorded
+        </label>
+        {settingsStatus && <p className="subtitle" style={{ marginTop: 8 }}>{settingsStatus}</p>}
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <form className="callout" onSubmit={addSingle}>
           <h3 style={{ marginTop: 0 }}>Add one person</h3>
@@ -285,6 +324,7 @@ export default function BusinessRosterClient() {
           <h3 style={{ marginTop: 0 }}>Bulk add</h3>
           <p className="subtitle" style={{ marginTop: 0 }}>
             One person per line: <code>email, start date (YYYY-MM-DD, optional)</code>
+            {personalEmailEnabled && <>, then optionally <code>personal email</code> (e.g. <code>a@work.com, , a@home.com</code>)</>}
           </p>
           <div className="field">
             <textarea
@@ -314,6 +354,12 @@ export default function BusinessRosterClient() {
             <label>Exit date (defaults to today)</label>
             <input type="date" value={exitDate} onChange={(e) => setExitDate(e.target.value)} />
           </div>
+          {personalEmailEnabled && (
+            <div className="field">
+              <label>Personal email for the exit survey (optional)</label>
+              <input type="email" value={exitPersonalEmail} onChange={(e) => setExitPersonalEmail(e.target.value)} placeholder="Leave blank to use the work email" />
+            </div>
+          )}
           <button className="btn btn-sm" type="submit" disabled={exiting}>
             {exiting ? "Saving…" : "Mark exited"}
           </button>

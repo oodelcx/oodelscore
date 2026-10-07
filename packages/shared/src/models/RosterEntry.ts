@@ -23,6 +23,9 @@ export interface IRosterEntry {
   businessId: Types.ObjectId; // which business/branch this person belongs to
   email: string;
   startDate: Date | null; // drives onboarding_30/onboarding_90 triggers
+  // Optional, only stored when the business has turned on exit surveys to a
+  // personal address. Cleared as soon as the exit survey has been sent.
+  personalEmail: string;
   endDate: Date | null; // set once known — drives the exit trigger; null = still active
   // Which lifecycle stages have already fired for this person, so the daily
   // cron never sends the same onboarding/exit survey twice. Appended to,
@@ -37,6 +40,7 @@ const RosterEntrySchema = new Schema<IRosterEntry>(
     businessId: { type: Schema.Types.ObjectId, ref: "Business", required: true },
     email: { type: String, required: true, lowercase: true, trim: true },
     startDate: { type: Date, default: null },
+    personalEmail: { type: String, default: "", lowercase: true, trim: true },
     endDate: { type: Date, default: null },
     triggeredStages: { type: [String], enum: LIFECYCLE_STAGES, default: [] },
   },

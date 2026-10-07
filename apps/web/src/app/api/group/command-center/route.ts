@@ -127,7 +127,7 @@ export async function GET() {
     AlertActivity.find({ businessId: { $in: businessIds } }).sort({ triggeredAt: -1 }).limit(10),
     ActionBoardItem.find({ businessId: { $in: businessIds }, status: "resolved" }).sort({ resolvedAt: -1 }).limit(8),
     ActionItemComment.find({}).sort({ createdAt: -1 }).limit(30), // filtered against this org's items below
-    DecisionLogEntry.find({ parentOrgId: org._id }).sort({ createdAt: -1 }).limit(8),
+    DecisionLogEntry.find({ parentOrgId: org._id, isDraft: { $ne: true } }).sort({ createdAt: -1 }).limit(8),
     Invoice.find({ ownerType: "parentOrg", ownerId: org._id, status: "failed" }).sort({ issuedAt: -1 }).limit(5),
   ]);
 

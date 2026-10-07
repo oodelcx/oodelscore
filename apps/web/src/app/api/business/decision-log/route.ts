@@ -33,7 +33,7 @@ export async function GET() {
   const isBranch = !!session.business.parentOrgId;
   const entries = await DecisionLogEntry.find(
     isBranch
-      ? { parentOrgId: session.business.parentOrgId, affectedBusinessIds: session.business._id, product }
+      ? { parentOrgId: session.business.parentOrgId, affectedBusinessIds: session.business._id, product, isDraft: { $ne: true } }
       : { businessId: session.business._id, product }
   ).sort({ createdAt: -1 });
 

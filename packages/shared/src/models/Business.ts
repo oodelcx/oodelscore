@@ -154,6 +154,11 @@ export interface IBusiness {
   // platform default. Lets Admin turn billing enforcement on for one
   // account being tested without affecting every other account.
   paymentGateEnabled: boolean | null;
+  // Colleague Experience: OFF by default. When a business turns this on it may
+  // store an optional personal email per leaver and the exit survey goes there
+  // instead of the work mailbox (usually closed by then). Turning it off
+  // deletes every stored personal email for the business.
+  exitSurveyPersonalEmailEnabled: boolean;
   businessValueInputs: IBusinessValueInputs;
   // Business-owner-editable: opts this account's data into OodelCX's
   // anonymized sector benchmark reports (OBS11) — aggregated by industry
@@ -219,6 +224,7 @@ const BusinessSchema = new Schema<IBusiness>(
     enabledProducts: { type: [String], enum: PRODUCTS, default: null },
     sensitiveRoutingContactId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     paymentGateEnabled: { type: Boolean, default: null },
+    exitSurveyPersonalEmailEnabled: { type: Boolean, default: false },
     businessValueInputs: { type: BusinessValueInputsSchema, default: () => ({}) },
     benchmarkOptIn: { type: Boolean, default: false },
     active: { type: Boolean, default: true },

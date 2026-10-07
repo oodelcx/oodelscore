@@ -37,6 +37,8 @@ import { ProgramEvaluationReport } from "../models/ProgramEvaluationReport";
 import { CompassAssessment } from "../models/CompassAssessment";
 import { CompassAssessmentHistory } from "../models/CompassAssessmentHistory";
 import { seedAmaniPrograms } from "./amaniPrograms";
+import { seedColleagueFlowsDemo } from "./colleagueFlowsDemo";
+import { RosterSurveyToken } from "../models/RosterSurveyToken";
 import { seedCompassDemo, type CompassDemoOwner, type CompassDemoProfile } from "./compassDemo";
 import { generateProgramEvaluationForEvent } from "../scoring/programEvaluation";
 import { hashPassword } from "../auth/password";
@@ -2487,6 +2489,13 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   const compassSeeded = await seedCompassDemo(compassOwners);
   console.log(`[showcase] compass: ${compassSeeded.assessments} assessments, ${compassSeeded.history} history rows`);
 
+  // Colleague Experience flows the baseline data doesn't show: personal-link
+  // surveys, lifecycle surveys, and sensitive-comment routing.
+  const colleagueFlows = await seedColleagueFlowsDemo();
+  console.log(
+    `[showcase] colleague flows: ${colleagueFlows.locations} locations, ${colleagueFlows.tokensMinted} tokens (${colleagueFlows.tokensUsed} used), ${colleagueFlows.responses} responses, ${colleagueFlows.sensitiveCases} sensitive cases`
+  );
+
   // Run the evaluation for every programme session that has finished.
   for (const evt of amaniPrograms.eventIds) {
     if (!evt.ended) continue;
@@ -2527,6 +2536,7 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("alertRules", () => AlertRule.deleteMany({}));
   await del("supportTickets", () => SupportTicket.deleteMany({}));
   await del("closingLoopUpdates", () => ClosingLoopUpdate.deleteMany({}));
+  await del("rosterSurveyTokens", () => RosterSurveyToken.deleteMany({}));
   await del("rosterEntries", () => RosterEntry.deleteMany({}));
   await del("events", () => TrainingEvent.deleteMany({}));
   await del("responses", () => FeedbackResponse.deleteMany({}));

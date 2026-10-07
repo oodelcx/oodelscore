@@ -127,6 +127,8 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
+  // Names only: a case can sit in a category no survey question uses (e.g. a Sensitive category), which the in-use list omits.
+  const [allCategoryNames, setAllCategoryNames] = useState<CategoryRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tier, setTier] = useState<"full" | "limited" | null>(null);
@@ -204,6 +206,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
       setBusinesses(businessesData.businesses ?? []);
       setTeam(teamData.team ?? []);
       setCategories(categoryData.categories ?? []);
+      setAllCategoryNames(categoryData.allCategories ?? []);
       setLoading(false);
     });
   }
@@ -214,7 +217,7 @@ export default function CasesClient({ tooltips }: { tooltips: Record<string, str
 
   function categoryName(id: string | null): string {
     if (!id) return "Any category";
-    return categories.find((c) => c._id === id)?.name ?? "Uncategorized";
+    return categories.find((c) => c._id === id)?.name ?? allCategoryNames.find((c) => c._id === id)?.name ?? "Uncategorized";
   }
 
   function logDecision(ctx: { title: string; trigger: string; linkedCaseId: string }) {

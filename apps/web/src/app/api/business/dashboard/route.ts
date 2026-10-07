@@ -99,7 +99,7 @@ export async function GET() {
 
     const [siblingMetrics, decisions] = await Promise.all([
       Promise.all(siblingIds.map(async (id) => maskBusinessMetricsForAnonymity(await computeBusinessMetrics(id, new Date(0), now, product), product))),
-      DecisionLogEntry.find({ affectedBusinessIds: session.business._id, product }).sort({ createdAt: -1 }).limit(3),
+      DecisionLogEntry.find({ affectedBusinessIds: session.business._id, product, isDraft: { $ne: true } }).sort({ createdAt: -1 }).limit(3),
     ]);
 
     const regionAverages = siblingMetrics.map((m) => m.starAverage).filter((v): v is number => v !== null);

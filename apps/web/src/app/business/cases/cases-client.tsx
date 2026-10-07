@@ -127,6 +127,8 @@ export default function BusinessCasesClient() {
   const [team, setTeam] = useState<TeamRow[]>([]);
   const [playbooks, setPlaybooks] = useState<PlaybookRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
+  // Names only: a case can sit in a category no survey question uses (e.g. a Sensitive category), which the in-use list omits.
+  const [allCategoryNames, setAllCategoryNames] = useState<CategoryRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [tier, setTier] = useState<"full" | "limited" | null>(null);
   const [isBranch, setIsBranch] = useState(false);
@@ -206,6 +208,7 @@ export default function BusinessCasesClient() {
       setOrgName(itemsData.orgName ?? null);
       setTeam(teamData.team ?? []);
       setCategories(categoryData.categories ?? []);
+      setAllCategoryNames(categoryData.allCategories ?? []);
       // /api/business/action-board already resolves the account's
       // currently-active product tab server-side — read it from here so a
       // new case lands on whichever tab is actually open, instead of the
@@ -228,7 +231,7 @@ export default function BusinessCasesClient() {
 
   function categoryName(id: string | null): string {
     if (!id) return "Any category";
-    return categories.find((c) => c._id === id)?.name ?? "Uncategorized";
+    return categories.find((c) => c._id === id)?.name ?? allCategoryNames.find((c) => c._id === id)?.name ?? "Uncategorized";
   }
 
   function playbookForCategory(categoryId: string | null) {

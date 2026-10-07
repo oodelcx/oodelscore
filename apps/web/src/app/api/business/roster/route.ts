@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase, RosterEntry, hasProduct, getTeamMemberProducts, logApiRouteError } from "@oodelscore/shared";
+import { connectToDatabase, RosterEntry, onboardingDueWindow, hasProduct, getTeamMemberProducts, logApiRouteError } from "@oodelscore/shared";
 import { requireBusinessOwner, type BusinessOwnerSession } from "@/lib/ownerAuth";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_BULK_ENTRIES = 1000;
 
 /**
@@ -28,21 +27,21 @@ export async function GET() {
     await connectToDatabase();
     const businessId = session.business._id;
     const now = new Date();
-    const threshold30 = new Date(now.getTime() - 30 * DAY_MS);
-    const threshold90 = new Date(now.getTime() - 90 * DAY_MS);
+    const window30 = onboardingDueWindow(30, now);
+    const window90 = onboardingDueWindow(90, now);
 
     const [totalEnrolled, totalActive, dueOnboarding30, dueOnboarding90, dueExit] = await Promise.all([
       RosterEntry.countDocuments({ businessId }),
       RosterEntry.countDocuments({ businessId, endDate: null }),
       RosterEntry.countDocuments({
         businessId,
-        startDate: { $ne: null, $lte: threshold30 },
+        startDate: { $ne: null, $gte: window30.from, $lte: window30.to },
         endDate: null,
         triggeredStages: { $ne: "onboarding_30" },
       }),
       RosterEntry.countDocuments({
         businessId,
-        startDate: { $ne: null, $lte: threshold90 },
+        startDate: { $ne: null, $gte: window90.from, $lte: window90.to },
         endDate: null,
         triggeredStages: { $ne: "onboarding_90" },
       }),
@@ -52,6 +51,7 @@ export async function GET() {
     return NextResponse.json({
       status: "ok",
       stats: { totalEnrolled, totalActive, dueOnboarding30, dueOnboarding90, dueExit },
+      settings: { exitSurveyPersonalEmailEnabled: !!session.business.exitSurveyPersonalEmailEnabled },
     });
   } catch (err) {
     await logApiRouteError("business/roster GET", err);
@@ -63,6 +63,7 @@ interface IncomingEntry {
   email: string;
   startDate?: string | null;
   endDate?: string | null;
+  personalEmail?: string | null;
 }
 
 /**
@@ -107,11 +108,18 @@ export async function POST(request: NextRequest) {
         const endDate = new Date(raw.endDate);
         if (!isNaN(endDate.getTime())) set.endDate = endDate;
       }
+      // Optional personal address for the exit survey: only accepted when the
+      // business has turned that on, and only if it looks like an email.
+      const setStr: Record<string, string> = {};
+      if (session.business.exitSurveyPersonalEmailEnabled && typeof raw.personalEmail === "string" && raw.personalEmail.trim()) {
+        const personal = raw.personalEmail.trim().toLowerCase();
+        if (emailPattern.test(personal)) setStr.personalEmail = personal;
+      }
       operations.push({
         updateOne: {
           filter: { businessId: session.business._id, email },
           update: {
-            ...(Object.keys(set).length > 0 ? { $set: set } : {}),
+            ...(Object.keys(set).length + Object.keys(setStr).length > 0 ? { $set: { ...set, ...setStr } } : {}),
             $setOnInsert: { triggeredStages: [], ...(set.startDate ? {} : { startDate: null }), ...(set.endDate ? {} : { endDate: null }) },
           },
           upsert: true,
@@ -157,10 +165,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     await connectToDatabase();
-    const updated = await RosterEntry.findOneAndUpdate(
-      { businessId: session.business._id, email },
-      { $set: { endDate } }
-    );
+    const set: Record<string, unknown> = { endDate };
+    if (session.business.exitSurveyPersonalEmailEnabled && typeof body?.personalEmail === "string" && body.personalEmail.trim()) {
+      const personal = body.personalEmail.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personal)) {
+        return NextResponse.json({ status: "error", message: "That personal email address is not valid" }, { status: 400 });
+      }
+      set.personalEmail = personal;
+    }
+    const updated = await RosterEntry.findOneAndUpdate({ businessId: session.business._id, email }, { $set: set });
     if (!updated) {
       return NextResponse.json({ status: "error", message: "No roster entry found for that email" }, { status: 404 });
     }

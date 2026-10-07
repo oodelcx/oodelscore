@@ -229,7 +229,7 @@ export async function GET() {
     AlertActivity.find({ businessId: { $in: allBusinessIds } }).sort({ triggeredAt: -1 }).limit(15),
     ActionBoardItem.find({ businessId: { $in: allBusinessIds }, status: "resolved" }).sort({ resolvedAt: -1 }).limit(10),
     ActionItemComment.find({}).sort({ createdAt: -1 }).limit(30),
-    DecisionLogEntry.find({}).sort({ createdAt: -1 }).limit(10),
+    DecisionLogEntry.find({ isDraft: { $ne: true } }).sort({ createdAt: -1 }).limit(10),
     Invoice.find({ status: "failed" }).sort({ issuedAt: -1 }).limit(8),
   ]);
 
