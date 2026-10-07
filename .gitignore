@@ -12,3 +12,4 @@ blob-report/
 npm-debug.log*
 .DS_Store
 .claude/
+apps/web/e2e-staging/results.json
