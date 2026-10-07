@@ -61,6 +61,8 @@ export * from "./categories/usage";
 export * from "./observability/systemHealth";
 export * from "./observability/stuckOnboarding";
 export * from "./seedData/showcase";
+export { seedColleagueFlowsDemo } from "./seedData/colleagueFlowsDemo";
+export { seedShowcasePolish } from "./seedData/showcasePolish";
 export * from "./escalation/engine";
 export * from "./billing/gate";
 export * from "./features/flags";

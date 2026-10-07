@@ -123,6 +123,12 @@ export default function BillingClient({ tooltips }: { tooltips: Record<string, s
         </div>
       )}
 
+      {(data.subscription?.status === "overdue" || data.subscription?.status === "past_due" || data.invoices.some((i) => i.status === "failed")) && !data.subscription?.isComp && (
+        <div className="callout" style={{ marginBottom: 16, borderColor: "var(--red, crimson)" }}>
+          <strong>Your last payment did not go through.</strong> Update your card with Manage subscription so your account stays active.
+        </div>
+      )}
+
       <div className="grid grid-2">
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>

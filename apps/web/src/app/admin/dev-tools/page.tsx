@@ -21,6 +21,26 @@ export default function DevDataToolsPage() {
     insights: { reportsCreated: number; reportsSkipped: number };
   } | null>(null);
 
+  const [extrasBusy, setExtrasBusy] = useState(false);
+  const [extrasError, setExtrasError] = useState<string | null>(null);
+  const [extrasDone, setExtrasDone] = useState<string | null>(null);
+
+  async function runSeedExtras() {
+    setExtrasBusy(true);
+    setExtrasError(null);
+    setExtrasDone(null);
+    const res = await fetch("/api/admin/dev-tools/seed-extras", { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setExtrasBusy(false);
+    if (!res.ok) {
+      setExtrasError(data?.message ?? "Failed to add the extra demo data");
+      return;
+    }
+    setExtrasDone(
+      `Colleague flows: ${data.colleagueFlows.locations} locations, ${data.colleagueFlows.tokensMinted} personal links, ${data.colleagueFlows.sensitiveCases} confidential cases. Polish data added.`
+    );
+  }
+
   const [wiping, setWiping] = useState(false);
   const [wipeError, setWipeError] = useState<string | null>(null);
   const [wipeResult, setWipeResult] = useState<Record<string, number> | null>(null);
@@ -188,6 +208,20 @@ export default function DevDataToolsPage() {
             {recomputeResult.insights.reportsSkipped} skipped — already existed or nothing to report).
           </div>
         )}
+      </div>
+
+      <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
+        <h3>Add colleague flows and polish data</h3>
+        <p className="card-sub">
+          Adds the personal-link pulse surveys, the day-30, day-90 and exit surveys, the confidential cases, and the extra
+          demo data (escalation assignments, case trails, goals, playbooks) on top of the existing showcase data. Nothing
+          is wiped and nothing is duplicated, so it is safe to press again. No email is sent.
+        </p>
+        {extrasError && <p className="error-text">{extrasError}</p>}
+        <button className="btn btn-dark" disabled={extrasBusy} onClick={runSeedExtras}>
+          {extrasBusy ? "Adding…" : "Add colleague flows and polish data"}
+        </button>
+        {extrasDone && <div className="callout" style={{ marginTop: 12 }}>{extrasDone}</div>}
       </div>
 
       <div className="card" style={{ maxWidth: 720, borderColor: "var(--red, crimson)" }}>

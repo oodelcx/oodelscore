@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 interface ContactMessageRow {
   _id: string;
+  kind?: "contact" | "demo";
   name: string;
   email: string;
   company: string;
@@ -32,7 +33,7 @@ export default function ContactMessagesPage() {
   return (
     <div>
       <h1>Contact Messages</h1>
-      <p className="subtitle">Every submission from the public /contact page, newest first.</p>
+      <p className="subtitle">Every submission from the public /contact page and every \"Book a demo\" request, newest first.</p>
 
       {error && <p className="error-text">{error}</p>}
       {loading && <p className="subtitle">Loading…</p>}
@@ -41,6 +42,7 @@ export default function ContactMessagesPage() {
         <table className="clean">
           <thead>
             <tr>
+              <th>Type</th>
               <th>From</th>
               <th>Company</th>
               <th>Message</th>
@@ -50,6 +52,9 @@ export default function ContactMessagesPage() {
           <tbody>
             {messages.map((m) => (
               <tr key={m._id}>
+                <td>
+                  <span className={m.kind === "demo" ? "pill pill-amber" : "pill"}>{m.kind === "demo" ? "Demo request" : "Contact"}</span>
+                </td>
                 <td>
                   <div style={{ fontWeight: 500 }}>{m.name}</div>
                   <div className="subtitle" style={{ fontSize: 12.5 }}>
@@ -63,7 +68,7 @@ export default function ContactMessagesPage() {
             ))}
             {messages.length === 0 && (
               <tr>
-                <td colSpan={4} className="subtitle">
+                <td colSpan={5} className="subtitle">
                   No messages yet.
                 </td>
               </tr>

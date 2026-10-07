@@ -220,11 +220,16 @@ function DecisionLogInner({ tooltips, wording }: { tooltips: Record<string, stri
   }
 
   async function patch(id: string, body: Record<string, unknown>) {
-    await fetch(`/api/group/decision-log/${id}`, {
+    setError(null);
+    const res = await fetch(`/api/group/decision-log/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.message ?? "Could not save the change");
+    }
     load();
   }
 
@@ -235,7 +240,7 @@ function DecisionLogInner({ tooltips, wording }: { tooltips: Record<string, stri
     setMetricDraft(entry.outcomeMetric ?? "starAverage");
     setCategoryDraft(entry.outcomeCategoryId ?? "");
     setVerdict(null);
-    setMeasureError(null);
+    setMeasureError(entry.isDraft ? "This entry was created automatically from a resolved case. Confirm it as a decision first." : null);
     setEditingId(null);
   }
 

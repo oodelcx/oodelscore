@@ -1560,3 +1560,16 @@ html.mobile-nav-open {
   border-color: var(--accent, #0f6e56);
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
 }
+
+/* Phone width: wide admin tables scroll sideways inside themselves instead of being clipped. */
+@media (max-width: 720px) {
+  table.clean {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .filters {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+}

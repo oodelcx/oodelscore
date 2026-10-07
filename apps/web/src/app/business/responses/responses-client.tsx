@@ -54,6 +54,11 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPointOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterId>("all");
+  // Lets other pages (Feedback Points) link straight to one point's responses: /business/responses?filter=<id>.
+  useEffect(() => {
+    const initial = new URLSearchParams(window.location.search).get("filter");
+    if (initial) setFilter(initial);
+  }, []);
   const [sort, setSort] = useState<SortId>("newest");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);

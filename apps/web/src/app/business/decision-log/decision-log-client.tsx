@@ -200,11 +200,16 @@ function BusinessDecisionLogInner({ tooltips, wording }: { tooltips: Record<stri
   }
 
   async function updateStatus(id: string, status: string) {
-    await fetch(`/api/business/decision-log/${id}`, {
+    setError(null);
+    const res = await fetch(`/api/business/decision-log/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.message ?? "Could not change the status");
+    }
     load();
   }
 
@@ -250,7 +255,7 @@ function BusinessDecisionLogInner({ tooltips, wording }: { tooltips: Record<stri
     setOutcomeBeforeDraft(entry.outcomeBefore !== null ? String(entry.outcomeBefore) : "");
     setOutcomeAfterDraft(entry.outcomeAfter !== null ? String(entry.outcomeAfter) : "");
     setVerdict(null);
-    setMeasureError(null);
+    setMeasureError(entry.isDraft ? "This entry was created automatically from a resolved case. Confirm it as a decision first." : null);
     setEditingId(null);
   }
 

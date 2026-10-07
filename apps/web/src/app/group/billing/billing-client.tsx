@@ -159,6 +159,12 @@ export default function GroupBillingClient({ tooltips }: { tooltips: Record<stri
         </div>
       </div>
 
+      {(data.subscription?.status === "overdue" || data.subscription?.status === "past_due" || data.invoices.some((i) => i.status === "failed")) && !data.subscription?.isComp && (
+        <div className="callout" style={{ marginBottom: 16, borderColor: "var(--red, crimson)" }}>
+          <strong>Your last payment did not go through.</strong> Update your card with Manage subscription so your account stays active.
+        </div>
+      )}
+
       <div className="section-title">How the group pays</div>
       <div className="grid grid-2" style={{ marginBottom: 20 }}>
         <div className="card">

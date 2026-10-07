@@ -256,7 +256,7 @@ export default function GroupCaseTrailClient({ caseId }: { caseId: string }) {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3>Original feedback</h3>
-        {sourceResponses.length === 0 && <p className="subtitle">No linked feedback response.</p>}
+        {sourceResponses.length === 0 && <p className="subtitle">{item.description ? "This case was raised from a pattern of feedback rather than one survey response — the respondent's words are in the description above." : "No linked feedback response."}</p>}
         {sourceResponses.map((r) => (
           <div key={r._id} style={{ marginBottom: 12 }}>
             <p className="card-sub" style={{ margin: "0 0 6px" }}>

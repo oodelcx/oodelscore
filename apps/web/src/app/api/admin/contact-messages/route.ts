@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, ContactMessage } from "@oodelscore/shared";
+import { connectToDatabase, ContactMessage, DemoRequest } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 /**
@@ -17,17 +17,26 @@ export async function GET() {
   }
 
   await connectToDatabase();
-  const messages = await ContactMessage.find().sort({ createdAt: -1 });
+  const [messages, demos] = await Promise.all([
+    ContactMessage.find().sort({ createdAt: -1 }),
+    DemoRequest.find().sort({ createdAt: -1 }),
+  ]);
 
-  return NextResponse.json({
-    status: "ok",
-    messages: messages.map((m) => ({
+  // "Book a demo" leads and /contact messages share one inbox, tagged by kind.
+  const rows = [
+    ...messages.map((m) => ({ kind: "contact" as const, m })),
+    ...demos.map((m) => ({ kind: "demo" as const, m })),
+  ]
+    .map(({ kind, m }) => ({
       _id: m._id.toString(),
+      kind,
       name: m.name,
       email: m.email,
       company: m.company,
       message: m.message,
       createdAt: m.createdAt,
-    })),
-  });
+    }))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return NextResponse.json({ status: "ok", messages: rows });
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Response, Category, FeedbackPoint, Event, hasFeature } from "@oodelscore/shared";
+import { connectToDatabase, Response, Category, FeedbackPoint, Event, hasFeature, resolveCsatQuestionIds } from "@oodelscore/shared";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 import { resolveViewProduct, isCustomerViewProduct } from "@/lib/viewProduct";
 import type { FilterQuery } from "mongoose";
@@ -96,6 +96,8 @@ export async function GET(request: Request) {
   const categoryNameById = new Map(categories.map((c) => [c._id.toString(), c.name]));
 
   const npsAnswers: number[] = [];
+  // CSAT counts only the star question the business/Admin marked as its CSAT question — same rule as the dashboard.
+  const csatQuestionIds = await resolveCsatQuestionIds(responses);
   let csatSatisfied = 0;
   let csatTotal = 0;
   let cesSum = 0;
@@ -118,7 +120,7 @@ export async function GET(request: Request) {
 
     for (const answer of response.answers) {
       if (answer.type === "nps_0_10" && typeof answer.value === "number") npsAnswers.push(answer.value);
-      if (answer.type === "star_1_5" && typeof answer.value === "number") {
+      if (answer.type === "star_1_5" && typeof answer.value === "number" && csatQuestionIds.has(String(answer.questionId))) {
         csatTotal += 1;
         if (answer.value >= 4) csatSatisfied += 1;
       }

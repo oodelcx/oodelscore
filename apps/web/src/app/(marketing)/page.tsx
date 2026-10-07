@@ -14,8 +14,9 @@ import { list, readViz, STAGE_IDS, strings } from "./ds/content";
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const home = await getSiteContent("home");
-  const title = "OodelCX — Feedback that turns into action";
+  const [home, menu] = await Promise.all([getSiteContent("home"), getSiteContent("menu")]);
+  // Follows the Site name set in Admin (the layout's title template can't apply to an absolute title).
+  const title = `${menu.fields.siteName || "OodelCX"} — Feedback that turns into action`;
   const description = home.fields.metaDescription;
   return {
     title: { absolute: title },

@@ -299,7 +299,7 @@ export default function FeedbackPointsClient() {
                     {p.scans} scans <InfoTip text={tooltips["scans"]} />
                   </div>
                   <div>
-                    {responses} responses <InfoTip text={tooltips["responses"]} />
+                    <a href={`/business/responses?filter=${p._id}`}>{responses} responses</a> <InfoTip text={tooltips["responses"]} />
                   </div>
                   <div>
                     <strong style={{ color: "var(--text)" }}>{conversion !== null ? `${conversion}%` : "—"}</strong> conversion{" "}
