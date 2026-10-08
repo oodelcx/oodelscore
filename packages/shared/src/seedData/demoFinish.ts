@@ -6,6 +6,11 @@ import { CxPulsePulseResponse } from "../models/CxPulsePulseResponse";
 import { AiInsightReport, type AiReportPeriod } from "../models/AiInsightReport";
 import type { Product } from "../models/products";
 import { currentQuarterLabel, pulseQuestionsFor } from "../cxpulse/selfAssessment";
+import { CronRun, CRON_JOBS } from "../models/CronRun";
+import { SystemHealthEvent } from "../models/SystemHealthEvent";
+import { BillingCredit } from "../models/BillingCredit";
+import { FeedbackPoint } from "../models/FeedbackPoint";
+import { Response as FeedbackResponse } from "../models/Response";
 import { getCxPulseFrameworkOrDefault, recomputeAllCxPulseScores } from "../cxpulse/compute";
 
 /**
@@ -30,6 +35,10 @@ export interface DemoFinishResult {
   selfAssessments: number;
   valueInputs: number;
   insightReports: number;
+  cronRuns: number;
+  healthEvents: number;
+  credits: number;
+  scanCounts: number;
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -81,7 +90,7 @@ function reportBody(params: { name: string; product: Product; period: AiReportPe
 }
 
 export async function seedDemoFinish(options: { insightReports?: boolean } = {}): Promise<DemoFinishResult> {
-  const result: DemoFinishResult = { loginsRefreshed: 0, selfAssessments: 0, valueInputs: 0, insightReports: 0 };
+  const result: DemoFinishResult = { loginsRefreshed: 0, selfAssessments: 0, valueInputs: 0, insightReports: 0, cronRuns: 0, healthEvents: 0, credits: 0, scanCounts: 0 };
   const now = Date.now();
 
   // 1. Logins
@@ -172,7 +181,54 @@ export async function seedDemoFinish(options: { insightReports?: boolean } = {})
     }
   }
 
-  // 5. Pulse scores, last, so they see everything above
+  // 5. Admin Platform Health: every scheduled job has a recent healthy run, and the event list is not empty
+  for (const job of CRON_JOBS) {
+    const exists = await CronRun.findOne({ job: job.job }).select("_id");
+    if (exists) continue;
+    await CronRun.create({ job: job.job, lastRunAt: new Date(now - Math.floor(Math.random() * 3 + 1) * 60 * 60 * 1000), lastOk: true, lastMessage: "Completed. Demo data." });
+    result.cronRuns++;
+  }
+  if ((await SystemHealthEvent.countDocuments()) === 0) {
+    await SystemHealthEvent.create([
+      { type: "cron_failure", message: "generate-insights timed out once and succeeded on the next run", context: { job: "generate-insights", demo: true }, occurredAt: new Date(now - 6 * DAY) },
+      { type: "api_route_error", message: "Temporary database timeout on /api/group/overview, recovered on retry", context: { route: "/api/group/overview", demo: true }, occurredAt: new Date(now - 3 * DAY) },
+      { type: "stripe_webhook_failure", message: "Webhook signature check failed for a test event, resent and accepted", context: { demo: true }, occurredAt: new Date(now - 9 * DAY) },
+    ]);
+    result.healthEvents += 3;
+  }
+
+  // 6. Billing credits and refunds, so the Billing pages show the ledger
+  if ((await BillingCredit.countDocuments()) === 0) {
+    const admin = await User.findOne({ accountType: "admin_staff" }).select("_id");
+    if (admin) {
+      const targets = [...orgs.slice(0, 2).map((o) => ({ ownerType: "parentOrg" as const, id: o._id })), ...standalone.slice(0, 1).map((b) => ({ ownerType: "business" as const, id: b._id }))];
+      const reasons = ["Goodwill credit after a delayed onboarding call", "Refund for a duplicate charge", "Credit for a billing-cycle mix-up"];
+      for (let i = 0; i < targets.length; i++) {
+        await BillingCredit.create({
+          ownerType: targets[i].ownerType,
+          ownerId: targets[i].id,
+          type: i === 1 ? "refund" : "credit",
+          amount: [50, 129, 25][i] ?? 25,
+          reason: reasons[i] ?? reasons[0],
+          issuedBy: admin._id,
+          issuedAt: new Date(now - (i + 2) * 4 * DAY),
+        });
+        result.credits++;
+      }
+    }
+  }
+
+  // 7. QR scan counts: scans are at least as many as responses, so conversion rates are real numbers
+  const counts = await FeedbackResponse.aggregate([{ $group: { _id: "$feedbackPointId", n: { $sum: 1 } } }]);
+  for (const c of counts) {
+    if (!c._id) continue;
+    const fp = await FeedbackPoint.findById(c._id).select("scans");
+    if (!fp || fp.scans >= c.n) continue;
+    await FeedbackPoint.updateOne({ _id: fp._id }, { $set: { scans: Math.round(c.n * (1.15 + Math.random() * 0.5)) } });
+    result.scanCounts++;
+  }
+
+  // 8. Pulse scores, last, so they see everything above
   await recomputeAllCxPulseScores();
 
   return result;

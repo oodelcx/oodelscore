@@ -82,8 +82,8 @@ export const SHOWCASE_PASSWORD = "ocx123";
 const responseScale = (): number => Math.max(1, Number(process.env.SHOWCASE_RESPONSE_SCALE ?? 1) || 1);
 const historyDays = (): number => Math.max(0, Number(process.env.SHOWCASE_HISTORY_DAYS ?? 0) || 0);
 const EMAIL_DOMAIN = "showcase.oodel.test";
-// Demo logins: short and memorable, e.g. meridian@ocxdemo.com, meridian.downtown@ocxdemo.com. Password for all: ocx123.
-const LOGIN_DOMAIN = "ocxdemo.com";
+// Demo logins: short and memorable, e.g. meridian@ocx.test, meridian.downtown@ocx.test. Password for all: ocx123.
+const LOGIN_DOMAIN = "ocx.test";
 
 /** "Meridian Bank – Downtown" -> "downtown"; "Horizon North Primary" (org "Horizon Schools Trust") -> "northprimary". */
 const SHORT_BRANCH_KEYS: Record<string, string> = {

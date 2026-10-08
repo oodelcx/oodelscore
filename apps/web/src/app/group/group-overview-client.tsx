@@ -138,6 +138,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [jump, setJump] = useState("");
+  const [jumpOpen, setJumpOpen] = useState(false);
   const [jumpResults, setJumpResults] = useState<{ businessId: string; name: string }[]>([]);
   const [topThemes, setTopThemes] = useState<ThemeRow[]>([]);
 
@@ -151,20 +152,18 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
       .then((d) => setTopThemes((d.themes ?? []).slice(0, 3)));
   }, []);
 
+  // Opening the box lists every branch straight away; typing narrows the list.
   useEffect(() => {
-    if (!jump.trim()) {
-      setJumpResults([]);
-      return;
-    }
+    if (!jumpOpen) return;
     const timeout = setTimeout(() => {
-      fetch(`/api/group/branches?q=${encodeURIComponent(jump)}`)
+      fetch(`/api/group/branches?q=${encodeURIComponent(jump.trim())}`)
         .then((res) => res.json())
         .then((d) =>
-          setJumpResults((d.branches ?? []).slice(0, 6).map((b: { businessId: string; name: string }) => ({ businessId: b.businessId, name: b.name })))
+          setJumpResults((d.branches ?? []).map((b: { businessId: string; name: string }) => ({ businessId: b.businessId, name: b.name })))
         );
-    }, 200);
+    }, jump.trim() ? 150 : 0);
     return () => clearTimeout(timeout);
-  }, [jump]);
+  }, [jump, jumpOpen]);
 
   if (loading) return <p className="subtitle">Loading…</p>;
   if (!data) return <p className="error-text">Couldn&apos;t load overview.</p>;
@@ -189,26 +188,35 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
             {data.regions.length === 1 ? "" : "s"}.
           </p>
         </div>
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative" }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setJumpOpen(false); }}>
           <input
             type="text"
             placeholder="Jump to a branch…"
             style={{ width: 260 }}
             value={jump}
-            onChange={(e) => setJump(e.target.value)}
+            onFocus={() => setJumpOpen(true)}
+            onChange={(e) => { setJump(e.target.value); setJumpOpen(true); }}
+            onKeyDown={(e) => { if (e.key === "Escape") setJumpOpen(false); }}
+            aria-expanded={jumpOpen}
+            autoComplete="off"
           />
-          {jumpResults.length > 0 && (
-            <div className="card" style={{ position: "absolute", top: 36, right: 0, zIndex: 5, padding: 6, width: 260 }}>
-              {jumpResults.map((r) => (
-                <div
-                  key={r.businessId}
-                  className="config-row"
-                  style={{ cursor: "pointer", padding: "6px 8px" }}
-                  onClick={() => router.push(`/group/branches/${r.businessId}`)}
-                >
-                  {r.name}
-                </div>
-              ))}
+          {jumpOpen && (
+            <div className="card" style={{ position: "absolute", top: 38, right: 0, zIndex: 20, padding: 6, width: 280, maxHeight: 320, overflowY: "auto" }}>
+              {jumpResults.length === 0 ? (
+                <div style={{ padding: "8px 10px", color: "var(--text-3)", fontSize: 13 }}>{jump.trim() ? "No branch matches." : "Loading branches…"}</div>
+              ) : (
+                jumpResults.map((r) => (
+                  <button
+                    key={r.businessId}
+                    type="button"
+                    className="config-row"
+                    style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: 0, cursor: "pointer", padding: "7px 10px", borderRadius: 8, font: "inherit" }}
+                    onClick={() => router.push(`/group/branches/${r.businessId}`)}
+                  >
+                    {r.name}
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>
