@@ -37,3 +37,10 @@ export async function redirectUnlessPage(
     if (!(await checkBranchPermission(session.business, branchKey))) redirect("/business");
   }
 }
+
+/** Branch-only guard: a branch whose group kept an area centralized cannot open that page by typing its address. */
+export async function redirectUnlessBranchAllowed(permission: BranchDelegatablePermission): Promise<void> {
+  const session = await requireBusinessOwner({ allowLimitedTeamMember: true });
+  if (!session) return;
+  if (!(await checkBranchPermission(session.business, permission))) redirect("/business");
+}

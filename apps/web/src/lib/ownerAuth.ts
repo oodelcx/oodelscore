@@ -44,6 +44,19 @@ interface OwnerAuthOptions {
 }
 
 /**
+ * A branch head only ever sees Customer X. Staff (Colleague X) feedback belongs to the group, or to a
+ * standalone business that bought it. Every portal route asks `hasProduct(session.business, ...)`, so removing
+ * the product from the in-memory copy closes every staff screen and API at once. `$ignore` makes sure this
+ * view-only change is never written back to the database.
+ */
+export function hideColleagueFromBranch(business: HydratedDocument<IBusiness>): void {
+  if (!business.parentOrgId) return;
+  if (!business.enabledProducts?.includes("colleague_experience")) return;
+  business.enabledProducts = business.enabledProducts.filter((p) => p !== "colleague_experience");
+  business.$ignore("enabledProducts");
+}
+
+/**
  * Resolves the current session to a "business" accountType user (the
  * primary owner) or a "full"/"limited" tier "team_member" whose
  * teamOfType is "business", plus the Business doc they act on. Per spec
@@ -57,6 +70,7 @@ export async function requireBusinessOwner(options: OwnerAuthOptions = {}): Prom
   if (user.accountType === "business") {
     const business = await Business.findById(user.parentId);
     if (!business) return null;
+    hideColleagueFromBranch(business);
     return { user, business, isTeamMember: false, tier: null };
   }
 
@@ -65,6 +79,7 @@ export async function requireBusinessOwner(options: OwnerAuthOptions = {}): Prom
     if (options.requirePage && !teamMemberCanAccess(user, options.requirePage)) return null;
     const business = await Business.findById(user.parentId);
     if (!business) return null;
+    hideColleagueFromBranch(business);
     return { user, business, isTeamMember: true, tier: user.tier };
   }
 

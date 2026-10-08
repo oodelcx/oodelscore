@@ -1,3 +1,4 @@
+import { hideColleagueFromBranch } from "@/lib/ownerAuth";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
@@ -40,6 +41,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   await connectToDatabase();
   const business = await Business.findById(user.parentId);
   if (!business) redirect("/login");
+  hideColleagueFromBranch(business);
 
   const parentOrg = business.parentOrgId ? await ParentOrganization.findById(business.parentOrgId) : null;
   const isBranch = !!parentOrg;
@@ -382,7 +384,14 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         </div>
       </aside>
       <main className="admin-main">
-        {isGated ? (
+        {isBranch && (business.enabledProducts ?? []).length === 0 ? (
+          <div className="card" style={{ maxWidth: 560 }}>
+            <h3>Nothing to show here</h3>
+            <p className="card-sub">
+              {parentOrg!.name} manages staff feedback centrally. Ask your group administrator if you need access to anything.
+            </p>
+          </div>
+        ) : isGated ? (
           <BillingLockedScreen
             billingHref="/business/billing"
             status={billingStatus === "never_activated" ? "never_activated" : "lapsed"}
