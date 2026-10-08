@@ -31,6 +31,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!feedbackPoint) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
 
   const body = await request.json().catch(() => null);
+  // Publish / close / reopen are one click, with no date to fiddle with.
+  if (body?.action === "publish") {
+    feedbackPoint.isDraft = false;
+    feedbackPoint.active = true;
+    await feedbackPoint.save();
+    return NextResponse.json({ status: "ok", feedbackPoint });
+  }
+  if (body?.action === "close") {
+    feedbackPoint.active = false;
+    await feedbackPoint.save();
+    return NextResponse.json({ status: "ok", feedbackPoint });
+  }
+  if (body?.action === "reopen") {
+    feedbackPoint.active = true;
+    // A date that has already passed would shut it again at once, so clear it when reopening.
+    if (feedbackPoint.endsAt && feedbackPoint.endsAt < new Date()) feedbackPoint.endsAt = null;
+    await feedbackPoint.save();
+    return NextResponse.json({ status: "ok", feedbackPoint });
+  }
   if (body?.endsAt === null) {
     feedbackPoint.endsAt = null;
   } else if (typeof body?.endsAt === "string") {

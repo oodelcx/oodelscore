@@ -22,6 +22,7 @@ interface FeedbackPointRow {
   qrToken: string;
   scans: number;
   active: boolean;
+  isDraft?: boolean;
   product?: "customer_experience" | "colleague_experience";
   hasNps: boolean;
   hasComments: boolean;
@@ -95,6 +96,28 @@ export default function FeedbackPointsClient() {
     setBuilderOpen(true);
   }
 
+  function pointStatus(p: FeedbackPointRow): "draft" | "live" | "closed" {
+    if (p.isDraft) return "draft";
+    if (!p.active) return "closed";
+    if (p.endsAt && new Date(p.endsAt) < new Date()) return "closed";
+    return "live";
+  }
+
+  async function pointAction(id: string, action: "publish" | "close" | "reopen") {
+    const res = await fetch(`/api/business/feedback-points/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.status !== "ok") {
+      alert(data?.message ?? "That change could not be saved.");
+      return;
+    }
+    const fp = data.feedbackPoint;
+    setPoints((prev) => prev.map((pt) => (pt._id === id ? { ...pt, active: fp.active, isDraft: fp.isDraft, endsAt: fp.endsAt } : pt)));
+  }
+
   async function submitBuilder(payload: SurveyBuilderPayload) {
     setBuilderError(null);
     setBuilderSubmitting(true);
@@ -110,6 +133,7 @@ export default function FeedbackPointsClient() {
           questions: payload.questions,
           deliveryMode: payload.deliveryMode,
           demographicOverride: payload.demographicOverride,
+          isDraft: payload.isDraft,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -307,7 +331,9 @@ export default function FeedbackPointsClient() {
                   </div>
                 </div>
                 <div className="badge-row">
-                  <span className={`pill ${p.active ? "pill-accent" : "pill-gray"}`}>{p.active ? "Active" : "Inactive"}</span>
+                  <span className={`pill ${pointStatus(p) === "live" ? "pill-accent" : pointStatus(p) === "draft" ? "pill-amber" : "pill-gray"}`}>
+                    {pointStatus(p) === "live" ? "Live" : pointStatus(p) === "draft" ? "Draft: not collecting yet" : "Closed"}
+                  </span>
                   <InfoTip text={tooltips["active-status"]} />
                   {p.eventName && <span className="pill pill-amber">Session: {p.eventName}</span>}
                   {configBadges(p).map((b, i) => (
@@ -333,7 +359,25 @@ export default function FeedbackPointsClient() {
                     onUpdated={(endsAt) => setPoints((prev) => prev.map((pt) => (pt._id === p._id ? { ...pt, endsAt } : pt)))}
                   />
                 )}
-                <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                  <a className="btn btn-dark" style={{ flex: 1, textAlign: "center" }} href={`/business/responses?filter=${p._id}`}>
+                    View responses
+                  </a>
+                  {!isBranch && pointStatus(p) === "draft" && (
+                    <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => pointAction(p._id, "publish")}>
+                      Publish
+                    </button>
+                  )}
+                  {!isBranch && pointStatus(p) === "live" && (
+                    <button className="btn" style={{ flex: 1 }} onClick={() => pointAction(p._id, "close")}>
+                      Close
+                    </button>
+                  )}
+                  {!isBranch && pointStatus(p) === "closed" && (
+                    <button className="btn" style={{ flex: 1 }} onClick={() => pointAction(p._id, "reopen")}>
+                      Reopen
+                    </button>
+                  )}
                   {p.deliveryMode !== "link" && (
                     <button className="btn" data-tour={isFirst ? "fp-first-qr" : undefined} style={{ flex: 1 }} onClick={() => setQrPoint(p)}>
                       View QR

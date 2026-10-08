@@ -83,6 +83,9 @@ export interface IFeedbackPoint {
   demographicOverride: IDemographicOverride | null; // null = use business default demographicConfig
   scans: number; // incremented each time the public feedback page loads — powers conversion rate (responses / scans)
   active: boolean;
+  // A draft has its QR code and link from the moment it is saved, but collects nothing until the owner publishes it.
+  // Optional so every point created before this field existed reads as published.
+  isDraft?: boolean;
   // Optional date-bound auto-close (e.g. "this survey runs Nov 1-30"):
   // once endsAt has passed the link is treated as closed even if `active`
   // is still true, so a business doesn't have to remember to toggle it off.
@@ -162,6 +165,7 @@ const FeedbackPointSchema = new Schema<IFeedbackPoint>(
     demographicOverride: { type: DemographicOverrideSchema, default: null },
     scans: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
+    isDraft: { type: Boolean, default: false },
     startsAt: { type: Date, default: null },
     endsAt: { type: Date, default: null },
     selectedQuestionIds: { type: [Schema.Types.ObjectId], default: null },
@@ -184,7 +188,8 @@ FeedbackPointSchema.index({ businessId: 1, product: 1, lifecycleTrigger: 1 });
 FeedbackPointSchema.index({ product: 1, distributionMode: 1, pulseCadence: 1 });
 
 /** True once `active` is on AND, if a date window is set, `now` falls inside it. */
-export function isFeedbackPointOpen(point: Pick<IFeedbackPoint, "active" | "startsAt" | "endsAt">, now: Date = new Date()): boolean {
+export function isFeedbackPointOpen(point: Pick<IFeedbackPoint, "active" | "startsAt" | "endsAt"> & { isDraft?: boolean }, now: Date = new Date()): boolean {
+  if (point.isDraft) return false;
   if (!point.active) return false;
   if (point.startsAt && now < point.startsAt) return false;
   if (point.endsAt && now > point.endsAt) return false;

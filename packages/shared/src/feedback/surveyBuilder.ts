@@ -133,6 +133,7 @@ export async function buildFeedbackPointFromTemplate(params: {
     responseQuota,
     deliveryMode,
     demographicOverride,
+    isDraft: b?.isDraft === true,
   });
 
   return { status: "ok", feedbackPoint };

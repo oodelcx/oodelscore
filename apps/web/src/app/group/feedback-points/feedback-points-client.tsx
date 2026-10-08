@@ -18,6 +18,7 @@ interface FeedbackPointRow {
   qrToken: string;
   scans: number;
   active: boolean;
+  isDraft?: boolean;
   responseQuota: number | null;
   product?: "customer_experience" | "colleague_experience";
   deliveryMode?: "qr" | "link" | "both";
@@ -45,6 +46,28 @@ export default function GroupFeedbackPointsClient() {
   const [businessId, setBusinessId] = useState("");
   const [builderSubmitting, setBuilderSubmitting] = useState(false);
   const [builderError, setBuilderError] = useState<string | null>(null);
+
+  function pointStatus(p: { active: boolean; isDraft?: boolean; endsAt: string | null }): "draft" | "live" | "closed" {
+    if (p.isDraft) return "draft";
+    if (!p.active) return "closed";
+    if (p.endsAt && new Date(p.endsAt) < new Date()) return "closed";
+    return "live";
+  }
+
+  async function pointAction(id: string, action: "publish" | "close" | "reopen") {
+    const res = await fetch(`/api/group/feedback-points/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.status !== "ok") {
+      alert(data?.message ?? "That change could not be saved.");
+      return;
+    }
+    const fp = data.feedbackPoint;
+    setPoints((prev) => (prev ? prev.map((pt) => (pt._id === id ? { ...pt, active: fp.active, isDraft: fp.isDraft, endsAt: fp.endsAt } : pt)) : prev));
+  }
 
   function load() {
     fetch("/api/group/feedback-points")
@@ -93,6 +116,7 @@ export default function GroupFeedbackPointsClient() {
           questions: payload.questions,
           deliveryMode: payload.deliveryMode,
           demographicOverride: payload.demographicOverride,
+          isDraft: payload.isDraft,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -169,7 +193,9 @@ export default function GroupFeedbackPointsClient() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <h3 style={{ margin: 0 }}>{p.name}</h3>
-                  <span className={`pill ${p.active ? "pill-accent" : "pill-gray"}`}>{p.active ? "Active" : "Inactive"}</span>
+                  <span className={`pill ${pointStatus(p) === "live" ? "pill-accent" : pointStatus(p) === "draft" ? "pill-amber" : "pill-gray"}`}>
+                    {pointStatus(p) === "live" ? "Live" : pointStatus(p) === "draft" ? "Draft: not collecting yet" : "Closed"}
+                  </span>
                 </div>
                 <span className="pill pill-blue" style={{ marginTop: 6, display: "inline-block" }}>
                   {p.businessName}
@@ -190,6 +216,23 @@ export default function GroupFeedbackPointsClient() {
                     setPoints((prev) => (prev ? prev.map((pt) => (pt._id === p._id ? { ...pt, endsAt } : pt)) : prev))
                   }
                 />
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  {pointStatus(p) === "draft" && (
+                    <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => pointAction(p._id, "publish")}>
+                      Publish
+                    </button>
+                  )}
+                  {pointStatus(p) === "live" && (
+                    <button className="btn btn-sm" style={{ flex: 1 }} onClick={() => pointAction(p._id, "close")}>
+                      Close
+                    </button>
+                  )}
+                  {pointStatus(p) === "closed" && (
+                    <button className="btn btn-sm" style={{ flex: 1 }} onClick={() => pointAction(p._id, "reopen")}>
+                      Reopen
+                    </button>
+                  )}
+                </div>
                 {p.deliveryMode !== "link" ? (
                   <button className="btn btn-sm" style={{ width: "100%" }} onClick={() => setQrPoint(p)}>
                     View QR

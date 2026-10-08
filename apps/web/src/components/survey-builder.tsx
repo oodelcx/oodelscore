@@ -129,6 +129,8 @@ export interface SurveyBuilderPayload {
   questions: { text: string; type: QuestionType; required: boolean; options: string[]; categoryId: string | null; isCsatQuestion: boolean }[];
   deliveryMode: DeliveryMode;
   demographicOverride: DemographicOverridePayload | null;
+  /** True = save as a draft: the QR code and link exist, but nothing is collected until it is published. */
+  isDraft: boolean;
 }
 
 interface SurveyBuilderPanelProps {
@@ -168,7 +170,7 @@ export function SurveyBuilderPanel({
   lockedProduct,
   submitting,
   error,
-  submitLabel = "Create feedback point",
+  submitLabel = "Publish",
   onCancel,
   onSubmit,
 }: SurveyBuilderPanelProps) {
@@ -179,7 +181,6 @@ export function SurveyBuilderPanel({
   );
   const [quota, setQuota] = useState("");
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("both");
-  const [customizeDemographics, setCustomizeDemographics] = useState(false);
   const [demographics, setDemographics] = useState<DemographicOverridePayload>({
     name: "off",
     email: "off",
@@ -282,7 +283,7 @@ export function SurveyBuilderPanel({
     setQuestions((qs) => qs.map((q) => (q.localKey === localKey ? { ...q, options: q.options.filter((_, i) => i !== index) } : q)));
   }
 
-  function handleSubmit() {
+  function handleSubmit(isDraft: boolean) {
     setLocalError(null);
     if (!name.trim()) {
       setLocalError("Name is required");
@@ -316,7 +317,8 @@ export function SurveyBuilderPanel({
         isCsatQuestion: q.isCsatQuestion,
       })),
       deliveryMode,
-      demographicOverride: customizeDemographics ? demographics : null,
+      demographicOverride: demographics,
+      isDraft,
     });
   }
 
@@ -357,29 +359,24 @@ export function SurveyBuilderPanel({
       </div>
 
       <div className="field" style={{ marginBottom: 16 }}>
-        <label className="field-check" style={{ margin: 0 }}>
-          <input type="checkbox" checked={customizeDemographics} onChange={(e) => setCustomizeDemographics(e.target.checked)} />
-          <span>Customize respondent details for this survey (otherwise it uses the account default)</span>
-        </label>
-        {customizeDemographics && (
-          <div className="qb-demographics" style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
-            {DEMOGRAPHIC_FIELDS.map((f) => (
-              <div className="field" key={f.key}>
-                <label>{f.label}</label>
-                <select
-                  value={demographics[f.key]}
-                  onChange={(e) => setDemographics((d) => ({ ...d, [f.key]: e.target.value as DemographicMode }))}
-                >
-                  {DEMOGRAPHIC_MODE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
+        <label>Respondent details for this survey</label>
+        <div className="qb-demographics" style={{ marginTop: 6, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+          {DEMOGRAPHIC_FIELDS.map((f) => (
+            <div className="field" key={f.key}>
+              <label>{f.label}</label>
+              <select
+                value={demographics[f.key]}
+                onChange={(e) => setDemographics((d) => ({ ...d, [f.key]: e.target.value as DemographicMode }))}
+              >
+                {DEMOGRAPHIC_MODE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="qb-layout">
@@ -541,8 +538,11 @@ export function SurveyBuilderPanel({
       <div className="qb-footer">
         {shownError && <p className="error-text" style={{ margin: 0 }}>{shownError}</p>}
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" className="btn btn-dark" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "Creating…" : submitLabel}
+          <button type="button" className="btn btn-dark" onClick={() => handleSubmit(false)} disabled={submitting}>
+            {submitting ? "Saving…" : submitLabel}
+          </button>
+          <button type="button" className="btn" onClick={() => handleSubmit(true)} disabled={submitting}>
+            Save as draft
           </button>
           <button type="button" className="btn" onClick={onCancel} disabled={submitting}>
             Cancel
