@@ -72,7 +72,7 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroTwoProductsCxCta: "Explore Customer X →",
       heroTwoProductsCeLabel: "Colleague X",
       heroTwoProductsCeHeading: "Colleague X",
-      heroTwoProductsCeBody: "What your own staff tell you, including what routes straight to HR, not their manager.",
+      heroTwoProductsCeBody: "What your own staff tell you, shared only with the people you choose, not their manager.",
       heroTwoProductsCeCta: "Explore Colleague X →",
       narrativeHeadline: "Most tools stop at Capture. We built Clarify, Claim, Close, and Confirm too.",
       narrativeSubhead: "A score with nowhere to go is just a number.",
@@ -205,8 +205,8 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
           featured: false,
           cta: "Start free trial",
           features: [
-            "Unlimited colleague roster",
-            "Sensitive-category routing straight to HR",
+            "One staff survey, a link and QR code per branch",
+            "Staff responses go to the people you choose",
             "eNPS tracked alongside Colleague Pulse",
             "Email support",
           ],
@@ -368,7 +368,7 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroSubheadline:
         "Staff hear about a broken process, a bad rota, or a manager problem long before it shows up as a resignation letter. Colleague X gives that feedback the same QR-to-case pipeline as your customers get — including a route that bypasses the manager entirely when it needs to.",
       metaDescription:
-        "Colleague X: internal feedback for staff, built on the same engine as OodelCX's Customer Experience product — QR surveys, AI Insights, sensitive-category routing to HR, Case Management, and eNPS.",
+        "Colleague X: internal feedback for staff, built on the same engine as OodelCX's Customer Experience product — QR surveys, AI Insights, responses sent to the people you choose, and eNPS.",
       features: JSON.stringify([
         {
           tag: "Colleague Feedback Collection",
@@ -392,17 +392,17 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
           body: "Employee Net Promoter Score, tracked alongside Colleague Pulse rather than as a separate spreadsheet someone assembles once a quarter — so \"would you recommend working here\" has a trend line, not just a snapshot.",
         },
         {
-          tag: "Sensitive-Category Routing",
+          tag: "Chosen Viewers",
           menuFeatured: true,
           group: "understand",
-          headline: "A complaint about a manager never lands on that manager's desk",
-          body: "Categories marked sensitive — HR complaints, leadership concerns, harassment — bypass your normal owner routing entirely and go straight to a designated contact, so a colleague reporting a problem with their own manager isn't handing it to the person it's about.",
+          headline: "Staff feedback goes to the people you choose, not to a manager",
+          body: "The head office builds one staff survey and publishes it to its branches. Responses are visible only to the people head office picks, such as the HR head, and a branch name is hidden until at least five people there have answered, so nobody can be singled out.",
         },
         {
-          tag: "Colleague Roster",
+          tag: "One Survey, Every Branch",
           group: "understand",
-          headline: "Feedback tied to a real team, not an anonymous pool",
-          body: "Keep a roster of who's being asked, by location and role, so response patterns can be read at the level that's actually useful — this shift, this branch, this department — without losing the option to keep individual responses anonymous.",
+          headline: "Build once, publish to every branch",
+          body: "Each branch gets its own link and QR code for the same survey, so you can read results branch by branch without a roster or personal links.",
         },
         {
           tag: "CX ↔ EX Correlation",
@@ -504,7 +504,7 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
           groupBody:
             "A regional or national network sees every branch on one screen: which one is quietly bleeding customers to wait times, which one's sensitive complaints are correctly reaching compliance instead of a teller's own line manager, and which fix — a queue change, a script update — is worth rolling out everywhere instead of reinventing at the next branch that hits the same problem.",
           benefits: [
-            "Compliance- and conduct-sensitive complaints route straight to a designated contact — never to the person, or the branch, they're about",
+            "Serious complaints open a case with an owner and a due date, so nothing sits in an inbox",
             "Branch-vs-branch benchmarking on wait time and service scores, not one blended network NPS hiding which locations actually need help",
             "A flagged interaction becomes an owned case the same day, with a due date a regional manager can actually chase",
             "A real before/after on the exact metric a branch was struggling with — for the audit trail, not just the team meeting",

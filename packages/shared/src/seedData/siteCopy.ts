@@ -133,16 +133,16 @@ const EX_FEATURES: Feature[] = [
     body: "eNPS is tracked alongside Colleague Pulse rather than compiled separately each quarter, so the result can be read as a trend instead of a single snapshot.",
   },
   {
-    tag: "Sensitive-Category Routing",
+    tag: "Chosen Viewers",
     group: "understand",
-    headline: "Concerns about a manager do not reach that manager",
-    body: "Categories you mark as sensitive, such as HR complaints or leadership concerns, skip the usual category owner and go to a designated contact. Comments that appear to concern a senior person are also screened.",
+    headline: "Staff feedback goes to the people you choose",
+    body: "Staff responses are visible only to the people head office picks, such as the HR head, from the first response. A branch is never named until at least five people there have answered.",
   },
   {
-    tag: "Colleague Roster",
+    tag: "One Survey, Every Branch",
     group: "understand",
-    headline: "Feedback linked to teams, not an anonymous pool",
-    body: "A roster by location and role lets patterns be read by branch or team, while individual responses stay anonymous. Results for any group with fewer than five responses are never shown.",
+    headline: "Build one survey, publish it to every branch",
+    body: "Head office builds the staff survey once and ticks the branches. Each branch gets its own link and QR code, and results can be read branch by branch.",
   },
   {
     tag: "CX ↔ EX Correlation",
@@ -189,7 +189,7 @@ const EX_FEATURES: Feature[] = [
 ];
 
 /** Bump when the copy below changes, so each page is rewritten once more (and only once) per revision. */
-export const COPY_REV = "4";
+export const COPY_REV = "5";
 
 const FINAL_CTA_SUB = "A twenty-minute walkthrough using a scenario close to your own.";
 
@@ -260,7 +260,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     heroTwoProductsCxBody: "How customers, clients and patients experience the organisation after each interaction.",
     heroTwoProductsCeLabel: "The people who work for you",
     heroTwoProductsCeBody:
-      "How colleagues experience their work, including concerns that should reach HR rather than a line manager.",
+      "How colleagues experience their work, shared with the people head office chooses rather than a line manager.",
     doorCxBullets: j([
       "Feedback by QR code or link in under a minute",
       "Issues assigned to an owner with a due date",
@@ -268,7 +268,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     ]),
     doorCeBullets: j([
       "Anonymous by design, linked to real teams",
-      "Sensitive concerns routed to HR, not the line manager",
+      "Staff responses go to the people you choose",
       "eNPS and Colleague Pulse in one view",
     ]),
     industriesEyebrow: "Solutions",
@@ -315,7 +315,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     heroSubheadline:
       "Colleagues often see a failing process, an unworkable rota or a management problem well before it appears as turnover. Colleague X gives that feedback the same path from first response to resolution as customer feedback, including a route that does not pass through the line manager when the concern requires it.",
     metaDescription:
-      "Colleague X from OodelCX: internal feedback collected by QR code or link, with routing of sensitive concerns to HR, Case Management and eNPS.",
+      "Colleague X from OodelCX: internal feedback collected by QR code or link, with responses sent to the people you choose, and eNPS.",
     alwaysOnText: "Anonymity controls, roles and two-factor authentication on every plan",
     ...EX_VIZ,
     industriesHeadline: "Used in the sectors where retention and morale matter.",
@@ -397,7 +397,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     audienceHeadline:
       "Organisations with several locations, where feedback needs to reach the right person in good time.",
     audienceItems: j([
-      { slug: "banking", name: "Banking & Finance", body: "Branch networks that need conduct-sensitive complaints routed correctly and recorded." },
+      { slug: "banking", name: "Banking & Finance", body: "Branch networks that need serious complaints turned into owned cases and recorded." },
       { slug: "education", name: "Education", body: "Multi-campus trusts comparing facilities and communication measures term over term." },
       { slug: "retail", name: "Retail", body: "Store chains that need to see results by location and by shift, not as one average." },
       { slug: "healthcare", name: "Healthcare", body: "Facility networks turning wait-time complaints into tracked, measured improvements." },

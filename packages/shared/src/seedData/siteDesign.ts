@@ -14,7 +14,7 @@ export type StageId = "capture" | "clarify" | "claim" | "close" | "confirm" | "n
 const STAGE_BY_TAG: Record<string, StageId> = {
   "Feedback Collection": "capture",
   "Colleague Feedback Collection": "capture",
-  "Colleague Roster": "capture",
+  "One Survey, Every Branch": "capture",
   "Theme Intelligence": "clarify",
   "Root Cause Investigation": "clarify",
   "Driver Analysis": "clarify",
@@ -25,7 +25,7 @@ const STAGE_BY_TAG: Record<string, StageId> = {
   "Automatic Alerts": "claim",
   "Guided Playbooks": "claim",
   "Escalation Workflows": "claim",
-  "Sensitive-Category Routing": "claim",
+  "Chosen Viewers": "claim",
   "Decision Log": "close",
   "Downloadable Reports": "close",
   "CX Pulse": "confirm",
@@ -72,7 +72,7 @@ const VIZ_COMMON = {
   vizRouteBypassed: "not involved",
   vizRouteTo: "Designated contact",
   vizRouteToSub: "receives and owns the case",
-  vizRouteCaption: "For categories marked sensitive, a concern goes straight to a person you choose.",
+  vizRouteCaption: "Staff responses go to the people you choose, never to a manager by default.",
 };
 
 export const CX_VIZ = {
@@ -133,7 +133,7 @@ export const EX_VIZ = {
   vizTracedBody: "6 of 9 negative comments fall between 20:00 and 22:00",
   vizClaimStyle: "route",
   vizCases: j([
-    { initials: "HR", title: "Case opened, anonymous", sub: "Owner Smith · due in 3 days", pill: "Sensitive", tone: "warn" },
+    { initials: "HR", title: "Case opened, anonymous", sub: "Owner Smith · due in 3 days", pill: "Anonymous", tone: "warn" },
   ]),
   vizPlaybookChips: j(["Playbook: Rota Review", "Review responses", "Talk to the team"]),
   vizDecisionInitials: "DL",
@@ -142,7 +142,7 @@ export const EX_VIZ = {
   vizBefore: "31",
   vizAfter: "52",
   vizReplyInitials: "✉",
-  vizReplyTitle: "Update sent to the whole roster",
+  vizReplyTitle: "Update shared with the whole team",
   vizReplyQuote: "You raised it, we changed the rota.",
   vizDashKpis: j([
     { label: "eNPS", value: "38", delta: "+6" },
@@ -203,7 +203,7 @@ export const DESIGN_FIELDS: Record<string, Record<string, string>> = {
     heroTwoProductsCxLabel: "For customers, clients, patients",
     heroTwoProductsCeLabel: "For your own people",
     doorCxBullets: j(["QR or link feedback in under a minute", "Cases with owners and due dates", "CX Pulse tracks real improvement"]),
-    doorCeBullets: j(["Anonymous by design, tied to real teams", "Sensitive routing straight to HR", "eNPS and Colleague Pulse in one view"]),
+    doorCeBullets: j(["Anonymous by design, tied to real teams", "Responses go to the people you choose", "eNPS and Colleague Pulse in one view"]),
     industriesEyebrow: "Solutions",
     industriesHeadline: "Built for the places feedback gets lost.",
     finalCtaSecondaryButton: "See pricing",
@@ -234,7 +234,7 @@ export const DESIGN_FIELDS: Record<string, Record<string, string>> = {
     heroPrimaryButton: "Book a demo",
     heroSecondaryButton: "See Customer X",
     heroSecondaryHref: "/customer-x",
-    heroChips: j(["Anonymous by design", "Routes to HR", "eNPS included"]),
+    heroChips: j(["Anonymous by design", "Seen by chosen people", "eNPS included"]),
     heroVisual: "route",
     railNote: "5C Framework",
     stepLabelFormat: "Step {n} of {total}",
