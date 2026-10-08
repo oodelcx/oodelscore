@@ -95,6 +95,7 @@ export function AttentionQueue({ portal }: { portal: "business" | "group" }) {
             </div>
             <div className="right">
               <span className={`pill ${d.pill.cls}`}>{d.pill.text}</span>
+              <span className="go">Open →</span>
             </div>
           </a>
         ))

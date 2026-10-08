@@ -443,7 +443,7 @@ export default function BusinessCasesClient() {
       </div>
 
       {!isLimited && flags.length > 0 && (
-        <div className="card" style={{ marginBottom: 18, borderColor: "var(--amber, #E0A100)" }}>
+        <div className="card note-amber" style={{ marginBottom: 18 }}>
           <h3 style={{ margin: "0 0 4px" }}>Recurring patterns in these cases</h3>
           <p className="card-sub" style={{ margin: "0 0 10px" }}>
             The same category keeps coming up here — the system noticed the pattern automatically. Turn it into a

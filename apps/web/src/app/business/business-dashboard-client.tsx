@@ -106,7 +106,7 @@ function RecurringIssuesCard() {
   if (flags.length === 0) return null;
 
   return (
-    <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #E0A100)" }}>
+    <div className="card note-amber" style={{ marginBottom: 20 }}>
       <div className="metric-label">Recurring issues</div>
       <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
         {flags.map((f) => (

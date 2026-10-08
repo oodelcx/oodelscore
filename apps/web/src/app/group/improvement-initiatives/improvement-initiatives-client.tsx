@@ -289,7 +289,7 @@ export default function GroupImprovementInitiativesClient({ tooltips, wording }:
       </div>
 
       {flags.length > 0 && (
-        <div className="card" style={{ marginBottom: 18, borderColor: "var(--amber, #E0A100)" }}>
+        <div className="card note-amber" style={{ marginBottom: 18 }}>
           <h3 style={{ margin: "0 0 4px" }}>Suggested — cross-branch recurring patterns</h3>
           <p className="card-sub" style={{ margin: "0 0 10px" }}>
             The same category keeps coming up across multiple branches. Review and turn it into a tracked initiative,

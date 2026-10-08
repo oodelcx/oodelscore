@@ -31,7 +31,7 @@ function RecurringIssuesCard() {
   if (flags.length === 0) return null;
 
   return (
-    <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #E0A100)" }}>
+    <div className="card note-amber" style={{ marginBottom: 20 }}>
       <div className="metric-label">Recurring issues — cross-branch</div>
       <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
         {flags.map((f) => (
@@ -225,7 +225,7 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
       <RecurringIssuesCard />
 
       {data.needsYourDecision.length > 0 && (
-        <div className="card" style={{ marginBottom: 20, borderColor: "var(--amber, #b57a00)" }}>
+        <div className="card note-amber" style={{ marginBottom: 20 }}>
           <h3 style={{ margin: "0 0 8px" }}>Needs a decision from you</h3>
           <p className="card-sub">Cases that reached the top of your escalation chain and are still unresolved.</p>
           <ul style={{ margin: 0, paddingLeft: 18 }}>

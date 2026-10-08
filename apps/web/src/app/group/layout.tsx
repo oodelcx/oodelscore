@@ -77,7 +77,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
       <aside className="admin-sidebar" data-no-print>
         <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
-            <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
+            <img className="admin-logo" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
             {viewProduct && <ProductViewSwitcher current={viewProduct} />}
           </div>

@@ -65,7 +65,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <aside className="admin-sidebar">
         <div className="admin-sidebar-scroll">
           <div className="admin-sidebar-top">
-            <img className="admin-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
+            <img className="admin-logo" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
             <div className="admin-brand-sub">ADMIN PORTAL</div>
           </div>
 

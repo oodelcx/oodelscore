@@ -56,7 +56,7 @@ export default function MobileNavToggle({ label }: { label: string }) {
           <span className="mobile-nav-btn-bar" />
           <span className="mobile-nav-btn-bar" />
         </button>
-        <img className="mobile-topbar-logo" src="/oodelcx-logo-white.webp" alt="OodelCX" />
+        <img className="mobile-topbar-logo" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
         <span className="mobile-topbar-label">{label}</span>
       </div>
       {open && <div className="mobile-nav-backdrop" onClick={() => setOpen(false)} />}
