@@ -148,4 +148,10 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     body: "Hi, here's an update on feedback you and your colleagues shared.\n\nWhat we heard:\n{{what_we_heard}}\n\nWhat we're doing:\n{{what_were_doing}}\n\nThanks for speaking up — it's what makes these changes happen.",
     availableVars: ["update_title", "what_we_heard", "what_were_doing"],
   },
+  {
+    key: "compass_recommendation",
+    subject: "Compass recommendation for {{account_name}}: {{dimension}}",
+    body: "Hi {{name}}, {{sender_name}} sent you a recommendation from OodelCX Compass for {{account_name}}.\n\nArea: {{dimension}}\n\n{{recognize}}\n\nSuggested next step: {{elevate}}\n\nOpen it here: {{action_link}}",
+    availableVars: ["name", "sender_name", "account_name", "dimension", "recognize", "elevate", "action_link"],
+  },
 ];

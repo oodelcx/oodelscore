@@ -88,6 +88,115 @@ interface CompassView {
   reassessmentDueAt: string | null;
   history: CompassHistoryEntry[];
   evidenceFusion: EvidenceFusionView | null;
+  reach?: ReachCardView[];
+}
+
+interface ReachCardView {
+  dimension: string;
+  label: string;
+  priority: "high" | "medium" | "low";
+  recognize: string;
+  elevate: string;
+  align: string;
+  connect: { label: string; href: string };
+  habituate: string;
+}
+
+function ReachCards({ cards, apiPath, reassessmentDueAt }: { cards: ReachCardView[]; apiPath: string; reassessmentDueAt: string | null }) {
+  const [team, setTeam] = useState<{ userId: string; label: string }[]>([]);
+  const [picked, setPicked] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState<Record<string, { ok: boolean; text: string }>>({});
+  const [sending, setSending] = useState<string | null>(null);
+  const teamPath = apiPath.includes("/group/") ? "/api/group/team" : "/api/business/team";
+
+  useEffect(() => {
+    fetch(teamPath)
+      .then((r) => r.json())
+      .then((d) => setTeam(Array.isArray(d.team) ? d.team : Array.isArray(d.members) ? d.members : []))
+      .catch(() => setTeam([]));
+  }, [teamPath]);
+
+  async function send(dimension: string) {
+    const toUserId = picked[dimension];
+    if (!toUserId) {
+      setMsg((m) => ({ ...m, [dimension]: { ok: false, text: "Choose who should get it first." } }));
+      return;
+    }
+    setSending(dimension);
+    const res = await fetch(`${apiPath}/elevate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dimension, toUserId }),
+    });
+    const data = await res.json().catch(() => null);
+    setSending(null);
+    setMsg((m) => ({
+      ...m,
+      [dimension]: res.ok ? { ok: true, text: `Sent to ${data?.sentTo ?? "your colleague"}.` } : { ok: false, text: data?.message ?? "It could not be sent." },
+    }));
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 20 }}>
+      <h3 style={{ marginTop: 0 }}>What to do next</h3>
+      <p className="card-sub" style={{ margin: "0 0 14px" }}>
+        One card for each area that is below Embedded or that the evidence does not back up. Each follows the REACH steps: Recognize, Elevate, Align, Connect, Habituate.
+      </p>
+      {cards.length === 0 ? (
+        <p className="subtitle">Every area is Embedded and confirmed by activity. Nothing to recommend right now.</p>
+      ) : (
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+          {cards.map((c) => (
+            <div key={c.dimension} className="card" style={{ background: "var(--bg-2, #f7f7f5)", minWidth: 0 }}>
+              <div className="page-head" style={{ marginBottom: 8 }}>
+                <b>{c.label}</b>
+                <span className={`pill ${c.priority === "high" ? "pill-red" : "pill-amber"}`}>{c.priority === "high" ? "Act first" : "Next"}</span>
+              </div>
+              <p style={{ margin: "0 0 8px", fontSize: 13 }}>
+                <b>Recognize.</b> {c.recognize}
+              </p>
+              <p style={{ margin: "0 0 8px", fontSize: 13 }}>
+                <b>Elevate.</b> {c.elevate}
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                <select
+                  aria-label={`Who should get the ${c.label} recommendation`}
+                  value={picked[c.dimension] ?? ""}
+                  onChange={(e) => setPicked((p) => ({ ...p, [c.dimension]: e.target.value }))}
+                  style={{ minWidth: 0, flex: "1 1 160px" }}
+                >
+                  <option value="">Choose a colleague…</option>
+                  {team.map((t) => (
+                    <option key={t.userId} value={t.userId}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <button className="btn btn-sm" disabled={sending === c.dimension} onClick={() => send(c.dimension)}>
+                  {sending === c.dimension ? "Sending…" : "Send by email"}
+                </button>
+              </div>
+              {msg[c.dimension] && (
+                <p className={msg[c.dimension].ok ? "callout" : "error-text"} role="status" style={{ margin: "0 0 8px", fontSize: 12.5 }}>
+                  {msg[c.dimension].text}
+                </p>
+              )}
+              <p style={{ margin: "0 0 8px", fontSize: 13 }}>
+                <b>Align.</b> {c.align}
+              </p>
+              <p style={{ margin: "0 0 8px", fontSize: 13 }}>
+                <b>Connect.</b> <a href={c.connect.href}>{c.connect.label} →</a>
+              </p>
+              <p style={{ margin: 0, fontSize: 13 }}>
+                <b>Habituate.</b> {c.habituate}
+                {reassessmentDueAt ? ` Compass is due again on ${new Date(reassessmentDueAt).toLocaleDateString()}.` : ""}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function groupByDimension(questions: CompassQuestionView[]): [string, CompassQuestionView[]][] {
@@ -227,6 +336,8 @@ export function CompassClient({ apiPath }: { apiPath: string }) {
           reassessmentDueAt={view.reassessmentDueAt}
           history={view.history}
           evidenceFusion={view.evidenceFusion}
+          reach={view.reach ?? []}
+          apiPath={apiPath}
         />
       ) : (
         <CompassQuestionsView
@@ -415,7 +526,11 @@ function CompassResultsView({
   reassessmentDueAt,
   history,
   evidenceFusion,
+  reach,
+  apiPath,
 }: {
+  reach: ReachCardView[];
+  apiPath: string;
   result: CompassResultView;
   onRestart: () => void;
   restarting: boolean;
@@ -522,6 +637,8 @@ function CompassResultsView({
       {history.length > 0 && <ProgressOverTime history={history} result={result} evidenceFusion={evidenceFusion} />}
 
       {evidenceFusion && <EvidenceFusionCard evidenceFusion={evidenceFusion} />}
+
+      <ReachCards cards={reach} apiPath={apiPath} reassessmentDueAt={reassessmentDueAt} />
     </div>
   );
 }

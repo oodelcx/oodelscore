@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, getCompassView, getEnabledProducts, hasFeature, computeEvidenceFusion } from "@oodelscore/shared";
+import { connectToDatabase, getCompassView, getEnabledProducts, hasFeature, computeEvidenceFusion, buildReachCards } from "@oodelscore/shared";
+import { getTooltips } from "@/lib/tooltips";
 import { requireBusinessOwner } from "@/lib/ownerAuth";
 
 /**
@@ -25,5 +26,15 @@ export async function GET() {
       ? await computeEvidenceFusion("business", session.business._id, view.result.dimensionScores ?? [], products)
       : null;
 
-  return NextResponse.json({ status: "ok", ...view, evidenceFusion });
+  const reach =
+    view.assessmentStatus === "completed" && view.result
+      ? buildReachCards({
+          dimensionScores: view.result.dimensionScores ?? [],
+          evidence: evidenceFusion ? evidenceFusion.dimensions.map((d) => ({ dimension: d.dimension, status: d.status })) : null,
+          portal: "business",
+          overrides: await getTooltips("compass-reach"),
+        })
+      : [];
+
+  return NextResponse.json({ status: "ok", ...view, evidenceFusion, reach });
 }

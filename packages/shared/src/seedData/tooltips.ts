@@ -1,4 +1,6 @@
 import type { ITooltipEntry } from "../models/TooltipScreen";
+import { REACH_DEFAULTS } from "../compass/reach";
+import { ANCHOR_DIMENSIONS, ANCHOR_DIMENSION_LABELS } from "../compass/constants";
 
 interface SeedTooltipScreen {
   screenKey: string;
@@ -851,5 +853,16 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
         text: "Every business under this parent organization, with its own score, NPS, response volume, and short-term trend — for spotting which branches need attention at a glance.",
       },
     ],
+  },
+  {
+    screenKey: "compass-reach",
+    screenLabel: "Compass recommendations (REACH)",
+    tooltips: ANCHOR_DIMENSIONS.flatMap((d) => [
+      { key: `${d}-gap`, label: `${ANCHOR_DIMENSION_LABELS[d]}: what we say when the area is weak`, text: REACH_DEFAULTS[d].gap },
+      { key: `${d}-overstated`, label: `${ANCHOR_DIMENSION_LABELS[d]}: what we say when the evidence disagrees`, text: REACH_DEFAULTS[d].overstated },
+      { key: `${d}-elevate`, label: `${ANCHOR_DIMENSION_LABELS[d]}: who to ask`, text: REACH_DEFAULTS[d].elevate },
+      { key: `${d}-align`, label: `${ANCHOR_DIMENSION_LABELS[d]}: suggested goal`, text: REACH_DEFAULTS[d].align },
+      { key: `${d}-habituate`, label: `${ANCHOR_DIMENSION_LABELS[d]}: routine to build`, text: REACH_DEFAULTS[d].habituate },
+    ]),
   },
 ];

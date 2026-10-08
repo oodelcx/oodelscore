@@ -97,6 +97,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "A business/group sends a Closing the Loop broadcast to its Colleague Experience roster",
     category: "alerts",
   },
+  compass_recommendation: {
+    label: "Compass recommendation",
+    trigger: "Someone presses Send to a colleague on a Compass recommendation card",
+    category: "alerts",
+  },
 };
 
 const CATEGORY_CHIPS: { id: "all" | CategoryId; label: string }[] = [

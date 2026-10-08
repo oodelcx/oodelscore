@@ -24,6 +24,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "colleague_lifecycle_survey",
   "colleague_pulse_survey",
   "you_said_we_did",
+  "compass_recommendation",
 ] as const;
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
 

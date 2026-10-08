@@ -79,3 +79,4 @@ export * from "./compass/questionBank";
 export * from "./compass/scoring";
 export * from "./compass/assessmentService";
 export * from "./compass/evidenceFusion";
+export * from "./compass/reach";

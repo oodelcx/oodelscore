@@ -1,3 +1,4 @@
+import { SEED_EMAIL_TEMPLATES } from "../seedData/emailTemplates";
 import type { Types } from "mongoose";
 import { EmailTemplate, type EmailTemplateKey } from "../models/EmailTemplate";
 import { User } from "../models/User";
@@ -77,7 +78,8 @@ export async function sendTemplatedEmail(
     throw new Error("RESEND_API_KEY is not set");
   }
 
-  const template = await EmailTemplate.findOne({ key });
+  // Falls back to the shipped default so a template added after an environment was seeded still sends.
+  const template = (await EmailTemplate.findOne({ key })) ?? SEED_EMAIL_TEMPLATES.find((t) => t.key === key);
   if (!template) {
     throw new Error(`No email template seeded for key "${key}"`);
   }
