@@ -88,11 +88,24 @@ export async function seedStructureDemo(): Promise<StructureDemoResult> {
         await Business.updateMany({ _id: { $in: inRegion.map((b) => b._id) } }, { $set: { orgNodeId: regionNode._id } });
         continue;
       }
-      // Clusters of up to three branches each, named after the first branch's short name.
-      for (let i = 0; i < inRegion.length; i += 3) {
-        const chunk = inRegion.slice(i, i + 3);
-        const label = `${region} Cluster ${String.fromCharCode(65 + i / 3)}`;
-        const cMgr = await teamMember(org._id, `${key}.${slug(region)}.c${String.fromCharCode(97 + i / 3)}@${LOGIN_DOMAIN}`, "Cluster Manager", products);
+      // Clusters: one per city for Precision (its branch names start with the city); otherwise groups of up to three branches.
+      const byCity = key === "precision";
+      const groups: { label: string; id: string; branches: typeof inRegion }[] = [];
+      if (byCity) {
+        for (const b of inRegion) {
+          const city = b.name.split(" – ")[1]?.split(" ")[0] ?? "Main";
+          const label = city === "Community" ? "Community Education" : `${city} Cluster`;
+          const g = groups.find((x) => x.label === label);
+          if (g) g.branches.push(b);
+          else groups.push({ label, id: slug(city), branches: [b] });
+        }
+      } else {
+        for (let i = 0; i < inRegion.length; i += 3) groups.push({ label: `${region} Cluster ${String.fromCharCode(65 + i / 3)}`, id: `${slug(region)}.c${String.fromCharCode(97 + i / 3)}`, branches: inRegion.slice(i, i + 3) });
+      }
+      for (const g of groups) {
+        const chunk = g.branches;
+        const label = g.label;
+        const cMgr = await teamMember(org._id, `${key}.${g.id}@${LOGIN_DOMAIN}`, "Cluster Manager", products);
         result.managers++;
         let node = await OrgNode.findOne({ parentOrgId: org._id, tierKey: "cluster", name: label });
         if (!node) node = await OrgNode.create({ parentOrgId: org._id, tierKey: "cluster", name: label, parentNodeId: regionNode._id, managerUserId: cMgr._id, managerTitle: "Cluster Manager" });

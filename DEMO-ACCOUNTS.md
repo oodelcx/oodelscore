@@ -25,18 +25,31 @@ Pattern: group `name@`, group team `name.ops@` and `name.lead@`; each branch has
 | Branch: Meridian Bank – Greenfield | meridian.greenfield@ocx.test (team: meridian.greenfield.ops@, meridian.greenfield.shift@) |
 | Branch: Meridian Bank – Old Town | meridian.oldtown@ocx.test (team: meridian.oldtown.ops@, meridian.oldtown.shift@) |
 
-## Precision Diagnostics Network (Medical diagnostic chain, 6 branches)
+## Precision Diagnostics Network (national diagnostics group: labs open 24/7, collection centres, radiology, vaccination, pharmacy, clinics, ambulance, homecare; a 15-location cross-section of 400+ centres)
 
 | Role | Login |
 |---|---|
-| Group owner | precision@ocx.test |
+| Group owner / Group Head | precision@ocx.test |
 | Group team (ops / lead) | precision.ops@ocx.test / precision.lead@ocx.test |
-| Branch: Precision Diagnostics – Main Lab | precision.main@ocx.test (team: precision.main.ops@, precision.main.shift@) |
-| Branch: Precision Diagnostics – Westside Collection Centre | precision.westside@ocx.test (team: precision.westside.ops@, precision.westside.shift@) |
-| Branch: Precision Diagnostics – Eastgate Imaging Centre | precision.eastgate@ocx.test (team: precision.eastgate.ops@, precision.eastgate.shift@) |
-| Branch: Precision Diagnostics – Northfield Lab | precision.northfield@ocx.test (team: precision.northfield.ops@, precision.northfield.shift@) |
-| Branch: Precision Diagnostics – Harbor Collection Point | precision.harbor@ocx.test (team: precision.harbor.ops@, precision.harbor.shift@) |
-| Branch: Precision Diagnostics – Airport Road Lab | precision.airport@ocx.test (team: precision.airport.ops@, precision.airport.shift@) |
+| Regional managers | precision.punjab@ocx.test, precision.sindh@ocx.test, precision.capital@ocx.test, precision.khyberpakhtunkhwa@ocx.test, precision.balochistan@ocx.test |
+| Cluster (city) managers | precision.lahore@ocx.test, precision.karachi@ocx.test, precision.islamabad@ocx.test, precision.rawalpindi@ocx.test, precision.multan@ocx.test, precision.faisalabad@ocx.test, precision.peshawar@ocx.test, precision.quetta@ocx.test, precision.community@ocx.test |
+| Branch: Lahore Central Lab (24/7) (Punjab) | precision.lahorecentral@ocx.test (team: precision.lahorecentral.ops@, precision.lahorecentral.shift@) |
+| Branch: Lahore Gulberg Collection Centre (Punjab) | precision.lahoregulberg@ocx.test (team: precision.lahoregulberg.ops@, precision.lahoregulberg.shift@) |
+| Branch: Lahore DHA Radiology & Imaging (Punjab) | precision.lahoredha@ocx.test (team: precision.lahoredha.ops@, precision.lahoredha.shift@) |
+| Branch: Rawalpindi Saddar Collection Centre (Punjab) | precision.rawalpindi@ocx.test (team: precision.rawalpindi.ops@, precision.rawalpindi.shift@) |
+| Branch: Multan Cantt Collection Centre (Punjab) | precision.multan@ocx.test (team: precision.multan.ops@, precision.multan.shift@) |
+| Branch: Faisalabad D Ground Lab & Pharmacy (Punjab) | precision.faisalabad@ocx.test (team: precision.faisalabad.ops@, precision.faisalabad.shift@) |
+| Branch: Karachi Central Lab (24/7) (Sindh) | precision.karachicentral@ocx.test (team: precision.karachicentral.ops@, precision.karachicentral.shift@) |
+| Branch: Karachi Clifton Collection Centre (Sindh) | precision.karachiclifton@ocx.test (team: precision.karachiclifton.ops@, precision.karachiclifton.shift@) |
+| Branch: Karachi Saddar Vaccination Centre (Sindh) | precision.karachisaddar@ocx.test (team: precision.karachisaddar.ops@, precision.karachisaddar.shift@) |
+| Branch: Karachi Homecare & Ambulance Base (Sindh) | precision.karachihomecare@ocx.test (team: precision.karachihomecare.ops@, precision.karachihomecare.shift@) |
+| Branch: Islamabad F-8 Clinic & Pharmacy (Capital) | precision.islamabadf8@ocx.test (team: precision.islamabadf8.ops@, precision.islamabadf8.shift@) |
+| Branch: Islamabad Blue Area Collection Centre (Capital) | precision.islamabadbluearea@ocx.test (team: precision.islamabadbluearea.ops@, precision.islamabadbluearea.shift@) |
+| Branch: Peshawar University Town Lab (Khyber Pakhtunkhwa) | precision.peshawar@ocx.test (team: precision.peshawar.ops@, precision.peshawar.shift@) |
+| Branch: Quetta Satellite Town Collection Centre (Balochistan) | precision.quetta@ocx.test (team: precision.quetta.ops@, precision.quetta.shift@) |
+| Branch: Community Education Programmes (screening camps, vaccination briefings, mothers' workshops) (Capital) | precision.education@ocx.test (team: precision.education.ops@, precision.education.shift@) |
+
+Escalation chain on this group: Branch manager, City cluster manager, Regional manager, Operations Lead, Group Head. Program Evaluation is switched on for this group (community education programmes).
 
 ## St. Augustine Health Network (Hospital network)
 
@@ -95,3 +108,7 @@ Pattern: group `name@`, group team `name.ops@` and `name.lead@`; each branch has
 To load: Admin → Dev Data Tools → Seed showcase data (rebuilds the showcase accounts under these logins). The older `*.showcase.oodel.test` logins are replaced; if you seeded earlier, run the seed again.
 
 Note: `.test` is a reserved domain that can never receive real email, so nothing sent from a demo account is ever delivered.
+
+## Structure and escalation logins
+
+Every group's seed also creates a Regional Manager per region (`group.region@ocx.test`, for example `meridian.north@ocx.test`) and, for groups with six or more branches, Cluster Managers (`group.region.ca@ocx.test` and so on). The Escalate button on a case shows these people by email.

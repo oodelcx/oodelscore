@@ -18,9 +18,9 @@ import { ProgramEvaluationReport } from "../models/ProgramEvaluationReport";
  * differences to find. All of it is demo data.
  */
 
-type Role = "obj1" | "obj2" | "obj3" | "obj4" | "facilitator" | "nps" | "favourite" | "open";
+export type Role = "obj1" | "obj2" | "obj3" | "obj4" | "facilitator" | "nps" | "favourite" | "open";
 
-interface QuestionSpec {
+export interface QuestionSpec {
   role: Role;
   text: string;
   type: QuestionType;
@@ -29,13 +29,13 @@ interface QuestionSpec {
   csat?: boolean;
 }
 
-interface Comment {
+export interface Comment {
   text: string;
   sentiment: "positive" | "neutral" | "negative";
   themes: string[];
 }
 
-interface SessionSpec {
+export interface SessionSpec {
   location: string;
   startsAgo: number; // negative = still upcoming
   durationDays: number;
@@ -49,7 +49,7 @@ interface SessionSpec {
   gapComments?: Comment[];
 }
 
-interface FollowUpSpec {
+export interface FollowUpSpec {
   questions: QuestionSpec[];
   /** Probability of "yes" for each yes/no question, in order. */
   yesRates: number[];
@@ -58,7 +58,7 @@ interface FollowUpSpec {
   comments: Comment[];
 }
 
-interface ProgramSpec {
+export interface ProgramSpec {
   name: string;
   seriesKey: string;
   facilitatorName: string;
@@ -77,7 +77,8 @@ interface ProgramSpec {
 
 const AGREE = "Rate how far you agree (1 = not at all, 5 = completely): ";
 
-const PROGRAMS: ProgramSpec[] = [
+export const AGREE_PREFIX = AGREE;
+export const AMANI_PROGRAMS: ProgramSpec[] = [
   {
     name: "Women's Economic Empowerment Workshop",
     seriesKey: "womens-empowerment",
@@ -443,6 +444,10 @@ export async function seedAmaniPrograms(params: {
   businessId: Types.ObjectId;
   categoryByName: Map<string, Types.ObjectId>;
   now?: Date;
+  /** Programmes to build; defaults to Amani's own. */
+  programs?: ProgramSpec[];
+  /** Industry the generated survey templates are suggested for. */
+  industry?: string;
 }): Promise<AmaniProgramsResult> {
   const now = params.now ?? new Date();
   const { businessId, categoryByName } = params;
@@ -455,17 +460,17 @@ export async function seedAmaniPrograms(params: {
 
   const out: AmaniProgramsResult = { qrPoints: [], eventIds: [], lowScoreEvents: [], sessionResponses: 0, followUpResponses: 0, followUpPoints: 0 };
 
-  for (const program of PROGRAMS) {
+  for (const program of params.programs ?? AMANI_PROGRAMS) {
     const sessionQs = program.sessionQuestions.map((q) => toQuestion(q, categoryByName));
     const followQs = program.followUp.questions.map((q) => toQuestion(q, categoryByName));
     const sessionTemplate = await QuestionTemplate.findOneAndUpdate(
       { name: `${program.name}: session feedback` },
-      { $set: { name: `${program.name}: session feedback`, product: "customer_experience", suggestedIndustries: ["Community Development & Training"], questions: sessionQs } },
+      { $set: { name: `${program.name}: session feedback`, product: "customer_experience", suggestedIndustries: [params.industry ?? "Community Development & Training"], questions: sessionQs } },
       { upsert: true, new: true }
     );
     const followTemplate = await QuestionTemplate.findOneAndUpdate(
       { name: `${program.name}: 30-day follow-up` },
-      { $set: { name: `${program.name}: 30-day follow-up`, product: "customer_experience", suggestedIndustries: ["Community Development & Training"], questions: followQs } },
+      { $set: { name: `${program.name}: 30-day follow-up`, product: "customer_experience", suggestedIndustries: [params.industry ?? "Community Development & Training"], questions: followQs } },
       { upsert: true, new: true }
     );
 

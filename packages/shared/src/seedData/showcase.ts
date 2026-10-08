@@ -39,6 +39,7 @@ import { ProgramEvaluationReport } from "../models/ProgramEvaluationReport";
 import { CompassAssessment } from "../models/CompassAssessment";
 import { CompassAssessmentHistory } from "../models/CompassAssessmentHistory";
 import { seedAmaniPrograms } from "./amaniPrograms";
+import { PRECISION_PROGRAMS } from "./precisionPrograms";
 import { seedLaunchDemoExtras } from "./launchDemo";
 import { seedDemoFinish } from "./demoFinish";
 import { seedStructureDemo } from "./structureDemo";
@@ -92,12 +93,21 @@ const LOGIN_DOMAIN = "ocx.test";
 const SHORT_BRANCH_KEYS: Record<string, string> = {
   "Meridian Bank – Airport Road": "airport",
   "Meridian Bank – Harbor Point": "harbor",
-  "Precision Diagnostics – Main Lab": "main",
-  "Precision Diagnostics – Westside Collection Centre": "westside",
-  "Precision Diagnostics – Eastgate Imaging Centre": "eastgate",
-  "Precision Diagnostics – Northfield Lab": "northfield",
-  "Precision Diagnostics – Harbor Collection Point": "harbor",
-  "Precision Diagnostics – Airport Road Lab": "airport",
+  "Precision – Lahore Central Lab (24/7)": "lahorecentral",
+  "Precision – Lahore Gulberg Collection Centre": "lahoregulberg",
+  "Precision – Lahore DHA Radiology & Imaging": "lahoredha",
+  "Precision – Rawalpindi Saddar Collection Centre": "rawalpindi",
+  "Precision – Multan Cantt Collection Centre": "multan",
+  "Precision – Faisalabad D Ground Lab & Pharmacy": "faisalabad",
+  "Precision – Karachi Central Lab (24/7)": "karachicentral",
+  "Precision – Karachi Clifton Collection Centre": "karachiclifton",
+  "Precision – Karachi Saddar Vaccination Centre": "karachisaddar",
+  "Precision – Karachi Homecare & Ambulance Base": "karachihomecare",
+  "Precision – Islamabad F-8 Clinic & Pharmacy": "islamabadf8",
+  "Precision – Islamabad Blue Area Collection Centre": "islamabadbluearea",
+  "Precision – Peshawar University Town Lab": "peshawar",
+  "Precision – Quetta Satellite Town Collection Centre": "quetta",
+  "Precision – Community Education Programmes": "education",
   "St. Augustine Downtown Medical Center": "downtown",
   "St. Augustine North Clinic": "north",
   "St. Augustine Women's Health Pavilion": "womens",
@@ -379,6 +389,34 @@ const NEGATIVE_COMMENTS = [
   "I was overcharged and no one would help me fix it.",
 ];
 
+// Used only for the diagnostics chain, so its feedback reads like patients talking about labs, not branches.
+const DIAG_COMMENTS = {
+  positive: [
+    "Report was ready before the promised time and the app alert was spot on.",
+    "The phlebotomist found the vein first time. Painless and professional.",
+    "Home collection arrived exactly on schedule at 7am.",
+    "Clean, quiet, and no queue. In and out in ten minutes.",
+    "The radiologist explained my scan clearly and kindly.",
+    "Pharmacy had everything in stock and the staff were helpful.",
+    "Vaccination centre was well organised and my child was calm.",
+  ],
+  neutral: [
+    "Service was fine, but the report took a little longer than expected.",
+    "Good lab, though parking near the collection centre is difficult.",
+    "Staff were polite, the waiting area was crowded.",
+  ],
+  negative: [
+    "Waited over an hour at the collection desk at 8am, no one gave us an update.",
+    "My report was promised in 24 hours and arrived on day three.",
+    "The home collection team was two hours late and did not call.",
+    "The ambulance took far too long to arrive and nobody told us why.",
+    "Pharmacy was out of stock of the prescribed medicine again.",
+    "Billing was confusing and I was charged for a test I did not ask for.",
+    "The collection room was not clean and the staff were short with us.",
+  ],
+};
+let COMMENT_POOL: typeof DIAG_COMMENTS | null = null;
+
 const AGE_GROUPS = ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"];
 const GENDERS = ["Male", "Female", "Prefer not to say"];
 
@@ -403,9 +441,9 @@ function answerValueFor(question: IQuestion, mood: "bad" | "neutral" | "good"): 
     case "multi_select":
       return question.options.length ? pickSome(question.options, randomInt(1, Math.min(3, question.options.length))) : [];
     case "open_text":
-      if (mood === "bad") return pick(NEGATIVE_COMMENTS);
-      if (mood === "neutral") return Math.random() < 0.5 ? pick(NEUTRAL_COMMENTS) : "";
-      return Math.random() < 0.5 ? pick(POSITIVE_COMMENTS) : "";
+      if (mood === "bad") return pick(COMMENT_POOL?.negative ?? NEGATIVE_COMMENTS);
+      if (mood === "neutral") return Math.random() < 0.5 ? pick(COMMENT_POOL?.neutral ?? NEUTRAL_COMMENTS) : "";
+      return Math.random() < 0.5 ? pick(COMMENT_POOL?.positive ?? POSITIVE_COMMENTS) : "";
     default:
       return null;
   }
@@ -905,6 +943,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     parentOrgId: Types.ObjectId | null,
     recipientEmail: string
   ): Promise<ProductFeedbackInfo> {
+    COMMENT_POOL = sectorKey === "diagnostics" ? DIAG_COMMENTS : null;
     const template = templateBySector.get(sectorKey)!;
     const feedbackPoint = await FeedbackPoint.create({
       businessId: business._id,
@@ -1607,30 +1646,59 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     secondLeadRoleLabel: "Patient Experience Lead",
   });
 
-  // --- 5b. Precision Diagnostics Network — medical diagnostic chain (labs, collection
-  // centres, imaging), multiple branches, CX + CE ---
+  // --- 5b. Precision Diagnostics Network: a national diagnostics group (labs open 24/7, collection
+  // centres, radiology, vaccination, pharmacy, clinics, ambulance and homecare) with 400+ collection
+  // centres across Pakistan. The demo carries a representative cross-section of 14 locations. ---
   const precision = await buildOrg({
     key: "precision",
     name: "Precision Diagnostics Network",
     industry: "Healthcare",
     products: ["customer_experience", "colleague_experience"],
     branches: [
-      { name: "Precision Diagnostics – Main Lab", region: "Central" },
-      { name: "Precision Diagnostics – Westside Collection Centre", region: "West" },
-      { name: "Precision Diagnostics – Eastgate Imaging Centre", region: "East" },
-      { name: "Precision Diagnostics – Northfield Lab", region: "North" },
-      { name: "Precision Diagnostics – Harbor Collection Point", region: "South", billing: "branch_pays" },
-      { name: "Precision Diagnostics – Airport Road Lab", region: "South" },
+      { name: "Precision – Lahore Central Lab (24/7)", region: "Punjab" },
+      { name: "Precision – Lahore Gulberg Collection Centre", region: "Punjab" },
+      { name: "Precision – Lahore DHA Radiology & Imaging", region: "Punjab" },
+      { name: "Precision – Rawalpindi Saddar Collection Centre", region: "Punjab" },
+      { name: "Precision – Multan Cantt Collection Centre", region: "Punjab", billing: "branch_pays" },
+      { name: "Precision – Faisalabad D Ground Lab & Pharmacy", region: "Punjab" },
+      { name: "Precision – Karachi Central Lab (24/7)", region: "Sindh" },
+      { name: "Precision – Karachi Clifton Collection Centre", region: "Sindh" },
+      { name: "Precision – Karachi Saddar Vaccination Centre", region: "Sindh" },
+      { name: "Precision – Karachi Homecare & Ambulance Base", region: "Sindh" },
+      { name: "Precision – Islamabad F-8 Clinic & Pharmacy", region: "Capital" },
+      { name: "Precision – Islamabad Blue Area Collection Centre", region: "Capital" },
+      { name: "Precision – Peshawar University Town Lab", region: "Khyber Pakhtunkhwa" },
+      { name: "Precision – Quetta Satellite Town Collection Centre", region: "Balochistan" },
     ],
     cxSectorKey: "diagnostics",
     cxPointName: "Sample Collection Desk",
     cePointName: "Lab Team Pulse",
     cxCountRange: [26, 40],
-    ceCountRange: [16, 26],
+    ceCountRange: [14, 22],
     opsRoleLabel: "Lab Operations Manager",
     shiftRoleLabel: "Senior Technologist",
     secondLeadRoleLabel: "Patient Experience Lead",
   });
+  // Precision runs Community Education programmes (screening camps, vaccination drives), so Program Evaluation is on for the group.
+  await ParentOrganization.updateOne({ _id: precision.org._id }, { $set: { enabledFeatures: [...DEFAULT_FEATURE_KEYS, "programEvaluation"] } });
+  // A dedicated Community Education location holds the programmes (screening camps, vaccination briefings, mothers' workshops) and their evaluations.
+  const eduShell = await createBusinessShell({
+    name: "Precision – Community Education Programmes",
+    industry: "Healthcare",
+    parentOrgId: precision.org._id,
+    region: "Capital",
+    billingAssignment: "group_pays",
+    slugKey: "precision.education",
+    products: ["customer_experience"],
+    questionTemplateId: templateBySector.get("diagnostics")!._id,
+    opsRoleLabel: "Programme Coordinator",
+    shiftRoleLabel: "Health Educator",
+    maxFeedbackPoints: 12,
+  });
+  const precisionPrograms = await seedAmaniPrograms({ businessId: eduShell.business._id, categoryByName, programs: PRECISION_PROGRAMS, industry: "Healthcare" });
+  result.events += precisionPrograms.eventIds.length;
+  result.feedbackPoints += precisionPrograms.qrPoints.length + precisionPrograms.followUpPoints;
+  precision.branches.push({ ...eduShell, byProduct: new Map() });
 
   // ---------------------------------------------------------------------
   // Standalone businesses
@@ -2117,7 +2185,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     },
   });
 
-  const precisionMain = precision.branches.find((b) => b.business.name === "Precision Diagnostics – Main Lab")!;
+  const precisionMain = precision.branches.find((b) => b.business.name === "Precision – Lahore Central Lab (24/7)")!;
   const precisionManagementId = ceCategoryByName.get("Management Support")!;
   const precisionCases = await buildCaseNarrative({
     parentOrgId: precision.org._id,
@@ -2135,7 +2203,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       { businessId: precisionMain.business._id, text: "Queue at the collection desk went out the door at 8am.", daysAgoCreated: 12 },
     ],
     initiativeTitle: "Online slot booking and SMS report alerts",
-    initiativeDescription: "Collection-desk queues and late reports kept recurring at the Main Lab. This initiative adds timed slot booking and an SMS when a report is ready.",
+    initiativeDescription: "Collection-desk queues and late reports kept recurring at the Lahore Central Lab. This initiative adds timed slot booking and an SMS when a report is ready.",
     initiativeOwnerId: precision.opsLead._id,
     flagStatus: "converted",
     measured: { before: 3.1, after: 4.2 },
@@ -2178,7 +2246,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       { businessId: precisionMain.business._id, text: "Escalations about analyser downtime go unanswered for days.", daysAgoCreated: 13 },
     ],
     initiativeTitle: "Named on-call supervisor for every shift",
-    initiativeDescription: "Management Support complaints at the Main Lab cited no senior contact on nights. This initiative publishes a named on-call supervisor for every shift.",
+    initiativeDescription: "Management Support complaints at the Lahore Central Lab cited no senior contact on nights. This initiative publishes a named on-call supervisor for every shift.",
     initiativeOwnerId: precision.opsLead._id,
     flagStatus: "converted",
     measured: { before: 2.8, after: 3.9 },
@@ -2678,7 +2746,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   console.log(`[showcase] launch extras: ${JSON.stringify(launch)}`);
 
   // Run the evaluation for every programme session that has finished.
-  for (const evt of amaniPrograms.eventIds) {
+  for (const evt of [...amaniPrograms.eventIds, ...precisionPrograms.eventIds]) {
     if (!evt.ended) continue;
     try {
       await generateProgramEvaluationForEvent(evt.id);
