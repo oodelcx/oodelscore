@@ -84,7 +84,7 @@ export function LoginForm() {
             />
           </div>
           {error && <p className="error-text">{error}</p>}
-          <button type="submit" className="btn btn-dark" disabled={loading}>
+          <button type="submit" className="btn btn-dark" disabled={loading} style={{ background: "#000", borderColor: "#000", color: "#fff" }}>
             {loading ? "Verifying…" : "Verify"}
           </button>
         </form>
