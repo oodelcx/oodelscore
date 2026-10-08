@@ -8,6 +8,7 @@ import {
   ScanToken,
   RosterSurveyToken,
   evaluateRealTimeAlertsForBusiness,
+  openCaseForSevereResponse,
   screenForSensitiveComment,
   autoTriageAndCreateActionItem,
   analyzeThemeSentiment,
@@ -239,6 +240,11 @@ async function handlePost(request: NextRequest, qrToken: string) {
 
   await evaluateRealTimeAlertsForBusiness(business._id, triggeringComment, feedbackPoint.product, createdResponse._id).catch((err) =>
     console.error("[feedback] real-time alert evaluation failed", err)
+  );
+
+  // A severe customer response opens a case by itself (capped per day); anything milder waits for a person.
+  await openCaseForSevereResponse(business, createdResponse, triggeringComment, feedbackPoint.product).catch((err) =>
+    console.error("[feedback] severe-response case failed", err)
   );
 
   // Colleague Experience's real-time safety check (PDF Section 2, steps 4-6):

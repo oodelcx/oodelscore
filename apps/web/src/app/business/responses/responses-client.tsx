@@ -16,6 +16,7 @@ interface ResponseRow {
   flagged: boolean;
   feedbackPointId: string;
   feedbackPointName: string;
+  caseId?: string | null;
 }
 interface FeedbackPointOption {
   _id: string;
@@ -64,10 +65,6 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loggingFor, setLoggingFor] = useState<string | null>(null);
-  const [actionTitle, setActionTitle] = useState("");
-  const [actionSubmitting, setActionSubmitting] = useState(false);
-  const [loggedIds, setLoggedIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<ResponseStats | null>(null);
   const [belowFloor, setBelowFloor] = useState(false);
   const [product, setProduct] = useState<ProductId>("customer_experience");
@@ -152,28 +149,18 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
     load();
   }
 
-  function startLogAction(r: ResponseRow) {
-    setLoggingFor(r._id);
-    setActionTitle(`Follow up: ${r.feedbackPointName}${comment(r) ? ` — "${comment(r)!.slice(0, 60)}"` : ""}`);
-  }
+  const [makingCaseFor, setMakingCaseFor] = useState<string | null>(null);
 
-  async function submitLogAction(r: ResponseRow) {
-    if (!actionTitle.trim()) return;
-    setActionSubmitting(true);
-    await fetch("/api/business/action-board", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: actionTitle.trim(),
-        description: comment(r) ?? "",
-        priority: (starValue(r) ?? 5) <= 2 ? "high" : "medium",
-        sourceResponseIds: [r._id],
-        product,
-      }),
-    });
-    setActionSubmitting(false);
-    setLoggingFor(null);
-    setLoggedIds((prev) => new Set(prev).add(r._id));
+  async function makeCase(r: ResponseRow) {
+    setMakingCaseFor(r._id);
+    const res = await fetch(`/api/business/responses/${r._id}/case`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setMakingCaseFor(null);
+    if (!res.ok || data?.status !== "ok") {
+      alert(data?.message ?? "The case could not be created. Try again.");
+      return;
+    }
+    load();
   }
 
   return (
@@ -312,37 +299,23 @@ export default function RawFeedbackClient({ tooltips }: { tooltips: Record<strin
                       {r.flagged ? "Unflag" : "Flag"}
                     </button>
                     <InfoTip text={tooltips["flag"]} />
-                    {loggedIds.has(r._id) ? (
-                      <span style={{ color: "var(--accent)", fontSize: "11.5px" }}>✓ Action logged</span>
+                    {r.caseId ? (
+                      <a href={`/business/cases/${r.caseId}`} style={{ color: "var(--accent)", fontSize: "11.5px" }}>
+                        ✓ Case opened. View it
+                      </a>
                     ) : (
                       <button
                         type="button"
                         className="btn btn-sm action-btn"
                         data-tour={isFirst ? "rf-first-log-action" : undefined}
-                        onClick={() => startLogAction(r)}
+                        disabled={makingCaseFor === r._id}
+                        onClick={() => makeCase(r)}
                       >
-                        Log action taken
+                        {makingCaseFor === r._id ? "Opening…" : "Make this a case"}
                       </button>
                     )}
                     <InfoTip text={tooltips["log-action"]} />
                   </div>
-
-                  {loggingFor === r._id && (
-                    <div className="ab-panel">
-                      <div className="field" style={{ margin: 0 }}>
-                        <label>Case title</label>
-                        <input value={actionTitle} onChange={(e) => setActionTitle(e.target.value)} autoFocus />
-                      </div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                        <button className="btn btn-dark btn-sm" disabled={actionSubmitting} onClick={() => submitLogAction(r)}>
-                          {actionSubmitting ? "Logging…" : "Add to Case Management"}
-                        </button>
-                        <button className="btn btn-sm" onClick={() => setLoggingFor(null)}>
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
 
                   <div className="ab-panel" style={{ marginTop: 14 }}>
                     <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>Full breakdown</h3>

@@ -44,6 +44,7 @@ export * from "./analytics/questionTrend";
 export * from "./security/rateLimit";
 export * from "./config/validateEnv";
 export * from "./alerts/evaluate";
+export * from "./alerts/severeResponse";
 export * from "./ai/triage";
 export * from "./ai/sensitiveScreen";
 export * from "./ai/themeSentiment";

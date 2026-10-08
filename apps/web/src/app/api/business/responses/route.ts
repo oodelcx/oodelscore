@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { connectToDatabase, Response, FeedbackPoint, PRODUCTS, meetsAnonymityFloor, type Product } from "@oodelscore/shared";
+import { connectToDatabase, ActionBoardItem, Response, FeedbackPoint, PRODUCTS, meetsAnonymityFloor, type Product } from "@oodelscore/shared";
 
 const PRODUCT_SET: readonly string[] = PRODUCTS;
 import { requireBusinessOwner } from "@/lib/ownerAuth";
@@ -110,12 +110,17 @@ export async function GET(request: Request) {
   ]);
 
   const feedbackPointNameById = new Map(feedbackPoints.map((fp) => [fp._id.toString(), fp.name]));
+  // Which of these responses already became a case, so the page can show "Case opened" instead of the button.
+  const casesForRows = await ActionBoardItem.find({ businessId: session.business._id, sourceResponseIds: { $in: rows.map((r) => r._id) } }).select("_id sourceResponseIds");
+  const caseIdByResponseId = new Map<string, string>();
+  for (const c of casesForRows) for (const rid of c.sourceResponseIds) caseIdByResponseId.set(rid.toString(), c._id.toString());
   const enriched = rows.map((r) => {
     // Aggregate rows (sort=lowest) carry a computed _starSort field used only
     // for ordering — strip it so the response shape matches the find() path.
     const { _starSort, ...rest } = r as typeof r & { _starSort?: number };
     return {
       ...rest,
+      caseId: caseIdByResponseId.get(String(r._id)) ?? null,
       feedbackPointName: feedbackPointNameById.get((r.feedbackPointId as mongoose.Types.ObjectId).toString()) ?? "Unknown",
     };
   });

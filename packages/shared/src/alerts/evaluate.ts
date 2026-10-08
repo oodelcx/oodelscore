@@ -1,3 +1,4 @@
+import { AUTO_CASE_DAILY_CAP, severeResponseReason } from "./severeResponse";
 import { logSystemHealthEvent } from "../observability/systemHealth";
 import { Types, type HydratedDocument } from "mongoose";
 import { AlertRule, type IAlertRule } from "../models/AlertRule";
@@ -70,7 +71,7 @@ export async function autoTriageAndCreateActionItem(
       description: `Respondent comment: "${triggeringComment}"`,
       createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
     });
-    if (recentDuplicate) return;
+    if (recentDuplicate) return null;
   }
 
   const categories = await Category.find({ product });
@@ -185,6 +186,34 @@ export async function autoTriageAndCreateActionItem(
       }).catch((err) => console.error("[alerts] failed to send action_assigned for AI triage", err));
     }
   }
+
+  return item;
+}
+
+/**
+ * The one automatic case rule: a single severe response (star average 1.5 or lower, or a recommend score of 0 to 2)
+ * opens a case by itself, up to AUTO_CASE_DAILY_CAP per location per day. Anything milder stays a response, and a
+ * person can turn it into a case with the "Make this a case" button. Customer feedback only.
+ */
+export async function openCaseForSevereResponse(
+  business: HydratedDocument<IBusiness>,
+  response: { _id: Types.ObjectId | string; answers: { type: string; value: unknown }[] },
+  comment: string | null,
+  product: Product
+) {
+  if (product !== "customer_experience") return null;
+  const reason = severeResponseReason(response.answers);
+  if (!reason) return null;
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const openedToday = await ActionBoardItem.countDocuments({
+    businessId: business._id,
+    product,
+    source: { $in: ["auto_assigned", "auto_suggested"] },
+    createdAt: { $gte: startOfDay },
+  });
+  if (openedToday >= AUTO_CASE_DAILY_CAP) return null;
+  return autoTriageAndCreateActionItem(business, `Severe response: ${reason}`, comment, product, response._id);
 }
 
 /** Returns false when the rule was still in cooldown and nothing was recorded. */
@@ -213,12 +242,7 @@ async function recordFiringAndNotify(
     }).catch((err) => console.error("[alerts] failed to send alert_notification", err));
   }
 
-  if (business) {
-    await autoTriageAndCreateActionItem(business, ruleDescription, triggeringComment, rule.product, sourceResponseId).catch((err) =>
-      console.error("[alerts] AI-assisted triage failed", err)
-    );
-  }
-
+  // Alert rules only notify. Cases come from severe responses (openCaseForSevereResponse) or are made by hand.
   return true;
 }
 
