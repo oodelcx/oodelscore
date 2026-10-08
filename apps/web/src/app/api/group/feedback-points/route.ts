@@ -37,18 +37,31 @@ export async function POST(request: Request) {
   await connectToDatabase();
 
   const body = await request.json().catch(() => null);
-  const businessId = typeof body?.businessId === "string" ? body.businessId : "";
-  const business = businessId ? await Business.findOne({ _id: businessId, parentOrgId: session.org._id }) : null;
-  if (!business) {
-    return NextResponse.json({ status: "error", message: "Pick a branch that belongs to your organization" }, { status: 400 });
+  const ids: string[] = Array.isArray(body?.businessIds)
+    ? body.businessIds.filter((x: unknown): x is string => typeof x === "string")
+    : typeof body?.businessId === "string"
+      ? [body.businessId]
+      : [];
+  const branches = ids.length ? await Business.find({ _id: { $in: ids }, parentOrgId: session.org._id }) : [];
+  if (branches.length === 0 || branches.length !== new Set(ids).size) {
+    return NextResponse.json({ status: "error", message: "Pick at least one branch that belongs to your organization" }, { status: 400 });
   }
 
-  const result = await buildFeedbackPointFromTemplate({
-    businessId: business._id,
-    enabledProducts: business.enabledProducts,
-    maxFeedbackPoints: business.maxFeedbackPoints,
-    body,
-  });
-  if (result.status === "error") return NextResponse.json(result, { status: 400 });
-  return NextResponse.json(result, { status: 201 });
+  let last: Awaited<ReturnType<typeof buildFeedbackPointFromTemplate>> | null = null;
+  for (const business of branches) {
+    const result = await buildFeedbackPointFromTemplate({
+      businessId: business._id,
+      enabledProducts: business.enabledProducts,
+      maxFeedbackPoints: business.maxFeedbackPoints,
+      body,
+    });
+    if (result.status === "error") {
+      return NextResponse.json(
+        { ...result, message: `${business.name}: ${result.message}${last ? " (earlier branches were already created)" : ""}` },
+        { status: 400 },
+      );
+    }
+    last = result;
+  }
+  return NextResponse.json({ ...last, created: branches.length }, { status: 201 });
 }

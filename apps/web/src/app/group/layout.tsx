@@ -233,15 +233,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                     Decision log
                   </a>
                 )}
-                {hasProduct(org, "colleague_experience") &&
-                  showCe &&
-                  hasFeature(org.enabledFeatures, "closingLoop") &&
-                  teamMemberCanAccess(user, "closingLoop") && (
-                    <a href="/group/closing-the-loop">
-                      <NavIcon name="closing-loop" />
-                      Closing the Loop
-                    </a>
-                  )}
               </NavSection>
               {(() => {
                 const showCxPulse =

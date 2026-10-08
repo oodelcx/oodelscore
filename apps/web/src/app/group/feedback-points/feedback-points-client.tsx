@@ -43,7 +43,7 @@ export default function GroupFeedbackPointsClient() {
   const [viewProduct, setViewProduct] = useState<"customer_experience" | "colleague_experience" | null>(null);
 
   const [builderOpen, setBuilderOpen] = useState(false);
-  const [businessId, setBusinessId] = useState("");
+  const [businessIds, setBusinessIds] = useState<string[]>([]);
   const [builderSubmitting, setBuilderSubmitting] = useState(false);
   const [builderError, setBuilderError] = useState<string | null>(null);
 
@@ -93,13 +93,13 @@ export default function GroupFeedbackPointsClient() {
   function openBuilder() {
     setBuilderError(null);
     setBuilderOpen(true);
-    if (branches.length > 0 && !businessId) setBusinessId(branches[0]._id);
+    if (branches.length > 0) setBusinessIds(branches.map((b) => b._id));
   }
 
   async function submitBuilder(payload: SurveyBuilderPayload) {
     setBuilderError(null);
-    if (!businessId) {
-      setBuilderError("Pick a branch");
+    if (businessIds.length === 0) {
+      setBuilderError("Tick at least one branch");
       return;
     }
     setBuilderSubmitting(true);
@@ -108,7 +108,7 @@ export default function GroupFeedbackPointsClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          businessId,
+          businessIds,
           name: payload.name,
           description: payload.description,
           product: payload.product,
@@ -154,15 +154,20 @@ export default function GroupFeedbackPointsClient() {
       {builderOpen && (
         <div className="card" style={{ marginBottom: 18 }}>
           <h3>Build a survey</h3>
-          <div className="field" style={{ maxWidth: 420, marginBottom: 8 }}>
-            <label>Branch</label>
-            <select value={businessId} onChange={(e) => setBusinessId(e.target.value)}>
-              {branches.map((b) => (
-                <option key={b._id} value={b._id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+          <div className="field" style={{ marginBottom: 8 }}>
+            <label>Publish to these branches (each gets its own link and QR code)</label>
+            {branches.map((b) => (
+              <label key={b._id} style={{ display: "block", fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={businessIds.includes(b._id)}
+                  onChange={(e) =>
+                    setBusinessIds((cur) => (e.target.checked ? [...cur, b._id] : cur.filter((x) => x !== b._id)))
+                  }
+                />{" "}
+                {b.name}
+              </label>
+            ))}
           </div>
           <SurveyBuilderPanel
             templatesApiPath="/api/group/feedback-points/templates"
