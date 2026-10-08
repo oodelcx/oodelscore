@@ -67,7 +67,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
   ]);
 
   const escalationUserIds = [
-    ...new Set(item.escalationHistory.map((h) => h.userId?.toString()).filter((x): x is string => !!x)),
+    ...new Set(
+      item.escalationHistory
+        .flatMap((h) => [h.userId, h.byUserId, h.toUserId])
+        .map((x) => x?.toString())
+        .filter((x): x is string => !!x)
+    ),
   ];
   const escalationUsers = await User.find({ _id: { $in: escalationUserIds } }).select("email");
   const emailByUserId = new Map(escalationUsers.map((u) => [u._id.toString(), u.email]));
@@ -123,6 +128,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
         note: h.note,
         at: h.at,
         userEmail: h.userId ? (emailByUserId.get(h.userId.toString()) ?? null) : null,
+        byEmail: h.byUserId ? (emailByUserId.get(h.byUserId.toString()) ?? null) : null,
+        toEmail: h.toUserId ? (emailByUserId.get(h.toUserId.toString()) ?? null) : null,
+        toLevel: h.toLevel ?? null,
+        toLabel: h.toLabel ?? "",
       })),
     },
     sourceResponses,

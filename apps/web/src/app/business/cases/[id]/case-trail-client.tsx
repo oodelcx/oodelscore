@@ -73,6 +73,7 @@ interface CaseDetail {
   createdAt: string;
   currentEscalationLevel: number;
   escalationHistory: EscalationHistoryRow[];
+  originatorLabel?: string;
   playbookRun: PlaybookRunSummary | null;
   customerNotifiedAt: string | null;
 }
@@ -158,6 +159,8 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
     load();
   }
 
+  const [escNotice, setEscNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
   async function escalate() {
     setEscalating(true);
     const res = await fetch(`/api/business/action-board/${caseId}/escalate`, {
@@ -168,10 +171,11 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
     const data = await res.json().catch(() => null);
     setEscalating(false);
     if (!res.ok) {
-      alert(data?.message ?? "Failed to escalate");
+      setEscNotice({ ok: false, text: data?.message ?? "Failed to escalate" });
       return;
     }
     setEscalationNote("");
+    setEscNotice({ ok: true, text: `Escalated to ${escalation.nextLevel?.label ?? "the next level"}${escalation.nextLevel?.assigneeEmail ? `. It is now with ${escalation.nextLevel.assigneeEmail}.` : "."}` });
     load();
   }
 
@@ -185,10 +189,11 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
     const data = await res.json().catch(() => null);
     setDeEscalating(false);
     if (!res.ok) {
-      alert(data?.message ?? "Failed to de-escalate");
+      setEscNotice({ ok: false, text: data?.message ?? "Failed to step back" });
       return;
     }
     setEscalationNote("");
+    setEscNotice({ ok: true, text: `Stepped back to ${escalation.prevLevel?.label ?? "the previous level"}.` });
     load();
   }
 
@@ -303,6 +308,12 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3>Case timeline</h3>
+        <p style={{ margin: "0 0 8px", fontSize: 13 }}>
+          <b>Raised by:</b> {item.originatorLabel || "Not recorded (older case)"}
+          {item.escalationHistory.length > 0 && (
+            <> — passed up {item.escalationHistory.filter((h) => h.action !== "de_escalated").length} time(s); the full path is below.</>
+          )}
+        </p>
         <p className="card-sub" style={{ margin: "0 0 8px" }}>
           Every status, priority, owner, and escalation change this case has been through, in order — append-only,
           never edited after the fact.
@@ -318,6 +329,11 @@ export default function BusinessCaseTrailClient({ caseId }: { caseId: string }) 
               </li>
             ))}
           </ul>
+        )}
+        {escNotice && (
+          <p className={escNotice.ok ? "callout" : "error-text"} role="status" style={{ marginTop: 10 }}>
+            {escNotice.text}
+          </p>
         )}
         {item.status !== "resolved" && (
           <div style={{ marginTop: 10 }}>

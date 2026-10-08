@@ -27,5 +27,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
   const comment = typeof openText?.value === "string" ? openText.value : null;
   const item = await autoTriageAndCreateActionItem(session.business, "Raised by hand from a response", comment, response.product, response._id);
   if (!item) return NextResponse.json({ status: "error", message: "The case could not be created. Try again." }, { status: 500 });
+  item.originatorLabel = session.user.email;
+  await item.save();
   return NextResponse.json({ status: "ok", caseId: item._id.toString(), alreadyOpen: false });
 }

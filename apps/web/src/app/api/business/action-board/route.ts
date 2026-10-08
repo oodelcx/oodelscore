@@ -96,6 +96,7 @@ export async function POST(request: Request) {
     dueDate: typeof body?.dueDate === "string" ? new Date(body.dueDate) : null,
     sourceResponseIds: Array.isArray(body?.sourceResponseIds) ? body.sourceResponseIds : [],
     source: "manual",
+    originatorLabel: session.user.email,
   });
 
   await autoAttachPlaybook(item).catch((err) => console.error("[action-board] auto-attach playbook failed", err));

@@ -31,6 +31,11 @@ export interface IEscalationHistoryEntry {
   action: EscalationTrailAction;
   note: string;
   at: Date;
+  // Who pressed the button, who it went to and at which level. Optional so entries written before this existed still load.
+  byUserId?: Types.ObjectId | null;
+  toUserId?: Types.ObjectId | null;
+  toLevel?: number | null;
+  toLabel?: string;
 }
 
 const EscalationHistoryEntrySchema = new Schema<IEscalationHistoryEntry>(
@@ -40,6 +45,10 @@ const EscalationHistoryEntrySchema = new Schema<IEscalationHistoryEntry>(
     action: { type: String, enum: ESCALATION_TRAIL_ACTIONS, required: true },
     note: { type: String, default: "" },
     at: { type: Date, default: Date.now },
+    byUserId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    toUserId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    toLevel: { type: Number, default: null },
+    toLabel: { type: String, default: "" },
   },
   { _id: false }
 );
@@ -106,6 +115,8 @@ export interface IActionBoardItem {
   // cron's SLA clock), and the full history of every level it has passed
   // through. Level 1 = the branch's own owner, always, by convention.
   currentEscalationLevel: number;
+  // Who or what raised this case in the first place (a person's email, or "System: <reason>"). Shown at the top of the case trail so the highest level can see where it came from.
+  originatorLabel: string;
   levelEnteredAt: Date;
   escalationHistory: IEscalationHistoryEntry[];
   // Set the moment a personal reply is sent to the customer who left the
@@ -144,6 +155,7 @@ const ActionBoardItemSchema = new Schema<IActionBoardItem>(
     escalatedToOrgAt: { type: Date, default: null },
     escalatedToOrgNote: { type: String, default: "" },
     currentEscalationLevel: { type: Number, default: 1 },
+    originatorLabel: { type: String, default: "" },
     levelEnteredAt: { type: Date, default: Date.now },
     escalationHistory: { type: [EscalationHistoryEntrySchema], default: [] },
     customerNotifiedAt: { type: Date, default: null },

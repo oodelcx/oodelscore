@@ -131,10 +131,18 @@ export default function BusinessCasesClient() {
   const [allCategoryNames, setAllCategoryNames] = useState<CategoryRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [tier, setTier] = useState<"full" | "limited" | null>(null);
+  const [escLevels, setEscLevels] = useState<{ level: number; label: string }[]>([]);
+  type EscInfo = {
+    canEscalate: boolean;
+    canDeEscalate: boolean;
+    nextLevel: { level: number; label: string; assigneeEmail: string | null } | null;
+    prevLevel: { level: number; label: string; assigneeEmail: string | null } | null;
+  };
+  const [escPanel, setEscPanel] = useState<{ id: string; mode: "up" | "down"; info: EscInfo | null } | null>(null);
+  const [escMessage, setEscMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [isBranch, setIsBranch] = useState(false);
   const [orgName, setOrgName] = useState<string | null>(null);
   const [escalating, setEscalating] = useState<string | null>(null);
-  const [escalatingId, setEscalatingId] = useState<string | null>(null);
   const [escalationNoteDraft, setEscalationNoteDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
@@ -201,6 +209,7 @@ export default function BusinessCasesClient() {
       fetch("/api/business/category-owners").then((r) => r.json()).catch(() => ({ categories: [] })),
     ]).then(([itemsData, teamData, categoryData]) => {
       setItems(itemsData.items ?? []);
+      setEscLevels(Array.isArray(categoryData?.escalationLevels) ? categoryData.escalationLevels : []);
       setPlaybooks(itemsData.playbooks ?? []);
       setTier(itemsData.tier ?? null);
       setStats(itemsData.stats ?? null);
@@ -303,39 +312,43 @@ export default function BusinessCasesClient() {
     load();
   }
 
-  function startEscalate(id: string) {
-    setEscalatingId(id);
+  async function openEscalation(id: string, mode: "up" | "down") {
+    setEscMessage(null);
     setEscalationNoteDraft("");
+    setEscPanel({ id, mode, info: null });
+    const res = await fetch(`/api/business/action-board/${id}`);
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.escalation) {
+      setEscPanel(null);
+      setEscMessage({ ok: false, text: data?.message ?? "Could not load the escalation chain for this case." });
+      return;
+    }
+    setEscPanel({ id, mode, info: data.escalation });
   }
 
-  async function confirmEscalate(id: string) {
+  async function confirmEscalation() {
+    if (!escPanel) return;
+    const { id, mode } = escPanel;
     setEscalating(id);
-    await updateItem(id, { escalatedToOrg: true, escalatedToOrgNote: escalationNoteDraft.trim() });
-    setEscalating(null);
-    setEscalatingId(null);
-    setEscalationNoteDraft("");
-  }
-
-  async function escalateToNextLevel(id: string) {
-    setEscalating(id);
-    const res = await fetch(`/api/business/action-board/${id}/escalate`, {
+    const res = await fetch(`/api/business/action-board/${id}/${mode === "up" ? "escalate" : "de-escalate"}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note: "" }),
+      body: JSON.stringify({ note: escalationNoteDraft.trim() }),
     });
     const data = await res.json().catch(() => null);
     setEscalating(null);
     if (!res.ok) {
-      alert(data?.message ?? "Failed to escalate");
+      setEscMessage({ ok: false, text: data?.message ?? "That could not be done. Try again." });
       return;
     }
+    const target = mode === "up" ? escPanel.info?.nextLevel : escPanel.info?.prevLevel;
+    setEscMessage({
+      ok: true,
+      text: `${mode === "up" ? "Escalated" : "Stepped back"} to level ${target?.level ?? ""} (${target?.label ?? ""})${target?.assigneeEmail ? `. It is now with ${target.assigneeEmail}.` : ". No one is assigned to that level yet."}`,
+    });
+    setEscPanel(null);
+    setEscalationNoteDraft("");
     load();
-  }
-
-  async function unEscalate(id: string) {
-    setEscalating(id);
-    await updateItem(id, { escalatedToOrg: false });
-    setEscalating(null);
   }
 
   async function toggleComments(id: string) {
@@ -396,6 +409,18 @@ export default function BusinessCasesClient() {
 
   return (
     <div>
+      {escMessage && (
+        <div
+          className={escMessage.ok ? "callout" : "callout error-text"}
+          role="status"
+          style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
+          <span>{escMessage.text}</span>
+          <button className="btn btn-sm" onClick={() => setEscMessage(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="page-head">
         <div>
           <h1>{isLimited ? "My Cases" : "Case Management"}</h1>
@@ -714,27 +739,37 @@ export default function BusinessCasesClient() {
                       >
                         💬 Comments{commentsByItem[item._id]?.length ? ` (${commentsByItem[item._id].length})` : ""}
                       </button>
-                      {isBranch && !isLimited && (
-                        <button
-                          type="button"
-                          className={`case-action-btn${item.escalatedToOrg ? " active" : ""}`}
-                          disabled={escalating === item._id}
-                          onClick={() => (item.escalatedToOrg ? unEscalate(item._id) : startEscalate(item._id))}
-                        >
-                          {item.escalatedToOrg ? "↓ De-escalate" : `↗ Escalate to ${orgName ?? "org"}`}
-                        </button>
-                      )}
-                      {!isLimited && item.status !== "resolved" && (
-                        <button
-                          type="button"
-                          className="case-action-btn"
-                          disabled={escalating === item._id}
-                          onClick={() => escalateToNextLevel(item._id)}
-                          title="Advance this case to the next configured escalation level"
-                        >
-                          ↑ Escalate to next level
-                        </button>
-                      )}
+                      {item.status !== "resolved" && escLevels.length > 1 && (() => {
+                        const top = Math.max(...escLevels.map((l) => l.level));
+                        return (
+                          <>
+                            {item.currentEscalationLevel < top ? (
+                              <button
+                                type="button"
+                                className="case-action-btn"
+                                disabled={escalating === item._id}
+                                onClick={() => openEscalation(item._id, "up")}
+                                title="Hand this case to the next person in the escalation chain"
+                              >
+                                ↑ Escalate
+                              </button>
+                            ) : (
+                              <span className="pill pill-amber">Highest level reached</span>
+                            )}
+                            {item.currentEscalationLevel > 1 && (
+                              <button
+                                type="button"
+                                className="case-action-btn"
+                                disabled={escalating === item._id}
+                                onClick={() => openEscalation(item._id, "down")}
+                                title="Hand this case back one level"
+                              >
+                                ↓ Step back
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     {!isLimited && <OwnerBadge label={team.find((t) => t.userId === item.ownerId)?.label ?? null} tip={tooltips["owner"]} />}
                   </div>
@@ -838,29 +873,53 @@ export default function BusinessCasesClient() {
           );
         })()}
 
-      {escalatingId &&
+      {escPanel &&
         (() => {
-          const item = items.find((i) => i._id === escalatingId);
+          const item = items.find((i) => i._id === escPanel.id);
           if (!item) return null;
+          const info = escPanel.info;
+          const target = info ? (escPanel.mode === "up" ? info.nextLevel : info.prevLevel) : null;
+          const allowed = info ? (escPanel.mode === "up" ? info.canEscalate : info.canDeEscalate) : false;
+          const up = escPanel.mode === "up";
           return (
             <CaseSidePanel
-              title={`Escalate — ${item.title}`}
-              onClose={() => setEscalatingId(null)}
+              title={`${up ? "Escalate" : "Step back"} — ${item.title}`}
+              onClose={() => setEscPanel(null)}
               footer={
                 <>
-                  <button className="btn btn-dark btn-sm" disabled={escalating === item._id} onClick={() => confirmEscalate(item._id)}>
-                    {escalating === item._id ? "Escalating…" : "Send escalation"}
+                  <button className="btn btn-dark btn-sm" disabled={!allowed || escalating === item._id} onClick={confirmEscalation}>
+                    {escalating === item._id ? "Working…" : up ? "Escalate" : "Step back"}
                   </button>
-                  <button className="btn btn-sm" onClick={() => setEscalatingId(null)}>
+                  <button className="btn btn-sm" onClick={() => setEscPanel(null)}>
                     Cancel
                   </button>
                 </>
               }
             >
-              <p className="subtitle" style={{ marginTop: 0 }}>
-                Escalating notifies {orgName ?? "your parent org"} — what do they need to know?
-              </p>
-              <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
+              {!info && <p className="subtitle">Loading the escalation chain…</p>}
+              {info && !allowed && (
+                <p className="subtitle">{up ? "This case is already at the highest level." : "This case is already at the first level."}</p>
+              )}
+              {info && allowed && target && (
+                <p className="subtitle" style={{ marginTop: 0 }}>
+                  This case is now at <b>level {item.currentEscalationLevel}</b>. {up ? "Escalating" : "Stepping back"} sends it to{" "}
+                  <b>level {target.level} ({target.label})</b>
+                  {target.assigneeEmail ? (
+                    <>
+                      , held by <b>{target.assigneeEmail}</b>, who will be emailed.
+                    </>
+                  ) : (
+                    ". No one holds that level yet, so nobody will be notified until an Admin assigns it."
+                  )}{" "}
+                  The full path stays on the case history.
+                </p>
+              )}
+              {info && allowed && (
+                <div className="field">
+                  <label>Note for the next person (optional)</label>
+                  <textarea value={escalationNoteDraft} onChange={(e) => setEscalationNoteDraft(e.target.value)} />
+                </div>
+              )}
             </CaseSidePanel>
           );
         })()}

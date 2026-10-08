@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const note = typeof body?.note === "string" ? body.note.trim() : "";
 
   try {
-    const updated = await escalateActionBoardItem(item, { note });
+    const updated = await escalateActionBoardItem(item, { note, byUserId: session.user._id });
     return NextResponse.json({ status: "ok", item: updated });
   } catch (err) {
     if (err instanceof EscalationError) {

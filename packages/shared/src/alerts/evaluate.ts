@@ -164,6 +164,7 @@ export async function autoTriageAndCreateActionItem(
     source: ownerId ? "auto_assigned" : "auto_suggested",
     suggestedAction,
     sensitive: isSensitive,
+    originatorLabel: `System: ${ruleDescription}`,
     // Links the case to the response that raised it, so the Response
     // dimension of CX/EX Pulse can see that this feedback was acted on.
     sourceResponseIds: sourceResponseId ? [new Types.ObjectId(sourceResponseId)] : [],

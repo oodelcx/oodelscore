@@ -70,10 +70,19 @@ export function buildCaseTimeline(
   const fromEscalation: TimelineEntry[] = escalationHistory.map((h) => ({
     kind: h.action,
     label:
-      h.action === "de_escalated"
-        ? `De-escalated from level ${h.level}`
-        : `Escalated from level ${h.level}${h.action === "auto_escalated" ? " (auto, SLA)" : ""}`,
-    actorLabel: h.userId ? (escalationUserEmailByUserId.get(h.userId.toString()) ?? "Unassigned") : "Unassigned",
+      (h.action === "de_escalated"
+        ? `Stepped back from level ${h.level}`
+        : `Escalated from level ${h.level}${h.action === "auto_escalated" ? " (auto, SLA)" : ""}`) +
+      (h.toLevel
+        ? ` to level ${h.toLevel}${h.toLabel ? ` (${h.toLabel})` : ""}${h.toUserId ? `, now with ${escalationUserEmailByUserId.get(h.toUserId.toString()) ?? "a team member"}` : ""}`
+        : ""),
+    actorLabel: h.action === "auto_escalated"
+      ? "System"
+      : h.byUserId
+        ? (escalationUserEmailByUserId.get(h.byUserId.toString()) ?? "A team member")
+        : h.userId
+          ? (escalationUserEmailByUserId.get(h.userId.toString()) ?? "Unassigned")
+          : "Unassigned",
     note: h.note,
     at: h.at.toISOString(),
   }));

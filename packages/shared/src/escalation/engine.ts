@@ -1,4 +1,4 @@
-import type { HydratedDocument, Types } from "mongoose";
+import { Types, type HydratedDocument } from "mongoose";
 import { Business, type IBusiness } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { EscalationAssignment } from "../models/EscalationAssignment";
@@ -111,7 +111,7 @@ export async function resolveEscalationAssignee(businessId: string, level: numbe
  */
 export async function escalateActionBoardItem(
   item: HydratedDocument<IActionBoardItem>,
-  opts: { note: string; auto?: boolean }
+  opts: { note: string; auto?: boolean; byUserId?: Types.ObjectId | string | null }
 ): Promise<HydratedDocument<IActionBoardItem>> {
   const business = await Business.findById(item.businessId);
   if (!business) throw new EscalationError("Business not found");
@@ -124,18 +124,22 @@ export async function escalateActionBoardItem(
   const nextLevelConfig = currentIndex === -1 ? levels[0] : levels[currentIndex + 1];
   if (!nextLevelConfig) throw new EscalationError("This case is already at the top of the escalation chain.");
 
+  const nextUserId = await resolveEscalationAssignee(item.businessId.toString(), nextLevelConfig.level);
   item.escalationHistory.push({
     level: item.currentEscalationLevel,
     userId: item.ownerId,
     action: opts.auto ? "auto_escalated" : "escalated",
     note: opts.note,
     at: new Date(),
+    byUserId: opts.byUserId ? new Types.ObjectId(String(opts.byUserId)) : null,
+    toUserId: nextUserId ?? null,
+    toLevel: nextLevelConfig.level,
+    toLabel: nextLevelConfig.label,
   });
 
   item.currentEscalationLevel = nextLevelConfig.level;
   item.levelEnteredAt = new Date();
 
-  const nextUserId = await resolveEscalationAssignee(item.businessId.toString(), nextLevelConfig.level);
   if (nextUserId) item.ownerId = nextUserId;
 
   await item.save();
@@ -168,7 +172,7 @@ export async function escalateActionBoardItem(
  */
 export async function deEscalateActionBoardItem(
   item: HydratedDocument<IActionBoardItem>,
-  opts: { note: string }
+  opts: { note: string; byUserId?: Types.ObjectId | string | null }
 ): Promise<HydratedDocument<IActionBoardItem>> {
   const business = await Business.findById(item.businessId);
   if (!business) throw new EscalationError("Business not found");
@@ -181,18 +185,22 @@ export async function deEscalateActionBoardItem(
   const prevLevelConfig = currentIndex <= 0 ? null : levels[currentIndex - 1];
   if (!prevLevelConfig) throw new EscalationError("This case is already at the bottom of the escalation chain.");
 
+  const prevUserId = await resolveEscalationAssignee(item.businessId.toString(), prevLevelConfig.level);
   item.escalationHistory.push({
     level: item.currentEscalationLevel,
     userId: item.ownerId,
     action: "de_escalated",
     note: opts.note,
     at: new Date(),
+    byUserId: opts.byUserId ? new Types.ObjectId(String(opts.byUserId)) : null,
+    toUserId: prevUserId ?? null,
+    toLevel: prevLevelConfig.level,
+    toLabel: prevLevelConfig.label,
   });
 
   item.currentEscalationLevel = prevLevelConfig.level;
   item.levelEnteredAt = new Date();
 
-  const prevUserId = await resolveEscalationAssignee(item.businessId.toString(), prevLevelConfig.level);
   if (prevUserId) item.ownerId = prevUserId;
 
   await item.save();
