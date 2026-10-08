@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  recordCronRun,
   connectToDatabase,
   evaluateBaselineAlerts,
   evaluateRecurringIssuesForAllOwners,
@@ -31,12 +32,14 @@ export async function POST(request: Request) {
   try {
     const result = await evaluateBaselineAlerts();
     await evaluateRecurringIssuesForAllOwners();
+    await recordCronRun("evaluate-baseline-alerts", true, JSON.stringify(result));
     return NextResponse.json({ status: "ok", ...result });
   } catch (err) {
     console.error("[cron/evaluate-baseline-alerts] failed", err);
     await logSystemHealthEvent("cron_failure", (err as Error).message ?? "evaluate-baseline-alerts failed", {
       route: "evaluate-baseline-alerts",
     });
+    await recordCronRun("evaluate-baseline-alerts", false, (err as Error).message ?? "failed");
     return NextResponse.json({ status: "error", message: "Job failed" }, { status: 500 });
   }
 }

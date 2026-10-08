@@ -42,6 +42,7 @@ export * from "./PlatformSettings";
 export * from "./EscalationAssignment";
 export * from "./ImprovementInitiative";
 export * from "./SystemHealthEvent";
+export * from "./CronRun";
 export * from "./ProcessedStripeEvent";
 export * from "./SupportTicket";
 export * from "./RecurringIssueFlag";

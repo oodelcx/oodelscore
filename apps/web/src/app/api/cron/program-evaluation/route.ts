@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, generateDueProgramEvaluations, logSystemHealthEvent } from "@oodelscore/shared";
+import { recordCronRun, connectToDatabase, generateDueProgramEvaluations, logSystemHealthEvent } from "@oodelscore/shared";
 
 /**
  * Daily. Finds every training Event past its grace period (see
@@ -21,12 +21,14 @@ export async function POST(request: Request) {
   await connectToDatabase();
   try {
     const result = await generateDueProgramEvaluations();
+    await recordCronRun("program-evaluation", true, JSON.stringify(result));
     return NextResponse.json({ status: "ok", ...result });
   } catch (err) {
     console.error("[cron/program-evaluation] failed", err);
     await logSystemHealthEvent("cron_failure", (err as Error).message ?? "program-evaluation failed", {
       route: "program-evaluation",
     });
+    await recordCronRun("program-evaluation", false, (err as Error).message ?? "failed");
     return NextResponse.json({ status: "error", message: "Job failed" }, { status: 500 });
   }
 }

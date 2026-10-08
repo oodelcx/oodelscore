@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, recomputeAllCxPulseScores, logSystemHealthEvent } from "@oodelscore/shared";
+import { recordCronRun, connectToDatabase, recomputeAllCxPulseScores, logSystemHealthEvent } from "@oodelscore/shared";
 
 /**
  * Meant to be hit nightly by an external scheduler (a Render Cron Job
@@ -24,12 +24,14 @@ export async function POST(request: Request) {
   await connectToDatabase();
   try {
     const result = await recomputeAllCxPulseScores();
+    await recordCronRun("recompute-cx-pulse", true, JSON.stringify(result));
     return NextResponse.json({ status: "ok", ...result });
   } catch (err) {
     console.error("[cron/recompute-cx-pulse] failed", err);
     await logSystemHealthEvent("cron_failure", (err as Error).message ?? "recompute-cx-pulse failed", {
       route: "recompute-cx-pulse",
     });
+    await recordCronRun("recompute-cx-pulse", false, (err as Error).message ?? "failed");
     return NextResponse.json({ status: "error", message: "Job failed" }, { status: 500 });
   }
 }

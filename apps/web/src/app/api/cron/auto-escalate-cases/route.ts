@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, autoEscalateOverdueCases, logSystemHealthEvent } from "@oodelscore/shared";
+import { recordCronRun, connectToDatabase, autoEscalateOverdueCases, logSystemHealthEvent } from "@oodelscore/shared";
 
 /**
  * Hourly sweep: any open Action Board item that's been sitting at its
@@ -20,12 +20,14 @@ export async function POST(request: Request) {
   await connectToDatabase();
   try {
     const result = await autoEscalateOverdueCases();
+    await recordCronRun("auto-escalate-cases", true, JSON.stringify(result));
     return NextResponse.json({ status: "ok", ...result });
   } catch (err) {
     console.error("[cron/auto-escalate-cases] failed", err);
     await logSystemHealthEvent("cron_failure", (err as Error).message ?? "auto-escalate-cases failed", {
       route: "auto-escalate-cases",
     });
+    await recordCronRun("auto-escalate-cases", false, (err as Error).message ?? "failed");
     return NextResponse.json({ status: "error", message: "Job failed" }, { status: 500 });
   }
 }

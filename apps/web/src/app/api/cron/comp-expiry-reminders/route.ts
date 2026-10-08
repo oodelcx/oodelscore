@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, sendCompExpiryReminders, logSystemHealthEvent } from "@oodelscore/shared";
+import { recordCronRun, connectToDatabase, sendCompExpiryReminders, logSystemHealthEvent } from "@oodelscore/shared";
 
 /**
  * Daily sweep — same shared-secret pattern as the other /api/cron routes.
@@ -20,12 +20,14 @@ export async function POST(request: Request) {
   await connectToDatabase();
   try {
     const result = await sendCompExpiryReminders();
+    await recordCronRun("comp-expiry-reminders", true, JSON.stringify(result));
     return NextResponse.json({ status: "ok", ...result });
   } catch (err) {
     console.error("[cron/comp-expiry-reminders] failed", err);
     await logSystemHealthEvent("cron_failure", (err as Error).message ?? "comp-expiry-reminders failed", {
       route: "comp-expiry-reminders",
     });
+    await recordCronRun("comp-expiry-reminders", false, (err as Error).message ?? "failed");
     return NextResponse.json({ status: "error", message: "Job failed" }, { status: 500 });
   }
 }

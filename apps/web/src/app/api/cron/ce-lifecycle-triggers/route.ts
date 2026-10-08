@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, runColleagueLifecycleTriggers, logSystemHealthEvent } from "@oodelscore/shared";
+import { recordCronRun, connectToDatabase, runColleagueLifecycleTriggers, logSystemHealthEvent } from "@oodelscore/shared";
 
 /**
  * Daily sweep — same shared-secret pattern as the other /api/cron routes.
@@ -22,12 +22,14 @@ export async function POST(request: Request) {
   await connectToDatabase();
   try {
     const result = await runColleagueLifecycleTriggers();
+    await recordCronRun("ce-lifecycle-triggers", true, JSON.stringify(result));
     return NextResponse.json({ status: "ok", ...result });
   } catch (err) {
     console.error("[cron/ce-lifecycle-triggers] failed", err);
     await logSystemHealthEvent("cron_failure", (err as Error).message ?? "ce-lifecycle-triggers failed", {
       route: "ce-lifecycle-triggers",
     });
+    await recordCronRun("ce-lifecycle-triggers", false, (err as Error).message ?? "failed");
     return NextResponse.json({ status: "error", message: "Job failed" }, { status: 500 });
   }
 }

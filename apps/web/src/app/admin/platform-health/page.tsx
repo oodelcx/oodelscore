@@ -35,6 +35,8 @@ export default function PlatformHealthPage() {
   const [events, setEvents] = useState<HealthEvent[]>([]);
   const [stuckOnboarding, setStuckOnboarding] = useState<StuckRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cronJobs, setCronJobs] = useState<{ job: string; every: string; why: string; state: string; lastRunAt: string | null; lastMessage: string }[]>([]);
+  const [setup, setSetup] = useState<{ name: string; ok: boolean; fix: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/platform-health")
@@ -42,6 +44,8 @@ export default function PlatformHealthPage() {
       .then((data) => {
         setEvents(data.events ?? []);
         setStuckOnboarding(data.stuckOnboarding ?? []);
+        setCronJobs(data.cronJobs ?? []);
+        setSetup(data.setup ?? []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -58,6 +62,52 @@ export default function PlatformHealthPage() {
             stuck mid-onboarding.
           </p>
         </div>
+      </div>
+
+      <div className="section-title">Setup checklist</div>
+      <div className="card" style={{ marginBottom: 20 }}>
+        {setup.map((c) => (
+          <p key={c.name} style={{ margin: "0 0 6px", fontSize: 13 }}>
+            <span className={`pill ${c.ok ? "pill-green" : "pill-red"}`}>{c.ok ? "Set" : "Missing"}</span> <b>{c.name}.</b>{" "}
+            {c.ok ? "" : c.fix}
+          </p>
+        ))}
+      </div>
+
+      <div className="section-title">Scheduled jobs</div>
+      <p className="subtitle" style={{ marginTop: 0 }}>
+        Each job must be created as a Render Cron Job that sends a POST to <code>/api/cron/&lt;job&gt;</code> with the header{" "}
+        <code>x-cron-secret</code>. A job that never ran means its feature is switched off in practice.
+      </p>
+      <div className="table-wrap" style={{ marginBottom: 20 }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Job</th>
+              <th>Should run</th>
+              <th>Last run</th>
+              <th>State</th>
+              <th>What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cronJobs.map((j) => (
+              <tr key={j.job}>
+                <td>
+                  <code>{j.job}</code>
+                </td>
+                <td>{j.every}</td>
+                <td>{j.lastRunAt ? new Date(j.lastRunAt).toLocaleString() : "Never"}</td>
+                <td>
+                  <span className={`pill ${j.state === "ok" ? "pill-green" : j.state === "overdue" ? "pill-amber" : "pill-red"}`}>
+                    {j.state === "ok" ? "Running" : j.state === "overdue" ? "Overdue" : j.state === "failed" ? "Last run failed" : "Never ran"}
+                  </span>
+                </td>
+                <td>{j.why}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <div className="section-title">Accounts stuck onboarding</div>

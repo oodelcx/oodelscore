@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, autoMeasurePendingDecisions, logSystemHealthEvent } from "@oodelscore/shared";
+import { recordCronRun, connectToDatabase, autoMeasurePendingDecisions, logSystemHealthEvent } from "@oodelscore/shared";
 
 /**
  * Meant to be hit once a day by an external scheduler (a Render Cron Job
@@ -21,12 +21,14 @@ export async function POST(request: Request) {
   await connectToDatabase();
   try {
     const result = await autoMeasurePendingDecisions();
+    await recordCronRun("measure-decisions", true, JSON.stringify(result));
     return NextResponse.json({ status: "ok", ...result });
   } catch (err) {
     console.error("[cron/measure-decisions] failed", err);
     await logSystemHealthEvent("cron_failure", (err as Error).message ?? "measure-decisions failed", {
       route: "measure-decisions",
     });
+    await recordCronRun("measure-decisions", false, (err as Error).message ?? "failed");
     return NextResponse.json({ status: "error", message: "Job failed" }, { status: 500 });
   }
 }
