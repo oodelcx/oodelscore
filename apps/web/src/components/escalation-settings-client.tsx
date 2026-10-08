@@ -38,6 +38,9 @@ export function EscalationSettingsClient({
   regions?: string[];
 }) {
   const [levels, setLevels] = useState<EscalationLevel[] | null>(null);
+  // Levels as last saved: a holder can only be set on a level that already exists on the server.
+  const [savedLevelNumbers, setSavedLevelNumbers] = useState<number[]>([]);
+  const [holderError, setHolderError] = useState<string | null>(null);
   const [slaHours, setSlaHours] = useState<string>("");
   const [savingLevels, setSavingLevels] = useState(false);
   const [levelsError, setLevelsError] = useState<string | null>(null);
@@ -61,6 +64,7 @@ export function EscalationSettingsClient({
         const d = await r.json();
         if (!r.ok) throw new Error(d.message ?? "Failed to load");
         setLevels(d.escalationLevels);
+        setSavedLevelNumbers((d.escalationLevels as EscalationLevel[]).map((l) => l.level));
         setSlaHours(d.escalationSlaHours !== null ? String(d.escalationSlaHours) : "");
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"));
@@ -144,6 +148,29 @@ export function EscalationSettingsClient({
     load();
   }
 
+  /** The org-wide holder of a level: the assignment with no region and no branch. */
+  function orgWideHolder(level: number): string {
+    const a = assignments.find((x) => x.level === level && !x.region && !x.businessId);
+    if (!a) return "";
+    return typeof a.userId === "string" ? a.userId : a.userId.email;
+  }
+
+  async function setOrgWideHolder(level: number, email: string) {
+    if (!email) return;
+    setHolderError(null);
+    const res = await fetch(`${apiPath}/assignments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ level, email, region: "", businessId: null }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setHolderError(data?.message ?? "Could not set that holder.");
+      return;
+    }
+    load();
+  }
+
   async function removeAssignment(id: string) {
     if (!confirm("Remove this assignment?")) return;
     await fetch(`${apiPath}/assignments/${id}`, { method: "DELETE" });
@@ -163,37 +190,63 @@ export function EscalationSettingsClient({
         when someone clicks Escalate, shown by name before they click, not just a level number.
       </p>
 
-      <div className="card" style={{ marginBottom: 20, maxWidth: 640 }}>
-        <h3>Levels</h3>
+      <div className="card" style={{ marginBottom: 20, maxWidth: 780 }}>
+        <h3>Levels and who holds them</h3>
         <p className="card-sub" style={{ margin: "0 0 12px" }}>
-          Level 1 is always your own owner login, automatically — start adding from level 2.
+          Level 1 is always the branch\u2019s own owner login. From level 2, give each level a title and choose who holds it. Region- or branch-specific holders are set further down.
         </p>
         {levels
           .slice()
           .sort((a, b) => a.level - b.level)
-          .map((l) => (
-            <div key={l.level} className="field-row" style={{ alignItems: "flex-end" }}>
-              <div className="field" style={{ width: 70 }}>
-                <label>Level</label>
-                <input type="text" value={l.level} disabled />
+          .map((l) => {
+            const holder = l.level === 1 ? "" : orgWideHolder(l.level);
+            const saved = savedLevelNumbers.includes(l.level);
+            return (
+              <div key={l.level} className="field-row" style={{ alignItems: "flex-end" }}>
+                <div className="field" style={{ width: 70 }}>
+                  <label>Level</label>
+                  <input type="text" value={l.level} disabled />
+                </div>
+                <div className="field" style={{ flex: 1 }}>
+                  <label>Title</label>
+                  <input
+                    type="text"
+                    value={l.label}
+                    disabled={l.level === 1}
+                    onChange={(e) => updateLevelLabel(l.level, e.target.value)}
+                    placeholder="e.g. Regional Manager"
+                  />
+                </div>
+                <div className="field" style={{ flex: 1.3 }}>
+                  <label>Held by (email)</label>
+                  {l.level === 1 ? (
+                    <input type="text" value="The branch's own owner login" disabled />
+                  ) : saved ? (
+                    <select value={holder} onChange={(e) => setOrgWideHolder(l.level, e.target.value)}>
+                      <option value="">{holder ? "" : "Choose a person…"}</option>
+                      {candidates.map((c) => (
+                        <option key={c.email} value={c.email}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input type="text" value="Save levels first, then choose who holds it" disabled />
+                  )}
+                </div>
+                {l.level !== 1 && (
+                  <button className="icon-btn btn-danger" onClick={() => removeLevel(l.level)} title="Remove level">
+                    🗑
+                  </button>
+                )}
               </div>
-              <div className="field" style={{ flex: 1 }}>
-                <label>Label</label>
-                <input
-                  type="text"
-                  value={l.label}
-                  disabled={l.level === 1}
-                  onChange={(e) => updateLevelLabel(l.level, e.target.value)}
-                  placeholder="e.g. Regional Manager"
-                />
-              </div>
-              {l.level !== 1 && (
-                <button className="icon-btn btn-danger" onClick={() => removeLevel(l.level)} title="Remove level">
-                  🗑
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
+        {holderError && <p className="error-text">{holderError}</p>}
+        <p className="field-hint" style={{ marginTop: 8 }}>
+          The email shown when a case is escalated is the holder chosen here. Holders are people already on your team
+          (team members and branch owners). To add someone new, ask your OodelCX account manager to add them as a team member first.
+        </p>
         <button className="btn btn-sm" onClick={addLevel} style={{ marginTop: 6 }}>
           + Add level
         </button>
@@ -218,8 +271,8 @@ export function EscalationSettingsClient({
         </button>
       </div>
 
-      <div className="card" style={{ maxWidth: 640 }}>
-        <h3>Who holds each level</h3>
+      <div className="card" style={{ maxWidth: 780 }}>
+        <h3>Different holders for a region or branch</h3>
         <p className="card-sub" style={{ margin: "0 0 12px" }}>
           {branches.length > 0
             ? "Assign someone org-wide, scoped to one region, or scoped to one specific branch — a branch-specific assignment wins over a region one, which wins over an org-wide one."

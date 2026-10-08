@@ -38,6 +38,7 @@ import { CompassAssessment } from "../models/CompassAssessment";
 import { CompassAssessmentHistory } from "../models/CompassAssessmentHistory";
 import { seedAmaniPrograms } from "./amaniPrograms";
 import { seedLaunchDemoExtras } from "./launchDemo";
+import { seedDemoFinish } from "./demoFinish";
 import { seedShowcasePolish } from "./showcasePolish";
 import { RosterSurveyToken } from "../models/RosterSurveyToken";
 import { seedCompassDemo, type CompassDemoOwner, type CompassDemoProfile } from "./compassDemo";
@@ -274,6 +275,21 @@ const SECTORS: SectorDef[] = [
       { text: "How likely are you to recommend us to family or friends?", type: "nps_0_10", category: null, required: true },
       { text: "How easy was it to get the care you needed today?", type: "ces_1_5", category: "Service Speed" },
       { text: "Did our staff clearly explain your diagnosis or treatment plan?", type: "yes_no", category: "Communication" },
+      { text: "Overall, how was your visit today?", type: "emoji_scale", category: null },
+      { text: "Anything else you'd like us to know?", type: "open_text", category: null },
+    ],
+  },
+  {
+    key: "diagnostics",
+    industry: "Healthcare",
+    templateName: "Diagnostic Lab Visit Survey",
+    questions: [
+      { text: "How friendly and respectful was our staff at the collection desk?", type: "star_1_5", category: "Staff Friendliness", required: true, isCsatQuestion: true },
+      { text: "How clean and hygienic was the collection area?", type: "star_1_5", category: "Cleanliness" },
+      { text: "How would you rate the wait before your sample or scan?", type: "star_1_5", category: "Service Speed" },
+      { text: "How likely are you to recommend us to family or friends?", type: "nps_0_10", category: null, required: true },
+      { text: "How easy was it to book, get tested and receive your report?", type: "ces_1_5", category: "Service Speed" },
+      { text: "Was your report ready within the time promised?", type: "yes_no", category: "Communication" },
       { text: "Overall, how was your visit today?", type: "emoji_scale", category: null },
       { text: "Anything else you'd like us to know?", type: "open_text", category: null },
     ],
@@ -1446,6 +1462,10 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       { name: "Meridian Bank – Uptown", region: "Central" },
       { name: "Meridian Bank – Airport Road", region: "South" },
       { name: "Meridian Bank – Riverside", region: "West", billing: "branch_pays" },
+      { name: "Meridian Bank – Lakeview", region: "North" },
+      { name: "Meridian Bank – Harbor Point", region: "East" },
+      { name: "Meridian Bank – Greenfield", region: "South" },
+      { name: "Meridian Bank – Old Town", region: "West" },
     ],
     cxSectorKey: "banking",
     cxPointName: "Branch Front Desk",
@@ -1541,6 +1561,31 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     ceCountRange: [16, 26],
     opsRoleLabel: "Clinical Operations Manager",
     shiftRoleLabel: "Charge Nurse",
+    secondLeadRoleLabel: "Patient Experience Lead",
+  });
+
+  // --- 5b. Precision Diagnostics Network — medical diagnostic chain (labs, collection
+  // centres, imaging), multiple branches, CX + CE ---
+  const precision = await buildOrg({
+    key: "precision",
+    name: "Precision Diagnostics Network",
+    industry: "Healthcare",
+    products: ["customer_experience", "colleague_experience"],
+    branches: [
+      { name: "Precision Diagnostics – Main Lab", region: "Central" },
+      { name: "Precision Diagnostics – Westside Collection Centre", region: "West" },
+      { name: "Precision Diagnostics – Eastgate Imaging Centre", region: "East" },
+      { name: "Precision Diagnostics – Northfield Lab", region: "North" },
+      { name: "Precision Diagnostics – Harbor Collection Point", region: "South", billing: "branch_pays" },
+      { name: "Precision Diagnostics – Airport Road Lab", region: "South" },
+    ],
+    cxSectorKey: "diagnostics",
+    cxPointName: "Sample Collection Desk",
+    cePointName: "Lab Team Pulse",
+    cxCountRange: [26, 40],
+    ceCountRange: [16, 26],
+    opsRoleLabel: "Lab Operations Manager",
+    shiftRoleLabel: "Senior Technologist",
     secondLeadRoleLabel: "Patient Experience Lead",
   });
 
@@ -1664,7 +1709,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   // Baseline cases + support tickets across every org branch
   // ---------------------------------------------------------------------
 
-  const allOrgs: OrgResult[] = [meridian, skyline, horizon, aurora, stAugustine];
+  const allOrgs: OrgResult[] = [meridian, skyline, horizon, aurora, stAugustine, precision];
   for (const org of allOrgs) {
     for (const b of org.branches) {
       for (const [, info] of b.byProduct) {
@@ -1687,6 +1732,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   await mapCategory("parentOrg", aurora.org._id, ceCategoryByName.get("Work-Life Balance")!, aurora.opsLead._id, { thresholdCount: 3, windowDays: 21 });
   await mapCategory("parentOrg", stAugustine.org._id, categoryByName.get("Service Speed")!, stAugustine.opsLead._id, { thresholdCount: 4, windowDays: 30 });
   await mapCategory("parentOrg", stAugustine.org._id, ceCategoryByName.get("Growth Opportunities")!, stAugustine.opsLead._id, { thresholdCount: 3, windowDays: 30 });
+  await mapCategory("parentOrg", precision.org._id, categoryByName.get("Service Speed")!, precision.opsLead._id, { thresholdCount: 4, windowDays: 30 });
+  await mapCategory("parentOrg", precision.org._id, ceCategoryByName.get("Management Support")!, precision.opsLead._id, { thresholdCount: 3, windowDays: 30 });
   await mapCategory("business", olive.business._id, categoryByName.get("Product Quality")!, olive.teamFull._id, { thresholdCount: 3, windowDays: 14 });
 
   // ---------------------------------------------------------------------
@@ -2025,6 +2072,74 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     },
   });
 
+  const precisionMain = precision.branches.find((b) => b.business.name === "Precision Diagnostics – Main Lab")!;
+  const precisionManagementId = ceCategoryByName.get("Management Support")!;
+  const precisionCases = await buildCaseNarrative({
+    parentOrgId: precision.org._id,
+    flagScope: "business",
+    flagScopeId: precisionMain.business._id,
+    businessIds: [precisionMain.business._id],
+    businessNameFor: (id) => nameByBusinessId.get(id.toString()) ?? "the lab",
+    product: "customer_experience",
+    categoryId: serviceSpeedId,
+    categoryLabel: "Service Speed",
+    comments: [
+      { businessId: precisionMain.business._id, text: "Waited over an hour for a simple blood draw.", daysAgoCreated: 40 },
+      { businessId: precisionMain.business._id, text: "My report was promised in 24 hours and took three days.", daysAgoCreated: 33 },
+      { businessId: precisionMain.business._id, text: "No one told us the scan was running late.", daysAgoCreated: 24 },
+      { businessId: precisionMain.business._id, text: "Queue at the collection desk went out the door at 8am.", daysAgoCreated: 12 },
+    ],
+    initiativeTitle: "Online slot booking and SMS report alerts",
+    initiativeDescription: "Collection-desk queues and late reports kept recurring at the Main Lab. This initiative adds timed slot booking and an SMS when a report is ready.",
+    initiativeOwnerId: precision.opsLead._id,
+    flagStatus: "converted",
+    measured: { before: 3.1, after: 4.2 },
+  });
+  await addPlaybookWithRun({
+    parentOrgId: precision.org._id,
+    businessId: null,
+    title: "Report Turnaround Recovery",
+    categoryId: serviceSpeedId,
+    trigger: "Service Speed or report turnaround falls below target at a lab",
+    steps: [
+      "Lab operations manager reviews the day's sample volume against technologist cover",
+      "Confirm every delayed report has a promised time shared with the patient",
+      "Add a float technologist or extend collection hours at peak",
+      "Re-check the lab's Service Speed score after two weeks",
+    ],
+    escalationContactId: precision.opsLead._id,
+    run: {
+      ownerType: "parentOrg",
+      ownerId: precision.org._id,
+      actionBoardItem: precisionCases[precisionCases.length - 1],
+      status: "completed",
+      startedAt: daysAgo(28),
+      completedAt: daysAgo(2),
+      completedStepIndexes: [0, 1, 2, 3],
+    },
+  });
+  const precisionCeCases = await buildCaseNarrative({
+    parentOrgId: precision.org._id,
+    flagScope: "parentOrg",
+    flagScopeId: precision.org._id,
+    businessIds: [precisionMain.business._id],
+    businessNameFor: (id) => nameByBusinessId.get(id.toString()) ?? "the lab",
+    product: "colleague_experience",
+    categoryId: precisionManagementId,
+    categoryLabel: "Management Support",
+    comments: [
+      { businessId: precisionMain.business._id, text: "Night-shift technologists have nobody senior to call when equipment fails.", daysAgoCreated: 34 },
+      { businessId: precisionMain.business._id, text: "Our supervisor is rarely on the floor during peak hours.", daysAgoCreated: 25 },
+      { businessId: precisionMain.business._id, text: "Escalations about analyser downtime go unanswered for days.", daysAgoCreated: 13 },
+    ],
+    initiativeTitle: "Named on-call supervisor for every shift",
+    initiativeDescription: "Management Support complaints at the Main Lab cited no senior contact on nights. This initiative publishes a named on-call supervisor for every shift.",
+    initiativeOwnerId: precision.opsLead._id,
+    flagStatus: "converted",
+    measured: { before: 2.8, after: 3.9 },
+  });
+  void precisionCeCases;
+
   const oliveProductQualityId = categoryByName.get("Product Quality")!;
   const oliveCases = await buildCaseNarrative({
     parentOrgId: null,
@@ -2123,6 +2238,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   await addSubscription({ ownerType: "parentOrg", ownerId: horizon.org._id, plan: "business_yearly", mrrValue: 1599, status: "active", paidInvoices: 3 });
   await addSubscription({ ownerType: "parentOrg", ownerId: aurora.org._id, plan: "business_monthly", mrrValue: 699, status: "active", paidInvoices: 2 });
   await markOwnerComp({ ownerType: "parentOrg", ownerId: stAugustine.org._id.toString(), period: "unlimited" });
+  await addSubscription({ ownerType: "parentOrg", ownerId: precision.org._id, plan: "business_monthly", mrrValue: 899, status: "active", paidInvoices: 3 });
   result.billingSubscriptions++;
 
   const horizonStemBranch = horizon.branches.find((b) => b.business.name === "Horizon STEM Academy")!;
@@ -2197,6 +2313,18 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     targetDate: daysAgo(5),
     status: "achieved",
     createdBy: stAugustine.orgOwner._id,
+  });
+
+  await addGoal({
+    ownerType: "parentOrg",
+    ownerId: precision.org._id,
+    label: "Get 90% of reports out on time across all labs",
+    metric: "starAverage",
+    startValue: 3.6,
+    targetValue: 4.4,
+    targetDate: daysAgo(-50),
+    status: "active",
+    createdBy: precision.orgOwner._id,
   });
 
   // ---------------------------------------------------------------------
@@ -2353,6 +2481,11 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       doing: "A larger break space opens at JFK next quarter — layout is finalized and construction has started.",
     },
     {
+      org: precision,
+      heard: "Lab teams told us night shifts have no senior person to call when equipment fails.",
+      doing: "A named on-call supervisor is now published for every shift at every lab.",
+    },
+    {
       org: stAugustine,
       heard: "Staff asked for clearer escalation paths when a shift is short-staffed.",
       doing: "A new on-call charge nurse rotation launches this month, with the escalation steps posted at every nursing station.",
@@ -2505,6 +2638,9 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       console.error(`[showcase] program evaluation failed for ${evt.name} — ${evt.location}`, err);
     }
   }
+
+  const finish = await seedDemoFinish({ insightReports: false });
+  console.log(`[showcase] demo finish: ${JSON.stringify(finish)}`);
 
   return result;
 }

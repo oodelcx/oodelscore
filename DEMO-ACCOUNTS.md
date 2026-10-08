@@ -161,3 +161,17 @@ Password for every showcase login is `ocx123`. Admin uses its own password above
 | Programme evaluation | Amani Women's Empowerment and Peacebuilding Institute owner | Program Evaluation |
 
 Compass, Evidence Fusion and REACH are computed from the activity in the data, so they always agree with what the prospect sees elsewhere.
+
+## Precision Diagnostics Network (medical diagnostic chain, group with 6 branches)
+
+Group owner `owner.precision@showcase.oodel.test`; team members `regional.ops.precision@` (Lab Operations Manager) and `lead.precision@` (Patient Experience Lead); each branch has `owner.<branch name without spaces or punctuation>@` and `ops.` / `shiftlead.` logins, same pattern as the other groups. Runs Customer X and Colleague X.
+
+## Meridian Bank Group
+
+Now 8 branches (Downtown, Uptown, Airport Road, Riverside, Lakeview, Harbor Point, Greenfield, Old Town) across Central, North, East, South and West.
+
+## Amani Women's Empowerment & Peacebuilding Institute (NGO with trainings)
+
+`amani@showcase.oodel.test` and `amani.programs@showcase.oodel.test`. Training sessions with objective-linked questions and a Program Evaluation report per finished session.
+
+To load all of this on staging: Admin, Dev Data Tools, Seed showcase data (rebuilds the showcase accounts). To only fill gaps on existing data (sign-ins, self-assessments, value inputs, Insights reports, CX Pulse), press "Add launch demo layer".

@@ -132,8 +132,9 @@ body { background: var(--bg); }
 .mobile-nav-btn-bar { background: var(--text-2); }
 .admin-sidebar { background: #fff; color: var(--text-2); border-right: 1px solid var(--border); }
 html.mobile-nav-open .admin-sidebar { box-shadow: 10px 0 40px rgba(14, 44, 34, 0.12); }
-.nav-group-label { color: var(--text-3); font-size: 10.5px; font-weight: 650; letter-spacing: 0.12em; padding: 16px 14px 6px; }
-.nav-group-chevron { color: var(--text-3); }
+.nav-group-label { color: #1d2a24; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; padding: 18px 14px 6px; }
+.nav-group-toggle .nav-group-label { color: #1d2a24; }
+.nav-group-chevron { color: var(--text-2); }
 .admin-nav a { color: var(--text-2); font-weight: 500; font-size: 13.5px; padding: 8px 12px; border-radius: 9px; }
 .admin-nav a:hover { background: var(--bg-2); color: var(--text); }
 .admin-nav a.active { background: var(--accent-bg); color: var(--accent); font-weight: 650; }
@@ -228,3 +229,8 @@ table.clean td { border-bottom: 1px solid #edf2f0; }
 .pb-chip { background: var(--accent-bg); border-color: #cfe9de; color: var(--accent); }
 .pb-chip-track { background: #cfe9de; }
 .pb-chip-fill { background: var(--brand); }
+
+/* Key-figure strips fill their row: cells share the width evenly however many there are, so no empty grey block is left. */
+.grid:has(> .card > .metric-label) { display: flex; flex-wrap: wrap; }
+.grid:has(> .card > .metric-label) > .card { flex: 1 1 200px; min-width: 0; box-sizing: border-box; }
+@media (max-width: 480px) { .grid:has(> .card > .metric-label) > .card { flex-basis: 45%; } }
