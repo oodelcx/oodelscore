@@ -98,11 +98,6 @@ export async function ProductPage({ page }: { page: "customer-x" | "colleague-x"
                     <div className="ds-always">
                       <b>{f.alwaysOnLabel}</b>
                       <span>{f.alwaysOnText}</span>
-                      {noStage.map((feat) => (
-                        <span key={feat.tag}>
-                          {feat.tag}: {feat.body}
-                        </span>
-                      ))}
                     </div>
                   )}
                 </div>

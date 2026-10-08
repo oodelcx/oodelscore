@@ -182,9 +182,22 @@
 .mkt .ds-always b { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--acc); }
 .mkt .ds-always span { font-size: 14.5px; }
 @media (max-width: 920px) {
-  .mkt .ds-chap-grid { grid-template-columns: 1fr; }
+  .mkt .ds-chap-grid,
+  .mkt .ds-chap:nth-of-type(even) .ds-chap-grid { grid-template-columns: minmax(0, 1fr); }
   .mkt .ds-chap:nth-of-type(even) .ds-chap-grid .ds-txt { order: 0; }
   .mkt .ds-vis-col { position: static; }
+}
+/* Grid children must be allowed to shrink or wide visuals push the page and get cut off. */
+.mkt .ds-chap-grid > *, .mkt .ds-vis-col, .mkt .ds-stage, .mkt .ds-stage > * { min-width: 0; max-width: 100%; }
+.mkt .ds-rung > *, .mkt .ds-case > *, .mkt .ds-win-body > * { min-width: 0; }
+.mkt .ds-rung span, .mkt .ds-case b, .mkt .ds-case span { overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .mkt .ds-chap .ds-def { font-size: 16px; }
+  .mkt .ds-feat p, .mkt .ds-chap .ds-lead { max-width: none; }
+  .mkt .ds-stage { padding: 12px; border-radius: 22px; }
+  .mkt .ds-rung { grid-template-columns: 26px minmax(0, 1fr); }
+  .mkt .ds-rung > :last-child { grid-column: 2; justify-self: start; }
+  .mkt .ds-chip { white-space: normal; }
 }
 .mkt .ds-ph-hero { padding-block: clamp(34px, 5vw, 64px); }
 .mkt .ds-ph-hero.cx { background: linear-gradient(180deg, var(--mint), var(--bg)); }

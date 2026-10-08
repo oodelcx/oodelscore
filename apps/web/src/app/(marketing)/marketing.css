@@ -949,13 +949,18 @@
 }
 @media (max-width: 900px) {
   .mkt .foot-grid {
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
   .mkt .foot-grid > :first-child {
     grid-column: 1 / -1;
   }
 }
-@media (max-width: 480px) {
+@media (max-width: 600px) {
+  .mkt .foot-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+@media (max-width: 420px) {
   .mkt .foot-grid {
     grid-template-columns: 1fr !important;
   }
