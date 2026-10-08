@@ -59,7 +59,10 @@ export function AttentionQueue({ portal }: { portal: "business" | "group" }) {
   const escalated = decorated.filter((x) => x.i.currentEscalationLevel > 1);
   const shown = (filter === "urgent" ? urgent : filter === "escalated" ? escalated : decorated).slice(0, 6);
 
-  if (items === null) return null;
+  // Hold the space while loading so the cards below don't jump down when the list arrives.
+  if (items === null) {
+    return <section className="card queue" style={{ marginBottom: 20, minHeight: 330 }} aria-busy="true" aria-label="Loading cases" />;
+  }
   return (
     <section className="card queue" style={{ marginBottom: 20 }} aria-labelledby="attn-h">
       <div className="queue-head">
