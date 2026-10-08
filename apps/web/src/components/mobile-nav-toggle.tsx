@@ -20,7 +20,8 @@ import { useEffect, useState } from "react";
  * business.css), just without needing a shared parent to manage the state
  * in — here the toggle and the sidebar are siblings.
  */
-export default function MobileNavToggle({ label }: { label: string }) {
+// `label` is kept for callers but no longer shown: the header carries only the logo.
+export default function MobileNavToggle({ label: _label }: { label?: string }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -57,7 +58,6 @@ export default function MobileNavToggle({ label }: { label: string }) {
           <span className="mobile-nav-btn-bar" />
         </button>
         <img className="mobile-topbar-logo" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
-        <span className="mobile-topbar-label">{label}</span>
       </div>
       {open && <div className="mobile-nav-backdrop" onClick={() => setOpen(false)} />}
     </>

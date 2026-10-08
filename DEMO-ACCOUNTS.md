@@ -1,6 +1,8 @@
 # Demo accounts (showcase seed)
 
-Created by **Admin → Dev Data Tools → showcase seed** (or `wipe-and-reseed-showcase.ts`). Every account below uses the password **ocx123**, except the admin account noted first. Addresses end in `.test`, so no email is ever delivered to them.
+Created by **Admin → Dev Data Tools → Seed showcase data**. **Every demo login uses the password `ocx123`** and an address of the form `username@ocxdemo.com`.
+
+Pattern: group `name@`, group team `name.ops@` and `name.lead@`; each branch has `name.branch@` (owner) plus `name.branch.ops@` and `name.branch.shift@` (team). Standalone businesses: `olive@`, `olive.ops@`, `olive.shift@`, `amani@`, `amani.ops@`.
 
 ## Admin
 
@@ -8,170 +10,88 @@ Created by **Admin → Dev Data Tools → showcase seed** (or `wipe-and-reseed-s
 |---|---|
 | admin.demo@oodelscore.com | OodelDemo!Admin1 |
 
-The other built-in demo logins (`group.demo@`, `business.demo@`, `branch.demo@oodelscore.com`; passwords `OodelDemo!Group1`, `OodelDemo!Biz1`, `OodelDemo!Branch1`) only exist if the environment has `SEED_DEMO=true`, and the showcase wipe removes them.
+## Meridian Bank Group (Bank, 8 branches)
 
-## Aurora Airlines (group with branches)
+| Role | Login |
+|---|---|
+| Group owner | meridian@ocxdemo.com |
+| Group team (ops / lead) | meridian.ops@ocxdemo.com / meridian.lead@ocxdemo.com |
+| Branch: Meridian Bank – Downtown | meridian.downtown@ocxdemo.com (team: meridian.downtown.ops@, meridian.downtown.shift@) |
+| Branch: Meridian Bank – Uptown | meridian.uptown@ocxdemo.com (team: meridian.uptown.ops@, meridian.uptown.shift@) |
+| Branch: Meridian Bank – Airport Road | meridian.airport@ocxdemo.com (team: meridian.airport.ops@, meridian.airport.shift@) |
+| Branch: Meridian Bank – Riverside | meridian.riverside@ocxdemo.com (team: meridian.riverside.ops@, meridian.riverside.shift@) |
+| Branch: Meridian Bank – Lakeview | meridian.lakeview@ocxdemo.com (team: meridian.lakeview.ops@, meridian.lakeview.shift@) |
+| Branch: Meridian Bank – Harbor Point | meridian.harbor@ocxdemo.com (team: meridian.harbor.ops@, meridian.harbor.shift@) |
+| Branch: Meridian Bank – Greenfield | meridian.greenfield@ocxdemo.com (team: meridian.greenfield.ops@, meridian.greenfield.shift@) |
+| Branch: Meridian Bank – Old Town | meridian.oldtown@ocxdemo.com (team: meridian.oldtown.ops@, meridian.oldtown.shift@) |
 
-| Role | Account | Email |
-|---|---|---|
-| Group owner | Aurora Airlines | owner.aurora@showcase.oodel.test |
-| Business owner | Aurora Airlines – JFK Hub | owner.auroraairlinesjfkhub@showcase.oodel.test |
-| Business owner | Aurora Airlines – LAX Hub | owner.auroraairlineslaxhub@showcase.oodel.test |
-| Business owner | Aurora Airlines – ORD Hub | owner.auroraairlinesordhub@showcase.oodel.test |
-| Team member | Aurora Airlines | lead.aurora@showcase.oodel.test |
-| Team member | Aurora Airlines – JFK Hub | ops.auroraairlinesjfkhub@showcase.oodel.test |
-| Team member | Aurora Airlines – LAX Hub | ops.auroraairlineslaxhub@showcase.oodel.test |
-| Team member | Aurora Airlines – ORD Hub | ops.auroraairlinesordhub@showcase.oodel.test |
-| Team member | Aurora Airlines | regional.ops.aurora@showcase.oodel.test |
-| Team member | Aurora Airlines – JFK Hub | shiftlead.auroraairlinesjfkhub@showcase.oodel.test |
-| Team member | Aurora Airlines – LAX Hub | shiftlead.auroraairlineslaxhub@showcase.oodel.test |
-| Team member | Aurora Airlines – ORD Hub | shiftlead.auroraairlinesordhub@showcase.oodel.test |
+## Precision Diagnostics Network (Medical diagnostic chain, 6 branches)
 
-## Horizon Schools Trust (group with branches)
+| Role | Login |
+|---|---|
+| Group owner | precision@ocxdemo.com |
+| Group team (ops / lead) | precision.ops@ocxdemo.com / precision.lead@ocxdemo.com |
+| Branch: Precision Diagnostics – Main Lab | precision.main@ocxdemo.com (team: precision.main.ops@, precision.main.shift@) |
+| Branch: Precision Diagnostics – Westside Collection Centre | precision.westside@ocxdemo.com (team: precision.westside.ops@, precision.westside.shift@) |
+| Branch: Precision Diagnostics – Eastgate Imaging Centre | precision.eastgate@ocxdemo.com (team: precision.eastgate.ops@, precision.eastgate.shift@) |
+| Branch: Precision Diagnostics – Northfield Lab | precision.northfield@ocxdemo.com (team: precision.northfield.ops@, precision.northfield.shift@) |
+| Branch: Precision Diagnostics – Harbor Collection Point | precision.harbor@ocxdemo.com (team: precision.harbor.ops@, precision.harbor.shift@) |
+| Branch: Precision Diagnostics – Airport Road Lab | precision.airport@ocxdemo.com (team: precision.airport.ops@, precision.airport.shift@) |
 
-| Role | Account | Email |
-|---|---|---|
-| Group owner | Horizon Schools Trust | owner.horizon@showcase.oodel.test |
-| Business owner | Horizon Arts Academy | owner.horizonartsacademy@showcase.oodel.test |
-| Business owner | Horizon East Primary | owner.horizoneastprimary@showcase.oodel.test |
-| Business owner | Horizon East Secondary | owner.horizoneastsecondary@showcase.oodel.test |
-| Business owner | Horizon North Primary | owner.horizonnorthprimary@showcase.oodel.test |
-| Business owner | Horizon North Secondary | owner.horizonnorthsecondary@showcase.oodel.test |
-| Business owner | Horizon South Primary | owner.horizonsouthprimary@showcase.oodel.test |
-| Business owner | Horizon South Secondary | owner.horizonsouthsecondary@showcase.oodel.test |
-| Business owner | Horizon STEM Academy | owner.horizonstemacademy@showcase.oodel.test |
-| Business owner | Horizon West Primary | owner.horizonwestprimary@showcase.oodel.test |
-| Business owner | Horizon West Secondary | owner.horizonwestsecondary@showcase.oodel.test |
-| Team member | Horizon Schools Trust | lead.horizon@showcase.oodel.test |
-| Team member | Horizon Arts Academy | ops.horizonartsacademy@showcase.oodel.test |
-| Team member | Horizon East Primary | ops.horizoneastprimary@showcase.oodel.test |
-| Team member | Horizon East Secondary | ops.horizoneastsecondary@showcase.oodel.test |
-| Team member | Horizon North Primary | ops.horizonnorthprimary@showcase.oodel.test |
-| Team member | Horizon North Secondary | ops.horizonnorthsecondary@showcase.oodel.test |
-| Team member | Horizon South Primary | ops.horizonsouthprimary@showcase.oodel.test |
-| Team member | Horizon South Secondary | ops.horizonsouthsecondary@showcase.oodel.test |
-| Team member | Horizon STEM Academy | ops.horizonstemacademy@showcase.oodel.test |
-| Team member | Horizon West Primary | ops.horizonwestprimary@showcase.oodel.test |
-| Team member | Horizon West Secondary | ops.horizonwestsecondary@showcase.oodel.test |
-| Team member | Horizon Schools Trust | regional.ops.horizon@showcase.oodel.test |
-| Team member | Horizon Arts Academy | shiftlead.horizonartsacademy@showcase.oodel.test |
-| Team member | Horizon East Primary | shiftlead.horizoneastprimary@showcase.oodel.test |
-| Team member | Horizon East Secondary | shiftlead.horizoneastsecondary@showcase.oodel.test |
-| Team member | Horizon North Primary | shiftlead.horizonnorthprimary@showcase.oodel.test |
-| Team member | Horizon North Secondary | shiftlead.horizonnorthsecondary@showcase.oodel.test |
-| Team member | Horizon South Primary | shiftlead.horizonsouthprimary@showcase.oodel.test |
-| Team member | Horizon South Secondary | shiftlead.horizonsouthsecondary@showcase.oodel.test |
-| Team member | Horizon STEM Academy | shiftlead.horizonstemacademy@showcase.oodel.test |
-| Team member | Horizon West Primary | shiftlead.horizonwestprimary@showcase.oodel.test |
-| Team member | Horizon West Secondary | shiftlead.horizonwestsecondary@showcase.oodel.test |
+## St. Augustine Health Network (Hospital network)
 
-## Meridian Bank Group (group with branches)
+| Role | Login |
+|---|---|
+| Group owner | staugustine@ocxdemo.com |
+| Group team (ops / lead) | staugustine.ops@ocxdemo.com / staugustine.lead@ocxdemo.com |
+| Branch: St. Augustine Downtown Medical Center | staugustine.downtown@ocxdemo.com (team: staugustine.downtown.ops@, staugustine.downtown.shift@) |
+| Branch: St. Augustine North Clinic | staugustine.north@ocxdemo.com (team: staugustine.north.ops@, staugustine.north.shift@) |
+| Branch: St. Augustine Women's Health Pavilion | staugustine.womens@ocxdemo.com (team: staugustine.womens.ops@, staugustine.womens.shift@) |
 
-| Role | Account | Email |
-|---|---|---|
-| Group owner | Meridian Bank Group | owner.meridian@showcase.oodel.test |
-| Business owner | Meridian Bank – Airport Road | owner.meridianbankairportroad@showcase.oodel.test |
-| Business owner | Meridian Bank – Downtown | owner.meridianbankdowntown@showcase.oodel.test |
-| Business owner | Meridian Bank – Riverside | owner.meridianbankriverside@showcase.oodel.test |
-| Business owner | Meridian Bank – Uptown | owner.meridianbankuptown@showcase.oodel.test |
-| Team member | Meridian Bank Group | lead.meridian@showcase.oodel.test |
-| Team member | Meridian Bank – Airport Road | ops.meridianbankairportroad@showcase.oodel.test |
-| Team member | Meridian Bank – Downtown | ops.meridianbankdowntown@showcase.oodel.test |
-| Team member | Meridian Bank – Riverside | ops.meridianbankriverside@showcase.oodel.test |
-| Team member | Meridian Bank – Uptown | ops.meridianbankuptown@showcase.oodel.test |
-| Team member | Meridian Bank Group | regional.ops.meridian@showcase.oodel.test |
-| Team member | Meridian Bank – Airport Road | shiftlead.meridianbankairportroad@showcase.oodel.test |
-| Team member | Meridian Bank – Downtown | shiftlead.meridianbankdowntown@showcase.oodel.test |
-| Team member | Meridian Bank – Riverside | shiftlead.meridianbankriverside@showcase.oodel.test |
-| Team member | Meridian Bank – Uptown | shiftlead.meridianbankuptown@showcase.oodel.test |
+## Skyline Telecom (Telecom (Colleague X only))
 
-## Skyline Telecom (group with branches)
+| Role | Login |
+|---|---|
+| Group owner | skyline@ocxdemo.com |
+| Group team (ops / lead) | skyline.ops@ocxdemo.com / skyline.lead@ocxdemo.com |
+| Branch: Skyline Telecom – Northgate Store | skyline.northgate@ocxdemo.com (team: skyline.northgate.ops@, skyline.northgate.shift@) |
+| Branch: Skyline Telecom – Eastside Store | skyline.eastside@ocxdemo.com (team: skyline.eastside.ops@, skyline.eastside.shift@) |
+| Branch: Skyline Telecom – Downtown Service Center | skyline.downtown@ocxdemo.com (team: skyline.downtown.ops@, skyline.downtown.shift@) |
 
-| Role | Account | Email |
-|---|---|---|
-| Group owner | Skyline Telecom | owner.skyline@showcase.oodel.test |
-| Business owner | Skyline Telecom – Downtown Service Center | owner.skylinetelecomdowntownse@showcase.oodel.test |
-| Business owner | Skyline Telecom – Eastside Store | owner.skylinetelecomeastsidest@showcase.oodel.test |
-| Business owner | Skyline Telecom – Northgate Store | owner.skylinetelecomnorthgates@showcase.oodel.test |
-| Team member | Skyline Telecom | lead.skyline@showcase.oodel.test |
-| Team member | Skyline Telecom – Downtown Service Center | ops.skylinetelecomdowntownse@showcase.oodel.test |
-| Team member | Skyline Telecom – Eastside Store | ops.skylinetelecomeastsidest@showcase.oodel.test |
-| Team member | Skyline Telecom – Northgate Store | ops.skylinetelecomnorthgates@showcase.oodel.test |
-| Team member | Skyline Telecom | regional.ops.skyline@showcase.oodel.test |
-| Team member | Skyline Telecom – Downtown Service Center | shiftlead.skylinetelecomdowntownse@showcase.oodel.test |
-| Team member | Skyline Telecom – Eastside Store | shiftlead.skylinetelecomeastsidest@showcase.oodel.test |
-| Team member | Skyline Telecom – Northgate Store | shiftlead.skylinetelecomnorthgates@showcase.oodel.test |
+## Horizon Schools Trust (School trust, 10 campuses)
 
-## St. Augustine Health Network (group with branches)
+| Role | Login |
+|---|---|
+| Group owner | horizon@ocxdemo.com |
+| Group team (ops / lead) | horizon.ops@ocxdemo.com / horizon.lead@ocxdemo.com |
+| Branch: Horizon North Primary | horizon.northprimary@ocxdemo.com (team: horizon.northprimary.ops@, horizon.northprimary.shift@) |
+| Branch: Horizon North Secondary | horizon.northsecondary@ocxdemo.com (team: horizon.northsecondary.ops@, horizon.northsecondary.shift@) |
+| Branch: Horizon East Primary | horizon.eastprimary@ocxdemo.com (team: horizon.eastprimary.ops@, horizon.eastprimary.shift@) |
+| Branch: Horizon East Secondary | horizon.eastsecondary@ocxdemo.com (team: horizon.eastsecondary.ops@, horizon.eastsecondary.shift@) |
+| Branch: Horizon South Primary | horizon.southprimary@ocxdemo.com (team: horizon.southprimary.ops@, horizon.southprimary.shift@) |
+| Branch: Horizon South Secondary | horizon.southsecondary@ocxdemo.com (team: horizon.southsecondary.ops@, horizon.southsecondary.shift@) |
+| Branch: Horizon West Primary | horizon.westprimary@ocxdemo.com (team: horizon.westprimary.ops@, horizon.westprimary.shift@) |
+| Branch: Horizon West Secondary | horizon.westsecondary@ocxdemo.com (team: horizon.westsecondary.ops@, horizon.westsecondary.shift@) |
+| Branch: Horizon STEM Academy | horizon.stemacademy@ocxdemo.com (team: horizon.stemacademy.ops@, horizon.stemacademy.shift@) |
+| Branch: Horizon Arts Academy | horizon.artsacademy@ocxdemo.com (team: horizon.artsacademy.ops@, horizon.artsacademy.shift@) |
 
-| Role | Account | Email |
-|---|---|---|
-| Group owner | St. Augustine Health Network | owner.staugustine@showcase.oodel.test |
-| Business owner | St. Augustine Downtown Medical Center | owner.staugustinedowntownmedic@showcase.oodel.test |
-| Business owner | St. Augustine North Clinic | owner.staugustinenorthclinic@showcase.oodel.test |
-| Business owner | St. Augustine Women's Health Pavilion | owner.staugustinewomenshealthp@showcase.oodel.test |
-| Team member | St. Augustine Health Network | lead.staugustine@showcase.oodel.test |
-| Team member | St. Augustine Downtown Medical Center | ops.staugustinedowntownmedic@showcase.oodel.test |
-| Team member | St. Augustine North Clinic | ops.staugustinenorthclinic@showcase.oodel.test |
-| Team member | St. Augustine Women's Health Pavilion | ops.staugustinewomenshealthp@showcase.oodel.test |
-| Team member | St. Augustine Health Network | regional.ops.staugustine@showcase.oodel.test |
-| Team member | St. Augustine Downtown Medical Center | shiftlead.staugustinedowntownmedic@showcase.oodel.test |
-| Team member | St. Augustine North Clinic | shiftlead.staugustinenorthclinic@showcase.oodel.test |
-| Team member | St. Augustine Women's Health Pavilion | shiftlead.staugustinewomenshealthp@showcase.oodel.test |
+## Aurora Airlines (Airline, 3 hubs)
+
+| Role | Login |
+|---|---|
+| Group owner | aurora@ocxdemo.com |
+| Group team (ops / lead) | aurora.ops@ocxdemo.com / aurora.lead@ocxdemo.com |
+| Branch: Aurora Airlines – JFK Hub | aurora.jfk@ocxdemo.com (team: aurora.jfk.ops@, aurora.jfk.shift@) |
+| Branch: Aurora Airlines – LAX Hub | aurora.lax@ocxdemo.com (team: aurora.lax.ops@, aurora.lax.shift@) |
+| Branch: Aurora Airlines – ORD Hub | aurora.ord@ocxdemo.com (team: aurora.ord.ops@, aurora.ord.shift@) |
 
 ## Standalone businesses
 
-| Role | Account | Email |
-|---|---|---|
-| Business owner | Amani Women's Empowerment & Peacebuilding Institute | amani@showcase.oodel.test |
-| Business owner | The Olive Table | owner.olivetable@showcase.oodel.test |
-| Team member | Amani Women's Empowerment & Peacebuilding Institute | amani.programs@showcase.oodel.test |
-| Team member | The Olive Table | ops.olivetable@showcase.oodel.test |
-| Team member | The Olive Table | shiftlead.olivetable@showcase.oodel.test |
+| Business | Logins |
+|---|---|
+| The Olive Table (restaurant) | olive@ocxdemo.com, olive.ops@ocxdemo.com, olive.shift@ocxdemo.com |
+| Amani Women's Empowerment & Peacebuilding Institute (NGO with trainings and Program Evaluation) | amani@ocxdemo.com, amani.ops@ocxdemo.com |
 
+To load: Admin → Dev Data Tools → Seed showcase data (rebuilds the showcase accounts under these logins). The older `*.showcase.oodel.test` logins are replaced; if you seeded earlier, run the seed again.
 
-## What the demo data does and does not show
-
-- **Amani Women's Empowerment & Peacebuilding Institute** (non-profit, stand-alone): three training programmes (women's empowerment, peacebuilding, Sufi peace), each with objective-tied survey questions, an in-session QR survey, a 30-day follow-up sent by link, and about 170 responses. Program Evaluation reports exist for the sessions that have ended. Sign in as `amani@showcase.oodel.test` and open **Program Evaluation**.
-- **Colleague Experience** is on for Meridian Bank branches, St. Augustine, Skyline Telecom and Aurora Airlines. Each branch has a shared-link pulse survey ("Team Pulse", "Crew Pulse" or "Staff Pulse"), about 20 to 35 responses, and a small roster of five people (one marked as exited).
-- **Colleague flows (added by `colleagueFlowsDemo.ts`, run automatically by the showcase seed, or on its own with `npm run seed:colleague-flows` in `packages/shared`).** Every colleague location with a roster gets:
-  - a roster-personalised **"Monthly Pulse (personal links)"** survey with a real personal-link token per active roster entry; two are marked used with the matching two anonymous responses, the rest are outstanding;
-  - the **Day-30 Check-in**, **Day-90 Check-in** and **Exit Survey** lifecycle surveys; the person who started about 60 days ago has answered their day-30 survey, the leaver (left 10 days ago) has an exit link sent and not yet answered, and the person who started 20 days ago is not due yet;
-  - a colleague category **"Leadership & Conduct"** marked Sensitive, the group's sensitive-routing contact set to the group owner, and two comments that name a senior leader. Each is flagged `sensitiveRouted`, so it is hidden from Raw Feedback and Highlights, and its case is routed to that contact and marked Sensitive.
-  The sensitive cases are written in the shape the live pipeline produces; they do not go through the AI screen, so the seed needs no API key. No email is sent.
-- To see the **anonymity floor** (fewer than 5 responses), add a location with a few responses in Admin; every seeded location has more than 5.
-- Skyline Telecom and Aurora Airlines have Colleague Experience only (no switch in the menu). Meridian Bank and St. Augustine have both products (use the Customer / Colleague switch).
-- **Confidential (sensitive) cases.** The "Leadership & Conduct" cases are visible only to the group's confidential contact (the group owner in the demo). Branch users get a 404 for them, Admin sees only that a "Confidential concern" exists, and every contact view is written to the audit log (`sensitive_case.viewed`). Resolving one creates a Decision Log draft with generic wording and no comment text.
-- **Showcase polish (`showcasePolish.ts`, run by the showcase seed, or alone with `npm run seed:polish` in `packages/shared`).** Adds escalation assignments, Business Value inputs, case event trails, colleague goals with two decisions, and playbooks for the stand-alone businesses. It is idempotent.
-- **Lifecycle go-live date.** Each feedback point has a `lifecycleGoLiveAt` date; people whose milestone fell before it are skipped, never sent a late survey. The seeded lifecycle surveys use a go-live 200 days ago. The Roster page shows a "Next send preview" with the counts due.
-- **Product pages.** Roster, Colleague Pulse, Closing the Loop and CX-EX correlation redirect when the account does not have the product, so no empty forms appear.
-
-## Prospect demo tour (after "Seed showcase data" or "Add launch demo layer")
-
-Password for every showcase login is `ocx123`. Admin uses its own password above.
-
-| Show this | Log in as | Where to look |
-|---|---|---|
-| Whole platform, billing, support, contact inbox | admin.demo@oodelscore.com | Command Center, Accounts, Compass Questions, Platform Health, Contact messages |
-| Group view with branches | owner.meridian@showcase.oodel.test | Overview, Compare, Maturity (CX Pulse), Compass (ANCHOR, Evidence Fusion, "What to do next" REACH cards), Cases |
-| Escalation with full path and originator | owner.meridian@... then open a case at Meridian Bank – Airport Road | Case Management, open a case trail: "Raised by", every level, a step back |
-| Branch view (Customer X only) | owner.meridianbankairportroad@showcase.oodel.test | Feedback Points, Raw Feedback, Escalate button |
-| Staff survey (Colleague X) | owner.meridian@... switch to Colleague | Raw Feedback shows responses from the first; branches under five answers are not named |
-| Standalone business | The Olive Table owner | Feedback Points shows a Draft and a Closed survey with responses; Compass, Business Value, Highlights |
-| Programme evaluation | Amani Women's Empowerment and Peacebuilding Institute owner | Program Evaluation |
-
-Compass, Evidence Fusion and REACH are computed from the activity in the data, so they always agree with what the prospect sees elsewhere.
-
-## Precision Diagnostics Network (medical diagnostic chain, group with 6 branches)
-
-Group owner `owner.precision@showcase.oodel.test`; team members `regional.ops.precision@` (Lab Operations Manager) and `lead.precision@` (Patient Experience Lead); each branch has `owner.<branch name without spaces or punctuation>@` and `ops.` / `shiftlead.` logins, same pattern as the other groups. Runs Customer X and Colleague X.
-
-## Meridian Bank Group
-
-Now 8 branches (Downtown, Uptown, Airport Road, Riverside, Lakeview, Harbor Point, Greenfield, Old Town) across Central, North, East, South and West.
-
-## Amani Women's Empowerment & Peacebuilding Institute (NGO with trainings)
-
-`amani@showcase.oodel.test` and `amani.programs@showcase.oodel.test`. Training sessions with objective-linked questions and a Program Evaluation report per finished session.
-
-To load all of this on staging: Admin, Dev Data Tools, Seed showcase data (rebuilds the showcase accounts). To only fill gaps on existing data (sign-ins, self-assessments, value inputs, Insights reports, CX Pulse), press "Add launch demo layer".
+Note: `ocxdemo.com` is a real-looking domain. Keep it unregistered or make sure no real mailbox exists there, because actions like escalating a case or sending a closing-the-loop update can email these addresses.

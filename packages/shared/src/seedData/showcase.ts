@@ -82,6 +82,46 @@ export const SHOWCASE_PASSWORD = "ocx123";
 const responseScale = (): number => Math.max(1, Number(process.env.SHOWCASE_RESPONSE_SCALE ?? 1) || 1);
 const historyDays = (): number => Math.max(0, Number(process.env.SHOWCASE_HISTORY_DAYS ?? 0) || 0);
 const EMAIL_DOMAIN = "showcase.oodel.test";
+// Demo logins: short and memorable, e.g. meridian@ocxdemo.com, meridian.downtown@ocxdemo.com. Password for all: ocx123.
+const LOGIN_DOMAIN = "ocxdemo.com";
+
+/** "Meridian Bank – Downtown" -> "downtown"; "Horizon North Primary" (org "Horizon Schools Trust") -> "northprimary". */
+const SHORT_BRANCH_KEYS: Record<string, string> = {
+  "Meridian Bank – Airport Road": "airport",
+  "Meridian Bank – Harbor Point": "harbor",
+  "Precision Diagnostics – Main Lab": "main",
+  "Precision Diagnostics – Westside Collection Centre": "westside",
+  "Precision Diagnostics – Eastgate Imaging Centre": "eastgate",
+  "Precision Diagnostics – Northfield Lab": "northfield",
+  "Precision Diagnostics – Harbor Collection Point": "harbor",
+  "Precision Diagnostics – Airport Road Lab": "airport",
+  "St. Augustine Downtown Medical Center": "downtown",
+  "St. Augustine North Clinic": "north",
+  "St. Augustine Women's Health Pavilion": "womens",
+  "Skyline Telecom – Northgate Store": "northgate",
+  "Skyline Telecom – Eastside Store": "eastside",
+  "Skyline Telecom – Downtown Service Center": "downtown",
+  "Aurora Airlines – JFK Hub": "jfk",
+  "Aurora Airlines – LAX Hub": "lax",
+  "Aurora Airlines – ORD Hub": "ord",
+};
+
+function shortBranchKey(branchName: string, orgName: string): string {
+  if (SHORT_BRANCH_KEYS[branchName]) return SHORT_BRANCH_KEYS[branchName];
+  const afterDash = branchName.split(/\s[–-]\s/);
+  let part: string;
+  if (afterDash.length > 1) {
+    part = afterDash[afterDash.length - 1];
+  } else {
+    // Drop the leading words the branch shares with its group's name.
+    const orgWords = orgName.toLowerCase().split(/\s+/);
+    const words = branchName.split(/\s+/);
+    let i = 0;
+    while (i < words.length - 1 && words[i].toLowerCase() === orgWords[i]) i++;
+    part = words.slice(i).join(" ");
+  }
+  return part.toLowerCase().replace(/[^a-z0-9]+/g, "") || slug(branchName);
+}
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -777,7 +817,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     shiftRoleLabel: string;
     maxFeedbackPoints: number;
   }): Promise<Pick<BuiltBusiness, "business" | "ownerUser" | "teamFull" | "teamLimited">> {
-    const contactEmail = `owner.${params.slugKey}@${EMAIL_DOMAIN}`;
+    const contactEmail = `${params.slugKey}@${LOGIN_DOMAIN}`;
     const business = await Business.findOneAndUpdate(
       { name: params.name },
       {
@@ -827,7 +867,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     const ownerUser = await upsertActiveUser({ email: contactEmail, accountType: "business", parentId: business._id, lastLoginDaysAgo: randomInt(0, 5) });
     result.users++;
     const teamFull = await upsertActiveUser({
-      email: `ops.${params.slugKey}@${EMAIL_DOMAIN}`,
+      email: `${params.slugKey}.ops@${LOGIN_DOMAIN}`,
       accountType: "team_member",
       parentId: business._id,
       teamRole: params.opsRoleLabel,
@@ -838,7 +878,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     });
     result.users++;
     const teamLimited = await upsertActiveUser({
-      email: `shiftlead.${params.slugKey}@${EMAIL_DOMAIN}`,
+      email: `${params.slugKey}.shift@${LOGIN_DOMAIN}`,
       accountType: "team_member",
       parentId: business._id,
       teamRole: params.shiftRoleLabel,
@@ -1356,7 +1396,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     shiftRoleLabel: string;
     secondLeadRoleLabel: string;
   }): Promise<OrgResult> {
-    const contactEmail = `owner.${params.key}@${EMAIL_DOMAIN}`;
+    const contactEmail = `${params.key}@${LOGIN_DOMAIN}`;
     const org = await ParentOrganization.findOneAndUpdate(
       { name: params.name },
       {
@@ -1386,7 +1426,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     const orgOwner = await upsertActiveUser({ email: contactEmail, accountType: "parent_org", parentId: org._id, lastLoginDaysAgo: randomInt(0, 4) });
     result.users++;
     const opsLead = await upsertActiveUser({
-      email: `regional.ops.${params.key}@${EMAIL_DOMAIN}`,
+      email: `${params.key}.ops@${LOGIN_DOMAIN}`,
       accountType: "team_member",
       parentId: org._id,
       teamRole: params.opsRoleLabel,
@@ -1397,7 +1437,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     });
     result.users++;
     const secondLead = await upsertActiveUser({
-      email: `lead.${params.key}@${EMAIL_DOMAIN}`,
+      email: `${params.key}.lead@${LOGIN_DOMAIN}`,
       accountType: "team_member",
       parentId: org._id,
       teamRole: params.secondLeadRoleLabel,
@@ -1417,7 +1457,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
         parentOrgId: org._id,
         region: branchDef.region,
         billingAssignment: branchDef.billing ?? "group_pays",
-        slugKey: slug(branchDef.name),
+        slugKey: `${params.key}.${shortBranchKey(branchDef.name, params.name)}`,
         products: params.products,
         questionTemplateId,
         opsRoleLabel: params.opsRoleLabel,
@@ -1600,7 +1640,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     parentOrgId: null,
     region: "",
     billingAssignment: "branch_pays",
-    slugKey: "olivetable",
+    slugKey: "olive",
     products: ["customer_experience"],
     questionTemplateId: templateBySector.get("restaurant")!._id,
     opsRoleLabel: "General Manager",
@@ -1625,7 +1665,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
 
   // --- 7. Amani Women's Empowerment & Peacebuilding Institute — Non-Profit,
   // standalone, events-based (training sessions, not a fixed location), CX only ---
-  const amaniEmail = `amani@${EMAIL_DOMAIN}`;
+  const amaniEmail = `amani@${LOGIN_DOMAIN}`;
   const amaniBusiness = await Business.findOneAndUpdate(
     { name: "Amani Women's Empowerment & Peacebuilding Institute" },
     {
@@ -1653,7 +1693,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   const amaniOwner = await upsertActiveUser({ email: amaniEmail, accountType: "business", parentId: amaniBusiness._id, lastLoginDaysAgo: 1 });
   result.users++;
   const amaniOps = await upsertActiveUser({
-    email: `amani.programs@${EMAIL_DOMAIN}`,
+    email: `amani.ops@${LOGIN_DOMAIN}`,
     accountType: "team_member",
     parentId: amaniBusiness._id,
     teamRole: "Program Coordinator",
