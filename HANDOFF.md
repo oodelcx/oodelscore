@@ -2,6 +2,11 @@
 
 Read `CLAUDE.md`, then this file, then `DEMO-ACCOUNTS.md`. Do not read `PRODUCT-ROADMAP.md`'s status table as truth: it is stale (Compass, Program Evaluation, Feature flags and the site redesign are all built; only Phase 8 "later" items are not).
 
+## Update (launch build, all on `main`; nothing on `production`)
+Built per the owner's final list: branch heads see Customer X only; page guards; survey Draft/Live/Closed with Close/Reopen and View responses; respondent-detail fields always shown; simple staff surveys (group builds once, ticks branches, one link+QR each; roster, personal links, lifecycle surveys, staff Closing the Loop and Sensitive categories retired; branch name hidden until 5 responses; editable anonymity line; viewers = owner + team members with the Colleague Pulse permission, granted by Admin); case rule (severe response opens a case, max 5 per location per day, "Make this a case" button, alert rules email only); billing safeguards (one open checkout, idempotency key, each Stripe event handled once); second "See pricing" button hidden while Pricing is off; marketing copy rewritten to real capabilities (COPY_REV 6 rewrites the stored copy on next deploy).
+Deliberately left for later: evidence fusion, REACH, rosters, staff emails, staff cases. Group-level staff totals still exclude branches under 5 responses.
+Not yet done: automated Playwright checks on staging and QA (owner declined QA for now). Delete the staging test location "Skyline Telecom – QA Floor Test" in Admin. Staging must be redeployed.
+
 ## Rules from the owner (founder)
 - **Nothing goes to `production`.** All work lands on `main` only. Never merge `main` into `production` without an explicit instruction in that message.
 - Confirm before any wipe or reseed of staging, any real Stripe charge, or any real email to a non-`.test` address.

@@ -49,7 +49,7 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroSubheadline:
         "OodelCX turns every QR scan — from a customer or a colleague — into tracked, owned work, not another number on a dashboard nobody opens. Built for one location or a thousand.",
       metaDescription:
-        "OodelCX turns customer and colleague feedback into tracked, owned work — QR-code surveys, AI Insights reports, and Case Management built for one location or a thousand.",
+        "OodelCX turns customer and colleague feedback into tracked, owned work — QR-code and link surveys, AI Insights reports, and Case Management for customer feedback, built for one location or a thousand.",
       loopEyebrow: "The 5C Framework",
       loopHeadline: "Capture. Clarify. Claim. Close. Confirm.",
       loopStages: JSON.stringify([
@@ -65,7 +65,7 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroBuiltForLine: "bank branch networks, retail chains, school trusts, and healthcare groups",
       heroTwoProductsHeadline: "Two ways to listen, one platform to act on both.",
       heroTwoProductsBody:
-        "Customer X and Colleague X run on the exact same engine — QR feedback, AI Insights, Case Management, and a maturity score — pointed at two different audiences. Run one or both.",
+        "Customer X and Colleague X run on the same survey engine and Pulse score, pointed at two different audiences: customers get cases and follow-through, colleagues get a simple staff survey whose answers go to the people you choose. Run one or both.",
       heroTwoProductsCxLabel: "Customer X",
       heroTwoProductsCxHeading: "Customer X",
       heroTwoProductsCxBody: "What customers, clients, or patients tell you after an interaction.",
@@ -146,7 +146,7 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
       heroSubhead:
         "Customer X and Colleague X are priced and billed separately, so you only pay for what you actually run. Every plan includes AI Insights reporting and unlimited responses.",
       metaDescription:
-        "OodelCX pricing for Customer X and Colleague X — single locations and multi-branch groups, every plan includes AI Insights reporting, Case Management, and unlimited responses.",
+        "OodelCX pricing for Customer X and Colleague X — single locations and multi-branch groups, every plan includes AI Insights reporting and unlimited responses.",
       loopStripHeadline: "Every plan is the whole loop, not a slice of it.",
       loopStripItems: JSON.stringify([
         { label: "Capture", body: "Unlimited feedback points (QR or link) and responses" },
@@ -366,7 +366,7 @@ const RAW_SEED_SITE_CONTENT: SeedSiteContent[] = [
     fields: {
       heroHeadline: "Colleague X: the same rigor, pointed at your own team.",
       heroSubheadline:
-        "Staff hear about a broken process, a bad rota, or a manager problem long before it shows up as a resignation letter. Colleague X gives that feedback the same QR-to-case pipeline as your customers get — including a route that bypasses the manager entirely when it needs to.",
+        "Staff hear about a broken process, a bad rota, or a manager problem long before it shows up as a resignation letter. Colleague X gives head office one simple staff survey, published to every branch, with answers visible only to the people you choose — never routed through the line manager.",
       metaDescription:
         "Colleague X: internal feedback for staff, built on the same engine as OodelCX's Customer Experience product — QR surveys, AI Insights, responses sent to the people you choose, and eNPS.",
       features: JSON.stringify([

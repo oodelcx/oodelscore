@@ -70,16 +70,52 @@ const CX_FEATURES: Feature[] = [
     body: "Weekly, monthly, quarterly and yearly reports are generated from the recorded data, limited to what the data supports, and reviewed before they are shared outside your team.",
   },
   {
+    tag: "OodelCX Compass",
+    group: "understand",
+    headline: "A maturity check on how you run customer experience",
+    body: "A short assessment across six dimensions (authority, numbers, culture, hearing, ownership and rhythm) places the organisation on a ladder and names what holds it back. It can be retaken, so progress shows over time.",
+  },
+  {
+    tag: "Highlights",
+    group: "understand",
+    headline: "Strong feedback is surfaced, not only complaints",
+    body: "Standout positive comments and recurring positive themes from the last 90 days are collected in one place, so good work is recognised and shared.",
+  },
+  {
+    tag: "Program Evaluation",
+    group: "understand",
+    headline: "Training and events judged against what people said",
+    body: "For a training programme or event, enter its aim and expected outcomes. The platform compares them with the feedback received and reports where they match and where they do not.",
+  },
+  {
+    tag: "Closing the Loop",
+    group: "act",
+    headline: "Tell the person what was done",
+    body: "Where a respondent has left contact details, you can send them a reply about the case, and the reply is recorded on the case timeline.",
+  },
+  {
+    tag: "Improvement Initiatives",
+    group: "act",
+    headline: "Larger fixes tracked as projects",
+    body: "Work that is bigger than a single case is tracked as an initiative with an owner, notes and status, and linked to the cases behind it.",
+  },
+  {
+    tag: "Business Value",
+    group: "act",
+    headline: "What negative feedback is worth",
+    body: "Using figures you enter about your own business, the platform estimates the value at stake in unresolved negative feedback and the value of what has been resolved. Nothing is pulled from an accounting system.",
+  },
+  {
     tag: "Case Management",
     group: "act",
     headline: "A defined place for corrective work",
-    body: "Flagged feedback becomes a case with a named owner, a due date and a status. Every change is kept in one timeline, so each issue has a clear line of responsibility.",
+    body: "A very poor response opens a case automatically (up to five per location per day), and any response can be made a case with one click. Each case has a named owner, a due date, a status and one timeline of every change.",
   },
   {
     tag: "Automatic Alerts",
     group: "act",
     headline: "Notification when a threshold is crossed",
-    body: "Thresholds can be set for a score decline, a sudden dip or an outlier branch. The responsible person is notified when one is reached, rather than at the end of the reporting period.",
+    body: "Thresholds can be set for a score decline, a sudden dip or an outlier branch. The responsible person is emailed when one is reached, rather than at the end of the reporting period.",
   },
   {
     tag: "Guided Playbooks",
@@ -163,33 +199,15 @@ const EX_FEATURES: Feature[] = [
     body: "Weekly, monthly, quarterly and yearly reports are generated from recorded responses and reviewed before they are shared beyond HR or leadership.",
   },
   {
-    tag: "Case Management",
-    group: "act",
-    headline: "Concerns tracked to resolution",
-    body: "The same Case Management used for customer feedback gives each colleague concern an owner, a due date and a status.",
-  },
-  {
-    tag: "Guided Playbooks",
-    group: "act",
-    headline: "Agreed responses to recurring concerns",
-    body: "A recurring issue, such as an equipment fault or a scheduling pattern, attaches a Playbook with the steps already agreed.",
-  },
-  {
     tag: "Decision Log",
     group: "act",
     headline: "Changes recorded with their measured effect",
     body: "A rota change or a new onboarding process is logged with its trigger and a before-and-after measure.",
   },
-  {
-    tag: "Automatic Alerts",
-    group: "act",
-    headline: "Notification when sentiment changes",
-    body: "A fall in Colleague Pulse or eNPS, or an outlier branch, triggers an alert to the responsible person.",
-  },
 ];
 
 /** Bump when the copy below changes, so each page is rewritten once more (and only once) per revision. */
-export const COPY_REV = "5";
+export const COPY_REV = "6";
 
 const FINAL_CTA_SUB = "A twenty-minute walkthrough using a scenario close to your own.";
 
@@ -255,7 +273,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     heroTwoProductsEyebrow: "Two products, one operating model",
     heroTwoProductsHeadline: "One operating model for the two groups every organisation depends on.",
     heroTwoProductsBody:
-      "Customer X covers the people an organisation serves. Colleague X covers the people who serve them. Each can be used on its own, or both together. They share the same framework, case management and maturity measure, so the two can be read side by side.",
+      "Customer X covers the people an organisation serves. Colleague X covers the people who serve them. Each can be used on its own, or both together. They use the same survey engine and the same Pulse measure, so the two can be read side by side.",
     heroTwoProductsCxLabel: "The people you serve",
     heroTwoProductsCxBody: "How customers, clients and patients experience the organisation after each interaction.",
     heroTwoProductsCeLabel: "The people who work for you",
@@ -282,7 +300,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     heroSubhead:
       "Customer X and Colleague X are priced and billed separately, so an organisation pays only for what it runs. Every plan includes AI Insights reporting and unlimited responses.",
     metaDescription:
-      "OodelCX pricing for Customer X and Colleague X, for single locations and multi-branch groups. Every plan includes AI Insights reporting, Case Management and unlimited responses.",
+      "OodelCX pricing for Customer X and Colleague X, for single locations and multi-branch groups. Every plan includes AI Insights reporting and unlimited responses.",
     loopStripHeadline: "Every plan covers the full framework.",
     loopStripItems: j([
       { label: "Capture", body: "Unlimited feedback points (QR or link) and responses" },
@@ -313,7 +331,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
   "colleague-x": {
     heroHeadline: "Colleague experience, managed with the same discipline.",
     heroSubheadline:
-      "Colleagues often see a failing process, an unworkable rota or a management problem well before it appears as turnover. Colleague X gives that feedback the same path from first response to resolution as customer feedback, including a route that does not pass through the line manager when the concern requires it.",
+      "Colleagues often see a failing process, an unworkable rota or a management problem well before it appears as turnover. Colleague X gives head office a simple way to hear it: one staff survey, published to every branch, with responses visible only to the people head office chooses and never routed through the line manager.",
     metaDescription:
       "Colleague X from OodelCX: internal feedback collected by QR code or link, with responses sent to the people you choose, and eNPS.",
     alwaysOnText: "Anonymity controls, roles and two-factor authentication on every plan",
@@ -354,7 +372,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     trustHeadline: "Built to be used carefully.",
     trustIntro: "These describe how the product behaves today.",
     trustItems: j([
-      { title: "Small groups stay anonymous", body: "Colleague results are never shown for a group of fewer than five responses, so no individual can be picked out." },
+      { title: "Small groups stay anonymous", body: "A branch is not named in staff results until at least five people there have answered, so no individual can be picked out." },
       { title: "AI stays within the evidence", body: "Investigations are written only from figures the platform has computed, and each conclusion is labelled likely, inferred or uncertain." },
       { title: "A person reviews reports", body: "AI Insights reports are reviewed before they are published to an account." },
       { title: "Access is controlled", body: "Per-person permissions limit what each team member can open, two-factor authentication protects every login, and sensitive account changes are recorded in an audit log." },
@@ -369,7 +387,7 @@ export const COPY_V2: Record<string, Record<string, string>> = {
     storyParagraphs: j([
       "Collecting feedback is the visible part. What follows needs an agreed process: who is responsible for an issue, by when it should be resolved, who is told, and how anyone would know afterwards that it made a difference.",
       "When that process is written down and shared, patterns are noticed sooner, responsibility is clear, and the decisions that followed can be reviewed and repeated.",
-      "OodelCX is built to supply that process, for both sides of an organisation. Every score on the dashboard traces to a case with an owner, and every case traces to a decision whose effect can be measured, for the customers an organisation serves and for the colleagues who serve them.",
+      "OodelCX is built to supply that process, for both sides of an organisation. For customers, every score on the dashboard traces to cases with owners, and every case to a decision whose effect can be measured. For colleagues, head office hears every response and can see how each branch compares.",
     ]),
     beliefsHeadline: "The principles we build to",
     beliefs: j([
