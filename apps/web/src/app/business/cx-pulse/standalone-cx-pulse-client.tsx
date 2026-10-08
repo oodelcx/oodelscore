@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PulseNextStep } from "@/components/pulse-next-step";
 import { InfoTip } from "@/components/info-tip";
 import { PulseSelfAssessmentCard } from "@/components/pulse-self-assessment-card";
 
@@ -65,6 +66,8 @@ export default function StandaloneCxPulseClient({ tooltips }: { tooltips: Record
         <InfoTip text={tooltips["cx-pulse-composite"]} />
       </h1>
       <p className="subtitle">Your customer-experience maturity score and how it&apos;s trending over time.</p>
+
+      <PulseNextStep portal="business" />
 
       <div className="card" style={{ marginBottom: 20 }}>
         <h3>Your score</h3>

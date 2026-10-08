@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PulseNextStep } from "@/components/pulse-next-step";
 import { InfoTip } from "@/components/info-tip";
 import { PulseSelfAssessmentCard } from "@/components/pulse-self-assessment-card";
 
@@ -78,6 +79,8 @@ export default function BranchCxPulseClient({ tooltips }: { tooltips: Record<str
         Your score, trend, and the other branches in your region{data.region ? ` (${data.region})` : ""} — something a
         standalone business can&apos;t see.
       </p>
+
+      <PulseNextStep portal="business" />
 
       <div className="grid grid-2" style={{ marginBottom: 20 }}>
         <div className="card">

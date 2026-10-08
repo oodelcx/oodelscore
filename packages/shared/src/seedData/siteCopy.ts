@@ -207,7 +207,7 @@ const EX_FEATURES: Feature[] = [
 ];
 
 /** Bump when the copy below changes, so each page is rewritten once more (and only once) per revision. */
-export const COPY_REV = "6";
+export const COPY_REV = "7";
 
 const FINAL_CTA_SUB = "A twenty-minute walkthrough using a scenario close to your own.";
 

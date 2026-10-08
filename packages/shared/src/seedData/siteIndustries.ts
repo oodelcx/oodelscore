@@ -6,8 +6,9 @@
  * category, alerts at a threshold, two-hour time-of-day concentration for
  * negative comments, branch-by-branch comparison, an escalation chain, a
  * Decision Log with before-and-after results, scheduled AI Insights reports,
- * and, for colleague feedback, sensitive-category routing to a designated
- * contact and a minimum group size of five before any result is shown.
+ * and, for colleague feedback, one survey published to every branch with answers
+ * visible only to the people head office chooses, and a branch left unnamed
+ * until five people there have answered.
  * Wording is sector-neutral (branch, campus, store, site, station, dealership)
  * so it reads the same in any country.
  */
@@ -61,7 +62,7 @@ export const SOLUTION_INDUSTRIES = [
       measures: ["Waiting time", "Staff courtesy", "Clarity of fees and advice", "Handling of complaints", "Likelihood to recommend"],
       uses: [
         ["pin", "Branch-level visibility", "When a branch falls below its threshold, the regional lead is notified the same day."],
-        ["shield", "Named owners by category", "Map complaint categories, such as fees and advice, to a named owner such as a compliance contact."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "A record for every case", "Each case keeps its owner, replies and decision history in one timeline."],
         ["pin", "Branch comparison", "Compare branches on the same categories, with each score set against its own history."],
       ],
@@ -75,13 +76,13 @@ export const SOLUTION_INDUSTRIES = [
         "Front-line staff see process failures, target pressure and customer-handling problems before anyone else. Raising them with a line manager is not always possible, so concerns surface late, often in exit interviews. Concerns about conduct are among those an organisation most needs to hear early.",
       measures: ["Workload", "Management support", "Training", "Tools and systems", "Likelihood to recommend (eNPS)"],
       uses: [
-        ["shield", "A route past the usual owner", "Categories you mark as sensitive go to a designated contact instead of the usual category owner."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["pin", "Branch comparison", "Compare colleague results by branch. Groups with fewer than five responses are never shown."],
         ["log", "Fixes with outcomes", "Log a rota or process change and compare results before and after."],
-        ["pin", "Reply to everyone", "Send a “you said, we did” update to the whole roster without identifying who responded."],
+        ["pin", "One survey, every branch", "Build the staff survey once and publish it to every branch, each with its own link and QR code."],
       ],
       scene: "Branch 14: workload concern, anonymous",
-      steps: [CONCERN_LINK, "Routed to the designated HR contact", "Update sent to the roster"],
+      steps: [CONCERN_LINK, "Seen by the people head office chose", "Results read branch by branch"],
     },
   }),
   industry({
@@ -97,7 +98,7 @@ export const SOLUTION_INDUSTRIES = [
       uses: [
         ["pin", "Campus comparison", "See which site is declining before the term review."],
         ["log", "Term-over-term trends", "Every score is set against the previous term."],
-        ["shield", "Named owners by category", "Facilities, communication and pastoral issues each go to a named owner."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Recurring issue flags", "The same issue raised repeatedly at one campus is flagged for review."],
       ],
       scene: "North Campus: communication score",
@@ -110,7 +111,7 @@ export const SOLUTION_INDUSTRIES = [
         "Teaching and support staff seldom have a confidential way to raise workload, leadership or resourcing concerns. Without one, these emerge late, often as resignations at the end of a term, when little can be done about them.",
       measures: ["Workload", "Leadership support", "Resources", "Professional development", "Likelihood to recommend (eNPS)"],
       uses: [
-        ["shield", "Confidential routing", "Concerns about leadership go to a designated contact outside the school."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["pin", "Results by location and role", "Read patterns by campus and role. Groups with fewer than five responses are never shown."],
         ["log", "eNPS each term", "A trend line for the board, not a one-off survey."],
         ["pin", "Close the loop", "Tell staff what changed, without identifying who raised it."],
@@ -132,7 +133,7 @@ export const SOLUTION_INDUSTRIES = [
       uses: [
         ["pin", "Store comparison", "Compare stores on the same categories and see which one is pulling the average down."],
         ["log", "Time-of-day patterns", "Negative comments are grouped into two-hour windows, so a lunchtime queue stands out."],
-        ["shield", "Alerts to the right manager", "A score drop notifies the store lead or the regional manager, as you configure."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Playbooks for repeat issues", "A recurring queue or stock problem gets the same agreed response across the chain."],
       ],
       scene: "Downtown: waiting time, midday",
@@ -146,7 +147,7 @@ export const SOLUTION_INDUSTRIES = [
       measures: ["Scheduling and rotas", "Equipment and stock handling", "Manager support", "Training", "Likelihood to recommend (eNPS)"],
       uses: [
         ["pin", "Store comparison", "Compare colleague results across stores. Groups with fewer than five responses are never shown."],
-        ["shield", "A route past the store manager", "Concerns about a store manager go to a designated contact."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Rota changes, measured", "See whether a new scheduling policy moved the number."],
         ["pin", "Short, repeatable surveys", "A brief survey by QR code or link fits between shifts."],
       ],
@@ -167,7 +168,7 @@ export const SOLUTION_INDUSTRIES = [
       uses: [
         ["pin", "Facility comparison", "Compare facilities on waiting time and other rated categories."],
         ["log", "Before and after", "Measure whether a new triage or check-in flow changed the score."],
-        ["shield", "Named owners by category", "Clinical and non-clinical concerns can go to different named owners."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Escalation chain", "A case that stalls moves up the chain you define."],
       ],
       scene: "Clinic B: waiting-time complaint",
@@ -180,13 +181,13 @@ export const SOLUTION_INDUSTRIES = [
         "Pressure on clinical and support teams shows first as small, repeated signals: understaffing, equipment, shift patterns. Without a safe channel they surface later as absence and turnover.",
       measures: ["Staffing levels", "Equipment", "Shift patterns", "Management support", "Likelihood to recommend (eNPS)"],
       uses: [
-        ["shield", "Confidential escalation", "Sensitive concerns go to a designated contact, not the usual owner."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["pin", "Site-level pulse", "Read results by site and role. Groups with fewer than five responses are never shown."],
         ["log", "Staffing decisions, measured", "Log a change and track the result."],
         ["pin", "Alert on a drop", "A fall in Colleague Pulse or eNPS below a threshold notifies the right person."],
       ],
       scene: "Site B: understaffing theme",
-      steps: [CONCERN_LINK, "Alert sent to the HR contact", OWNED],
+      steps: [CONCERN_LINK, "Seen by the people head office chose", OWNED],
     },
   }),
   industry({
@@ -202,7 +203,7 @@ export const SOLUTION_INDUSTRIES = [
       uses: [
         ["pin", "Store and service-point comparison", "Compare stores and service points on the same categories."],
         ["log", "Themes across comments", "Recurring topics such as billing or installation are grouped automatically."],
-        ["shield", "Named owners by category", "Billing, network and installation issues can go to separate named owners."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Investigation", "See the time-of-day and branch concentration behind a drop in a category."],
       ],
       scene: "Store 9: billing confusion",
@@ -216,7 +217,7 @@ export const SOLUTION_INDUSTRIES = [
       measures: ["Workload and targets", "Tools and systems", "Manager support", "Training", "Likelihood to recommend (eNPS)"],
       uses: [
         ["pin", "Team and site comparison", "Compare colleague results by site. Groups with fewer than five responses are never shown."],
-        ["shield", "A route past the usual owner", "Sensitive categories go to a designated contact."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Changes, measured", "Log a change to a script or tool and compare results before and after."],
         ["pin", "Pulse over time", "Colleague Pulse and eNPS are tracked as a trend, not a single survey."],
       ],
@@ -238,7 +239,7 @@ export const SOLUTION_INDUSTRIES = [
         ["pin", "Feedback points by location", "Place a QR code at a gate, lounge or baggage hall, or send a link after the flight."],
         ["pin", "Station comparison", "Compare airports or stations on the same categories."],
         ["log", "Trends over time", "Every score is set against its own history."],
-        ["shield", "Named owners by category", "Baggage, cabin and ground issues each go to a named owner."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
       ],
       scene: "Station C: baggage-claim wait",
       steps: [BY_LINK, "Concentrated in one time window", OWNED],
@@ -251,7 +252,7 @@ export const SOLUTION_INDUSTRIES = [
       measures: ["Rosters and rest", "Equipment and tools", "Management support", "Training", "Likelihood to recommend (eNPS)"],
       uses: [
         ["pin", "Short surveys by link or QR", "A brief survey suits people who are rarely in one place."],
-        ["shield", "A route past the usual owner", "Sensitive categories go to a designated contact."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["pin", "Base comparison", "Compare colleague results by base. Groups with fewer than five responses are never shown."],
         ["log", "Roster changes, measured", "Log a change and compare results before and after."],
       ],
@@ -272,7 +273,7 @@ export const SOLUTION_INDUSTRIES = [
       uses: [
         ["pin", "Comparison by event and facilitator", "Compare sessions, locations and facilitators on the same questions."],
         ["log", "Programme evaluation", "Compare what a training set out to deliver with what participants said."],
-        ["shield", "Feedback without identification", "Respondents are not required to identify themselves."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Reports for funders and boards", "Export a structured report for any period."],
       ],
       scene: "Workshop, Site A: relevance score",
@@ -285,13 +286,13 @@ export const SOLUTION_INDUSTRIES = [
         "Staff and volunteers work across offices and field locations, often with limited resources and high commitment. Strain tends to appear as turnover rather than as complaints, and concerns about managers are hard to raise in small teams.",
       measures: ["Workload", "Safety and wellbeing", "Resources", "Management support", "Likelihood to recommend (eNPS)"],
       uses: [
-        ["shield", "A route past the usual owner", "Sensitive categories go to a designated contact."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["pin", "Location comparison", "Compare colleague results by location. Groups with fewer than five responses are never shown."],
         ["log", "Changes, measured", "Log a change and compare results before and after."],
-        ["pin", "Close the loop", "Send a “you said, we did” update to the whole roster."],
+        ["pin", "One survey, every branch", "Build the staff survey once and publish it to every branch, each with its own link and QR code."],
       ],
       scene: "Field office: workload theme",
-      steps: [CONCERN_LINK, "Routed to the designated contact", "Update sent to the roster"],
+      steps: [CONCERN_LINK, "Seen by the people head office chose", "Results read branch by branch"],
     },
   }),
   industry({
@@ -307,7 +308,7 @@ export const SOLUTION_INDUSTRIES = [
       uses: [
         ["pin", "Dealership comparison", "Compare dealerships and service centres on the same categories."],
         ["pin", "Separate feedback points", "Use separate QR codes or links for sales, service and delivery."],
-        ["shield", "Named owners by category", "Sales, workshop and parts issues each go to a named owner."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Before and after", "Measure whether a change to the service process moved the score."],
       ],
       scene: "Dealership 7: service waiting time",
@@ -321,7 +322,7 @@ export const SOLUTION_INDUSTRIES = [
       measures: ["Workshop equipment", "Workload and scheduling", "Training", "Management support", "Likelihood to recommend (eNPS)"],
       uses: [
         ["pin", "Site comparison", "Compare colleague results by site. Groups with fewer than five responses are never shown."],
-        ["shield", "A route past the usual owner", "Sensitive categories go to a designated contact."],
+        ["shield", "Seen only by people you choose", "Staff responses go to the people head office picks, never to a line manager by default."],
         ["log", "Changes, measured", "Log an equipment or scheduling change and compare results before and after."],
         ["pin", "Short surveys by QR or link", "A brief survey fits around the workshop day."],
       ],
