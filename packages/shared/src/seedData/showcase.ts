@@ -37,7 +37,7 @@ import { ProgramEvaluationReport } from "../models/ProgramEvaluationReport";
 import { CompassAssessment } from "../models/CompassAssessment";
 import { CompassAssessmentHistory } from "../models/CompassAssessmentHistory";
 import { seedAmaniPrograms } from "./amaniPrograms";
-import { seedColleagueFlowsDemo } from "./colleagueFlowsDemo";
+import { seedLaunchDemoExtras } from "./launchDemo";
 import { seedShowcasePolish } from "./showcasePolish";
 import { RosterSurveyToken } from "../models/RosterSurveyToken";
 import { seedCompassDemo, type CompassDemoOwner, type CompassDemoProfile } from "./compassDemo";
@@ -2490,15 +2490,11 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   const compassSeeded = await seedCompassDemo(compassOwners);
   console.log(`[showcase] compass: ${compassSeeded.assessments} assessments, ${compassSeeded.history} history rows`);
 
-  // Colleague Experience flows the baseline data doesn't show: personal-link
-  // surveys, lifecycle surveys, and sensitive-comment routing.
-  const colleagueFlows = await seedColleagueFlowsDemo();
-  console.log(
-    `[showcase] colleague flows: ${colleagueFlows.locations} locations, ${colleagueFlows.tokensMinted} tokens (${colleagueFlows.tokensUsed} used), ${colleagueFlows.responses} responses, ${colleagueFlows.sensitiveCases} sensitive cases`
-  );
-
   const polish = await seedShowcasePolish();
   console.log(`[showcase] polish: ${JSON.stringify(polish)}`);
+
+  const launch = await seedLaunchDemoExtras();
+  console.log(`[showcase] launch extras: ${JSON.stringify(launch)}`);
 
   // Run the evaluation for every programme session that has finished.
   for (const evt of amaniPrograms.eventIds) {

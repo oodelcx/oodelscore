@@ -145,3 +145,19 @@ The other built-in demo logins (`group.demo@`, `business.demo@`, `branch.demo@oo
 - **Showcase polish (`showcasePolish.ts`, run by the showcase seed, or alone with `npm run seed:polish` in `packages/shared`).** Adds escalation assignments, Business Value inputs, case event trails, colleague goals with two decisions, and playbooks for the stand-alone businesses. It is idempotent.
 - **Lifecycle go-live date.** Each feedback point has a `lifecycleGoLiveAt` date; people whose milestone fell before it are skipped, never sent a late survey. The seeded lifecycle surveys use a go-live 200 days ago. The Roster page shows a "Next send preview" with the counts due.
 - **Product pages.** Roster, Colleague Pulse, Closing the Loop and CX-EX correlation redirect when the account does not have the product, so no empty forms appear.
+
+## Prospect demo tour (after "Seed showcase data" or "Add launch demo layer")
+
+Password for every showcase login is `ocx123`. Admin uses its own password above.
+
+| Show this | Log in as | Where to look |
+|---|---|---|
+| Whole platform, billing, support, contact inbox | admin.demo@oodelscore.com | Command Center, Accounts, Compass Questions, Platform Health, Contact messages |
+| Group view with branches | owner.meridian@showcase.oodel.test | Overview, Compare, Maturity (CX Pulse), Compass (ANCHOR, Evidence Fusion, "What to do next" REACH cards), Cases |
+| Escalation with full path and originator | owner.meridian@... then open a case at Meridian Bank – Airport Road | Case Management, open a case trail: "Raised by", every level, a step back |
+| Branch view (Customer X only) | owner.meridianbankairportroad@showcase.oodel.test | Feedback Points, Raw Feedback, Escalate button |
+| Staff survey (Colleague X) | owner.meridian@... switch to Colleague | Raw Feedback shows responses from the first; branches under five answers are not named |
+| Standalone business | The Olive Table owner | Feedback Points shows a Draft and a Closed survey with responses; Compass, Business Value, Highlights |
+| Programme evaluation | Amani Women's Empowerment and Peacebuilding Institute owner | Program Evaluation |
+
+Compass, Evidence Fusion and REACH are computed from the activity in the data, so they always agree with what the prospect sees elsewhere.

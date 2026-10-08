@@ -64,6 +64,7 @@ export * from "./observability/stuckOnboarding";
 export * from "./seedData/showcase";
 export { seedColleagueFlowsDemo } from "./seedData/colleagueFlowsDemo";
 export { seedShowcasePolish } from "./seedData/showcasePolish";
+export { seedLaunchDemoExtras } from "./seedData/launchDemo";
 export * from "./escalation/engine";
 export * from "./billing/gate";
 export * from "./features/flags";

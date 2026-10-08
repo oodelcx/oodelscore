@@ -50,14 +50,14 @@ function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
 
-interface TemplateQuestion {
+export interface TemplateQuestion {
   _id?: Types.ObjectId;
   type: string;
   categoryId: Types.ObjectId | null;
   options?: string[];
 }
 
-function answerFor(question: TemplateQuestion, comment: string, positive: boolean) {
+export function answerFor(question: TemplateQuestion, comment: string, positive: boolean) {
   let value: unknown;
   switch (question.type) {
     case "star_1_5":

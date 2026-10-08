@@ -37,7 +37,7 @@ export default function DevDataToolsPage() {
       return;
     }
     setExtrasDone(
-      `Colleague flows: ${data.colleagueFlows.locations} locations, ${data.colleagueFlows.tokensMinted} personal links, ${data.colleagueFlows.sensitiveCases} confidential cases. Polish data added.`
+      `Added: ${data.launch.escalationJourneys} escalation journeys, ${data.launch.staffSurveys} staff surveys (${data.launch.staffResponses} responses), ${data.launch.draftSurveys} draft and ${data.launch.closedSurveys} closed surveys, ${data.launch.originators} case originators, ${data.launch.contactMessages} inbox messages.`
     );
   }
 
@@ -211,15 +211,17 @@ export default function DevDataToolsPage() {
       </div>
 
       <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
-        <h3>Add colleague flows and polish data</h3>
+        <h3>Add launch demo layer</h3>
         <p className="card-sub">
-          Adds the personal-link pulse surveys, the day-30, day-90 and exit surveys, the confidential cases, and the extra
-          demo data (escalation assignments, case trails, goals, playbooks) on top of the existing showcase data. Nothing
-          is wiped and nothing is duplicated, so it is safe to press again. No email is sent.
+          Adds the launch demo layer on top of the showcase data: full escalation journeys with the originator, draft and
+          closed surveys, the staff survey published to every branch (some branches above and some below five
+          responses), contact messages, and the extra polish data. Compass, Evidence Fusion and REACH are computed from
+          the activity already there. Nothing is wiped and nothing is duplicated, so it is safe to press again. No email
+          is sent.
         </p>
         {extrasError && <p className="error-text">{extrasError}</p>}
         <button className="btn btn-dark" disabled={extrasBusy} onClick={runSeedExtras}>
-          {extrasBusy ? "Adding…" : "Add colleague flows and polish data"}
+          {extrasBusy ? "Adding…" : "Add launch demo layer"}
         </button>
         {extrasDone && <div className="callout" style={{ marginTop: 12 }}>{extrasDone}</div>}
       </div>
