@@ -160,20 +160,21 @@
 .mkt .ds-rail a.on { background: var(--acc); color: #04130D; } .ds-rail a.on i { background: #04130D; color: var(--acc); }
 .mkt .ds-rail .ds-rail-note { margin-left: auto; font-size: 12.5px; color: var(--muted); flex: none; padding-left: 14px; }
 @media (max-width: 760px) { .mkt .ds-rail .ds-rail-note { display: none; } }
-.mkt .ds-chap { padding-block: clamp(36px, 6vw, 72px); }
+.mkt .ds-chap { padding-block: clamp(28px, 4vw, 52px); }
 .mkt .ds-chap:nth-of-type(even) { background: var(--bg2); }
-.mkt .ds-chap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 72px); align-items: start; }
+.mkt .ds-chap-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(24px, 4vw, 56px); align-items: center; }
+.mkt .ds-chap:nth-of-type(even) .ds-chap-grid { grid-template-columns: 0.9fr 1.1fr; }
 .mkt .ds-chap:nth-of-type(even) .ds-chap-grid .ds-txt { order: 2; }
 .mkt .ds-chap .ds-big { font-size: clamp(40px, 6vw, 76px); font-weight: 800; letter-spacing: -.045em; line-height: .95; color: var(--ink); }
 .mkt .ds-chap .ds-big::first-letter { color: var(--acc); }
-.mkt .ds-chap .ds-def { margin: 12px 0 22px; font-size: 18px; color: var(--muted); max-width: 44ch; }
+.mkt .ds-chap .ds-def { margin: 10px 0 16px; font-size: 18px; color: var(--muted); max-width: 44ch; }
 .mkt .ds-feats { display: grid; gap: 0; }
 .mkt .ds-feat { padding: 15px 0; border-top: 1px solid var(--line); display: grid; gap: 3px; }
 .mkt .ds-feat:first-child { border-top: 0; padding-top: 0; }
 .mkt .ds-feat h4 { font-size: 16.5px; letter-spacing: -.015em; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .mkt .ds-feat h4 small { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--acc-d); }
 .mkt .ds-feat p { color: var(--muted); font-size: 14.5px; max-width: 54ch; }
-.mkt .ds-vis-col { position: sticky; top: 140px; }
+.mkt .ds-vis-col { align-self: center; }
 .mkt .ds-vis-col .ds-stage { display: grid; place-items: center; padding: clamp(14px, 2.5vw, 30px); border-radius: 28px; background: radial-gradient(420px 260px at 20% 0%, color-mix(in srgb, var(--acc) 26%, transparent), transparent 70%), var(--acc-soft); gap: 14px; }
 .mkt .ds-vis-col .ds-stage > * { width: 100%; }
 .mkt .ds-vis-col .ds-stage .ds-phone { width: 214px; }

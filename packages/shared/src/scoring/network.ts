@@ -31,6 +31,9 @@ export interface BusinessSummary {
   cesLowEffortPercent: number | null;
   responseCount: number;
   confidence: BenchmarkConfidence;
+  // Unmasked, for network-wide totals only. A small staff branch is hidden by name and score everywhere else, but its answers still count toward the group total.
+  rawStarAverage: number | null;
+  rawNpsScore: number | null;
 }
 
 /**
@@ -66,6 +69,8 @@ export async function computeNetworkSummaries(
         cesLowEffortPercent: metrics.cesLowEffortPercent,
         responseCount: metrics.responseCount,
         confidence: confidenceForSampleSize(metrics.responseCount),
+        rawStarAverage: rawMetrics.starAverage,
+        rawNpsScore: rawMetrics.npsScore,
       };
     })
   );

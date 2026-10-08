@@ -38,6 +38,4 @@ export const CRON_JOBS: { job: string; every: string; maxAgeHours: number; why: 
   { job: "generate-insights", every: "weekly", maxAgeHours: 24 * 8, why: "AI Insights reports are drafted for approval." },
   { job: "program-evaluation", every: "daily", maxAgeHours: 30, why: "Program Evaluation compares training aims with feedback." },
   { job: "comp-expiry-reminders", every: "daily", maxAgeHours: 30, why: "Complimentary and pilot accounts get expiry reminders." },
-  { job: "ce-pulse-cadence", every: "daily", maxAgeHours: 30, why: "Retired staff pulse scheduling (no effect for launch)." },
-  { job: "ce-lifecycle-triggers", every: "daily", maxAgeHours: 30, why: "Retired staff lifecycle surveys (no effect for launch)." },
 ];

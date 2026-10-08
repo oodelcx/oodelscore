@@ -114,7 +114,7 @@ export default function FeedbackFormPage({ params }: { params: Promise<{ token: 
   const demoSteps: Step[] = [];
   const d = data.demographicConfig;
   if (d.name !== "off") demoSteps.push({ kind: "demographic", demoField: "name", label: "Your name", required: d.name === "mandatory" });
-  if (d.email !== "off") demoSteps.push({ kind: "demographic", demoField: "email", label: "Email address", required: d.email === "mandatory" });
+  if (d.email !== "off") demoSteps.push({ kind: "demographic", demoField: "email", label: d.email === "mandatory" ? "Email address" : "Email address (optional). Add it if you would like a reply about your feedback.", required: d.email === "mandatory" });
   if (d.phone !== "off") demoSteps.push({ kind: "demographic", demoField: "phone", label: "Phone number", required: d.phone === "mandatory" });
   if (d.ageGroup !== "off") demoSteps.push({ kind: "demographic", demoField: "ageGroup", label: "Age group", required: d.ageGroup === "mandatory" });
   if (d.gender !== "off") demoSteps.push({ kind: "demographic", demoField: "gender", label: "Gender", required: d.gender === "mandatory" });

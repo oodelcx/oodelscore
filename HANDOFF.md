@@ -7,6 +7,10 @@ Built per the owner's final list: branch heads see Customer X only; page guards;
 Deliberately left for later: evidence fusion, REACH, rosters, staff emails, staff cases. Group-level staff totals still exclude branches under 5 responses.
 Not yet done: automated Playwright checks on staging and QA (owner declined QA for now). Delete the staging test location "Skyline Telecom – QA Floor Test" in Admin. Staging must be redeployed.
 
+## Update 2 (everything on `main`)
+Built: one role-aware Escalate button (shows who it goes to, confirm and note, inline result, Step back, full path history; "Raised by" originator on every case); REACH recommendation cards on Compass results (text editable in Admin -> Tooltips "Compass recommendations", Elevate emails a colleague); Platform Health now lists every scheduled job with last run, plus a setup checklist for email, AI, cron secret, Stripe and site address; email falls back to shipped templates; group staff totals include small branches; roster page, roster APIs and the two retired staff cron jobs removed; optional-email prompt on the survey; Customer/Colleague switch shows "Switching..." (raw speed not profiled); Customer X / Colleague X chapter spacing tightened.
+Still needed outside the code: create the Render Cron Jobs (see Platform Health), set RESEND_API_KEY, ANTHROPIC_API_KEY, CRON_SECRET, Stripe keys and webhook, APP_URL.
+
 ## Rules from the owner (founder)
 - **Nothing goes to `production`.** All work lands on `main` only. Never merge `main` into `production` without an explicit instruction in that message.
 - Confirm before any wipe or reseed of staging, any real Stripe charge, or any real email to a non-`.test` address.

@@ -26,10 +26,14 @@ export function ProductViewSwitcher({ current }: { current: Product }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [posting, setPosting] = useState(false);
+  const [target, setTarget] = useState<Product | null>(null);
   const pending = isPending || posting;
+  // Show the choice immediately; the page behind it takes a moment to reload.
+  const shown = pending && target ? target : current;
 
   async function switchTo(product: Product) {
     if (product === current || pending) return;
+    setTarget(product);
     setPosting(true);
     await fetch("/api/view-product", {
       method: "POST",
@@ -46,7 +50,7 @@ export function ProductViewSwitcher({ current }: { current: Product }) {
     <div className="product-switcher" role="group" aria-label="Viewing">
       <button
         type="button"
-        className={`product-switcher-btn${current === "customer_experience" ? " active" : ""}`}
+        className={`product-switcher-btn${shown === "customer_experience" ? " active" : ""}`}
         onClick={() => switchTo("customer_experience")}
         disabled={pending}
       >
@@ -54,12 +58,17 @@ export function ProductViewSwitcher({ current }: { current: Product }) {
       </button>
       <button
         type="button"
-        className={`product-switcher-btn${current === "colleague_experience" ? " active" : ""}`}
+        className={`product-switcher-btn${shown === "colleague_experience" ? " active" : ""}`}
         onClick={() => switchTo("colleague_experience")}
         disabled={pending}
       >
         Colleague
       </button>
+      {pending && (
+        <span role="status" style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>
+          Switching…
+        </span>
+      )}
     </div>
   );
 }

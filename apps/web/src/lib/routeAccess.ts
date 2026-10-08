@@ -68,7 +68,6 @@ export const BUSINESS_ACCESS_CONFIG: PortalAccessConfig = {
   pageAccessKeys: [
     ["/business/attention-centre", "attentionCentre"],
     ["/business/feedback-points", "feedbackPoints"],
-    ["/business/roster", "colleagueRoster"],
     ["/business/responses", "rawFeedback"],
     ["/business/insights", "insights"],
     ["/business/analytics", "analytics"],

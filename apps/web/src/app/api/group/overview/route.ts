@@ -54,10 +54,10 @@ export async function GET() {
     .sort((a, b) => (b.starAverage as number) - (a.starAverage as number))
     .slice(0, 5);
 
-  const withScores = summaries.filter((s) => s.starAverage !== null);
-  const withNps = summaries.filter((s) => s.npsScore !== null);
-  const networkAverage = withScores.length === 0 ? null : Math.round((withScores.reduce((sum, s) => sum + (s.starAverage as number), 0) / withScores.length) * 100) / 100;
-  const networkNps = withNps.length === 0 ? null : Math.round(withNps.reduce((sum, s) => sum + (s.npsScore as number), 0) / withNps.length);
+  const withScores = summaries.filter((s) => s.rawStarAverage !== null);
+  const withNps = summaries.filter((s) => s.rawNpsScore !== null);
+  const networkAverage = withScores.length === 0 ? null : Math.round((withScores.reduce((sum, s) => sum + (s.rawStarAverage as number), 0) / withScores.length) * 100) / 100;
+  const networkNps = withNps.length === 0 ? null : Math.round(withNps.reduce((sum, s) => sum + (s.rawNpsScore as number), 0) / withNps.length);
 
   // Weighted by each branch's own response count, same reasoning as
   // Command Center's org-wide roll-up.
