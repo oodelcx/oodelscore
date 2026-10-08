@@ -31,9 +31,20 @@ export const FEATURE_DEFINITIONS = [
   },
 ] as const;
 
+/**
+ * Features that are OFF until Admin switches them on for an account. Program
+ * Evaluation is for organisations that run trainings or events and want their
+ * feedback judged against stated objectives, so it should not appear for
+ * everyone by default.
+ */
+export const OPT_IN_FEATURE_KEYS: string[] = ["programEvaluation"];
+
 export type FeatureKey = (typeof FEATURE_DEFINITIONS)[number]["key"];
 
 export const ALL_FEATURE_KEYS: FeatureKey[] = FEATURE_DEFINITIONS.map((f) => f.key);
+
+/** What a brand-new account starts with: everything except the opt-in features. */
+export const DEFAULT_FEATURE_KEYS: FeatureKey[] = ALL_FEATURE_KEYS.filter((k) => !OPT_IN_FEATURE_KEYS.includes(k));
 
 const FEATURE_KEY_SET: ReadonlySet<string> = new Set(ALL_FEATURE_KEYS);
 
@@ -47,6 +58,6 @@ export function isValidFeatureKey(key: string): key is FeatureKey {
  * an existing account out of a feature it already had.
  */
 export function hasFeature(enabledFeatures: readonly string[] | undefined | null, key: FeatureKey): boolean {
-  if (!enabledFeatures) return true;
+  if (!enabledFeatures) return !OPT_IN_FEATURE_KEYS.includes(key);
   return enabledFeatures.includes(key);
 }

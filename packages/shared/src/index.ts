@@ -85,3 +85,4 @@ export * from "./compass/reach";
 export * from "./structure/chain";
 export * from "./structure/service";
 export { seedStructureDemo } from "./seedData/structureDemo";
+export * from "./migrations/oneTime";

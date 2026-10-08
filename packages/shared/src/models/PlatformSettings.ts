@@ -6,6 +6,8 @@ export const PLATFORM_SETTINGS_SINGLETON_KEY = "default";
 export interface IPlatformSettings {
   singletonKey: string;
   toursEnabled: boolean;
+  // Ids of one-time data migrations already applied (see migrations/oneTime.ts).
+  oneTimeMigrations: string[];
   // Global kill switch for the payment gate (Business/Group layouts).
   // Defaults FALSE deliberately: every account created before Stripe
   // billing existed has no BillingSubscription row at all, so flipping
@@ -26,6 +28,7 @@ const PlatformSettingsSchema = new Schema<IPlatformSettings>(
   {
     singletonKey: { type: String, required: true, unique: true, default: PLATFORM_SETTINGS_SINGLETON_KEY },
     toursEnabled: { type: Boolean, required: true, default: true },
+    oneTimeMigrations: { type: [String], default: [] },
     paymentGateEnabled: { type: Boolean, required: true, default: false },
     compassReassessmentCadenceDays: { type: Number, default: 180 },
   },

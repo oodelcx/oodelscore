@@ -3,6 +3,7 @@ import { Event } from "../models/Event";
 import { Business } from "../models/Business";
 import { ProgramEvaluationReport, type IProgramEvaluationReport } from "../models/ProgramEvaluationReport";
 import { hasFeature } from "../features/flags";
+import { ParentOrganization } from "../models/ParentOrganization";
 import { gatherProgramEvaluationEvidence } from "./programEvaluationEvidence";
 import { analyzeProgramEvaluation } from "../ai/programEvaluation";
 
@@ -108,9 +109,15 @@ export async function generateDueProgramEvaluations(now: Date = new Date()): Pro
   const pending = dueEvents.filter((e) => !alreadyReported.has(e._id.toString()));
   if (pending.length === 0) return { eventsEvaluated: 0, eventsSkippedInsufficientData: 0 };
 
-  const businesses = await Business.find({ _id: { $in: pending.map((e) => e.businessId) } }).select("enabledFeatures");
+  const businesses = await Business.find({ _id: { $in: pending.map((e) => e.businessId) } }).select("enabledFeatures parentOrgId");
+  // A branch follows its group's switch; a standalone business has its own.
+  const orgIds = [...new Set(businesses.map((b) => b.parentOrgId?.toString()).filter((x): x is string => !!x))];
+  const orgs = orgIds.length ? await ParentOrganization.find({ _id: { $in: orgIds } }).select("enabledFeatures") : [];
+  const orgEnabled = new Map(orgs.map((o) => [o._id.toString(), hasFeature(o.enabledFeatures, "programEvaluation")]));
   const enabledBusinessIds = new Set(
-    businesses.filter((b) => hasFeature(b.enabledFeatures, "programEvaluation")).map((b) => b._id.toString())
+    businesses
+      .filter((b) => (b.parentOrgId ? orgEnabled.get(b.parentOrgId.toString()) === true : hasFeature(b.enabledFeatures, "programEvaluation")))
+      .map((b) => b._id.toString())
   );
 
   let eventsEvaluated = 0;

@@ -15,8 +15,8 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
   const business = await Business.findOne({ _id: event.businessId, parentOrgId: session.org._id });
   if (!business) return NextResponse.json({ status: "error", message: "Not found" }, { status: 404 });
-  if (!hasFeature(business.enabledFeatures, "programEvaluation")) {
-    return NextResponse.json({ status: "error", message: "Program Evaluation is not enabled for this branch" }, { status: 403 });
+  if (!hasFeature(session.org.enabledFeatures, "programEvaluation")) {
+    return NextResponse.json({ status: "error", message: "Program Evaluation is not enabled for this organization" }, { status: 403 });
   }
   if (event.category !== "training") {
     return NextResponse.json({ status: "error", message: "Only a training-category event can be evaluated" }, { status: 400 });

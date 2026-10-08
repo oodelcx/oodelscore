@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { Types } from "mongoose";
 import { OrgNode } from "../models/OrgNode";
+import { DEFAULT_FEATURE_KEYS } from "../features/flags";
 import { Business } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { User, type AccountType, type TeamMemberTier } from "../models/User";
@@ -1684,6 +1685,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
         maxFeedbackPoints: 10,
         questionTemplateId: templateBySector.get("training")!._id,
         enabledProducts: ["customer_experience"],
+        // A training organisation: Program Evaluation is switched on for it (it is off by default).
+        enabledFeatures: [...DEFAULT_FEATURE_KEYS, "programEvaluation"],
         demographicConfig: { name: "optional", email: "off", phone: "off", ageGroup: "optional", gender: "off" },
         accountManagerId: adminUserId ?? null,
         active: true,

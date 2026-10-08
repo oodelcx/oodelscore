@@ -15,7 +15,7 @@ type RouteParams = { params: Promise<{ eventId: string }> };
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireBusinessOwner({ requirePage: "feedbackPoints" });
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
-  if (!hasFeature(session.business.enabledFeatures, "programEvaluation")) {
+  if (session.business.parentOrgId || !hasFeature(session.business.enabledFeatures, "programEvaluation")) {
     return NextResponse.json({ status: "error", message: "Program Evaluation is not enabled for this account" }, { status: 403 });
   }
 

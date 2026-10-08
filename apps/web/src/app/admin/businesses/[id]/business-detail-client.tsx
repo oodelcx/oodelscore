@@ -62,7 +62,7 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "playbooks", label: "Playbook Library", description: "Playbook library and automated trigger runs." },
   { key: "compass", label: "OodelCX Compass", description: "ANCHOR six-dimension maturity diagnostic assessment." },
   { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes." },
-  { key: "programEvaluation", label: "Program Evaluation", description: "AI evaluation of a training Event's feedback against the business's own stated objectives." },
+  { key: "programEvaluation", label: "Program Evaluation", description: "Only for a business that runs trainings or events: AI evaluation of each session's feedback against its stated objectives. Off by default. For a branch, switch it on for the group instead." },
   { key: "closingLoop", label: "Closing the Loop", description: "\"You said, we did\" broadcast updates to the Colleague Experience roster." },
   { key: "businessValue", label: "Business Value", description: "Translates at-risk feedback into a commercial exposure figure." },
 ];
@@ -87,6 +87,8 @@ const TEAM_RESTRICTABLE_PAGES: { key: string; label: string }[] = [
   { key: "programEvaluation", label: "Program Evaluation" },
 ];
 const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);
+// Program Evaluation is opt-in: off for a new account until ticked.
+const DEFAULT_FEATURE_KEYS = ALL_FEATURE_KEYS.filter((k) => k !== "programEvaluation");
 
 function formatSigned(value: number): string {
   return value > 0 ? `+${value}` : String(value);
@@ -277,7 +279,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
   // Feature flags (task #121) — which advanced features Admin has turned on
   // for this account. null on the business doc means "all on", so the
   // toggle list starts fully checked until Admin edits it.
-  const [enabledFeatures, setEnabledFeatures] = useState<string[]>(ALL_FEATURE_KEYS);
+  const [enabledFeatures, setEnabledFeatures] = useState<string[]>(DEFAULT_FEATURE_KEYS);
   const [featuresBusy, setFeaturesBusy] = useState(false);
   const [featuresMessage, setFeaturesMessage] = useState<string | null>(null);
   // Payment gate override (null = follow the platform default).
@@ -764,7 +766,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
         setEnabledProducts(b.enabledProducts?.length ? b.enabledProducts : ["customer_experience"]);
         setEscalationLevels(b.escalationLevels?.length ? b.escalationLevels : [{ level: 1, label: "Owner" }]);
         setEscalationSlaHours(b.escalationSlaHours != null ? String(b.escalationSlaHours) : "");
-        setEnabledFeatures(b.enabledFeatures ?? ALL_FEATURE_KEYS);
+        setEnabledFeatures(b.enabledFeatures ?? DEFAULT_FEATURE_KEYS);
         setPaymentGateEnabled(b.paymentGateEnabled ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -1992,7 +1994,7 @@ export default function BusinessDetailClient({ tooltips }: { tooltips: Record<st
             on.
           </p>
           <div className="field-row" style={{ flexWrap: "wrap", gap: "10px 24px" }}>
-            {FEATURE_TOGGLES.map((f) => (
+            {FEATURE_TOGGLES.filter((f) => !(f.key === "programEvaluation" && form.parentOrgId)).map((f) => (
               <label key={f.key} style={{ display: "flex", alignItems: "flex-start", gap: 8, width: 260 }}>
                 <input
                   type="checkbox"

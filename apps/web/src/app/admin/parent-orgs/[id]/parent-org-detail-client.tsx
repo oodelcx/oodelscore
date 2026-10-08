@@ -57,7 +57,7 @@ const FEATURE_TOGGLES: { key: string; label: string; description: string }[] = [
   { key: "highlights", label: "Highlights", description: "Surfaces strong positive feedback and recurring positive themes." },
   { key: "closingLoop", label: "Closing the Loop", description: "\"You said, we did\" broadcast updates to the Colleague Experience roster." },
   { key: "businessValue", label: "Business Value", description: "Translates at-risk feedback into a commercial exposure figure." },
-  { key: "programEvaluation", label: "Program Evaluation", description: "AI evaluation of a training Event's feedback against the business's own stated objectives." },
+  { key: "programEvaluation", label: "Program Evaluation", description: "Only for a group that runs trainings or events: AI evaluation of each session's feedback against its stated objectives, shown on the group (not on branches). Off by default." },
 ];
 // Keep in sync with packages/shared/src/features/teamPermissions.ts — same
 // reason as FEATURE_TOGGLES above.
@@ -78,6 +78,8 @@ const TEAM_RESTRICTABLE_PAGES: { key: string; label: string }[] = [
   { key: "highlights", label: "Highlights" },
 ];
 const ALL_FEATURE_KEYS = FEATURE_TOGGLES.map((f) => f.key);
+// Program Evaluation is opt-in: off for a new account until ticked.
+const DEFAULT_FEATURE_KEYS = ALL_FEATURE_KEYS.filter((k) => k !== "programEvaluation");
 
 function formatSigned(value: number): string {
   return value > 0 ? `+${value}` : String(value);
@@ -257,7 +259,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
   // Feature flags (task #121) — which advanced features Admin has turned on
   // for this org (and, independently, each of its branches). null on the
   // org doc means "all on", so the toggle list starts fully checked.
-  const [enabledFeatures, setEnabledFeatures] = useState<string[]>(ALL_FEATURE_KEYS);
+  const [enabledFeatures, setEnabledFeatures] = useState<string[]>(DEFAULT_FEATURE_KEYS);
   const [featuresBusy, setFeaturesBusy] = useState(false);
   const [featuresMessage, setFeaturesMessage] = useState<string | null>(null);
   const [paymentGateEnabled, setPaymentGateEnabled] = useState<boolean | null>(null);
@@ -465,7 +467,7 @@ export default function ParentOrgDetailClient({ tooltips }: { tooltips: Record<s
         setEnabledProducts(o.enabledProducts?.length ? o.enabledProducts : ["customer_experience"]);
         setEscalationLevels(o.escalationLevels?.length ? o.escalationLevels : [{ level: 1, label: "Owner" }]);
         setEscalationSlaHours(o.escalationSlaHours != null ? String(o.escalationSlaHours) : "");
-        setEnabledFeatures(o.enabledFeatures ?? ALL_FEATURE_KEYS);
+        setEnabledFeatures(o.enabledFeatures ?? DEFAULT_FEATURE_KEYS);
         setPaymentGateEnabled(o.paymentGateEnabled ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))

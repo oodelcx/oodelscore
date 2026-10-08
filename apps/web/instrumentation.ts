@@ -28,6 +28,18 @@ export async function register(): Promise<void> {
   const { validateEnv } = await import("@oodelscore/shared");
   validateEnv();
 
+  // One-time data migrations run in the background so they can never delay the server opening its port.
+  void (async () => {
+    try {
+      const { connectToDatabase, runOneTimeMigrations } = await import("@oodelscore/shared");
+      await connectToDatabase();
+      const ran = await runOneTimeMigrations();
+      if (ran.length) console.log(`[migrations] applied: ${ran.join(", ")}`);
+    } catch (err) {
+      console.error("[migrations] could not run one-time migrations:", err);
+    }
+  })();
+
   const seedBase = process.env.SEED_BASE === "true";
   const seedDemo = process.env.SEED_DEMO === "true";
   if (!seedBase && !seedDemo) return;

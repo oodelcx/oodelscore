@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, Event, ProgramEvaluationReport } from "@oodelscore/shared";
+import { connectToDatabase, Business, Event, ProgramEvaluationReport, hasFeature } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 /**
@@ -15,10 +15,11 @@ export async function GET() {
 
   await connectToDatabase();
   const org = session.org;
-  const branches = await Business.find({ parentOrgId: org._id }).select("_id name enabledFeatures");
-  const enabledBranchIds = branches
-    .filter((b) => (b.enabledFeatures ? b.enabledFeatures.includes("programEvaluation") : true))
-    .map((b) => b._id);
+  if (!hasFeature(org.enabledFeatures, "programEvaluation")) {
+    return NextResponse.json({ status: "error", message: "Program Evaluation is not enabled for this organization" }, { status: 403 });
+  }
+  const branches = await Business.find({ parentOrgId: org._id }).select("_id name");
+  const enabledBranchIds = branches.map((b) => b._id);
   const branchNameById = new Map(branches.map((b) => [b._id.toString(), b.name]));
 
   if (enabledBranchIds.length === 0) return NextResponse.json({ status: "ok", items: [] });

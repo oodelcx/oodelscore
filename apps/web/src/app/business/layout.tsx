@@ -222,6 +222,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 )}
                 {hasProduct(business, "customer_experience") &&
                   showCx &&
+                  !isBranch &&
                   hasFeature(business.enabledFeatures, "programEvaluation") &&
                   teamMemberCanAccess(user, "programEvaluation") && (
                   <a href="/business/program-evaluation">
