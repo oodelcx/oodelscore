@@ -241,15 +241,6 @@ export default function CategoriesPage() {
                 <option value="colleague_experience">Colleague Experience</option>
               </select>
             </div>
-            {product === "colleague_experience" && (
-              <div className="field" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="checkbox" id="cat-sensitive" checked={sensitive} onChange={(e) => setSensitive(e.target.checked)} />
-                <label htmlFor="cat-sensitive" style={{ margin: 0 }}>
-                  Sensitive (HR/leadership) — bypasses normal category-owner routing, goes to the designated
-                  sensitive-routing contact instead
-                </label>
-              </div>
-            )}
             {error && <p className="error-text">{error}</p>}
             <div className="modal-actions">
               <button className="btn" onClick={() => setShowCreateModal(false)}>
@@ -281,19 +272,6 @@ export default function CategoriesPage() {
                 onKeyDown={(e) => e.key === "Enter" && saveEdit()}
               />
             </div>
-            {editingCategory.product === "colleague_experience" && (
-              <div className="field" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  id="cat-edit-sensitive"
-                  checked={editingSensitive}
-                  onChange={(e) => setEditingSensitive(e.target.checked)}
-                />
-                <label htmlFor="cat-edit-sensitive" style={{ margin: 0 }}>
-                  Sensitive (HR/leadership) — bypasses normal category-owner routing
-                </label>
-              </div>
-            )}
             {error && <p className="error-text">{error}</p>}
             <div className="modal-actions">
               <button className="btn" onClick={() => setEditingCategory(null)}>

@@ -53,7 +53,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   category.name = name;
-  if (typeof body.sensitive === "boolean") category.sensitive = body.sensitive;
+  if (body.sensitive === false) category.sensitive = false; // sensitive categories are retired; can only be switched off
   await category.save();
   return NextResponse.json({ status: "ok", category });
 }

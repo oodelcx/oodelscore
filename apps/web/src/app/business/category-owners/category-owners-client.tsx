@@ -192,31 +192,6 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
         just follow your normal escalation chain.
       </div>
 
-      {ceEnabled && (
-        <div className="callout" style={{ marginBottom: 20 }}>
-          <h3 style={{ marginTop: 0 }}>Sensitive category routing</h3>
-          <p className="subtitle" style={{ marginTop: 0 }}>
-            A Colleague Experience category marked &quot;Sensitive&quot; (HR/leadership complaints) never goes to that
-            category&rsquo;s normal owner — it goes here instead, so a complaint about HR never lands with HR.
-          </p>
-          <div className="field" style={{ maxWidth: 320 }}>
-            <label>Sensitive-category contact</label>
-            <select
-              value={sensitiveRoutingContactId}
-              onChange={(e) => saveSensitiveRoutingContact(e.target.value)}
-              disabled={savingSensitiveContact}
-            >
-              <option value="">Not set</option>
-              {team.map((t) => (
-                <option key={t.userId} value={t.userId}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-
       {!loading && (
         <div className="callout" style={{ marginBottom: 20 }}>
           <h3 style={{ marginTop: 0 }}>Sector benchmarking</h3>

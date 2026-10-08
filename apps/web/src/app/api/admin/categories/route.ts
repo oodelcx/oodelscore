@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   const category = await Category.create({
     name: body.name.trim(),
     product,
-    sensitive: typeof body.sensitive === "boolean" ? body.sensitive : false,
+    sensitive: false,
   });
   return NextResponse.json({ status: "ok", category }, { status: 201 });
 }

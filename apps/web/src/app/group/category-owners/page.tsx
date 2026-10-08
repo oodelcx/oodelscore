@@ -204,28 +204,6 @@ export default function GroupCategoryOwnersPage() {
         )}
       </div>
 
-      {colleagueEnabled && (
-        <div className="callout" style={{ marginBottom: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Sensitive category routing</h3>
-          <p className="subtitle" style={{ marginTop: 0 }}>
-            A Colleague Experience category marked &quot;Sensitive&quot; (HR/leadership complaints) never goes to that
-            category&rsquo;s normal owner — it goes to this contact instead, for any branch that has not chosen its own, so a
-            complaint about HR never lands with HR.
-          </p>
-          <div className="field" style={{ maxWidth: 320 }}>
-            <label>Sensitive-category contact</label>
-            <select value={sensitiveContactId} onChange={(e) => saveSensitiveContact(e.target.value)}>
-              <option value="">Not set</option>
-              {team.map((t) => (
-                <option key={t.userId} value={t.userId}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-
       <div className="callout" style={{ marginBottom: 12 }}>
         This is the <b>default</b> owner for every branch in your organization. Any branch can set its own owner for a
         category from its own Category Owners page — that overrides your default for that branch only, everyone else

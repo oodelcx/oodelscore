@@ -276,7 +276,8 @@ export async function seedColleagueFlowsDemo(): Promise<ColleagueFlowsSeedResult
     }
 
     // ---- 3. Sensitive-comment routing (on this location's main shared-link pulse) ----
-    const mainPulse = await FeedbackPoint.findOne({
+    // Sensitive-comment routing was retired for launch; no sensitive demo data is seeded.
+    const mainPulse = true ? null : await FeedbackPoint.findOne({
       businessId: business._id,
       product: "colleague_experience",
       distributionMode: "qr_open",
