@@ -1,0 +1,102 @@
+/*
+ * Portal refresh (all three portals). Loaded after admin.css and business.css,
+ * so it only overrides look, never structure. It restyles the shared building
+ * blocks once: cards, key-figure strips, tables, pills, buttons, inputs, the
+ * sidebar and page headers. Every page that already uses those classes picks
+ * the new look up without being edited.
+ */
+:root {
+  --bg: #f3f5f4;
+  --bg-2: #ebefed;
+  --border: #dde3e0;
+  --text: #121a16;
+  --text-2: #55635b;
+  --text-3: #86938c;
+  --accent: #0b7a55;
+  --accent-bg: #e1f3ea;
+  --green: #0b7a55;
+  --green-bg: #e1f3ea;
+  --radius: 12px;
+  --ring: 0 0 0 3px rgba(11, 122, 85, 0.22);
+}
+
+/* Page header */
+h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.subtitle { font-size: 14px; max-width: 78ch; }
+.page-head { margin-bottom: 20px; }
+.section-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; margin: 28px 0 12px; }
+
+/* Cards */
+.card { border-radius: var(--radius); border-color: var(--border); box-shadow: none; padding: 18px 20px; }
+.card h3 { font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em; }
+.card .card-sub { font-size: 12.5px; }
+
+/* Key-figure strips: any grid whose cards open with a metric label becomes one connected strip. */
+.grid:has(> .card > .metric-label) {
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.grid:has(> .card > .metric-label) > .card {
+  border: 0;
+  border-radius: 0;
+  background: var(--card);
+  padding: 16px 18px;
+}
+.metric-label { font-size: 11px; font-weight: 650; letter-spacing: 0.06em; color: var(--text-3); }
+.metric-val { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 6px; line-height: 1.15; }
+.metric-note { font-size: 12.5px; }
+
+/* Tables */
+table.clean th { font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; padding: 0 10px 9px 0; }
+table.clean td { padding: 12px 10px 12px 0; font-variant-numeric: tabular-nums; }
+table.clean tbody tr { transition: background 0.12s; }
+table.clean tbody tr:hover td { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+table.clean td:first-child { font-weight: 600; }
+
+/* Pills, chips, buttons, inputs */
+.pill { font-size: 11px; font-weight: 650; padding: 2px 9px; letter-spacing: 0.01em; white-space: nowrap; }
+.chip { font-size: 12.5px; padding: 5px 12px; transition: background 0.12s, border-color 0.12s; }
+.chip:hover { border-color: var(--text-3); }
+.btn { border-radius: 8px; font-weight: 600; transition: border-color 0.12s, background 0.12s, transform 0.06s; }
+.btn:active { transform: translateY(1px); }
+.btn-dark { background: var(--text); border-color: var(--text); }
+select, input[type="text"], input[type="email"], input[type="number"], input[type="search"], input[type="date"], textarea { border-radius: 8px; }
+.btn:focus-visible, .chip:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* Callouts */
+.callout { border-radius: 10px; font-size: 13.5px; line-height: 1.5; }
+
+/* Sidebar */
+.admin-sidebar a { border-radius: 8px; }
+.admin-sidebar a[aria-current="page"], .admin-sidebar a.active { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* Reusable pieces for refreshed pages */
+.queue { padding: 0; overflow: hidden; }
+.queue-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.queue-head h3 { margin: 0; }
+.queue-row { display: grid; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 14px; padding: 12px 18px 12px 0; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; align-items: center; }
+.queue-row:last-child { border-bottom: 0; }
+.queue-row:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.queue-row .stripe { align-self: stretch; border-radius: 0 3px 3px 0; background: var(--border); }
+.queue-row .stripe.high { background: var(--red); } .queue-row .stripe.med { background: var(--amber); } .queue-row .stripe.low { background: var(--green); }
+.queue-row b { display: block; font-weight: 600; font-size: 13.5px; overflow-wrap: anywhere; }
+.queue-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--text-3); font-size: 12.5px; margin-top: 2px; }
+.queue-empty { padding: 22px 18px; color: var(--text-2); text-align: center; font-size: 13.5px; }
+.pager { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 12px 4px 0; font-size: 12.5px; color: var(--text-2); }
+.pager .btn { padding: 5px 11px; }
+.pager-count { font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { .queue-row { grid-template-columns: 4px minmax(0, 1fr); } .queue-row .right { grid-column: 2; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* business.css redefines .grid-4 after admin.css, which silently cancelled admin.css's phone rules. Restore them with enough specificity. */
+@media (max-width: 900px) { .grid.grid-4, .grid.grid-5, .grid.grid-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .grid.grid-2 { grid-template-columns: minmax(0, 1fr); } .grid.grid-4, .grid.grid-5, .grid.grid-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .metric-val { font-size: 22px; } }
+.page-head .subtitle { margin-bottom: 0; }
+.callout a { color: inherit; font-weight: 650; text-decoration: underline; }
+.table-wrap, .card:has(> table) { overflow-x: auto; }

@@ -7,6 +7,7 @@ import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { NavIcon } from "@/components/nav-icon";
 import "./admin.css";
+import "../portal-refresh.css";
 
 /**
  * Pending-AI-reports badge for the sidebar nav, scoped the same way the

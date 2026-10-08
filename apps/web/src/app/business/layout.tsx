@@ -29,6 +29,7 @@ import { isAccessDenied, BUSINESS_ACCESS_CONFIG } from "@/lib/routeAccess";
 import { NavIcon } from "@/components/nav-icon";
 import "../admin/admin.css";
 import "./business.css";
+import "../portal-refresh.css";
 
 export default async function BusinessLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PeriodComparisonCards, type Comparisons } from "@/components/period-comparison-cards";
+import { AttentionQueue } from "@/components/attention-queue";
 import { InfoTip } from "@/components/info-tip";
 import { ThemeCard } from "@/components/theme-card";
 
@@ -218,6 +219,8 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
           {data.headline}
         </div>
       )}
+
+      <AttentionQueue portal="group" />
 
       <RecurringIssuesCard />
 

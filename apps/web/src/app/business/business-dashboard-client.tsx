@@ -3,6 +3,7 @@
 import { makeWording } from "@/lib/wordingPick";
 import { useEffect, useState } from "react";
 import { PeriodComparisonCards } from "@/components/period-comparison-cards";
+import { AttentionQueue } from "@/components/attention-queue";
 import { InfoTip } from "@/components/info-tip";
 import { useTooltips } from "@/lib/useTooltips";
 
@@ -178,6 +179,8 @@ export default function BusinessDashboardClient() {
         </div>
       )}
 
+        <AttentionQueue portal="business" />
+
         <div className="grid grid-4" data-tour="dash-kpi-strip" style={{ marginBottom: 20 }}>
           <div className="card">
             <div className="metric-label">
@@ -262,6 +265,8 @@ export default function BusinessDashboardClient() {
           Scores, trends and comments are hidden until at least 5 colleagues have responded, so nobody can be identified from a small group.
         </div>
       )}
+
+      <AttentionQueue portal="business" />
 
       <RecurringIssuesCard />
 

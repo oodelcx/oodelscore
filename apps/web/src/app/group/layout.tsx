@@ -15,6 +15,7 @@ import {
 } from "@oodelscore/shared";
 import "../admin/admin.css";
 import "../business/business.css";
+import "../portal-refresh.css";
 import LogoutLink from "./logout-link";
 import MobileNavToggle from "@/components/mobile-nav-toggle";
 import { TourProvider } from "@/components/tour/tour-provider";
