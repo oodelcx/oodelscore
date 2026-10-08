@@ -22,6 +22,7 @@ interface FormData {
   businessName: string;
   groupTag: string | null;
   isAnonymous?: boolean;
+  anonymityLine?: string | null;
   formLayout: "single_page" | "one_per_screen";
   demographicConfig: DemographicConfig;
   questions: Question[];
@@ -204,7 +205,7 @@ function Header({ data }: { data: FormData }) {
       <div className="ff-biz-name">{data.businessName}</div>
       {data.groupTag && <div className="ff-group-tag">{data.groupTag}</div>}
       {data.isAnonymous && (
-        <div className="ff-group-tag">This survey is anonymous: it never asks for your name, email or phone.</div>
+        <div className="ff-group-tag">{data.anonymityLine || "This survey is anonymous. For harassment or serious concerns, use your organisation's own channels."}</div>
       )}
     </div>
   );

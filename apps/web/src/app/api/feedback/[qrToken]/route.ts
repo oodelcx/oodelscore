@@ -1,3 +1,4 @@
+import { getColleagueWording } from "@/lib/wording";
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -121,6 +122,7 @@ async function handleGet(request: NextRequest, qrToken: string) {
     businessName: business.name,
     groupTag: groupTag ? `Part of ${groupTag}` : null,
     isAnonymous: feedbackPoint.product === "colleague_experience",
+    anonymityLine: feedbackPoint.product === "colleague_experience" ? (await getColleagueWording())["anonymity-line"] ?? null : null,
     formLayout,
     demographicConfig,
     questions: effectiveQuestions(feedbackPoint, template ?? { questions: [] }).map((q, index) => ({

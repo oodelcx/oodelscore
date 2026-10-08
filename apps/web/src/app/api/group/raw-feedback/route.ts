@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, Response, PRODUCTS, meetsAnonymityFloor, type Product } from "@oodelscore/shared";
+import { connectToDatabase, Business, Response, PRODUCTS, meetsAnonymityFloor, teamMemberCanAccess, type Product } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 import { computeResponseStats } from "@/lib/responseStats";
 
@@ -12,6 +12,10 @@ export async function GET(request: Request) {
   if (!session) return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
+  // Staff feedback goes only to the people the group chose: the owner, and team members with Colleague Pulse access.
+  if (searchParams.get("product") === "colleague_experience" && session.isTeamMember && !teamMemberCanAccess(session.user, "exPulse")) {
+    return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
+  }
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number(searchParams.get("limit")) || DEFAULT_LIMIT));
   const filter = searchParams.get("filter") === "negative" ? "negative" : "all";
@@ -32,17 +36,20 @@ export async function GET(request: Request) {
   // A specific branch must be one of this org's own — filtering by an
   // arbitrary id from the query string could otherwise leak another
   // account's feedback into this response.
-  const scopedBusinessIds =
+  let scopedBusinessIds =
     branchId && businessIds.some((id) => id.toString() === branchId) ? businessIds.filter((id) => id.toString() === branchId) : businessIds;
 
   const match: Record<string, unknown> = { businessId: { $in: scopedBusinessIds }, product };
-  // Colleague Experience: withhold individual responses below the anonymity
-  // floor and never list comments routed to the sensitive contact.
+  // Staff feedback: every response reaches the group from the very first one. What stays hidden is WHICH branch
+  // wrote it, until that branch has 5 responses, so nobody at a small branch can be picked out.
+  const branchesWithEnough = new Set<string>();
   if (product === "colleague_experience") {
-    match.sensitiveRouted = { $ne: true };
-    const totalForScope = await Response.countDocuments({ businessId: { $in: scopedBusinessIds }, product });
-    if (!meetsAnonymityFloor(totalForScope)) {
-      return NextResponse.json({ status: "ok", responses: [], feedbackPoints: [], page: 1, limit, total: 0, totalPages: 1, stats: null, belowAnonymityFloor: true });
+    const counts = await Response.aggregate([{ $match: { businessId: { $in: businessIds }, product } }, { $group: { _id: "$businessId", n: { $sum: 1 } } }]);
+    for (const c of counts) if (meetsAnonymityFloor(c.n)) branchesWithEnough.add(String(c._id));
+    // Filtering to one small branch would single its people out, so that filter is ignored until the branch has 5.
+    if (scopedBusinessIds.length === 1 && !branchesWithEnough.has(scopedBusinessIds[0].toString())) {
+      scopedBusinessIds = businessIds;
+      match.businessId = { $in: scopedBusinessIds };
     }
   }
   if (filter === "negative") {
@@ -61,7 +68,13 @@ export async function GET(request: Request) {
     computeResponseStats(match),
   ]);
 
-  const enriched = responses.map((r) => ({ ...r, businessName: businessNameById.get(r.businessId.toString()) ?? "Unknown" }));
+  const enriched = responses.map((r) => {
+    const hideBranch = product === "colleague_experience" && !branchesWithEnough.has(r.businessId.toString());
+    const { businessId, ...rest } = r;
+    return hideBranch
+      ? { ...rest, businessId: "", businessName: "Branch hidden (fewer than 5 responses)" }
+      : { ...rest, businessId, businessName: businessNameById.get(r.businessId.toString()) ?? "Unknown" };
+  });
 
   return NextResponse.json({
     status: "ok",
@@ -71,6 +84,9 @@ export async function GET(request: Request) {
     total,
     totalPages: Math.max(1, Math.ceil(total / limit)),
     stats,
-    businesses: businesses.map((b) => ({ _id: b._id.toString(), name: b.name })),
+    businesses:
+      product === "colleague_experience"
+        ? businesses.filter((b) => branchesWithEnough.has(b._id.toString())).map((b) => ({ _id: b._id.toString(), name: b.name }))
+        : businesses.map((b) => ({ _id: b._id.toString(), name: b.name })),
   });
 }

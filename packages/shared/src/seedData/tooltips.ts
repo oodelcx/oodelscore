@@ -18,6 +18,11 @@ export const SEED_TOOLTIPS: SeedTooltipScreen[] = [
     screenKey: "colleague-wording",
     screenLabel: "Colleague Experience wording",
     tooltips: [
+      {
+        key: "anonymity-line",
+        label: "Line shown on every staff survey",
+        text: "This survey is anonymous. For harassment or serious concerns, use your organisation's own channels.",
+      },
       { key: "csat", label: "CSAT tile name", text: "Satisfaction" },
       {
         key: "csat-tip",

@@ -9,8 +9,6 @@ import {
   RosterSurveyToken,
   evaluateRealTimeAlertsForBusiness,
   openCaseForSevereResponse,
-  screenForSensitiveComment,
-  autoTriageAndCreateActionItem,
   analyzeThemeSentiment,
   classifyDevice,
   dedupCookieName,
@@ -247,33 +245,7 @@ async function handlePost(request: NextRequest, qrToken: string) {
     console.error("[feedback] severe-response case failed", err)
   );
 
-  // Colleague Experience's real-time safety check (PDF Section 2, steps 4-6):
-  // every response with a comment is screened for whether it concerns a
-  // specific senior leader/HR, before anyone at the company ever sees it —
-  // unconditionally, not only when an Alert Rule happens to also fire on
-  // this same response (evaluateRealTimeAlertsForBusiness above only
-  // triages when a threshold is actually crossed, which is the gap this
-  // closes). Awaited, same as the alert evaluation above: this has to
-  // finish before this request returns, since "before anyone sees anything"
-  // means before the response is visible internally, not just before the
-  // respondent's own thank-you screen.
-  if (feedbackPoint.product === "colleague_experience" && triggeringComment) {
-    try {
-      const isSensitive = await screenForSensitiveComment(triggeringComment);
-      if (isSensitive) {
-        await autoTriageAndCreateActionItem(
-          business,
-          "Directly reported via a Colleague Experience response",
-          triggeringComment,
-          "colleague_experience",
-          createdResponse._id
-        );
-        await Response.findByIdAndUpdate(createdResponse._id, { sensitiveRouted: true });
-      }
-    } catch (err) {
-      console.error("[feedback] sensitive-comment screen failed", err);
-    }
-  }
+  // Staff (Colleague X) responses never open cases and are not screened by AI: they go to the viewers the group chose.
 
   // Theme & Sentiment Intelligence (CX roadmap Phase 2) — deliberately NOT
   // awaited: a respondent filling out a form shouldn't wait on a Claude
