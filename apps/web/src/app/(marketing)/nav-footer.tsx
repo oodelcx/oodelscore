@@ -149,7 +149,7 @@ const NAV_KEY_BY_PATH: Record<string, string> = Object.fromEntries(
   Object.entries(PATH_BY_KEY).map(([key, path]) => [path, key])
 );
 
-function isHiddenByNav(href: string, navItems: INavItem[]): boolean {
+export function isHiddenByNav(href: string, navItems: INavItem[]): boolean {
   const navKey = NAV_KEY_BY_PATH[href];
   if (!navKey) return false; // not a gated marketing page (a sector page, Privacy, Terms, an anchor): always show
   const item = navItems.find((n) => n.key === navKey);

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getSiteContent } from "@/lib/siteContent";
 import { visibleIndustries } from "@/lib/industries";
-import { MarketingNav, MarketingFooter } from "./nav-footer";
+import { MarketingNav, MarketingFooter, isHiddenByNav } from "./nav-footer";
 import { BookDemoButton } from "./demo-modal";
 import { FiveCLoop } from "./ds/five-c-loop";
 import { IndustryTiles } from "./ds/industry-tiles";
@@ -185,9 +185,11 @@ export default async function MarketingHomePage() {
             <p className="ds-lead">{f.finalCtaSubhead}</p>
             <div className="ds-row">
               <BookDemoButton className="ds-btn ds-btn-p">{f.finalCtaPrimaryButton}</BookDemoButton>
-              <a className="ds-btn ds-btn-g" href={f.finalCtaSecondaryHref || "/pricing"}>
-                {f.finalCtaSecondaryButton}
-              </a>
+              {!isHiddenByNav(f.finalCtaSecondaryHref || "/pricing", menu.navItems) && (
+                <a className="ds-btn ds-btn-g" href={f.finalCtaSecondaryHref || "/pricing"}>
+                  {f.finalCtaSecondaryButton}
+                </a>
+              )}
             </div>
           </div>
         </section>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, getStripeClient, handleStripeWebhookEvent, logSystemHealthEvent } from "@oodelscore/shared";
+import { connectToDatabase, ProcessedStripeEvent, getStripeClient, handleStripeWebhookEvent, logSystemHealthEvent } from "@oodelscore/shared";
 
 export const runtime = "nodejs";
 
@@ -32,10 +32,21 @@ export async function POST(request: Request) {
 
   await connectToDatabase();
 
+  // Process each Stripe event once: claim its id first; a repeat delivery finds
+  // the claim and is acknowledged without running the handler again. If the
+  // handler fails the claim is released so Stripe's retry can run it.
+  try {
+    await ProcessedStripeEvent.create({ _id: event.id });
+  } catch (err) {
+    if ((err as { code?: number }).code === 11000) return NextResponse.json({ received: true, duplicate: true });
+    throw err;
+  }
+
   try {
     await handleStripeWebhookEvent(event);
   } catch (err) {
     console.error("[stripe webhook] handler failed", event.type, err);
+    await ProcessedStripeEvent.deleteOne({ _id: event.id }).catch(() => {});
     await logSystemHealthEvent("stripe_webhook_failure", (err as Error).message ?? "Handler failed", {
       eventType: event.type,
       eventId: event.id,

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { defaultStageForFeature } from "@oodelscore/shared";
 import { getSiteContent } from "@/lib/siteContent";
 import { visibleIndustries, type IndustryDetail } from "@/lib/industries";
-import { MarketingNav, MarketingFooter } from "../nav-footer";
+import { MarketingNav, MarketingFooter, isHiddenByNav } from "../nav-footer";
 import { BookDemoButton } from "../demo-modal";
 import { ChapterRail } from "./chapter-rail";
 import { IndustryTiles } from "./industry-tiles";
@@ -137,9 +137,11 @@ export async function ProductPage({ page }: { page: "customer-x" | "colleague-x"
             <p className="ds-lead">{f.finalCtaSubhead}</p>
             <div className="ds-row">
               <BookDemoButton className="ds-btn ds-btn-p">{f.finalCtaPrimaryButton}</BookDemoButton>
-              <a className="ds-btn ds-btn-g" href={f.finalCtaSecondaryHref || "/pricing"}>
-                {f.finalCtaSecondaryButton}
-              </a>
+              {!isHiddenByNav(f.finalCtaSecondaryHref || "/pricing", menu.navItems) && (
+                <a className="ds-btn ds-btn-g" href={f.finalCtaSecondaryHref || "/pricing"}>
+                  {f.finalCtaSecondaryButton}
+                </a>
+              )}
             </div>
           </div>
         </section>

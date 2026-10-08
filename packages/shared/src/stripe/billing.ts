@@ -49,6 +49,22 @@ export class BillingError extends Error {}
  * rolls into the parent org's single subscription instead. Call before
  * creating any business-level subscription (checkout or comp).
  */
+/**
+ * Billing safeguard: one open checkout per customer. If the owner already has
+ * an unfinished checkout session (double click, second tab, back button) we
+ * hand back that same link instead of creating a second one that could be paid
+ * twice. Sessions expire on their own after 24h, so this never traps anyone.
+ */
+async function findOpenCheckoutUrl(stripe: ReturnType<typeof getStripeClient>, customerId: string, mode: "payment" | "subscription") {
+  const open = await stripe.checkout.sessions.list({ customer: customerId, status: "open", limit: 10 });
+  return open.data.find((s) => s.mode === mode && s.url)?.url ?? null;
+}
+
+/** Same request within the same minute reuses one Stripe object (idempotency key). */
+function checkoutIdempotencyKey(ownerType: string, ownerId: string, products: string, amounts: string) {
+  return `checkout:${ownerType}:${ownerId}:${products}:${amounts}:${Math.floor(Date.now() / 60000)}`;
+}
+
 export async function assertBusinessCanHaveOwnSubscription(businessId: string): Promise<void> {
   const business = await Business.findById(businessId);
   if (!business) throw new BillingError("Business not found");
@@ -184,6 +200,8 @@ export async function createCheckoutSessionForOwner(params: {
   const managedPayments = { enabled: false } as const;
 
   if (lumpSum.length > 0) {
+    const existingUrl = await findOpenCheckoutUrl(stripe, customerId, "payment");
+    if (existingUrl) return existingUrl;
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer: customerId,
@@ -199,11 +217,13 @@ export async function createCheckoutSessionForOwner(params: {
       cancel_url: params.cancelUrl,
       metadata,
       managed_payments: managedPayments,
-    });
+    }, { idempotencyKey: checkoutIdempotencyKey(params.ownerType, params.ownerId, products, lumpSum.map((l) => l.terms.amount).join("+")) });
     if (!session.url) throw new BillingError("Stripe did not return a checkout URL");
     return session.url;
   }
 
+  const existingSubUrl = await findOpenCheckoutUrl(stripe, customerId, "subscription");
+  if (existingSubUrl) return existingSubUrl;
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
@@ -221,7 +241,7 @@ export async function createCheckoutSessionForOwner(params: {
     metadata,
     subscription_data: { metadata },
     managed_payments: managedPayments,
-  });
+  }, { idempotencyKey: checkoutIdempotencyKey(params.ownerType, params.ownerId, products, recurring.map((r) => r.terms.amount).join("+")) });
 
   if (!session.url) throw new BillingError("Stripe did not return a checkout URL");
   return session.url;
