@@ -136,6 +136,7 @@ export async function POST(request: Request) {
     role.permissions.businesses.scope === "assigned" ? user._id : (body.accountManagerId ?? null);
 
   const business = await Business.create({
+    structure: { enabled: true, tiers: [], groupSteps: [], branchTitle: "Branch manager", slaByTier: {} },
     name: body.name.trim(),
     industry: typeof body.industry === "string" ? body.industry : "",
     parentOrgId: body.parentOrgId || null,

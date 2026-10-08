@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import { Types } from "mongoose";
+import { OrgNode } from "../models/OrgNode";
 import { Business } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { User, type AccountType, type TeamMemberTier } from "../models/User";
@@ -39,6 +40,7 @@ import { CompassAssessmentHistory } from "../models/CompassAssessmentHistory";
 import { seedAmaniPrograms } from "./amaniPrograms";
 import { seedLaunchDemoExtras } from "./launchDemo";
 import { seedDemoFinish } from "./demoFinish";
+import { seedStructureDemo } from "./structureDemo";
 import { seedShowcasePolish } from "./showcasePolish";
 import { RosterSurveyToken } from "../models/RosterSurveyToken";
 import { seedCompassDemo, type CompassDemoOwner, type CompassDemoProfile } from "./compassDemo";
@@ -2663,6 +2665,9 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   const compassSeeded = await seedCompassDemo(compassOwners);
   console.log(`[showcase] compass: ${compassSeeded.assessments} assessments, ${compassSeeded.history} history rows`);
 
+  const structureDemo = await seedStructureDemo();
+  console.log(`[showcase] structure: ${JSON.stringify(structureDemo)}`);
+
   const polish = await seedShowcasePolish();
   console.log(`[showcase] polish: ${JSON.stringify(polish)}`);
 
@@ -2730,6 +2735,7 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("programEvaluationReports", () => ProgramEvaluationReport.deleteMany({}));
   await del("compassAssessments", () => CompassAssessment.deleteMany({}));
   await del("compassAssessmentHistory", () => CompassAssessmentHistory.deleteMany({}));
+  await del("orgNodes", () => OrgNode.deleteMany({}));
   await del("businesses", () => Business.deleteMany({}));
   await del("parentOrgs", () => ParentOrganization.deleteMany({}));
   await del("users", () => User.deleteMany({ accountType: { $ne: "admin_staff" } }));

@@ -28,7 +28,6 @@ export async function GET() {
     categories,
     allCategories,
     mappings,
-    escalationLevels: session.org.escalationLevels,
     sensitiveRoutingContactId: session.org.sensitiveRoutingContactId ? session.org.sensitiveRoutingContactId.toString() : null,
     colleagueEnabled: getEnabledProducts(session.org).includes("colleague_experience"),
   });
@@ -76,10 +75,6 @@ export async function PUT(request: Request) {
     body?.repeatThresholdCount === null || typeof body?.repeatThresholdCount === "number" ? body.repeatThresholdCount : undefined;
   const repeatWindowDays =
     body?.repeatWindowDays === null || typeof body?.repeatWindowDays === "number" ? body.repeatWindowDays : undefined;
-  const escalateAfterDays =
-    body?.escalateAfterDays === null || typeof body?.escalateAfterDays === "number" ? body.escalateAfterDays : undefined;
-  const escalateToLevel =
-    body?.escalateToLevel === null || typeof body?.escalateToLevel === "number" ? body.escalateToLevel : undefined;
 
   await connectToDatabase();
   const mapping = await CategoryOwnerMapping.findOneAndUpdate(
@@ -89,8 +84,6 @@ export async function PUT(request: Request) {
         defaultOwnerId,
         ...(repeatThresholdCount !== undefined ? { repeatThresholdCount } : {}),
         ...(repeatWindowDays !== undefined ? { repeatWindowDays } : {}),
-        ...(escalateAfterDays !== undefined ? { escalateAfterDays } : {}),
-        ...(escalateToLevel !== undefined ? { escalateToLevel } : {}),
       },
     },
     { upsert: true, new: true }

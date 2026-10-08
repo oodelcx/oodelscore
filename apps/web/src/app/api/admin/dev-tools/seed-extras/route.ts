@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, seedDemoFinish, seedLaunchDemoExtras, seedShowcasePolish } from "@oodelscore/shared";
+import { connectToDatabase, seedDemoFinish, seedStructureDemo, seedLaunchDemoExtras, seedShowcasePolish } from "@oodelscore/shared";
 import { requireStaffSession } from "@/lib/adminAuth";
 
 /**
@@ -20,8 +20,9 @@ export async function POST() {
   }
 
   await connectToDatabase();
+  const structure = await seedStructureDemo();
   const polish = await seedShowcasePolish();
   const launch = await seedLaunchDemoExtras();
   const finish = await seedDemoFinish();
-  return NextResponse.json({ status: "ok", polish, launch, finish });
+  return NextResponse.json({ status: "ok", structure, polish, launch, finish });
 }

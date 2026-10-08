@@ -3,30 +3,11 @@ import { Business, type IBusiness } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { EscalationAssignment } from "../models/EscalationAssignment";
 import { ActionBoardItem, type IActionBoardItem } from "../models/ActionBoardItem";
-import { CategoryOwnerMapping } from "../models/CategoryOwnerMapping";
+import { OrgNode } from "../models/OrgNode";
 import { User } from "../models/User";
 import { sendTemplatedEmail } from "../email/resend";
 import type { IEscalationLevel } from "../models/common";
-
-/**
- * A category can opt into its own escalation threshold (set on Category
- * Owners, independent of the region-based EscalationAssignment system) —
- * "if a case in this category sits unresolved past N days, jump it
- * straight to level X," for a category whose severity warrants a
- * different path than the account's default SLA. Returns null when the
- * item has no category or the category never opted in, in which case the
- * caller falls back to the normal account-wide SLA sweep.
- */
-async function getCategoryEscalationOverride(
-  item: Pick<IActionBoardItem, "businessId" | "parentOrgId" | "categoryId">
-): Promise<{ afterDays: number; toLevel: number } | null> {
-  if (!item.categoryId) return null;
-  const mapping = item.parentOrgId
-    ? await CategoryOwnerMapping.findOne({ ownerScope: "parentOrg", ownerScopeId: item.parentOrgId, categoryId: item.categoryId })
-    : await CategoryOwnerMapping.findOne({ ownerScope: "business", ownerScopeId: item.businessId, categoryId: item.categoryId });
-  if (!mapping || mapping.escalateAfterDays === null || mapping.escalateToLevel === null) return null;
-  return { afterDays: mapping.escalateAfterDays, toLevel: mapping.escalateToLevel };
-}
+import { buildTreeChain, chainIndexForLevel, slaHoursForStep, idStr, type ChainStep } from "../structure/chain";
 
 export class EscalationError extends Error {}
 
@@ -61,7 +42,7 @@ export async function getEscalationConfig(business: Pick<IBusiness, "parentOrgId
  * checks (in order) a branch-specific override, a region-scoped assignment,
  * then an org-wide/business-wide one.
  */
-export async function resolveEscalationAssignee(businessId: string, level: number): Promise<Types.ObjectId | null> {
+async function legacyAssignee(businessId: string, level: number): Promise<Types.ObjectId | null> {
   const business = await Business.findById(businessId);
   if (!business) return null;
 
@@ -101,6 +82,67 @@ export async function resolveEscalationAssignee(businessId: string, level: numbe
   return businessWide?.userId ?? null;
 }
 
+
+export interface BusinessChain {
+  mode: "tree" | "legacy";
+  chain: ChainStep[];
+  slaHours: number | null;
+  slaByTier: Record<string, number>;
+}
+
+/**
+ * The escalation chain for one business, lowest step first. A group (or
+ * standalone business) on the new structure gets its chain from its tree:
+ * branch manager, each box above that has a manager, then the group-level
+ * steps. One still on the older numbered levels keeps working unchanged, so
+ * nothing already in flight breaks when this ships.
+ */
+export async function getChainForBusiness(business: HydratedDocument<IBusiness>): Promise<BusinessChain> {
+  const org = business.parentOrgId ? await ParentOrganization.findById(business.parentOrgId) : null;
+  const structure = org ? org.structure : business.structure;
+  const slaHours = org ? org.escalationSlaHours : business.escalationSlaHours ?? null;
+
+  if (structure?.enabled) {
+    const branchOwner = await User.findOne({ accountType: "business", parentId: business._id }).select("_id");
+    const tierName = new Map((structure.tiers ?? []).map((t) => [t.key, t.name]));
+    const nodes: { tierKey: string; tierName: string; managerTitle: string; managerUserId: string | null }[] = [];
+    let nodeId = org ? business.orgNodeId : null;
+    for (let i = 0; nodeId && i < 12; i++) {
+      const node = await OrgNode.findById(nodeId);
+      if (!node) break;
+      nodes.push({ tierKey: node.tierKey, tierName: tierName.get(node.tierKey) ?? node.tierKey, managerTitle: node.managerTitle, managerUserId: idStr(node.managerUserId) });
+      nodeId = node.parentNodeId;
+    }
+    const head = org ? await User.findOne({ accountType: "parent_org", parentId: org._id }).select("_id") : null;
+    const chain = buildTreeChain({
+      branchTitle: structure.branchTitle,
+      branchOwnerId: idStr(branchOwner?._id),
+      nodes,
+      groupSteps: (structure.groupSteps ?? []).map((g) => ({ title: g.title, userId: idStr(g.userId) })),
+      fallbackHead: head ? { userId: idStr(head._id), title: "Group Head" } : null,
+    });
+    return { mode: "tree", chain, slaHours, slaByTier: (structure.slaByTier ?? {}) as Record<string, number> };
+  }
+
+  const config = await getEscalationConfig(business);
+  const levels = config.levels.slice().sort((a, b) => a.level - b.level);
+  const chain: ChainStep[] = [];
+  for (const l of levels) {
+    const userId = await legacyAssignee(business._id.toString(), l.level);
+    chain.push({ level: l.level, label: l.label, userId: idStr(userId), tierKey: l.level <= 1 ? "branch" : "group" });
+  }
+  return { mode: "legacy", chain, slaHours: config.slaHours, slaByTier: {} };
+}
+
+/** Who holds a given level for this business right now (level 1 is always the branch's own owner). */
+export async function resolveEscalationAssignee(businessId: string, level: number): Promise<Types.ObjectId | null> {
+  const business = await Business.findById(businessId);
+  if (!business) return null;
+  const { chain } = await getChainForBusiness(business);
+  const step = chain.find((c) => c.level === level);
+  return step?.userId ? new Types.ObjectId(step.userId) : null;
+}
+
 /**
  * Advances one case to the next configured level: records the outgoing
  * level in escalationHistory (never edited afterward — this is the case's
@@ -116,15 +158,14 @@ export async function escalateActionBoardItem(
   const business = await Business.findById(item.businessId);
   if (!business) throw new EscalationError("Business not found");
 
-  const config = await getEscalationConfig(business);
-  const levels = config.levels.slice().sort((a, b) => a.level - b.level);
-  if (!levels.length) throw new EscalationError("No escalation levels configured for this account yet.");
+  const { chain } = await getChainForBusiness(business);
+  if (chain.length <= 1) throw new EscalationError("No one is set up above the branch yet. Add the escalation people first.");
 
-  const currentIndex = levels.findIndex((l) => l.level === item.currentEscalationLevel);
-  const nextLevelConfig = currentIndex === -1 ? levels[0] : levels[currentIndex + 1];
+  const currentIndex = chainIndexForLevel(chain, item.currentEscalationLevel);
+  const nextLevelConfig = chain[currentIndex + 1];
   if (!nextLevelConfig) throw new EscalationError("This case is already at the top of the escalation chain.");
 
-  const nextUserId = await resolveEscalationAssignee(item.businessId.toString(), nextLevelConfig.level);
+  const nextUserId = nextLevelConfig.userId ? new Types.ObjectId(nextLevelConfig.userId) : null;
   item.escalationHistory.push({
     level: item.currentEscalationLevel,
     userId: item.ownerId,
@@ -177,15 +218,12 @@ export async function deEscalateActionBoardItem(
   const business = await Business.findById(item.businessId);
   if (!business) throw new EscalationError("Business not found");
 
-  const config = await getEscalationConfig(business);
-  const levels = config.levels.slice().sort((a, b) => a.level - b.level);
-  if (!levels.length) throw new EscalationError("No escalation levels configured for this account yet.");
-
-  const currentIndex = levels.findIndex((l) => l.level === item.currentEscalationLevel);
-  const prevLevelConfig = currentIndex <= 0 ? null : levels[currentIndex - 1];
+  const { chain } = await getChainForBusiness(business);
+  const currentIndex = chainIndexForLevel(chain, item.currentEscalationLevel);
+  const prevLevelConfig = currentIndex <= 0 ? null : chain[currentIndex - 1];
   if (!prevLevelConfig) throw new EscalationError("This case is already at the bottom of the escalation chain.");
 
-  const prevUserId = await resolveEscalationAssignee(item.businessId.toString(), prevLevelConfig.level);
+  const prevUserId = prevLevelConfig.userId ? new Types.ObjectId(prevLevelConfig.userId) : null;
   item.escalationHistory.push({
     level: item.currentEscalationLevel,
     userId: item.ownerId,
@@ -243,46 +281,16 @@ export async function autoEscalateOverdueCases(): Promise<{ escalated: number; s
         skipped++;
         continue;
       }
-      const config = await getEscalationConfig(business);
+      const { chain, slaHours, slaByTier } = await getChainForBusiness(business);
       const levelStarted = item.levelEnteredAt ?? item.createdAt;
       const hoursSince = (Date.now() - new Date(levelStarted).getTime()) / (1000 * 60 * 60);
-
-      // A category-specific override takes priority over the account-wide
-      // SLA sweep: if this case's category opted into its own threshold and
-      // it's overdue, jump straight to that category's configured level
-      // (one escalateActionBoardItem call per rung, since escalationHistory
-      // needs an entry for each level actually passed through) rather than
-      // advancing only one level the way the default SLA sweep does.
-      const categoryOverride = await getCategoryEscalationOverride(item);
-      if (categoryOverride && hoursSince >= categoryOverride.afterDays * 24) {
-        let movedAny = false;
-        while (item.currentEscalationLevel < categoryOverride.toLevel) {
-          try {
-            await escalateActionBoardItem(item, {
-              note: `Auto-escalated: this category is configured to escalate to level ${categoryOverride.toLevel} after ${categoryOverride.afterDays} day(s) unresolved.`,
-              auto: true,
-            });
-            movedAny = true;
-          } catch (err) {
-            if (err instanceof EscalationError) break;
-            throw err;
-          }
-        }
-        if (movedAny) {
-          escalated++;
-          continue;
-        }
-      }
-
-      if (!config.slaHours) {
+      const step = chain[chainIndexForLevel(chain, item.currentEscalationLevel)];
+      const limit = step ? slaHoursForStep(step, slaByTier, slaHours) : null;
+      if (!limit || hoursSince < limit) {
         skipped++;
         continue;
       }
-      if (hoursSince < config.slaHours) {
-        skipped++;
-        continue;
-      }
-      await escalateActionBoardItem(item, { note: "Auto-escalated: unresolved past the SLA at this level.", auto: true });
+      await escalateActionBoardItem(item, { note: "Auto-escalated: unresolved past the time allowed at this step.", auto: true });
       escalated++;
     } catch (err) {
       if (err instanceof EscalationError) {
@@ -295,4 +303,27 @@ export async function autoEscalateOverdueCases(): Promise<{ escalated: number; s
   }
 
   return { escalated, skipped, failed };
+}
+
+/** What the Escalate / Step back buttons need: who a click would hand the case to, shown before the click. */
+export async function describeEscalation(businessId: string, currentLevel: number) {
+  const business = await Business.findById(businessId);
+  const empty = { levelsConfigured: 0, topLevel: null as number | null, canEscalate: false, canDeEscalate: false, nextLevel: null as null | { level: number; label: string; assigneeEmail: string | null }, prevLevel: null as null | { level: number; label: string; assigneeEmail: string | null } };
+  if (!business) return empty;
+  const { chain } = await getChainForBusiness(business);
+  if (!chain.length) return empty;
+  const i = chainIndexForLevel(chain, currentLevel);
+  const next = chain[i + 1] ?? null;
+  const prev = i > 0 ? chain[i - 1] : null;
+  const ids = [next?.userId, prev?.userId].filter((x): x is string => !!x);
+  const users = ids.length ? await User.find({ _id: { $in: ids } }).select("email") : [];
+  const emailOf = (id: string | null | undefined) => (id ? users.find((u) => u._id.toString() === id)?.email ?? null : null);
+  return {
+    levelsConfigured: chain.length,
+    topLevel: chain[chain.length - 1].level,
+    canEscalate: !!next,
+    canDeEscalate: !!prev,
+    nextLevel: next ? { level: next.level, label: next.label, assigneeEmail: emailOf(next.userId) } : null,
+    prevLevel: prev ? { level: prev.level, label: prev.label, assigneeEmail: emailOf(prev.userId) } : null,
+  };
 }

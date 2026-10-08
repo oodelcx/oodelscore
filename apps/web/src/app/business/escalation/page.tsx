@@ -1,5 +1,5 @@
-import { EscalationSettingsClient } from "@/components/escalation-settings-client";
+import { StructureClient } from "@/components/structure-client";
 
 export default function BusinessEscalationPage() {
-  return <EscalationSettingsClient apiPath="/api/business/escalation" />;
+  return <StructureClient apiPath="/api/business/structure" />;
 }

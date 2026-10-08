@@ -99,6 +99,7 @@ export async function POST(request: Request) {
   const accountManagerId = role.permissions.parentOrgs.scope === "assigned" ? user._id : (body.accountManagerId ?? null);
 
   const parentOrg = await ParentOrganization.create({
+    structure: { enabled: true, tiers: [], groupSteps: [], branchTitle: "Branch manager", slaByTier: {} },
     name: body.name.trim(),
     contactName: typeof body.contactName === "string" ? body.contactName : "",
     contactEmail,

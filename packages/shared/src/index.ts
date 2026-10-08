@@ -82,3 +82,6 @@ export * from "./compass/scoring";
 export * from "./compass/assessmentService";
 export * from "./compass/evidenceFusion";
 export * from "./compass/reach";
+export * from "./structure/chain";
+export * from "./structure/service";
+export { seedStructureDemo } from "./seedData/structureDemo";

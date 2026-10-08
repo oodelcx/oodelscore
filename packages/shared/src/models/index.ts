@@ -40,6 +40,7 @@ export * from "./AuditLogEntry";
 export * from "./CaseEventLogEntry";
 export * from "./PlatformSettings";
 export * from "./EscalationAssignment";
+export * from "./OrgNode";
 export * from "./ImprovementInitiative";
 export * from "./SystemHealthEvent";
 export * from "./CronRun";

@@ -9,6 +9,8 @@ import {
   type IPricingTerms,
   DEFAULT_PRICING_TERMS,
   EscalationLevelSchema,
+  StructureSchema,
+  type IStructure,
   type IEscalationLevel,
   DEFAULT_ESCALATION_LEVELS,
 } from "./common";
@@ -71,6 +73,9 @@ export interface IParentOrganization {
   // ADMIN-EDITABLE ONLY. Hours an unresolved case may sit at its current
   // level before the cron auto-escalates it one level. null = manual only.
   escalationSlaHours: number | null;
+  // The group's structure tree and group-level escalation steps. When
+  // structure.enabled is false the older numbered levels above still apply.
+  structure: IStructure;
   accountManagerId: Types.ObjectId | null; // -> users._id (staff)
   branchSeatLimit: number | null; // ADMIN-EDITABLE ONLY. null = unlimited. Enforced against active business count.
   teamMemberSeatLimit: number | null; // ADMIN-EDITABLE ONLY. The Group's own staff pool, independent of any branch's.
@@ -114,6 +119,7 @@ const ParentOrganizationSchema = new Schema<IParentOrganization>(
     checkoutEnabled: { type: Boolean, default: false },
     escalationLevels: { type: [EscalationLevelSchema], default: () => DEFAULT_ESCALATION_LEVELS.map((l) => ({ ...l })) },
     escalationSlaHours: { type: Number, default: null },
+    structure: { type: StructureSchema, default: () => ({}) },
     accountManagerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     branchSeatLimit: { type: Number, default: null },
     teamMemberSeatLimit: { type: Number, default: null },

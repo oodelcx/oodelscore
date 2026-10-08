@@ -9,6 +9,8 @@ import {
   type IPricingTerms,
   DEFAULT_PRICING_TERMS,
   EscalationLevelSchema,
+  StructureSchema,
+  type IStructure,
   type IEscalationLevel,
   DEFAULT_ESCALATION_LEVELS,
 } from "./common";
@@ -117,6 +119,10 @@ export interface IBusiness {
   // escalation level before the cron auto-escalates it one level. null =
   // no auto-escalation (Admin/branch must escalate manually).
   escalationSlaHours: number | null;
+  // Standalone business: who handles escalations (groupSteps only). A branch uses its group's structure.
+  structure: IStructure;
+  // The lowest box of the group's structure tree this branch sits under (null = directly under the group).
+  orgNodeId: Types.ObjectId | null;
   plan: BusinessPlan;
   maxFeedbackPoints: number;
   questionTemplateId: Types.ObjectId | null; // ADMIN-EDITABLE ONLY, ever
@@ -213,6 +219,8 @@ const BusinessSchema = new Schema<IBusiness>(
     checkoutEnabled: { type: Boolean, default: false },
     escalationLevels: { type: [EscalationLevelSchema], default: () => DEFAULT_ESCALATION_LEVELS.map((l) => ({ ...l })) },
     escalationSlaHours: { type: Number, default: null },
+    structure: { type: StructureSchema, default: () => ({}) },
+    orgNodeId: { type: Schema.Types.ObjectId, ref: "OrgNode", default: null },
     plan: { type: String, enum: BUSINESS_PLANS, default: "business_monthly" },
     maxFeedbackPoints: { type: Number, default: 1 },
     questionTemplateId: { type: Schema.Types.ObjectId, ref: "QuestionTemplate", default: null },

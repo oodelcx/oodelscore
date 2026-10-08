@@ -6,6 +6,7 @@ import {
   Business,
   AlertActivity,
   ActionBoardItem,
+  describeEscalation,
   ImprovementInitiative,
   CxPulseScore,
   computeNetworkSummaries,
@@ -86,24 +87,32 @@ export async function GET() {
       ImprovementInitiative.countDocuments({ parentOrgId: session.org._id, product, status: "completed", completedAt: { $gte: from } }),
     ]);
 
-  // "Needs a decision from you" — cases that have escalated all the way to
-  // this org's top configured level and are still unresolved. Only
-  // meaningful once escalation goes beyond level 1 (the branch's own owner).
-  const topLevel = session.org.escalationLevels.length
-    ? Math.max(...session.org.escalationLevels.map((l) => l.level))
-    : 1;
-  const needsYourDecision =
-    topLevel > 1
-      ? await ActionBoardItem.find({
-          parentOrgId: session.org._id,
-          product,
-          status: { $ne: "resolved" },
-          currentEscalationLevel: topLevel,
-          $and: [sensitiveVisibilityClause(caseViewerForGroup(session))],
-        })
-          .select("title businessId currentEscalationLevel")
-          .limit(10)
-      : [];
+  // "Needs a decision from you": unresolved cases that have escalated all the
+  // way to the top of their own branch's chain. Chains differ per branch (a
+  // branch under a cluster has a longer one), so each case is checked
+  // against its own branch's top step.
+  const escalatedCases = await ActionBoardItem.find({
+    parentOrgId: session.org._id,
+    product,
+    status: { $ne: "resolved" },
+    currentEscalationLevel: { $gt: 1 },
+    $and: [sensitiveVisibilityClause(caseViewerForGroup(session))],
+  })
+    .select("title businessId currentEscalationLevel")
+    .sort({ levelEnteredAt: -1 })
+    .limit(200);
+  const topByBusiness = new Map<string, number | null>();
+  const needsYourDecision: typeof escalatedCases = [];
+  for (const c of escalatedCases) {
+    const key = c.businessId.toString();
+    if (!topByBusiness.has(key)) {
+      const info = await describeEscalation(key, 1);
+      topByBusiness.set(key, info.topLevel);
+    }
+    const top = topByBusiness.get(key);
+    if (top !== null && top !== undefined && c.currentEscalationLevel >= top) needsYourDecision.push(c);
+    if (needsYourDecision.length >= 10) break;
+  }
 
   const monthChange = comparisons.month.changePercent;
   const headline =

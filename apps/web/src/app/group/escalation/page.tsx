@@ -1,5 +1,5 @@
-import { EscalationSettingsClient } from "@/components/escalation-settings-client";
+import { StructureClient } from "@/components/structure-client";
 
 export default function GroupEscalationPage() {
-  return <EscalationSettingsClient apiPath="/api/group/escalation" regions={[]} />;
+  return <StructureClient apiPath="/api/group/structure" />;
 }

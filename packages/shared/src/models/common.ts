@@ -145,3 +145,45 @@ export const NoteEntrySchema = new Schema<INoteEntry>(
 // A brand-new account starts with just the one rung every business already
 // has for free — its own owner. Admin adds more during implementation.
 export const DEFAULT_ESCALATION_LEVELS: IEscalationLevel[] = [{ level: 1, label: "Owner" }];
+
+
+/**
+ * A group's (or standalone business's) escalation structure.
+ *  - enabled: false = still on the older numbered-levels setup (engine falls back to it).
+ *  - tiers: the optional layers between the group and its branches, top to bottom
+ *    (Region, Area, Cluster...). Names are the group's own words.
+ *  - groupSteps: who handles escalations at group level, in order from the lowest
+ *    group-level step up to the top (Operations Lead, then Group Head).
+ *  - branchTitle: what the person who runs a branch is called.
+ *  - slaByTier: optional hours per step; keys are "branch", a tier key, or "group".
+ *    The single escalationSlaHours applies wherever a key is missing.
+ */
+export interface IStructureTier {
+  key: string;
+  name: string;
+}
+export interface IStructureStep {
+  title: string;
+  userId: import("mongoose").Types.ObjectId | null;
+}
+export interface IStructure {
+  enabled: boolean;
+  tiers: IStructureTier[];
+  groupSteps: IStructureStep[];
+  branchTitle: string;
+  slaByTier: Record<string, number>;
+}
+
+export const StructureSchema = new Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    tiers: { type: [new Schema({ key: { type: String, required: true }, name: { type: String, required: true } }, { _id: false })], default: [] },
+    groupSteps: {
+      type: [new Schema({ title: { type: String, required: true }, userId: { type: Schema.Types.ObjectId, ref: "User", default: null } }, { _id: false })],
+      default: [],
+    },
+    branchTitle: { type: String, default: "Branch manager" },
+    slaByTier: { type: Schema.Types.Mixed, default: () => ({}) },
+  },
+  { _id: false }
+);

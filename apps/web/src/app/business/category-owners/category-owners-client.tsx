@@ -12,15 +12,9 @@ interface MappingRow {
   defaultOwnerId: string;
   repeatThresholdCount: number | null;
   repeatWindowDays: number | null;
-  escalateAfterDays: number | null;
-  escalateToLevel: number | null;
-}
+  }
 interface TeamRow {
   userId: string;
-  label: string;
-}
-interface EscalationLevelRow {
-  level: number;
   label: string;
 }
 
@@ -41,9 +35,6 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
   const [savingSensitiveContact, setSavingSensitiveContact] = useState(false);
   const [benchmarkOptIn, setBenchmarkOptIn] = useState(false);
   const [savingBenchmarkOptIn, setSavingBenchmarkOptIn] = useState(false);
-  const [escalationLevels, setEscalationLevels] = useState<EscalationLevelRow[]>([]);
-  const [escalateDrafts, setEscalateDrafts] = useState<Record<string, { days: string; level: string }>>({});
-  const [savingEscalateFor, setSavingEscalateFor] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -55,22 +46,15 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
       setCategories(data.categories ?? []);
       const byCategory: Record<string, MappingRow> = {};
       const drafts: Record<string, { count: string; days: string }> = {};
-      const escalateDraftsNext: Record<string, { days: string; level: string }> = {};
       for (const m of data.mappings ?? []) {
         byCategory[m.categoryId] = m;
         drafts[m.categoryId] = {
           count: m.repeatThresholdCount != null ? String(m.repeatThresholdCount) : "",
           days: m.repeatWindowDays != null ? String(m.repeatWindowDays) : "",
         };
-        escalateDraftsNext[m.categoryId] = {
-          days: m.escalateAfterDays != null ? String(m.escalateAfterDays) : "",
-          level: m.escalateToLevel != null ? String(m.escalateToLevel) : "",
-        };
       }
       setMappings(byCategory);
       setRepeatDrafts(drafts);
-      setEscalateDrafts(escalateDraftsNext);
-      setEscalationLevels(data.escalationLevels ?? []);
       setTeam(teamData.team ?? []);
       setIsBranch(!!meData.business?.parentOrgId);
       setCeEnabled(!!data.ceEnabled);
@@ -138,25 +122,6 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
     load();
   }
 
-  async function saveEscalateOverride(categoryId: string) {
-    const ownerId = mappings[categoryId]?.defaultOwnerId;
-    if (!ownerId) return;
-    const draft = escalateDrafts[categoryId] ?? { days: "", level: "" };
-    setSavingEscalateFor(categoryId);
-    await fetch("/api/business/category-owners", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        categoryId,
-        defaultOwnerId: ownerId,
-        escalateAfterDays: draft.days.trim() ? Number(draft.days) : null,
-        escalateToLevel: draft.level.trim() ? Number(draft.level) : null,
-      }),
-    });
-    setSavingEscalateFor(null);
-    load();
-  }
-
   return (
     <div>
       <div className="page-head">
@@ -178,18 +143,14 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
         </div>
       )}
       <div className="callout">
-        Items in a mapped category are assigned directly to that category&rsquo;s default owner — no separate
-        confirmation step.
-      </div>
-      <div className="callout">
-        &quot;Flag as recurring after&quot; watches this business&rsquo;s own cases only — e.g. 5 times in 30 days.
-        Leave blank to turn detection off for that category.
-      </div>
-      <div className="callout">
-        &quot;Escalate if unresolved&quot; is independent of your escalation config (see the Escalation page): it&rsquo;s a
-        category-specific override — if a case in this category sits unresolved for this many days, it jumps
-        straight to the chosen level, regardless of what region it&rsquo;s in. Leave blank for a category that should
-        just follow your normal escalation chain.
+        <b>How this works.</b> Every survey question belongs to a category, for example Cleanliness or Waiting Time.
+        When a low score opens a case, it goes straight to the person you choose here for that category. A category
+        with no owner goes to the branch manager.
+        <br />
+        <b>Recurring issues.</b> Optionally, if the same category produces the same problem several times (for
+        example 5 times in 30 days), it is flagged as a recurring issue. Leave it empty to switch this off.
+        <br />
+        <b>Not here:</b> how long a case can wait before moving up is set once, on the Escalation page.
       </div>
 
       {!loading && (
@@ -223,7 +184,6 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
                 <InfoTip text={tooltips["default-owner"]} />
               </th>
               <th>Flag as recurring after</th>
-              <th>Escalate if unresolved</th>
             </tr>
           </thead>
           <tbody>
@@ -283,54 +243,11 @@ export default function BusinessCategoryOwnersClient({ tooltips }: { tooltips: R
                     <span className="subtitle">Set an owner first</span>
                   )}
                 </td>
-                <td>
-                  {mappings[c._id]?.defaultOwnerId ? (
-                    <div className="field-row" style={{ alignItems: "flex-end", gap: 6 }}>
-                      <div className="field" style={{ margin: 0, width: 70 }}>
-                        <label style={{ fontSize: 11 }}>Days</label>
-                        <input
-                          type="number"
-                          min="1"
-                          placeholder="off"
-                          value={escalateDrafts[c._id]?.days ?? ""}
-                          onChange={(e) =>
-                            setEscalateDrafts((d) => ({ ...d, [c._id]: { ...(d[c._id] ?? { days: "", level: "" }), days: e.target.value } }))
-                          }
-                        />
-                      </div>
-                      <div className="field" style={{ margin: 0, width: 140 }}>
-                        <label style={{ fontSize: 11 }}>Level</label>
-                        <select
-                          value={escalateDrafts[c._id]?.level ?? ""}
-                          onChange={(e) =>
-                            setEscalateDrafts((d) => ({ ...d, [c._id]: { ...(d[c._id] ?? { days: "", level: "" }), level: e.target.value } }))
-                          }
-                        >
-                          <option value="">Not set</option>
-                          {escalationLevels.map((l) => (
-                            <option key={l.level} value={l.level}>
-                              Level {l.level} — {l.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        className="btn btn-sm"
-                        disabled={savingEscalateFor === c._id}
-                        onClick={() => saveEscalateOverride(c._id)}
-                      >
-                        {savingEscalateFor === c._id ? "…" : "Save"}
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="subtitle">Set an owner first</span>
-                  )}
-                </td>
               </tr>
             ))}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={4} className="subtitle">
+                <td colSpan={3} className="subtitle">
                   No categories yet.
                 </td>
               </tr>

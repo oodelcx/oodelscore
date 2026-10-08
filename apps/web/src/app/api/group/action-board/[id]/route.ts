@@ -17,8 +17,7 @@ import {
   ensureDraftDecisionForResolvedCase,
   CaseEventLogEntry,
   resolveQuestionTextByQuestionId,
-  getEscalationConfig,
-  resolveEscalationAssignee,
+  describeEscalation,
 } from "@oodelscore/shared";
 import { requireParentOrgOwner, caseViewerForGroup } from "@/lib/ownerAuth";
 import { attachPlaybookRunsToItems } from "@/lib/caseStats";
@@ -69,26 +68,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const emailByUserId = new Map(escalationUsers.map((u) => [u._id.toString(), u.email]));
   const timeline = buildCaseTimeline(events, item.escalationHistory, emailByUserId);
   const questionTextById = await resolveQuestionTextByQuestionId(sourceResponses);
-  const escalationConfig = await getEscalationConfig({
-    parentOrgId: session.org._id,
-    escalationLevels: [],
-    escalationSlaHours: null,
-  });
-  const levels = escalationConfig.levels.slice().sort((a, b) => a.level - b.level);
-  const topLevel = levels.length > 0 ? Math.max(...levels.map((l) => l.level)) : null;
-  // See the business route's identical comment — this resolves WHO a click
-  // would hand the case to, so the UI never escalates blind.
-  const currentIndex = levels.findIndex((l) => l.level === item.currentEscalationLevel);
-  const nextLevelConfig = currentIndex === -1 ? levels[0] : levels[currentIndex + 1];
-  const prevLevelConfig = currentIndex <= 0 ? null : levels[currentIndex - 1];
-  const [nextAssigneeId, prevAssigneeId] = await Promise.all([
-    nextLevelConfig ? resolveEscalationAssignee(item.businessId.toString(), nextLevelConfig.level) : null,
-    prevLevelConfig ? resolveEscalationAssignee(item.businessId.toString(), prevLevelConfig.level) : null,
-  ]);
-  const [nextAssignee, prevAssignee] = await Promise.all([
-    nextAssigneeId ? User.findById(nextAssigneeId).select("email") : null,
-    prevAssigneeId ? User.findById(prevAssigneeId).select("email") : null,
-  ]);
+  const escalation = await describeEscalation(item.businessId.toString(), item.currentEscalationLevel);
 
   const [itemWithRun] = await attachPlaybookRunsToItems([item], playbooks);
 
@@ -131,18 +111,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     questionTextById,
     comments,
     timeline,
-    escalation: {
-      levelsConfigured: escalationConfig.levels.length,
-      topLevel,
-      canEscalate: topLevel !== null && item.currentEscalationLevel < topLevel,
-      canDeEscalate: item.currentEscalationLevel > 1,
-      nextLevel: nextLevelConfig
-        ? { level: nextLevelConfig.level, label: nextLevelConfig.label, assigneeEmail: nextAssignee?.email ?? null }
-        : null,
-      prevLevel: prevLevelConfig
-        ? { level: prevLevelConfig.level, label: prevLevelConfig.label, assigneeEmail: prevAssignee?.email ?? null }
-        : null,
-    },
+    escalation,
     businessName: business?.name ?? null,
     recurringFlag,
   });

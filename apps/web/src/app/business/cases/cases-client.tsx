@@ -131,7 +131,6 @@ export default function BusinessCasesClient() {
   const [allCategoryNames, setAllCategoryNames] = useState<CategoryRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [tier, setTier] = useState<"full" | "limited" | null>(null);
-  const [escLevels, setEscLevels] = useState<{ level: number; label: string }[]>([]);
   type EscInfo = {
     canEscalate: boolean;
     canDeEscalate: boolean;
@@ -209,7 +208,6 @@ export default function BusinessCasesClient() {
       fetch("/api/business/category-owners").then((r) => r.json()).catch(() => ({ categories: [] })),
     ]).then(([itemsData, teamData, categoryData]) => {
       setItems(itemsData.items ?? []);
-      setEscLevels(Array.isArray(categoryData?.escalationLevels) ? categoryData.escalationLevels : []);
       setPlaybooks(itemsData.playbooks ?? []);
       setTier(itemsData.tier ?? null);
       setStats(itemsData.stats ?? null);
@@ -739,37 +737,30 @@ export default function BusinessCasesClient() {
                       >
                         💬 Comments{commentsByItem[item._id]?.length ? ` (${commentsByItem[item._id].length})` : ""}
                       </button>
-                      {item.status !== "resolved" && escLevels.length > 1 && (() => {
-                        const top = Math.max(...escLevels.map((l) => l.level));
-                        return (
-                          <>
-                            {item.currentEscalationLevel < top ? (
-                              <button
-                                type="button"
-                                className="case-action-btn"
-                                disabled={escalating === item._id}
-                                onClick={() => openEscalation(item._id, "up")}
-                                title="Hand this case to the next person in the escalation chain"
-                              >
-                                ↑ Escalate
-                              </button>
-                            ) : (
-                              <span className="pill pill-amber">Highest level reached</span>
-                            )}
-                            {item.currentEscalationLevel > 1 && (
-                              <button
-                                type="button"
-                                className="case-action-btn"
-                                disabled={escalating === item._id}
-                                onClick={() => openEscalation(item._id, "down")}
-                                title="Hand this case back one level"
-                              >
-                                ↓ Step back
-                              </button>
-                            )}
-                          </>
-                        );
-                      })()}
+                      {item.status !== "resolved" && (
+                        <>
+                          <button
+                            type="button"
+                            className="case-action-btn"
+                            disabled={escalating === item._id}
+                            onClick={() => openEscalation(item._id, "up")}
+                            title="Hand this case to the next person in the escalation chain"
+                          >
+                            ↑ Escalate
+                          </button>
+                          {item.currentEscalationLevel > 1 && (
+                            <button
+                              type="button"
+                              className="case-action-btn"
+                              disabled={escalating === item._id}
+                              onClick={() => openEscalation(item._id, "down")}
+                              title="Hand this case back one level"
+                            >
+                              ↓ Step back
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                     {!isLimited && <OwnerBadge label={team.find((t) => t.userId === item.ownerId)?.label ?? null} tip={tooltips["owner"]} />}
                   </div>
