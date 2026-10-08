@@ -12,3 +12,5 @@ blob-report/
 npm-debug.log*
 .DS_Store
 .claude/
+docs/build/*.html
+docs/build/__pycache__/
