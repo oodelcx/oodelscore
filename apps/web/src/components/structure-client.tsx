@@ -111,6 +111,7 @@ export function StructureClient({ apiPath, heading = true }: { apiPath: string; 
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [selectMode, setSelectMode] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [bulkTo, setBulkTo] = useState("");
   const [slaDraft, setSlaDraft] = useState("");
@@ -235,58 +236,66 @@ export function StructureClient({ apiPath, heading = true }: { apiPath: string; 
     file.text().then((t) => { setImportText(t); setImportRows(parseCsv(t)); setImportPreview(null); });
   }
 
+  const chainView = (b: Branch) => (
+    <div>
+      <div className="esc-chain">
+        {b.chain.length ? b.chain.map((s, i) => (
+          <span key={i} style={{ display: "contents" }}>
+            {i > 0 && <span className="esc-arrow">›</span>}
+            <span className="esc-step" title={s.email}>{s.email ? s.email.split("@")[0] : s.label}{s.label && s.email ? ` · ${s.label}` : ""}</span>
+          </span>
+        )) : <span className="esc-muted">Nobody above this branch yet</span>}
+      </div>
+      {b.issues.map((x) => (<div key={x} className="esc-warn">{x}</div>))}
+    </div>
+  );
+
+  const selecting = isGroup && selectMode;
+
   return (
-    <div style={{ maxWidth: 1040 }}>
+    <div className="esc">
       {heading && (
-        <>
+        <div className="page-head">
           <h1>Escalation</h1>
           <p className="subtitle">
             {isGroup
-              ? "For every branch, and for every person, choose who a case goes to next. A case follows those choices up to the Group Head."
+              ? "Choose who each branch escalates to first, and who each person escalates to after that. A case follows these choices up to the Group Head."
               : "Choose who a case goes to next, step by step, until it reaches the top."}
           </p>
-        </>
+        </div>
       )}
 
-      <div className="card" style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
-        <div><div className="field-hint">{isGroup ? "Branches" : "Location"}</div><strong style={{ fontSize: 22 }}>{data.branches.length}</strong></div>
-        <div><div className="field-hint">Escalation people</div><strong style={{ fontSize: 22 }}>{data.people.length}</strong></div>
-        <div>
-          <div className="field-hint">Team seats</div>
-          <strong style={{ fontSize: 22 }}>{data.seats.used}{data.seats.limit !== null ? ` of ${data.seats.limit}` : ""}</strong>
-        </div>
-        <div>
-          <div className="field-hint">Needs attention</div>
-          <strong style={{ fontSize: 22, color: branchesWithIssues ? "#b45309" : "inherit" }}>{branchesWithIssues}</strong>
-        </div>
+      <div className="grid grid-4">
+        <div className="card"><div className="metric-label">{isGroup ? "BRANCHES" : "LOCATION"}</div><div className="metric-val">{data.branches.length}</div></div>
+        <div className="card"><div className="metric-label">ESCALATION PEOPLE</div><div className="metric-val">{data.people.length}</div></div>
+        <div className="card"><div className="metric-label">TEAM SEATS USED</div><div className="metric-val">{data.seats.used}{data.seats.limit !== null ? ` / ${data.seats.limit}` : ""}</div></div>
+        <div className="card"><div className="metric-label">NEED ATTENTION</div><div className="metric-val" style={{ color: branchesWithIssues ? "#9a6406" : undefined }}>{branchesWithIssues}</div></div>
       </div>
 
-      {error && <p className="error-text" role="alert">{error}</p>}
-      {notice && <p className="callout" role="status">{notice}</p>}
+      {error && <div className="callout callout-amber" role="alert">{error}</div>}
+      {notice && <div className="callout" role="status">{notice}</div>}
 
       {/* ---- People ---- */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+      <div className="card">
+        <div className="esc-head-row">
           <div>
-            <h3 style={{ margin: 0 }}>People who handle escalations</h3>
-            <p className="card-sub" style={{ margin: "4px 0 0" }}>Each person escalates to one other person. The Group Head is the top and escalates to no one.</p>
+            <h3>People who handle escalations</h3>
+            <p className="card-sub">Each person escalates to one other person. The Group Head is the top.</p>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="esc-actions">
             {seatsFull && !seatOpen && <button className="btn" onClick={() => setSeatOpen(true)}>Request more seats</button>}
             <button className="btn btn-dark" onClick={() => setAddOpen((v) => !v)} disabled={busy}>{addOpen ? "Close" : "Add a person"}</button>
           </div>
         </div>
 
-        {seatsFull && (
-          <p className="callout" style={{ marginTop: 12 }}>
-            All {data.seats.limit} team seats are in use. To add someone, remove a person who has left, or request more seats from OodelCX.
-          </p>
-        )}
+        {seatsFull && <div className="callout callout-amber" style={{ marginBottom: 12 }}>All {data.seats.limit} team seats are in use. Remove someone who has left, or request more seats from OodelCX.</div>}
         {seatOpen && (
-          <div className="field" style={{ marginTop: 12 }}>
-            <label htmlFor="seat-note">What do you need? (optional)</label>
-            <textarea id="seat-note" rows={2} value={seatNote} onChange={(e) => setSeatNote(e.target.value)} placeholder="For example: two more regional managers joining in March" />
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <div className="esc-form">
+            <div>
+              <label htmlFor="seat-note">What do you need? (optional)</label>
+              <textarea id="seat-note" rows={2} value={seatNote} onChange={(e) => setSeatNote(e.target.value)} placeholder="For example: two more regional managers joining in March" />
+            </div>
+            <div className="esc-actions">
               <button className="btn btn-dark" disabled={busy} onClick={async () => { if (await act({ action: "requestSeats", note: seatNote })) { setSeatOpen(false); setSeatNote(""); } }}>Send request</button>
               <button className="btn" onClick={() => setSeatOpen(false)}>Cancel</button>
             </div>
@@ -294,105 +303,71 @@ export function StructureClient({ apiPath, heading = true }: { apiPath: string; 
         )}
 
         {addOpen && (
-          <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--border, #e5e7eb)", borderRadius: 10 }}>
-            <div className="field-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <div className="field" style={{ flex: "1 1 220px" }}>
-                <label htmlFor="add-email">Email</label>
-                <input id="add-email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} placeholder="name@company.com" />
-              </div>
-              <div className="field" style={{ flex: "1 1 180px" }}>
-                <label htmlFor="add-title">Title</label>
-                <input id="add-title" value={addForm.title} onChange={(e) => setAddForm({ ...addForm, title: e.target.value })} placeholder="Regional Manager" />
-              </div>
-              <div className="field" style={{ flex: "0 1 150px" }}>
+          <div className="esc-form">
+            <div className="esc-form-grid">
+              <div><label htmlFor="add-email">Email</label><input id="add-email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} placeholder="name@company.com" /></div>
+              <div><label htmlFor="add-title">Title</label><input id="add-title" type="text" value={addForm.title} onChange={(e) => setAddForm({ ...addForm, title: e.target.value })} placeholder="Regional Manager" /></div>
+              <div>
                 <label htmlFor="add-tier">Access</label>
                 <select id="add-tier" value={addForm.tier} onChange={(e) => setAddForm({ ...addForm, tier: e.target.value })}>
                   <option value="full">Full</option>
                   <option value="limited">Limited (own cases only)</option>
                 </select>
               </div>
-              <div className="field" style={{ flex: "1 1 220px" }}>
-                <label htmlFor="add-up">Escalates to</label>
-                <TargetSelect value={addForm.escalatesToId} onChange={(id) => setAddForm({ ...addForm, escalatesToId: id })} targets={peopleTargets} blankLabel="Choose later" />
-              </div>
+              <div><label htmlFor="add-up">Escalates to</label><TargetSelect value={addForm.escalatesToId} onChange={(id) => setAddForm({ ...addForm, escalatesToId: id })} targets={peopleTargets} blankLabel="Choose later" /></div>
             </div>
-            <p className="field-hint">They get an email to set their password. This uses one team seat{seatsLeft !== null ? ` (${seatsLeft} left)` : ""}.</p>
-            <button className="btn btn-dark" disabled={busy || seatsFull || !addForm.email || !addForm.title} onClick={submitAdd}>Send invitation</button>
+            <div className="esc-actions">
+              <button className="btn btn-dark" disabled={busy || seatsFull || !addForm.email || !addForm.title} onClick={submitAdd}>Send invitation</button>
+              <span className="esc-muted">They get an email to set a password and use one team seat{seatsLeft !== null ? ` (${seatsLeft} left)` : ""}.</span>
+            </div>
           </div>
         )}
 
-        <div style={{ overflowX: "auto", marginTop: 14 }}>
-          <table className="table" style={{ width: "100%" }}>
-            <thead>
-              <tr><th>Person</th><th>Title</th><th>Escalates to</th><th>Branches</th><th>Open cases</th><th /></tr>
-            </thead>
-            <tbody>
-              {data.people.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    {p.email}
-                    {p.inviteStatus !== "active" && <span className="pill" style={{ marginLeft: 6 }}>{p.inviteStatus === "invite_pending" ? "Invited" : "Invite expired"}</span>}
-                    {p.tier === "limited" && <span className="pill" style={{ marginLeft: 6 }}>Limited</span>}
-                  </td>
-                  <td>{p.title || "—"}</td>
-                  <td style={{ minWidth: 230 }}>
-                    {p.kind === "head" ? (
-                      <span className="field-hint">Top of the chain</span>
-                    ) : (
-                      <TargetSelect
-                        value={p.escalatesToId ?? ""}
-                        onChange={(id) => act({ action: "setPerson", personId: p.id, toEmail: emailOf(id) })}
-                        targets={peopleTargets}
-                        exclude={p.id}
-                        blankLabel="No one (top of their chain)"
-                        disabled={busy}
-                      />
-                    )}
-                  </td>
-                  <td>{p.usedByBranches}</td>
-                  <td>{p.openCases}</td>
-                  <td style={{ textAlign: "right" }}>
-                    {p.kind === "team" && (
-                      <button className="btn" disabled={busy} onClick={() => { setLeaver(p); setLeaverMode("existing"); setLeaverExisting(""); setError(null); }}>Remove or replace</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {!data.people.length && <tr><td colSpan={6} className="field-hint">No one yet. Add the people who handle escalations, or ask OodelCX to import them.</td></tr>}
-            </tbody>
-          </table>
+        <div className="esc-list">
+          <div className="esc-row esc-people esc-th"><span>Person</span><span>Escalates to</span><span>Handles</span><span /></div>
+          {data.people.map((p) => (
+            <div className="esc-row esc-people" key={p.id}>
+              <div className="esc-main">
+                <strong>{p.email}</strong>
+                <span>
+                  {p.title || "—"}
+                  {p.inviteStatus !== "active" && <> · <span className="pill pill-amber" style={{ display: "inline" }}>{p.inviteStatus === "invite_pending" ? "Invited" : "Invite expired"}</span></>}
+                  {p.tier === "limited" && <> · <span className="pill pill-gray" style={{ display: "inline" }}>Limited</span></>}
+                </span>
+              </div>
+              <div>
+                {p.kind === "head" ? (
+                  <span className="esc-muted">Top of the chain</span>
+                ) : (
+                  <TargetSelect value={p.escalatesToId ?? ""} onChange={(id) => act({ action: "setPerson", personId: p.id, toEmail: emailOf(id) })} targets={peopleTargets} exclude={p.id} blankLabel="No one (top of their chain)" disabled={busy} />
+                )}
+              </div>
+              <div className="esc-count">{p.usedByBranches} branch{p.usedByBranches === 1 ? "" : "es"}<br />{p.openCases} open case{p.openCases === 1 ? "" : "s"}</div>
+              <div>{p.kind === "team" && <button className="btn" disabled={busy} onClick={() => { setLeaver(p); setLeaverMode("existing"); setLeaverExisting(""); setError(null); }}>Remove or replace</button>}</div>
+            </div>
+          ))}
+          {!data.people.length && <p className="esc-muted" style={{ padding: "14px 0" }}>No one yet. Add the people who handle escalations, or ask OodelCX to import them.</p>}
         </div>
 
         {leaver && (
-          <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--border, #e5e7eb)", borderRadius: 10 }}>
-            <h4 style={{ margin: 0 }}>{leaver.email} is leaving</h4>
-            <p className="card-sub" style={{ margin: "4px 0 10px" }}>
-              Everyone who escalated to them{leaver.usedByBranches ? ` (${leaver.usedByBranches} branch${leaver.usedByBranches === 1 ? "" : "es"})` : ""}{leaver.openCases ? ` and their ${leaver.openCases} open case${leaver.openCases === 1 ? "" : "s"}` : ""} move to whoever takes over. Each case shows the handover in its timeline.
-            </p>
-            <div style={{ display: "grid", gap: 8 }}>
-              <label><input type="radio" checked={leaverMode === "existing"} onChange={() => setLeaverMode("existing")} /> Someone already on the team takes over</label>
-              {leaverMode === "existing" && (
-                <TargetSelect value={leaverExisting} onChange={setLeaverExisting} targets={peopleTargets} exclude={leaver.id} blankLabel="Choose a person…" />
-              )}
-              <label>
-                <input type="radio" checked={leaverMode === "new"} onChange={() => setLeaverMode("new")} disabled={false} /> Invite a replacement{" "}
-                <span className="field-hint">(takes the leaver&apos;s seat, so this works even when seats are full)</span>
-              </label>
-              {leaverMode === "new" && (
-                <div className="field-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <div className="field" style={{ flex: "1 1 220px" }}>
-                    <label htmlFor="rep-email">Replacement&apos;s email</label>
-                    <input id="rep-email" type="email" value={leaverNew.email} onChange={(e) => setLeaverNew({ ...leaverNew, email: e.target.value })} />
-                  </div>
-                  <div className="field" style={{ flex: "1 1 180px" }}>
-                    <label htmlFor="rep-title">Title</label>
-                    <input id="rep-title" value={leaverNew.title} onChange={(e) => setLeaverNew({ ...leaverNew, title: e.target.value })} placeholder={leaver.title} />
-                  </div>
-                </div>
-              )}
-              <label><input type="radio" checked={leaverMode === "none"} onChange={() => setLeaverMode("none")} /> No replacement yet: move everything to whoever they escalated to{data.head ? " (or the Group Head)" : ""}</label>
+          <div className="esc-form" style={{ marginTop: 14, marginBottom: 0 }}>
+            <div>
+              <strong>{leaver.email} is leaving</strong>
+              <p className="card-sub" style={{ margin: "4px 0 0" }}>
+                Everyone who escalated to them{leaver.usedByBranches ? ` (${leaver.usedByBranches} branch${leaver.usedByBranches === 1 ? "" : "es"})` : ""}{leaver.openCases ? ` and their ${leaver.openCases} open case${leaver.openCases === 1 ? "" : "s"}` : ""} move to whoever takes over. Each case records the handover.
+              </p>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center", margin: 0 }}><input type="radio" checked={leaverMode === "existing"} onChange={() => setLeaverMode("existing")} /> Someone already on the team takes over</label>
+            {leaverMode === "existing" && <TargetSelect value={leaverExisting} onChange={setLeaverExisting} targets={peopleTargets} exclude={leaver.id} blankLabel="Choose a person…" />}
+            <label style={{ display: "flex", gap: 8, alignItems: "center", margin: 0 }}><input type="radio" checked={leaverMode === "new"} onChange={() => setLeaverMode("new")} /> Invite a replacement <span className="esc-muted">(takes the leaver&apos;s seat, so it works even when seats are full)</span></label>
+            {leaverMode === "new" && (
+              <div className="esc-form-grid">
+                <div><label htmlFor="rep-email">Replacement&apos;s email</label><input id="rep-email" type="email" value={leaverNew.email} onChange={(e) => setLeaverNew({ ...leaverNew, email: e.target.value })} /></div>
+                <div><label htmlFor="rep-title">Title</label><input id="rep-title" type="text" value={leaverNew.title} onChange={(e) => setLeaverNew({ ...leaverNew, title: e.target.value })} placeholder={leaver.title} /></div>
+              </div>
+            )}
+            <label style={{ display: "flex", gap: 8, alignItems: "center", margin: 0 }}><input type="radio" checked={leaverMode === "none"} onChange={() => setLeaverMode("none")} /> No replacement yet: move everything to whoever they escalated to{data.head ? " (or the Group Head)" : ""}</label>
+            <div className="esc-actions">
               <button className="btn btn-dark" disabled={busy || (leaverMode === "new" && !leaverNew.email)} onClick={submitLeaver}>Confirm</button>
               <button className="btn" onClick={() => setLeaver(null)}>Cancel</button>
             </div>
@@ -401,141 +376,121 @@ export function StructureClient({ apiPath, heading = true }: { apiPath: string; 
       </div>
 
       {/* ---- Branches ---- */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ margin: 0 }}>{isGroup ? "Branches" : "This location"}</h3>
-        <p className="card-sub" style={{ margin: "4px 0 12px" }}>
-          Choose who each {isGroup ? "branch" : "location"} escalates to first. {isGroup ? "Tick several branches to set them in one go. " : ""}After that, the chain follows the people above.
-        </p>
-
-        {isGroup && (
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
-            <input aria-label="Search branches" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Search branch, region or manager" style={{ flex: "1 1 240px" }} />
-            {picked.size > 0 && (
-              <>
-                <span className="field-hint">{picked.size} selected</span>
-                <TargetSelect value={bulkTo} onChange={setBulkTo} targets={peopleTargets} blankLabel="Group Head (default)" />
-                <button className="btn btn-dark" disabled={busy} onClick={() => saveBranches([...picked], bulkTo)}>Set for {picked.size}</button>
-                <button className="btn" onClick={() => setPicked(new Set())}>Clear</button>
-              </>
+      <div className="card">
+        <div className="esc-head-row">
+          <div>
+            <h3>{isGroup ? "Branches" : "This location"}</h3>
+            <p className="card-sub">Who each {isGroup ? "branch" : "location"} escalates to first. After that, the chain follows the people above.</p>
+          </div>
+          <div className="esc-actions">
+            {isGroup && data.branches.length > 1 && (
+              <button className="btn" onClick={() => { setSelectMode((v) => !v); setPicked(new Set()); }}>{selectMode ? "Done" : "Set several at once"}</button>
             )}
+            {isGroup && <input className="esc-search" type="search" aria-label="Search branches" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Search branch, region or manager" />}
+          </div>
+        </div>
+
+        {selecting && (
+          <div className="esc-bulk">
+            <span><strong>{picked.size}</strong> selected. Tick branches below, choose who they escalate to, then apply.</span>
+            <TargetSelect value={bulkTo} onChange={setBulkTo} targets={peopleTargets} blankLabel="Group Head (default)" />
+            <button className="btn btn-dark" disabled={busy || picked.size === 0} onClick={() => saveBranches([...picked], bulkTo)}>Apply to {picked.size || "…"}</button>
+            <button className="btn" onClick={toggleAllShown}>{shown.every((b) => picked.has(b.id)) ? "Unselect page" : "Select this page"}</button>
           </div>
         )}
 
-        <div style={{ overflowX: "auto" }}>
-          <table className="table" style={{ width: "100%" }}>
-            <thead>
-              <tr>
-                {isGroup && <th style={{ width: 28 }}><input type="checkbox" aria-label="Select all on this page" checked={shown.length > 0 && shown.every((b) => picked.has(b.id))} onChange={toggleAllShown} /></th>}
-                <th>{isGroup ? "Branch" : "Location"}</th>
-                <th>{data.branchTitle}</th>
-                <th>Escalates to</th>
-                <th>Then</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((b) => (
-                <tr key={b.id}>
-                  {isGroup && <td><input type="checkbox" aria-label={`Select ${b.name}`} checked={picked.has(b.id)} onChange={() => togglePick(b.id)} /></td>}
-                  <td>
-                    <strong>{b.name}</strong>
-                    {b.region && <div className="field-hint">{b.region}</div>}
-                  </td>
-                  <td>{b.managerEmail || "—"}</td>
-                  <td style={{ minWidth: 230 }}>
-                    <TargetSelect value={b.escalatesToId ?? ""} onChange={(id) => saveBranches([b.id], id)} targets={peopleTargets} blankLabel={data.head ? "Group Head (default)" : "Choose a person…"} disabled={busy} />
-                  </td>
-                  <td>
-                    <div className="field-hint">
-                      {b.chain.length ? b.chain.map((s) => `${s.label}${s.email ? ` (${s.email})` : ""}`).join(" → ") : "Nobody above this branch yet"}
-                    </div>
-                    {b.issues.map((i) => (<div key={i} className="error-text" style={{ fontSize: 12 }}>{i}</div>))}
-                  </td>
-                </tr>
-              ))}
-              {!shown.length && <tr><td colSpan={5} className="field-hint">No branches match.</td></tr>}
-            </tbody>
-          </table>
+        <div className="esc-list">
+          <div className={`esc-row esc-th${selecting ? " selecting" : ""}`}>
+            {selecting && <span />}
+            <span>{isGroup ? "Branch" : "Location"}</span><span>Escalates to first</span><span>Then</span>
+          </div>
+          {shown.map((b) => (
+            <div className={`esc-row${selecting ? " selecting" : ""}`} key={b.id}>
+              {selecting && <input type="checkbox" aria-label={`Select ${b.name}`} checked={picked.has(b.id)} onChange={() => togglePick(b.id)} />}
+              <div className="esc-main">
+                <strong>{b.name}</strong>
+                <span>{[b.region, b.managerEmail && `${data.branchTitle}: ${b.managerEmail}`].filter(Boolean).join(" · ") || "—"}</span>
+              </div>
+              <div><TargetSelect value={b.escalatesToId ?? ""} onChange={(id) => saveBranches([b.id], id)} targets={peopleTargets} blankLabel={data.head ? "Group Head (default)" : "Choose a person…"} disabled={busy} /></div>
+              {chainView(b)}
+            </div>
+          ))}
+          {!shown.length && <p className="esc-muted" style={{ padding: "14px 0" }}>No branches match.</p>}
         </div>
 
         {pageCount > 1 && (
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 12 }}>
+          <div className="esc-pager">
             <button className="btn" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>Previous</button>
-            <span className="field-hint">Page {safePage + 1} of {pageCount} · {filtered.length} branches</span>
+            <span>Page {safePage + 1} of {pageCount} · {filtered.length} branches</span>
             <button className="btn" disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)}>Next</button>
           </div>
         )}
       </div>
 
       {/* ---- Timing ---- */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ margin: 0 }}>Time at each step</h3>
-        <p className="card-sub" style={{ margin: "4px 0 12px" }}>If a case sits untouched this long, it moves up to the next person on its own. Leave blank to escalate by hand only.</p>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <input aria-label="Hours at each step" type="number" min={1} value={slaDraft} onChange={(e) => setSlaDraft(e.target.value)} style={{ width: 110 }} placeholder="Hours" />
-          <span className="field-hint">hours</span>
+      <div className="card">
+        <h3>Time at each step</h3>
+        <p className="card-sub" style={{ margin: "3px 0 12px" }}>If a case sits untouched this long, it moves up to the next person on its own. Leave blank to escalate by hand only.</p>
+        <div className="esc-time">
+          <input aria-label="Hours at each step" type="number" min={1} value={slaDraft} onChange={(e) => setSlaDraft(e.target.value)} placeholder="Hours" />
+          <span className="esc-muted">hours</span>
           <button className="btn btn-dark" disabled={busy} onClick={() => act({ action: "setSla", hours: slaDraft.trim() ? Number(slaDraft) : null })}>Save</button>
         </div>
       </div>
 
       {/* ---- Admin bulk import ---- */}
       {isAdmin && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <h3 style={{ margin: 0 }}>Import from a file</h3>
-          <p className="card-sub" style={{ margin: "4px 0 12px" }}>
-            For first-time setup. Import the people first, then the branches. You see every row checked before anything is saved; one problem blocks the whole file.
-          </p>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <select aria-label="What the file contains" value={importKind} onChange={(e) => { setImportKind(e.target.value as "people" | "branches"); setImportRows([]); setImportText(""); setImportPreview(null); }}>
-              <option value="people">People (email, title, access, escalates_to_email)</option>
-              <option value="branches">Branches (branch, escalates_to_email)</option>
-            </select>
-            <button className="btn" onClick={() => download(`escalation-${importKind}-template.csv`, TEMPLATES[importKind])}>Download template</button>
-            <input aria-label="Choose a CSV file" type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0])} />
-          </div>
-          <div className="field" style={{ marginTop: 10 }}>
-            <label htmlFor="import-text">Or paste the rows (with the header line)</label>
-            <textarea id="import-text" rows={4} value={importText} onChange={(e) => { setImportText(e.target.value); setImportRows(parseCsv(e.target.value)); setImportPreview(null); }} />
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn btn-dark" disabled={busy || !importRows.length} onClick={() => act({ action: "importPreview", kind: importKind, rows: importRows })}>Check {importRows.length || ""} row{importRows.length === 1 ? "" : "s"}</button>
-            {importPreview && !importPreview.hasErrors && (
-              <button className="btn btn-dark" disabled={busy} onClick={async () => { if (await act({ action: "importApply", kind: importKind, rows: importRows })) { setImportPreview(null); setImportRows([]); setImportText(""); } }}>Apply import</button>
-            )}
+        <div className="card">
+          <h3>Import from a file</h3>
+          <p className="card-sub" style={{ margin: "3px 0 12px" }}>For first-time setup. Import the people first, then the branches. Every row is checked before anything is saved; one problem blocks the whole file.</p>
+          <div className="esc-form">
+            <div className="esc-actions">
+              <select aria-label="What the file contains" value={importKind} onChange={(e) => { setImportKind(e.target.value as "people" | "branches"); setImportRows([]); setImportText(""); setImportPreview(null); }} style={{ maxWidth: 360 }}>
+                <option value="people">People (email, title, access, escalates_to_email)</option>
+                <option value="branches">Branches (branch, escalates_to_email)</option>
+              </select>
+              <button className="btn" onClick={() => download(`escalation-${importKind}-template.csv`, TEMPLATES[importKind])}>Download template</button>
+              <input aria-label="Choose a CSV file" type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0])} />
+            </div>
+            <div>
+              <label htmlFor="import-text">Or paste the rows (with the header line)</label>
+              <textarea id="import-text" rows={4} value={importText} onChange={(e) => { setImportText(e.target.value); setImportRows(parseCsv(e.target.value)); setImportPreview(null); }} />
+            </div>
+            <div className="esc-actions">
+              <button className="btn btn-dark" disabled={busy || !importRows.length} onClick={() => act({ action: "importPreview", kind: importKind, rows: importRows })}>Check {importRows.length || ""} row{importRows.length === 1 ? "" : "s"}</button>
+              {importPreview && !importPreview.hasErrors && (
+                <button className="btn btn-dark" disabled={busy} onClick={async () => { if (await act({ action: "importApply", kind: importKind, rows: importRows })) { setImportPreview(null); setImportRows([]); setImportText(""); } }}>Apply import</button>
+              )}
+            </div>
           </div>
           {importPreview && (
-            <div style={{ overflowX: "auto", marginTop: 12 }}>
-              <table className="table" style={{ width: "100%" }}>
-                <thead><tr><th>Row</th><th>Who</th><th>Result</th></tr></thead>
-                <tbody>
-                  {importPreview.preview.map((r, i) => (
-                    <tr key={`${r.row}-${i}`}>
-                      <td>{r.row || "—"}</td>
-                      <td>{r.label}</td>
-                      <td style={{ color: r.status === "error" ? "#b91c1c" : undefined }}>{r.status === "error" ? "Problem: " : r.status === "new" ? "New: " : r.status === "update" ? "Update: " : "Same: "}{r.message}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="esc-list">
+              {importPreview.preview.map((r, i) => (
+                <div className="esc-row" key={`${r.row}-${i}`} style={{ gridTemplateColumns: "60px minmax(160px, 1fr) minmax(0, 3fr)" }}>
+                  <span className="esc-muted">Row {r.row || "—"}</span>
+                  <strong>{r.label}</strong>
+                  <span style={{ color: r.status === "error" ? "#a8261d" : undefined }}>
+                    <span className={`pill ${r.status === "error" ? "pill-red" : r.status === "new" ? "pill-green" : "pill-gray"}`} style={{ marginRight: 8 }}>{r.status === "error" ? "Problem" : r.status === "new" ? "New" : r.status === "update" ? "Update" : "Same"}</span>{r.message}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
 
       {/* ---- Change log ---- */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ margin: 0 }}>Recent changes</h3>
-        <p className="card-sub" style={{ margin: "4px 0 10px" }}>Changes made here or by OodelCX both appear below.</p>
+      <div className="card">
+        <h3>Recent changes</h3>
+        <p className="card-sub" style={{ margin: "3px 0 8px" }}>Changes made here or by OodelCX both appear below.</p>
         {data.changeLog.length ? (
-          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}>
+          <ul className="esc-log">
             {data.changeLog.map((l) => (
-              <li key={l.id}>
-                <span>{l.summary}</span>{" "}
-                <span className="field-hint">{new Date(l.at).toLocaleString()} · {l.byKind === "admin" ? "OodelCX" : l.by}</span>
-              </li>
+              <li key={l.id}><span>{l.summary}</span><span>{new Date(l.at).toLocaleString()} · {l.byKind === "admin" ? "OodelCX" : l.by}</span></li>
             ))}
           </ul>
         ) : (
-          <p className="field-hint">No changes yet.</p>
+          <p className="esc-muted">No changes yet.</p>
         )}
       </div>
     </div>
