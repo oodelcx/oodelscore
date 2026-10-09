@@ -3,11 +3,11 @@ import { Business, type IBusiness } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { EscalationAssignment } from "../models/EscalationAssignment";
 import { ActionBoardItem, type IActionBoardItem } from "../models/ActionBoardItem";
-import { OrgNode } from "../models/OrgNode";
 import { User } from "../models/User";
 import { sendTemplatedEmail } from "../email/resend";
 import type { IEscalationLevel } from "../models/common";
-import { buildTreeChain, chainIndexForLevel, slaHoursForStep, idStr, type ChainStep } from "../structure/chain";
+import { buildPointerChain, chainIndexForLevel, slaHoursForStep, idStr, type ChainStep, type PointerPerson } from "../structure/chain";
+import { convertTreeToPointers } from "./convert";
 
 export class EscalationError extends Error {}
 
@@ -84,7 +84,9 @@ async function legacyAssignee(businessId: string, level: number): Promise<Types.
 
 
 export interface BusinessChain {
-  mode: "tree" | "legacy";
+  mode: "pointers" | "legacy";
+  /** Plain-word problems with this branch's setup (nobody set, removed person, loop). */
+  issues: string[];
   chain: ChainStep[];
   slaHours: number | null;
   slaByTier: Record<string, number>;
@@ -97,31 +99,56 @@ export interface BusinessChain {
  * steps. One still on the older numbered levels keeps working unchanged, so
  * nothing already in flight breaks when this ships.
  */
+/** Loads everyone reachable by following "escalates to" pointers from the given people, up to a safe depth. */
+async function loadPointerPeople(startIds: string[]): Promise<Map<string, PointerPerson>> {
+  const people = new Map<string, PointerPerson>();
+  let frontier = startIds.filter(Boolean);
+  for (let round = 0; frontier.length && round < 14; round++) {
+    const users = await User.find({ _id: { $in: frontier } }).select("teamRole accountType escalatesToUserId");
+    const next: string[] = [];
+    for (const u of users) {
+      const id = u._id.toString();
+      if (people.has(id)) continue;
+      const to = idStr(u.escalatesToUserId);
+      people.set(id, { id, title: u.teamRole || (u.accountType === "parent_org" ? "Group Head" : ""), escalatesToId: to });
+      if (to && !people.has(to)) next.push(to);
+    }
+    frontier = next;
+  }
+  return people;
+}
+
 export async function getChainForBusiness(business: HydratedDocument<IBusiness>): Promise<BusinessChain> {
   const org = business.parentOrgId ? await ParentOrganization.findById(business.parentOrgId) : null;
-  const structure = org ? org.structure : business.structure;
+  let structure = org ? org.structure : business.structure;
   const slaHours = org ? org.escalationSlaHours : business.escalationSlaHours ?? null;
 
-  if (structure?.enabled) {
-    const branchOwner = await User.findOne({ accountType: "business", parentId: business._id }).select("_id");
-    const tierName = new Map((structure.tiers ?? []).map((t) => [t.key, t.name]));
-    const nodes: { tierKey: string; tierName: string; managerTitle: string; managerUserId: string | null }[] = [];
-    let nodeId = org ? business.orgNodeId : null;
-    for (let i = 0; nodeId && i < 12; i++) {
-      const node = await OrgNode.findById(nodeId);
-      if (!node) break;
-      nodes.push({ tierKey: node.tierKey, tierName: tierName.get(node.tierKey) ?? node.tierKey, managerTitle: node.managerTitle, managerUserId: idStr(node.managerUserId) });
-      nodeId = node.parentNodeId;
+  // A group set up with the earlier tiers-and-boxes screen is converted to pointers the first time its chain is read.
+  if (structure?.enabled && structure.model !== "pointers") {
+    await convertTreeToPointers(org ? { parentOrgId: org._id } : { businessId: business._id });
+    const fresh = org ? await ParentOrganization.findById(org._id).select("structure") : await Business.findById(business._id).select("structure");
+    structure = fresh?.structure ?? structure;
+    if (!org) {
+      const reloaded = await Business.findById(business._id).select("escalatesToUserId");
+      business.escalatesToUserId = reloaded?.escalatesToUserId ?? null;
     }
+  }
+
+  if (structure?.enabled && structure.model === "pointers") {
+    const branchOwner = await User.findOne({ accountType: "business", parentId: business._id }).select("_id");
     const head = org ? await User.findOne({ accountType: "parent_org", parentId: org._id }).select("_id") : null;
-    const chain = buildTreeChain({
+    // Read the pointer fresh: the business document passed in may predate a change.
+    const pointerDoc = await Business.findById(business._id).select("escalatesToUserId");
+    const firstPointer = idStr(pointerDoc?.escalatesToUserId);
+    const people = await loadPointerPeople(firstPointer ? [firstPointer] : []);
+    const result = buildPointerChain({
       branchTitle: structure.branchTitle,
       branchOwnerId: idStr(branchOwner?._id),
-      nodes,
-      groupSteps: (structure.groupSteps ?? []).map((g) => ({ title: g.title, userId: idStr(g.userId) })),
-      fallbackHead: head ? { userId: idStr(head._id), title: "Group Head" } : null,
+      firstPointerId: firstPointer,
+      people,
+      head: head ? { id: head._id.toString(), title: "Group Head" } : null,
     });
-    return { mode: "tree", chain, slaHours, slaByTier: (structure.slaByTier ?? {}) as Record<string, number> };
+    return { mode: "pointers", chain: result.chain, issues: result.issues, slaHours, slaByTier: {} };
   }
 
   const config = await getEscalationConfig(business);
@@ -131,7 +158,7 @@ export async function getChainForBusiness(business: HydratedDocument<IBusiness>)
     const userId = await legacyAssignee(business._id.toString(), l.level);
     chain.push({ level: l.level, label: l.label, userId: idStr(userId), tierKey: l.level <= 1 ? "branch" : "group" });
   }
-  return { mode: "legacy", chain, slaHours: config.slaHours, slaByTier: {} };
+  return { mode: "legacy", chain, issues: [], slaHours: config.slaHours, slaByTier: {} };
 }
 
 /** Who holds a given level for this business right now (level 1 is always the branch's own owner). */

@@ -77,6 +77,12 @@ export const SEED_EMAIL_TEMPLATES: SeedEmailTemplate[] = [
     availableVars: ["name", "level_label", "business_name", "action_title", "escalation_note", "action_link"],
   },
   {
+    key: "escalation_role_assigned",
+    subject: "You now handle escalations for {{account_name}}",
+    body: "Hi {{name}}, {{changed_by}} set you up as the escalation contact for {{from_whom}} on {{account_name}}. When a case is escalated to you, you will get an email with a link to it.\n\nSign in to see your cases: {{app_link}}",
+    availableVars: ["name", "changed_by", "from_whom", "account_name", "app_link"],
+  },
+  {
     key: "invoice_receipt",
     subject: "Your OodelCX payment receipt",
     body: "Hi {{name}}, we've received your payment of {{invoice_amount}}. Thank you.",

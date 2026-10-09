@@ -30,9 +30,11 @@ Pattern: group `name@`, group team `name.ops@` and `name.lead@`; each branch has
 | Role | Login |
 |---|---|
 | Group owner / Group Head | precision@ocx.test |
-| Group team (ops / lead) | precision.ops@ocx.test / precision.lead@ocx.test |
+| Group team (ops / lead) | precision.ops@ocx.test / precision.lead@ocx.test (chain: branch → city manager → regional manager → ops → lead → group head) |
 | Regional managers | precision.punjab@ocx.test, precision.sindh@ocx.test, precision.capital@ocx.test, precision.khyberpakhtunkhwa@ocx.test, precision.balochistan@ocx.test |
-| Cluster (city) managers | precision.lahore@ocx.test, precision.karachi@ocx.test, precision.islamabad@ocx.test, precision.rawalpindi@ocx.test, precision.multan@ocx.test, precision.faisalabad@ocx.test, precision.peshawar@ocx.test, precision.quetta@ocx.test, precision.community@ocx.test |
+| Cluster (city) managers | precision.lahore.cm@ocx.test, precision.karachi.cm@ocx.test, precision.islamabad.cm@ocx.test, precision.rawalpindi.cm@ocx.test, precision.multan.cm@ocx.test, precision.faisalabad.cm@ocx.test, precision.peshawar.cm@ocx.test, precision.quetta.cm@ocx.test, precision.community.cm@ocx.test |
+| Spare cluster manager (for the "someone leaves" demo; not in any chain yet) | precision.spare@ocx.test |
+| Team seats | Precision has exactly one free seat: add one person, then the next shows the seat limit and "Request more seats". Other groups have two free. |
 | Branch: Lahore Central Lab (24/7) (Punjab) | precision.lahorecentral@ocx.test (team: precision.lahorecentral.ops@, precision.lahorecentral.shift@) |
 | Branch: Lahore Gulberg Collection Centre (Punjab) | precision.lahoregulberg@ocx.test (team: precision.lahoregulberg.ops@, precision.lahoregulberg.shift@) |
 | Branch: Lahore DHA Radiology & Imaging (Punjab) | precision.lahoredha@ocx.test (team: precision.lahoredha.ops@, precision.lahoredha.shift@) |
@@ -49,7 +51,7 @@ Pattern: group `name@`, group team `name.ops@` and `name.lead@`; each branch has
 | Branch: Quetta Satellite Town Collection Centre (Balochistan) | precision.quetta@ocx.test (team: precision.quetta.ops@, precision.quetta.shift@) |
 | Branch: Community Education Programmes (screening camps, vaccination briefings, mothers' workshops) (Capital) | precision.education@ocx.test (team: precision.education.ops@, precision.education.shift@) |
 
-Escalation chain on this group: Branch manager, City cluster manager, Regional manager, Operations Lead, Group Head. Program Evaluation is switched on for this group (community education programmes).
+Escalation chain on this group: Branch manager, City cluster manager, Regional manager, Operations Lead, Quality/second lead, Group Head. Program Evaluation is switched on for this group (community education programmes).
 
 ## St. Augustine Health Network (Hospital network)
 
@@ -109,6 +111,10 @@ To load: Admin → Dev Data Tools → Seed showcase data (rebuilds the showcase 
 
 Note: `.test` is a reserved domain that can never receive real email, so nothing sent from a demo account is ever delivered.
 
+## Escalation screen demo (all groups)
+
+Sign in as a group head (for example `precision@ocx.test`) and open Escalation. Every branch and every person has one "Escalates to" choice; the "Then" column shows the whole chain. Things to show: change a branch (or tick several and set them together); change a person; "Add a person" (uses a team seat); "Remove or replace" on a manager (cases and branches move, the case timeline records it); "Request more seats" once seats are full. In Admin, open the same group and its Escalation tab: the same records, the same change log, plus "Import from a file" (CSV template download, row-by-row check, then apply).
+
 ## Structure and escalation logins
 
-Every group's seed also creates a Regional Manager per region (`group.region@ocx.test`, for example `meridian.north@ocx.test`) and, for groups with six or more branches, Cluster Managers (`group.region.ca@ocx.test` and so on). The Escalate button on a case shows these people by email.
+Every group's seed also creates a Regional Manager per region (`group.region@ocx.test`, for example `meridian.north@ocx.test`) and, for groups with six or more branches, Cluster Managers (`group.region.ca@ocx.test` and so on; Precision uses `precision.lahore.cm@ocx.test` style). The Escalate button on a case shows these people by email.

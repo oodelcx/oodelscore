@@ -45,3 +45,55 @@ describe("slaHoursForStep", () => {
   it("falls back to the single number", () => expect(slaHoursForStep(step, {}, 48)).toBe(48));
   it("is null when nothing is set", () => expect(slaHoursForStep(step, undefined, null)).toBeNull());
 });
+
+import { buildPointerChain, wouldCreateLoop, type PointerPerson } from "./chain";
+
+const person = (id: string, title: string, to: string | null): [string, PointerPerson] => [id, { id, title, escalatesToId: to }];
+
+describe("buildPointerChain", () => {
+  const people = new Map([person("cm", "Cluster Manager", "rm"), person("rm", "Regional Manager", "ops"), person("ops", "Operations Lead", "head"), person("head", "Group Head", null)]);
+  const base = { branchTitle: "Branch manager", branchOwnerId: "b1", people, head: { id: "head", title: "Group Head" } };
+
+  it("follows pointers from the branch up to the group head", () => {
+    const r = buildPointerChain({ ...base, firstPointerId: "cm" });
+    expect(r.chain.map((c) => [c.level, c.label, c.userId])).toEqual([
+      [1, "Branch manager", "b1"],
+      [2, "Cluster Manager", "cm"],
+      [3, "Regional Manager", "rm"],
+      [4, "Operations Lead", "ops"],
+      [5, "Group Head", "head"],
+    ]);
+    expect(r.issues).toEqual([]);
+  });
+  it("sends a branch with nobody set to the group head and flags it", () => {
+    const r = buildPointerChain({ ...base, firstPointerId: null });
+    expect(r.chain.map((c) => c.userId)).toEqual(["b1", "head"]);
+    expect(r.issues).toEqual(["nobody_set"]);
+  });
+  it("falls back to the group head when the pointer is to a removed person", () => {
+    const r = buildPointerChain({ ...base, firstPointerId: "gone" });
+    expect(r.chain.map((c) => c.userId)).toEqual(["b1", "head"]);
+    expect(r.issues).toContain("pointer_removed");
+  });
+  it("cuts a loop and says so", () => {
+    const loop = new Map([person("a", "A", "b"), person("b", "B", "a")]);
+    const r = buildPointerChain({ ...base, people: loop, firstPointerId: "a" });
+    expect(r.chain.map((c) => c.userId)).toEqual(["b1", "a", "b"]);
+    expect(r.issues).toContain("loop");
+  });
+  it("is just the branch for a standalone business with nobody set", () => {
+    const r = buildPointerChain({ ...base, head: null, firstPointerId: null });
+    expect(r.chain).toHaveLength(1);
+  });
+  it("stops at a person who escalates to nobody", () => {
+    const r = buildPointerChain({ ...base, firstPointerId: "head" });
+    expect(r.chain.map((c) => c.userId)).toEqual(["b1", "head"]);
+  });
+});
+
+describe("wouldCreateLoop", () => {
+  const map = new Map<string, string | null>([["a", "b"], ["b", "c"], ["c", null]]);
+  it("detects pointing at yourself", () => expect(wouldCreateLoop("a", "a", map)).toBe(true));
+  it("detects a longer loop", () => expect(wouldCreateLoop("c", "a", map)).toBe(true));
+  it("allows a clean pointer", () => expect(wouldCreateLoop("a", "c", map)).toBe(false));
+});

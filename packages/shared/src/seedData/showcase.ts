@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { Types } from "mongoose";
 import { OrgNode } from "../models/OrgNode";
+import { EscalationChangeLog } from "../models/EscalationChangeLog";
 import { DEFAULT_FEATURE_KEYS } from "../features/flags";
 import { Business } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
@@ -2807,6 +2808,7 @@ export async function wipeAllTenantData(): Promise<Record<string, number>> {
   await del("compassAssessments", () => CompassAssessment.deleteMany({}));
   await del("compassAssessmentHistory", () => CompassAssessmentHistory.deleteMany({}));
   await del("orgNodes", () => OrgNode.deleteMany({}));
+  await del("escalationChangeLog", () => EscalationChangeLog.deleteMany({}));
   await del("businesses", () => Business.deleteMany({}));
   await del("parentOrgs", () => ParentOrganization.deleteMany({}));
   await del("users", () => User.deleteMany({ accountType: { $ne: "admin_staff" } }));

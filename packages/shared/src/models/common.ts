@@ -168,6 +168,8 @@ export interface IStructureStep {
 }
 export interface IStructure {
   enabled: boolean;
+  /** "pointers" = the "escalates to" model. Missing on an older tier-and-box setup, which is converted on first use. */
+  model?: "pointers" | null;
   tiers: IStructureTier[];
   groupSteps: IStructureStep[];
   branchTitle: string;
@@ -177,6 +179,7 @@ export interface IStructure {
 export const StructureSchema = new Schema(
   {
     enabled: { type: Boolean, default: false },
+    model: { type: String, enum: ["pointers"], default: null },
     tiers: { type: [new Schema({ key: { type: String, required: true }, name: { type: String, required: true } }, { _id: false })], default: [] },
     groupSteps: {
       type: [new Schema({ title: { type: String, required: true }, userId: { type: Schema.Types.ObjectId, ref: "User", default: null } }, { _id: false })],

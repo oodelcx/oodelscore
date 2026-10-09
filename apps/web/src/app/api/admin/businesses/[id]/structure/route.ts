@@ -18,5 +18,5 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ status: "error", message: "Forbidden" }, { status: 403 });
   }
   const { id } = await params;
-  return structurePost({ kind: "business", id }, request);
+  return structurePost({ kind: "business", id }, request, { userId: session.user._id.toString(), email: session.user.email, kind: "admin" });
 }

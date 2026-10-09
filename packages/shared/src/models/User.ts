@@ -57,6 +57,8 @@ export interface IUser {
   // a new machine. A tour can still be re-triggered anytime via the "Take a
   // tour" affordance regardless of this list.
   seenTours: string[];
+  // Escalation: who a case moves to when this person escalates it. Null = nobody above (the top of the chain).
+  escalatesToUserId: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +87,7 @@ const UserSchema = new Schema<IUser>(
     twoFactorSecret: { type: String, default: null },
     twoFactorPendingSecret: { type: String, default: null },
     seenTours: { type: [String], default: [] },
+    escalatesToUserId: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true }
 );

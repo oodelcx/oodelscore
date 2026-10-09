@@ -57,3 +57,90 @@ export function slaHoursForStep(step: ChainStep, slaByTier: Record<string, numbe
 
 export type IdLike = string | Types.ObjectId | null | undefined;
 export const idStr = (v: IdLike): string | null => (v ? String(v) : null);
+
+/** A person who can hold a step in the chain. */
+export interface PointerPerson {
+  id: string;
+  title: string; // "Cluster Manager"
+  escalatesToId: string | null;
+}
+
+export interface PointerChainInput {
+  branchTitle: string;
+  branchOwnerId: string | null;
+  /** The branch's own "escalates to" (a person), or null for the default. */
+  firstPointerId: string | null;
+  /** Everyone reachable from the pointers, by id. A pointer to someone missing here (removed) ends the chain at that point. */
+  people: Map<string, PointerPerson>;
+  /** The group head: where a branch with nobody set (or a broken pointer) goes. Null for a standalone business. */
+  head: { id: string; title: string } | null;
+  maxDepth?: number;
+}
+
+export interface PointerChainResult {
+  chain: ChainStep[];
+  /** What is wrong with this branch's setup, in plain words. Empty when the chain is clean. */
+  issues: ("nobody_set" | "pointer_removed" | "loop" | "too_long")[];
+}
+
+/**
+ * Builds a branch's escalation chain by following "escalates to" pointers:
+ * the branch's own manager first, then whoever the branch points to, then
+ * whoever that person points to, and so on until someone points to nobody.
+ * A branch with no pointer goes to the group head. A pointer to a removed
+ * person, a loop, or an over-long chain is cut off, reported in `issues`,
+ * and (for a removed person) falls back to the group head so a case is
+ * never stranded. Pure, so it is testable without a database.
+ */
+export function buildPointerChain(input: PointerChainInput): PointerChainResult {
+  const max = input.maxDepth ?? 12;
+  const issues: PointerChainResult["issues"] = [];
+  const steps: Omit<ChainStep, "level">[] = [{ label: input.branchTitle || "Branch manager", userId: input.branchOwnerId, tierKey: "branch" }];
+  const seen = new Set<string>(input.branchOwnerId ? [input.branchOwnerId] : []);
+
+  let cur: string | null = input.firstPointerId;
+  if (!cur) {
+    if (input.head) {
+      cur = input.head.id;
+      issues.push("nobody_set");
+    }
+  }
+  let depth = 0;
+  while (cur) {
+    if (seen.has(cur)) {
+      issues.push("loop");
+      break;
+    }
+    if (depth >= max) {
+      issues.push("too_long");
+      break;
+    }
+    const person: PointerPerson | undefined = input.people.get(cur) ?? (input.head && cur === input.head.id ? { id: input.head.id, title: input.head.title, escalatesToId: null } : undefined);
+    if (!person) {
+      issues.push("pointer_removed");
+      break;
+    }
+    seen.add(cur);
+    steps.push({ label: person.title.trim() || "Escalation contact", userId: person.id, tierKey: "step" });
+    cur = person.escalatesToId;
+    depth++;
+  }
+  // A pointer to someone removed must not strand the case: fall back to the group head.
+  if (steps.length === 1 && input.head && !seen.has(input.head.id)) {
+    steps.push({ label: input.head.title, userId: input.head.id, tierKey: "step" });
+  }
+  return { chain: steps.map((s, i) => ({ ...s, level: i + 1 })), issues };
+}
+
+/**
+ * Would pointing `fromId` at `toId` create a loop? True when following
+ * pointers from `toId` reaches `fromId` again (or `toId` is `fromId`).
+ */
+export function wouldCreateLoop(fromId: string, toId: string, escalatesTo: Map<string, string | null>, maxDepth = 50): boolean {
+  let cur: string | null = toId;
+  for (let i = 0; cur && i < maxDepth; i++) {
+    if (cur === fromId) return true;
+    cur = escalatesTo.get(cur) ?? null;
+  }
+  return false;
+}

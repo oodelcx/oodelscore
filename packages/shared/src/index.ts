@@ -67,6 +67,7 @@ export { seedShowcasePolish } from "./seedData/showcasePolish";
 export { seedLaunchDemoExtras } from "./seedData/launchDemo";
 export { seedDemoFinish } from "./seedData/demoFinish";
 export * from "./escalation/engine";
+export * from "./escalation/convert";
 export * from "./billing/gate";
 export * from "./features/flags";
 export * from "./features/teamPermissions";

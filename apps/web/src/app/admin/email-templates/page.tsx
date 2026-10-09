@@ -102,6 +102,11 @@ const TRIGGER_COPY: Record<EmailTemplateKey, { label: string; trigger: string; c
     trigger: "Someone presses Send to a colleague on a Compass recommendation card",
     category: "alerts",
   },
+  escalation_role_assigned: {
+    label: "Escalation role assigned",
+    trigger: "A person is set as the next step in someone's escalation chain",
+    category: "account",
+  },
 };
 
 const CATEGORY_CHIPS: { id: "all" | CategoryId; label: string }[] = [

@@ -123,6 +123,9 @@ export interface IBusiness {
   structure: IStructure;
   // The lowest box of the group's structure tree this branch sits under (null = directly under the group).
   orgNodeId: Types.ObjectId | null;
+  // Escalation: who a case at this business moves to when its own manager escalates it (a person already on the account).
+  // Null = the group head (or, for a standalone business, nobody above).
+  escalatesToUserId: Types.ObjectId | null;
   plan: BusinessPlan;
   maxFeedbackPoints: number;
   questionTemplateId: Types.ObjectId | null; // ADMIN-EDITABLE ONLY, ever
@@ -221,6 +224,7 @@ const BusinessSchema = new Schema<IBusiness>(
     escalationSlaHours: { type: Number, default: null },
     structure: { type: StructureSchema, default: () => ({}) },
     orgNodeId: { type: Schema.Types.ObjectId, ref: "OrgNode", default: null },
+    escalatesToUserId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     plan: { type: String, enum: BUSINESS_PLANS, default: "business_monthly" },
     maxFeedbackPoints: { type: Number, default: 1 },
     questionTemplateId: { type: Schema.Types.ObjectId, ref: "QuestionTemplate", default: null },

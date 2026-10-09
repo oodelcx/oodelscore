@@ -2,6 +2,7 @@ import { Business } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
 import { Event } from "../models/Event";
 import { PlatformSettings, PLATFORM_SETTINGS_SINGLETON_KEY } from "../models/PlatformSettings";
+import { convertTreeToPointers } from "../escalation/convert";
 import { ALL_FEATURE_KEYS, DEFAULT_FEATURE_KEYS } from "../features/flags";
 
 /**
@@ -12,6 +13,9 @@ import { ALL_FEATURE_KEYS, DEFAULT_FEATURE_KEYS } from "../features/flags";
  * group). Runs once; the id is recorded in PlatformSettings.
  */
 const PROGRAM_EVALUATION_OPT_IN = "program-evaluation-opt-in-v1";
+
+/** Groups set up with the earlier tiers-and-boxes screen move onto "escalates to" pointers. */
+const ESCALATION_TREE_TO_POINTERS = "escalation-tree-to-pointers-v1";
 
 export async function runOneTimeMigrations(): Promise<string[]> {
   // The settings row may not exist yet on an account that never saved one; create it with the same defaults the app already assumes.
@@ -48,6 +52,15 @@ export async function runOneTimeMigrations(): Promise<string[]> {
     }
     await PlatformSettings.updateOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }, { $addToSet: { oneTimeMigrations: PROGRAM_EVALUATION_OPT_IN } });
     ran.push(PROGRAM_EVALUATION_OPT_IN);
+  }
+
+  if (!done.has(ESCALATION_TREE_TO_POINTERS)) {
+    const orgs = await ParentOrganization.find({ "structure.enabled": true }).select("_id structure");
+    for (const o of orgs) if (o.structure.model !== "pointers") await convertTreeToPointers({ parentOrgId: o._id });
+    const standalone = await Business.find({ parentOrgId: null, "structure.enabled": true }).select("_id structure");
+    for (const b of standalone) if (b.structure.model !== "pointers") await convertTreeToPointers({ businessId: b._id });
+    await PlatformSettings.updateOne({ singletonKey: PLATFORM_SETTINGS_SINGLETON_KEY }, { $addToSet: { oneTimeMigrations: ESCALATION_TREE_TO_POINTERS } });
+    ran.push(ESCALATION_TREE_TO_POINTERS);
   }
   return ran;
 }

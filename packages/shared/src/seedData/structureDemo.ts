@@ -1,7 +1,7 @@
 import type { Types } from "mongoose";
 import { Business } from "../models/Business";
 import { ParentOrganization } from "../models/ParentOrganization";
-import { OrgNode } from "../models/OrgNode";
+import { EscalationChangeLog } from "../models/EscalationChangeLog";
 import { User } from "../models/User";
 import { hashPassword } from "../auth/password";
 
@@ -38,81 +38,109 @@ async function teamMember(orgId: Types.ObjectId, email: string, teamRole: string
 
 export interface StructureDemoResult {
   orgsStructured: number;
-  nodes: number;
-  managers: number;
+  people: number;
+  branchesPointed: number;
 }
 
 /**
- * Gives every group a real structure tree for the demo: a Region level (and a
- * Cluster level for the bigger groups), a named manager for every box, and
- * group steps (Operations Lead, then Group Head). Each branch is placed under
- * its region/cluster, so the Escalate button shows a real chain with emails.
- * Idempotent: a group that already has its structure switched on is left alone.
+ * Gives every group a real "escalates to" setup for the demo. Each branch
+ * points at the first person above it, and each person points at the next:
+ *   branch -> cluster manager (bigger groups) -> regional manager
+ *          -> operations lead -> (Precision only: quality lead) -> group head.
+ * Precision Diagnostics gets the complete team (a manager for every region and
+ * every city, plus a spare unassigned cluster manager for the "someone leaves"
+ * demo) and exactly one free team seat, so adding one person works and the
+ * next one shows the seat limit. Idempotent: a group already on pointers with
+ * branches pointed is left alone.
  */
 export async function seedStructureDemo(): Promise<StructureDemoResult> {
-  const result: StructureDemoResult = { orgsStructured: 0, nodes: 0, managers: 0 };
+  const result: StructureDemoResult = { orgsStructured: 0, people: 0, branchesPointed: 0 };
   const orgs = await ParentOrganization.find();
   for (const org of orgs) {
-    if (org.structure?.enabled && (await OrgNode.exists({ parentOrgId: org._id }))) continue;
     const owner = await User.findOne({ accountType: "parent_org", parentId: org._id });
     if (!owner) continue;
-    const key = owner.email.split("@")[0];
-    const products = (org.enabledProducts ?? ["customer_experience"]) as ("customer_experience" | "colleague_experience")[];
     const branches = await Business.find({ parentOrgId: org._id, active: true }).sort({ name: 1 });
     if (!branches.length) continue;
+    if (org.structure?.enabled && org.structure.model === "pointers" && branches.some((b) => b.escalatesToUserId)) continue;
 
+    const key = owner.email.split("@")[0];
+    const isPrecision = key === "precision";
+    const products = (org.enabledProducts ?? ["customer_experience"]) as ("customer_experience" | "colleague_experience")[];
     const useClusters = branches.length >= 6;
-    const tiers = useClusters ? [{ key: "region", name: "Region" }, { key: "cluster", name: "Cluster" }] : [{ key: "region", name: "Region" }];
 
     const ops = await User.findOne({ email: `${key}.ops@${LOGIN_DOMAIN}` });
-    const groupSteps: { title: string; userId: Types.ObjectId | null }[] = [];
-    if (ops) groupSteps.push({ title: ops.teamRole || "Operations Lead", userId: ops._id });
-    groupSteps.push({ title: "Group Head", userId: owner._id });
-
-    await ParentOrganization.updateOne(
-      { _id: org._id },
-      { $set: { "structure.enabled": true, "structure.tiers": tiers, "structure.groupSteps": groupSteps, "structure.branchTitle": "Branch manager", "structure.slaByTier": {}, escalationSlaHours: org.escalationSlaHours ?? 48 } }
-    );
+    const lead = isPrecision ? await User.findOne({ email: `${key}.lead@${LOGIN_DOMAIN}` }) : null;
+    // Top of the group: ops -> (lead) -> head.
+    const upper: { id: Types.ObjectId }[] = [];
+    if (ops) upper.push({ id: ops._id });
+    if (lead) upper.push({ id: lead._id });
+    for (let i = 0; i < upper.length; i++) {
+      await User.updateOne({ _id: upper[i].id }, { $set: { escalatesToUserId: upper[i + 1]?.id ?? owner._id } });
+    }
+    await User.updateOne({ _id: owner._id }, { $set: { escalatesToUserId: null } });
+    const aboveRegion = upper[0]?.id ?? owner._id;
 
     const regions = [...new Set(branches.map((b) => b.region || "Main"))].sort();
     for (const region of regions) {
-      const email = `${key}.${slug(region)}@${LOGIN_DOMAIN}`;
-      const mgr = await teamMember(org._id, email, `${region} Regional Manager`, products);
-      result.managers++;
-      let regionNode = await OrgNode.findOne({ parentOrgId: org._id, tierKey: "region", name: `${region} Region` });
-      if (!regionNode) regionNode = await OrgNode.create({ parentOrgId: org._id, tierKey: "region", name: `${region} Region`, parentNodeId: null, managerUserId: mgr._id, managerTitle: `${region} Regional Manager` });
-      result.nodes++;
+      const mgr = await teamMember(org._id, `${key}.${slug(region)}@${LOGIN_DOMAIN}`, `${region} Regional Manager`, products);
+      await User.updateOne({ _id: mgr._id }, { $set: { escalatesToUserId: aboveRegion } });
+      result.people++;
 
       const inRegion = branches.filter((b) => (b.region || "Main") === region);
       if (!useClusters) {
-        await Business.updateMany({ _id: { $in: inRegion.map((b) => b._id) } }, { $set: { orgNodeId: regionNode._id } });
+        await Business.updateMany({ _id: { $in: inRegion.map((b) => b._id) } }, { $set: { escalatesToUserId: mgr._id } });
+        result.branchesPointed += inRegion.length;
         continue;
       }
       // Clusters: one per city for Precision (its branch names start with the city); otherwise groups of up to three branches.
-      const byCity = key === "precision";
       const groups: { label: string; id: string; branches: typeof inRegion }[] = [];
-      if (byCity) {
+      if (isPrecision) {
         for (const b of inRegion) {
           const city = b.name.split(" – ")[1]?.split(" ")[0] ?? "Main";
-          const label = city === "Community" ? "Community Education" : `${city} Cluster`;
+          const label = city === "Community" ? "Community Education" : `${city} Cluster Manager`;
           const g = groups.find((x) => x.label === label);
           if (g) g.branches.push(b);
-          else groups.push({ label, id: slug(city), branches: [b] });
+          else groups.push({ label, id: `${slug(city)}.cm`, branches: [b] }); // ".cm": a branch owner can share the city's name (precision.multan)
         }
       } else {
-        for (let i = 0; i < inRegion.length; i += 3) groups.push({ label: `${region} Cluster ${String.fromCharCode(65 + i / 3)}`, id: `${slug(region)}.c${String.fromCharCode(97 + i / 3)}`, branches: inRegion.slice(i, i + 3) });
+        for (let i = 0; i < inRegion.length; i += 3) groups.push({ label: `${region} Cluster ${String.fromCharCode(65 + i / 3)} Manager`, id: `${slug(region)}.c${String.fromCharCode(97 + i / 3)}`, branches: inRegion.slice(i, i + 3) });
       }
       for (const g of groups) {
-        const chunk = g.branches;
-        const label = g.label;
-        const cMgr = await teamMember(org._id, `${key}.${g.id}@${LOGIN_DOMAIN}`, "Cluster Manager", products);
-        result.managers++;
-        let node = await OrgNode.findOne({ parentOrgId: org._id, tierKey: "cluster", name: label });
-        if (!node) node = await OrgNode.create({ parentOrgId: org._id, tierKey: "cluster", name: label, parentNodeId: regionNode._id, managerUserId: cMgr._id, managerTitle: "Cluster Manager" });
-        result.nodes++;
-        await Business.updateMany({ _id: { $in: chunk.map((b) => b._id) } }, { $set: { orgNodeId: node._id } });
+        const cMgr = await teamMember(org._id, `${key}.${g.id}@${LOGIN_DOMAIN}`, g.label.endsWith("Manager") ? g.label : `${g.label} Lead`, products);
+        await User.updateOne({ _id: cMgr._id }, { $set: { escalatesToUserId: mgr._id } });
+        result.people++;
+        await Business.updateMany({ _id: { $in: g.branches.map((b) => b._id) } }, { $set: { escalatesToUserId: cMgr._id } });
+        result.branchesPointed += g.branches.length;
       }
     }
+
+    if (isPrecision) {
+      // A spare cluster manager nobody is assigned to yet: shows a ready replacement when someone leaves.
+      const spare = await teamMember(org._id, `precision.spare@${LOGIN_DOMAIN}`, "Cluster Manager (spare)", products);
+      await User.updateOne({ _id: spare._id }, { $set: { escalatesToUserId: aboveRegion } });
+      result.people++;
+    }
+
+    const used = await User.countDocuments({ accountType: "team_member", teamOfType: "parentOrg", parentId: org._id, inviteStatus: { $ne: "invite_expired" } });
+    await ParentOrganization.updateOne(
+      { _id: org._id },
+      {
+        $set: {
+          "structure.enabled": true,
+          "structure.model": "pointers",
+          "structure.tiers": [],
+          "structure.groupSteps": [],
+          "structure.branchTitle": "Branch manager",
+          "structure.slaByTier": {},
+          escalationSlaHours: org.escalationSlaHours ?? 48,
+          teamMemberSeatLimit: used + (isPrecision ? 1 : 2),
+        },
+      }
+    );
+    await EscalationChangeLog.create([
+      { ownerType: "parentOrg", ownerId: org._id, actorEmail: "OodelCX", actorKind: "admin", action: "import", summary: `Escalation set up with ${org.name} during onboarding.`, createdAt: new Date(Date.now() - 20 * 86400000) },
+      { ownerType: "parentOrg", ownerId: org._id, actorEmail: owner.email, actorKind: "group", action: "set_branches", summary: `${branches[0].name} now escalates to ${ops?.email ?? owner.email}.`, createdAt: new Date(Date.now() - 3 * 86400000) },
+    ]);
     result.orgsStructured++;
   }
   return result;

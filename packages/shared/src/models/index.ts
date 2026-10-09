@@ -41,6 +41,7 @@ export * from "./CaseEventLogEntry";
 export * from "./PlatformSettings";
 export * from "./EscalationAssignment";
 export * from "./OrgNode";
+export * from "./EscalationChangeLog";
 export * from "./ImprovementInitiative";
 export * from "./SystemHealthEvent";
 export * from "./CronRun";

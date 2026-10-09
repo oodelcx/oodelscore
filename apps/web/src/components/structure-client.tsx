@@ -1,330 +1,541 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-interface Tier { key: string; name: string }
-interface Step { title: string; email: string }
-interface Node { id: string; tierKey: string; name: string; parentNodeId: string | null; managerEmail: string; managerTitle: string; branchCount: number }
-interface Branch { id: string; name: string; region: string; orgNodeId: string | null }
-interface Candidate { email: string; label: string }
+interface Person {
+  id: string;
+  email: string;
+  title: string;
+  kind: "head" | "team";
+  tier: "full" | "limited" | null;
+  escalatesToId: string | null;
+  inviteStatus: string;
+  usedByBranches: number;
+  openCases: number;
+}
+interface Branch {
+  id: string;
+  name: string;
+  region: string;
+  managerEmail: string;
+  escalatesToId: string | null;
+  chain: { label: string; email: string }[];
+  issues: string[];
+}
+interface Target { id: string; email: string; label: string }
 interface Data {
   kind: "parentOrg" | "business";
   name: string;
   enabled: boolean;
-  tiers: Tier[];
+  model: "pointers" | "legacy";
   branchTitle: string;
-  groupSteps: Step[];
   slaHours: number | null;
-  slaByTier: Record<string, number>;
-  nodes: Node[];
+  head: { id: string; email: string } | null;
   branches: Branch[];
-  candidates: Candidate[];
-  legacy: { levels: { level: number; label: string }[]; assignmentCount: number; hasScoped: boolean };
+  people: Person[];
+  targets: Target[];
+  seats: { used: number; limit: number | null };
+  legacy: { levels: { level: number; label: string }[]; assignmentCount: number };
+  changeLog: { id: string; at: string; by: string; byKind: string; summary: string }[];
 }
-interface Preview { steps: { level: number; label: string; email: string; hours: number | null }[]; slaHours: number | null }
+interface ImportPreviewRow { row: number; label: string; status: "new" | "update" | "unchanged" | "error"; message: string }
+
+const PAGE = 25;
+
+/** Minimal CSV reader: commas, quoted cells, doubled quotes. Header names are lower-cased with spaces as underscores. */
+function parseCsv(text: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let cur: string[] = [];
+  let cell = "";
+  let quoted = false;
+  const src = text.replace(/^﻿/, "");
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (quoted) {
+      if (c === '"' && src[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") { cur.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && src[i + 1] === "\n") i++;
+      cur.push(cell); cell = "";
+      if (cur.some((x) => x.trim())) rows.push(cur);
+      cur = [];
+    } else cell += c;
+  }
+  cur.push(cell);
+  if (cur.some((x) => x.trim())) rows.push(cur);
+  if (rows.length < 2) return [];
+  const header = rows[0].map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
+  return rows.slice(1).map((r) => Object.fromEntries(header.map((h, i) => [h, (r[i] ?? "").trim()])));
+}
+
+const TEMPLATES = {
+  people: "email,title,access,escalates_to_email\nregional.north@yourcompany.com,Regional Manager,full,ops.head@yourcompany.com\n",
+  branches: "branch,escalates_to_email\nLahore - Gulberg,cluster.lahore@yourcompany.com\n",
+};
+
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function TargetSelect({ value, onChange, targets, exclude, blankLabel, disabled }: { value: string; onChange: (id: string) => void; targets: Target[]; exclude?: string; blankLabel: string; disabled?: boolean }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} aria-label="Escalates to">
+      <option value="">{blankLabel}</option>
+      {targets.filter((t) => t.id !== exclude).map((t) => (<option key={t.id} value={t.id}>{t.label}</option>))}
+    </select>
+  );
+}
 
 /**
  * One screen for "who handles escalations", shared by a group, a standalone
- * business and Admin. Top to bottom: the group and its team, then the levels
- * the group uses (Region, Cluster...), then the boxes under each level, then
- * the branches. The escalation chain is read straight off this tree, so there
- * is no separate list of numbered levels to keep in step.
+ * business and OodelCX Admin (the same records, so a change on either side
+ * shows on the other). Every branch and every person has one "escalates to"
+ * choice; the chain a case follows is read off those choices. OodelCX sets it
+ * up with the customer (by hand or from a file); the customer then keeps it
+ * current when people move or leave.
  */
 export function StructureClient({ apiPath, heading = true }: { apiPath: string; heading?: boolean }) {
+  const isAdmin = apiPath.startsWith("/api/admin/");
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [previewBranch, setPreviewBranch] = useState("");
-  const [preview, setPreview] = useState<Preview | null>(null);
+
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkTo, setBulkTo] = useState("");
+  const [slaDraft, setSlaDraft] = useState("");
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ email: "", title: "", tier: "full", escalatesToId: "" });
+  const [leaver, setLeaver] = useState<Person | null>(null);
+  const [leaverMode, setLeaverMode] = useState<"existing" | "new" | "none">("existing");
+  const [leaverExisting, setLeaverExisting] = useState("");
+  const [leaverNew, setLeaverNew] = useState({ email: "", title: "", tier: "full" });
+  const [seatNote, setSeatNote] = useState("");
+  const [seatOpen, setSeatOpen] = useState(false);
+
+  const [importKind, setImportKind] = useState<"people" | "branches">("people");
+  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
+  const [importText, setImportText] = useState("");
+  const [importPreview, setImportPreview] = useState<{ preview: ImportPreviewRow[]; hasErrors: boolean } | null>(null);
 
   async function load() {
     const res = await fetch(apiPath);
     const d = await res.json().catch(() => null);
     if (!res.ok) { setError(d?.message ?? "Could not load."); return; }
     setData(d);
+    setSlaDraft(d.slaHours ? String(d.slaHours) : "");
   }
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [apiPath]);
 
-  async function act(body: Record<string, unknown>, okMessage?: string) {
+  async function act(body: Record<string, unknown>, okMessage?: string): Promise<boolean> {
     setBusy(true); setError(null); setNotice(null);
     const res = await fetch(apiPath, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await res.json().catch(() => null);
     setBusy(false);
     if (!res.ok) { setError(d?.message ?? "That could not be saved."); return false; }
-    if (d.preview) { setPreview(d.preview); return true; }
+    if (d.import) { setImportPreview(d.import); return true; }
     setData(d);
-    if (okMessage) setNotice(okMessage);
+    setSlaDraft(d.slaHours ? String(d.slaHours) : "");
+    setNotice(d.message ?? okMessage ?? null);
     return true;
   }
 
-  useEffect(() => {
-    if (!previewBranch || !data?.enabled) { setPreview(null); return; }
-    act({ action: "preview", businessId: previewBranch });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewBranch, data?.enabled, data?.nodes, data?.groupSteps, data?.branches]);
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = search.trim().toLowerCase();
+    return data.branches.filter((b) => !q || b.name.toLowerCase().includes(q) || b.region.toLowerCase().includes(q) || b.managerEmail.toLowerCase().includes(q));
+  }, [data, search]);
 
   if (error && !data) return <p className="error-text">{error}</p>;
   if (!data) return <p className="subtitle">Loading…</p>;
 
   const isGroup = data.kind === "parentOrg";
-  const people = data.candidates;
+  const byId = new Map(data.targets.map((t) => [t.id, t]));
+  const emailOf = (id: string | null) => (id ? byId.get(id)?.email ?? "" : "");
+  const seatsFull = data.seats.limit !== null && data.seats.used >= data.seats.limit;
+  const seatsLeft = data.seats.limit === null ? null : Math.max(0, data.seats.limit - data.seats.used);
+  const branchesWithIssues = data.branches.filter((b) => b.issues.length).length;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE));
+  const safePage = Math.min(page, pageCount - 1);
+  const shown = filtered.slice(safePage * PAGE, safePage * PAGE + PAGE);
+  const peopleTargets = data.targets.filter((t) => data.people.some((p) => p.id === t.id));
 
-  const PersonSelect = ({ value, onChange }: { value: string; onChange: (email: string) => void }) => (
-    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Person">
-      <option value="">{value ? "" : "Choose a person…"}</option>
-      {people.map((c) => (<option key={c.email} value={c.email}>{c.label}</option>))}
-    </select>
-  );
-
-  // ---- Not on the new structure yet ----
-  if (!data.enabled) {
+  // ---- Not on the "escalates to" screen yet ----
+  if (data.model !== "pointers") {
     const hasLegacy = data.legacy.levels.length > 1 || data.legacy.assignmentCount > 0;
     return (
       <div style={{ maxWidth: 760 }}>
-        {heading && <h1>Escalation and structure</h1>}
+        {heading && <h1>Escalation</h1>}
         <div className="card">
           <h3>{hasLegacy ? "This account still uses the older escalation setup" : "Set up who handles escalations"}</h3>
           <p className="subtitle" style={{ marginTop: 6 }}>
-            {isGroup
-              ? "The new screen works top to bottom: your group and its team, then the levels you use (Region, Cluster and so on), then your branches. The escalation chain is worked out from that, so there is nothing else to keep in step."
-              : "Choose who a case goes to when it is escalated, in order."}
+            {hasLegacy
+              ? `Today: ${data.legacy.levels.filter((l) => l.level > 1).map((l) => l.label).join(" → ") || "no levels"}, with ${data.legacy.assignmentCount} named holder${data.legacy.assignmentCount === 1 ? "" : "s"}. Cases keep escalating this way until you switch. Switching keeps the same people and the same order for every branch; branch-specific holders are kept where they differ.`
+              : "Choose, for every branch and every person, who a case goes to next. Cases then follow those choices up to the top."}
           </p>
-          {hasLegacy && (
-            <p className="subtitle">
-              Today: {data.legacy.levels.filter((l) => l.level > 1).map((l) => l.label).join(" → ") || "no levels"}, with {data.legacy.assignmentCount} named holder{data.legacy.assignmentCount === 1 ? "" : "s"}.
-              Cases keep escalating this way until you switch. Switching copies your current people across{data.legacy.hasScoped ? "; region holders become Region boxes, and any branch-specific holders must be set again" : ""}.
-            </p>
-          )}
           {error && <p className="error-text">{error}</p>}
-          <button className="btn btn-dark" disabled={busy} onClick={() => act(hasLegacy ? { action: "convertLegacy" } : { action: "saveSettings" })}>
-            {hasLegacy ? "Switch to the new structure" : "Start"}
-          </button>
+          <button className="btn btn-dark" disabled={busy} onClick={() => act({ action: "convertLegacy" })}>{hasLegacy ? "Switch to the new screen" : "Start"}</button>
         </div>
       </div>
     );
   }
 
-  const topNodes = (tierKey: string) => data.nodes.filter((n) => n.tierKey === tierKey);
-  const tierIndex = (key: string) => data.tiers.findIndex((t) => t.key === key);
-  const lowestTier = data.tiers[data.tiers.length - 1];
-  const nodeBranches = (id: string) => data.branches.filter((b) => b.orgNodeId === id);
-  const unassigned = data.branches.filter((b) => !b.orgNodeId);
-
-  function saveSteps(steps: Step[]) { return act({ action: "saveSettings", groupSteps: steps }); }
-  function saveTiers(tiers: Tier[]) { return act({ action: "saveSettings", tiers }); }
-
-  function NodeBox({ node, depth }: { node: Node; depth: number }) {
-    const idx = tierIndex(node.tierKey);
-    const childTier = data!.tiers[idx + 1];
-    const kids = data!.nodes.filter((n) => n.parentNodeId === node.id);
-    const [names, setNames] = useState("");
-    const [open, setOpen] = useState(false);
-    const tierName = data!.tiers[idx]?.name ?? node.tierKey;
-    return (
-      <div style={{ marginLeft: depth ? 18 : 0, borderLeft: depth ? "2px solid var(--border)" : "none", paddingLeft: depth ? 12 : 0, marginTop: 10 }}>
-        <div className="card" style={{ padding: 12 }}>
-          <div className="field-row" style={{ alignItems: "flex-end", flexWrap: "wrap" }}>
-            <div className="field" style={{ flex: 1.2, minWidth: 150 }}>
-              <label>{tierName}</label>
-              <input type="text" defaultValue={node.name} onBlur={(e) => e.target.value.trim() && e.target.value !== node.name && act({ action: "updateNode", id: node.id, name: e.target.value })} />
-            </div>
-            <div className="field" style={{ flex: 1, minWidth: 140 }}>
-              <label>Their title</label>
-              <input type="text" defaultValue={node.managerTitle} placeholder={`${tierName} manager`} onBlur={(e) => e.target.value !== node.managerTitle && act({ action: "updateNode", id: node.id, managerTitle: e.target.value })} />
-            </div>
-            <div className="field" style={{ flex: 1.4, minWidth: 190 }}>
-              <label>Who handles escalations (email)</label>
-              <PersonSelect value={node.managerEmail} onChange={(email) => act({ action: "updateNode", id: node.id, managerEmail: email })} />
-            </div>
-            <button className="icon-btn btn-danger" title="Delete this box" onClick={() => confirm(`Delete ${node.name}?`) && act({ action: "deleteNode", id: node.id })}>🗑</button>
-          </div>
-          {!node.managerEmail && <p className="field-hint" style={{ margin: "6px 0 0" }}>No one chosen yet, so cases skip this step.</p>}
-          {!childTier && nodeBranches(node.id).length > 0 && (
-            <p className="subtitle" style={{ margin: "8px 0 0" }}>
-              Branches: {nodeBranches(node.id).map((b) => b.name).join(", ")}
-            </p>
-          )}
-          {childTier && (
-            <div style={{ marginTop: 8 }}>
-              <button className="btn btn-sm" onClick={() => setOpen((v) => !v)}>{open ? "Close" : `+ Add ${childTier.name.toLowerCase()}s under ${node.name}`}</button>
-              {open && (
-                <div style={{ marginTop: 8 }}>
-                  <textarea rows={3} placeholder={`One ${childTier.name.toLowerCase()} per line`} value={names} onChange={(e) => setNames(e.target.value)} style={{ width: "100%" }} />
-                  <button className="btn btn-dark btn-sm" disabled={busy || !names.trim()} onClick={async () => { if (await act({ action: "addNode", tierKey: childTier.key, parentNodeId: node.id, names: names.split("\n") })) { setNames(""); setOpen(false); } }}>Add</button>
-                </div>
-              )}
-            </div>
-          )}
-          {!childTier && (
-            <div style={{ marginTop: 8 }}>
-              <label className="field-hint">Branches in this {tierName.toLowerCase()}</label>
-              <select
-                value=""
-                onChange={(e) => e.target.value && act({ action: "moveBranch", businessId: e.target.value, orgNodeId: node.id })}
-              >
-                <option value="">+ Put a branch here…</option>
-                {data!.branches.filter((b) => b.orgNodeId !== node.id).map((b) => (<option key={b.id} value={b.id}>{b.name}</option>))}
-              </select>
-            </div>
-          )}
-        </div>
-        {kids.map((k) => (<NodeBox key={k.id} node={k} depth={depth + 1} />))}
-      </div>
-    );
+  function togglePick(id: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleAllShown() {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      const all = shown.every((b) => next.has(b.id));
+      for (const b of shown) { if (all) next.delete(b.id); else next.add(b.id); }
+      return next;
+    });
   }
 
-  function AddTopNodes() {
-    const first = data!.tiers[0];
-    const [names, setNames] = useState("");
-    if (!first) return null;
-    return (
-      <div style={{ marginTop: 10 }}>
-        <textarea rows={3} placeholder={`Add ${first.name.toLowerCase()}s, one per line (for example North, South)`} value={names} onChange={(e) => setNames(e.target.value)} style={{ width: "100%" }} />
-        <button className="btn btn-dark btn-sm" disabled={busy || !names.trim()} onClick={async () => { if (await act({ action: "addNode", tierKey: first.key, parentNodeId: null, names: names.split("\n") })) setNames(""); }}>Add {first.name.toLowerCase()}s</button>
-      </div>
-    );
+  async function saveBranches(ids: string[], toId: string) {
+    const ok = await act({ action: "setBranches", businessIds: ids, toEmail: emailOf(toId) });
+    if (ok) { setPicked(new Set()); setBulkTo(""); }
+  }
+
+  async function submitAdd() {
+    const ok = await act({ action: "addPerson", email: addForm.email, title: addForm.title, tier: addForm.tier, escalatesToEmail: emailOf(addForm.escalatesToId) });
+    if (ok) { setAddForm({ email: "", title: "", tier: "full", escalatesToId: "" }); setAddOpen(false); }
+  }
+
+  async function submitLeaver() {
+    if (!leaver) return;
+    const body: Record<string, unknown> = { action: "removePerson", personId: leaver.id };
+    if (leaverMode === "existing") {
+      if (!leaverExisting) { setError("Choose who takes over."); return; }
+      body.replacementId = leaverExisting;
+    } else if (leaverMode === "new") {
+      body.newPerson = { email: leaverNew.email, title: leaverNew.title || leaver.title, tier: leaverNew.tier };
+    }
+    const ok = await act(body);
+    if (ok) { setLeaver(null); setLeaverNew({ email: "", title: "", tier: "full" }); setLeaverExisting(""); }
+  }
+
+  function onFile(file: File | undefined) {
+    if (!file) return;
+    file.text().then((t) => { setImportText(t); setImportRows(parseCsv(t)); setImportPreview(null); });
   }
 
   return (
-    <div style={{ maxWidth: 900 }}>
-      {heading && <h1>Escalation and structure</h1>}
-      <p className="subtitle">
-        {isGroup
-          ? "Build your structure from the top down. When a case is escalated it moves one step up: the branch manager, then each box above the branch that has someone chosen, then your group team. Each step shows a name and email before anyone clicks Escalate."
-          : "Choose who a case goes to when you escalate it, in order. The first person is you."}
-      </p>
-      {error && <p className="error-text">{error}</p>}
-      {notice && <div className="callout" role="status">{notice}</div>}
-
-      {/* 1. Group and team */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3>{isGroup ? "1. Group head and group team" : "Who handles escalations"}</h3>
-        <p className="card-sub" style={{ margin: "0 0 10px" }}>
-          {isGroup
-            ? "The top of the chain, in order from the first group-level step to the last. If you add no one, cases end with the group owner."
-            : "In order. Each Escalate press moves the case to the next person."}
-        </p>
-        {data.groupSteps.map((g, i) => (
-          <div key={i} className="field-row" style={{ alignItems: "flex-end", flexWrap: "wrap" }}>
-            <div className="field" style={{ flex: 1, minWidth: 150 }}>
-              <label>Title</label>
-              <input type="text" defaultValue={g.title} onBlur={(e) => e.target.value !== g.title && saveSteps(data.groupSteps.map((s, j) => (j === i ? { ...s, title: e.target.value } : s)))} />
-            </div>
-            <div className="field" style={{ flex: 1.4, minWidth: 190 }}>
-              <label>Email</label>
-              <PersonSelect value={g.email} onChange={(email) => saveSteps(data.groupSteps.map((s, j) => (j === i ? { ...s, email } : s)))} />
-            </div>
-            <button className="icon-btn" title="Move up" disabled={i === 0} onClick={() => { const a = [...data.groupSteps]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; saveSteps(a); }}>↑</button>
-            <button className="icon-btn" title="Move down" disabled={i === data.groupSteps.length - 1} onClick={() => { const a = [...data.groupSteps]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; saveSteps(a); }}>↓</button>
-            <button className="icon-btn btn-danger" title="Remove" onClick={() => saveSteps(data.groupSteps.filter((_, j) => j !== i))}>🗑</button>
-          </div>
-        ))}
-        <button className="btn btn-sm" onClick={() => saveSteps([...data.groupSteps.filter((s) => s.email), { title: isGroup ? "Group Head" : "Escalation contact", email: "" }])} style={{ marginTop: 6 }}>
-          + Add {data.groupSteps.length ? "another step" : isGroup ? "group head or team member" : "a person"}
-        </button>
-        <p className="field-hint" style={{ marginTop: 8 }}>
-          People come from your team (team members{isGroup ? " and branch owners" : ""}). To add someone new, ask your OodelCX account manager to add them as a team member first.
-        </p>
-      </div>
-
-      {/* 2. Levels */}
-      {isGroup && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <h3>2. Levels between the group and your branches</h3>
-          <p className="card-sub" style={{ margin: "0 0 10px" }}>
-            Use only the levels you have, named in your own words (Region, Area, Cluster, Zone, District). No levels at all is fine: branches then sit directly under the group.
+    <div style={{ maxWidth: 1040 }}>
+      {heading && (
+        <>
+          <h1>Escalation</h1>
+          <p className="subtitle">
+            {isGroup
+              ? "For every branch, and for every person, choose who a case goes to next. A case follows those choices up to the Group Head."
+              : "Choose who a case goes to next, step by step, until it reaches the top."}
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-            {data.tiers.map((t, i) => (
-              <span key={t.key} className="pill pill-gray" style={{ display: "inline-flex", gap: 6, alignItems: "center", padding: "4px 10px" }}>
-                <input type="text" defaultValue={t.name} style={{ width: 90, border: 0, background: "transparent", padding: 0 }} aria-label="Level name" onBlur={(e) => e.target.value.trim() && e.target.value !== t.name && saveTiers(data.tiers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-                <button className="icon-btn" title="Remove this level" onClick={() => saveTiers(data.tiers.filter((_, j) => j !== i))}>×</button>
-              </span>
-            ))}
-            <span className="pill pill-green">Branch</span>
-          </div>
-          <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {["Region", "Area", "Cluster"].filter((n) => !data.tiers.some((t) => t.name === n)).map((n) => (
-              <button key={n} className="btn btn-sm" onClick={() => saveTiers([...data.tiers, { key: "", name: n }])}>+ {n}</button>
-            ))}
-            <button className="btn btn-sm" onClick={() => { const name = prompt("Name of the level (for example Zone)"); if (name?.trim()) saveTiers([...data.tiers, { key: "", name }]); }}>+ Other…</button>
-          </div>
-          <div className="field" style={{ maxWidth: 280, marginTop: 12 }}>
-            <label>What is the person who runs a branch called?</label>
-            <input type="text" defaultValue={data.branchTitle} onBlur={(e) => e.target.value.trim() && e.target.value !== data.branchTitle && act({ action: "saveSettings", branchTitle: e.target.value })} />
-          </div>
-        </div>
+        </>
       )}
 
-      {/* 3. The tree */}
-      {isGroup && data.tiers.length > 0 && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <h3>3. Your {data.tiers.map((t) => t.name.toLowerCase()).join(", then ")}</h3>
-          <p className="card-sub" style={{ margin: "0 0 4px" }}>
-            Add the boxes, say who handles escalations in each, and put your branches in the lowest level{lowestTier ? ` (${lowestTier.name.toLowerCase()})` : ""}.
+      <div className="card" style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
+        <div><div className="field-hint">{isGroup ? "Branches" : "Location"}</div><strong style={{ fontSize: 22 }}>{data.branches.length}</strong></div>
+        <div><div className="field-hint">Escalation people</div><strong style={{ fontSize: 22 }}>{data.people.length}</strong></div>
+        <div>
+          <div className="field-hint">Team seats</div>
+          <strong style={{ fontSize: 22 }}>{data.seats.used}{data.seats.limit !== null ? ` of ${data.seats.limit}` : ""}</strong>
+        </div>
+        <div>
+          <div className="field-hint">Needs attention</div>
+          <strong style={{ fontSize: 22, color: branchesWithIssues ? "#b45309" : "inherit" }}>{branchesWithIssues}</strong>
+        </div>
+      </div>
+
+      {error && <p className="error-text" role="alert">{error}</p>}
+      {notice && <p className="callout" role="status">{notice}</p>}
+
+      {/* ---- People ---- */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <div>
+            <h3 style={{ margin: 0 }}>People who handle escalations</h3>
+            <p className="card-sub" style={{ margin: "4px 0 0" }}>Each person escalates to one other person. The Group Head is the top and escalates to no one.</p>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {seatsFull && !seatOpen && <button className="btn" onClick={() => setSeatOpen(true)}>Request more seats</button>}
+            <button className="btn btn-dark" onClick={() => setAddOpen((v) => !v)} disabled={busy}>{addOpen ? "Close" : "Add a person"}</button>
+          </div>
+        </div>
+
+        {seatsFull && (
+          <p className="callout" style={{ marginTop: 12 }}>
+            All {data.seats.limit} team seats are in use. To add someone, remove a person who has left, or request more seats from OodelCX.
           </p>
-          {topNodes(data.tiers[0].key).filter((n) => !n.parentNodeId).map((n) => (<NodeBox key={n.id} node={n} depth={0} />))}
-          <AddTopNodes />
-          {unassigned.length > 0 && (
-            <div className="callout callout-amber" style={{ marginTop: 14 }}>
-              {unassigned.length} branch{unassigned.length === 1 ? " is" : "es are"} not in a {lowestTier?.name.toLowerCase()} yet, so their cases skip those steps: {unassigned.slice(0, 6).map((b) => b.name).join(", ")}
-              {unassigned.length > 6 ? ` and ${unassigned.length - 6} more` : ""}. Use "Put a branch here" in the {lowestTier?.name.toLowerCase()} boxes above.
+        )}
+        {seatOpen && (
+          <div className="field" style={{ marginTop: 12 }}>
+            <label htmlFor="seat-note">What do you need? (optional)</label>
+            <textarea id="seat-note" rows={2} value={seatNote} onChange={(e) => setSeatNote(e.target.value)} placeholder="For example: two more regional managers joining in March" />
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn btn-dark" disabled={busy} onClick={async () => { if (await act({ action: "requestSeats", note: seatNote })) { setSeatOpen(false); setSeatNote(""); } }}>Send request</button>
+              <button className="btn" onClick={() => setSeatOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {addOpen && (
+          <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--border, #e5e7eb)", borderRadius: 10 }}>
+            <div className="field-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <div className="field" style={{ flex: "1 1 220px" }}>
+                <label htmlFor="add-email">Email</label>
+                <input id="add-email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} placeholder="name@company.com" />
+              </div>
+              <div className="field" style={{ flex: "1 1 180px" }}>
+                <label htmlFor="add-title">Title</label>
+                <input id="add-title" value={addForm.title} onChange={(e) => setAddForm({ ...addForm, title: e.target.value })} placeholder="Regional Manager" />
+              </div>
+              <div className="field" style={{ flex: "0 1 150px" }}>
+                <label htmlFor="add-tier">Access</label>
+                <select id="add-tier" value={addForm.tier} onChange={(e) => setAddForm({ ...addForm, tier: e.target.value })}>
+                  <option value="full">Full</option>
+                  <option value="limited">Limited (own cases only)</option>
+                </select>
+              </div>
+              <div className="field" style={{ flex: "1 1 220px" }}>
+                <label htmlFor="add-up">Escalates to</label>
+                <TargetSelect value={addForm.escalatesToId} onChange={(id) => setAddForm({ ...addForm, escalatesToId: id })} targets={peopleTargets} blankLabel="Choose later" />
+              </div>
+            </div>
+            <p className="field-hint">They get an email to set their password. This uses one team seat{seatsLeft !== null ? ` (${seatsLeft} left)` : ""}.</p>
+            <button className="btn btn-dark" disabled={busy || seatsFull || !addForm.email || !addForm.title} onClick={submitAdd}>Send invitation</button>
+          </div>
+        )}
+
+        <div style={{ overflowX: "auto", marginTop: 14 }}>
+          <table className="table" style={{ width: "100%" }}>
+            <thead>
+              <tr><th>Person</th><th>Title</th><th>Escalates to</th><th>Branches</th><th>Open cases</th><th /></tr>
+            </thead>
+            <tbody>
+              {data.people.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    {p.email}
+                    {p.inviteStatus !== "active" && <span className="pill" style={{ marginLeft: 6 }}>{p.inviteStatus === "invite_pending" ? "Invited" : "Invite expired"}</span>}
+                    {p.tier === "limited" && <span className="pill" style={{ marginLeft: 6 }}>Limited</span>}
+                  </td>
+                  <td>{p.title || "—"}</td>
+                  <td style={{ minWidth: 230 }}>
+                    {p.kind === "head" ? (
+                      <span className="field-hint">Top of the chain</span>
+                    ) : (
+                      <TargetSelect
+                        value={p.escalatesToId ?? ""}
+                        onChange={(id) => act({ action: "setPerson", personId: p.id, toEmail: emailOf(id) })}
+                        targets={peopleTargets}
+                        exclude={p.id}
+                        blankLabel="No one (top of their chain)"
+                        disabled={busy}
+                      />
+                    )}
+                  </td>
+                  <td>{p.usedByBranches}</td>
+                  <td>{p.openCases}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {p.kind === "team" && (
+                      <button className="btn" disabled={busy} onClick={() => { setLeaver(p); setLeaverMode("existing"); setLeaverExisting(""); setError(null); }}>Remove or replace</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {!data.people.length && <tr><td colSpan={6} className="field-hint">No one yet. Add the people who handle escalations, or ask OodelCX to import them.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+
+        {leaver && (
+          <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--border, #e5e7eb)", borderRadius: 10 }}>
+            <h4 style={{ margin: 0 }}>{leaver.email} is leaving</h4>
+            <p className="card-sub" style={{ margin: "4px 0 10px" }}>
+              Everyone who escalated to them{leaver.usedByBranches ? ` (${leaver.usedByBranches} branch${leaver.usedByBranches === 1 ? "" : "es"})` : ""}{leaver.openCases ? ` and their ${leaver.openCases} open case${leaver.openCases === 1 ? "" : "s"}` : ""} move to whoever takes over. Each case shows the handover in its timeline.
+            </p>
+            <div style={{ display: "grid", gap: 8 }}>
+              <label><input type="radio" checked={leaverMode === "existing"} onChange={() => setLeaverMode("existing")} /> Someone already on the team takes over</label>
+              {leaverMode === "existing" && (
+                <TargetSelect value={leaverExisting} onChange={setLeaverExisting} targets={peopleTargets} exclude={leaver.id} blankLabel="Choose a person…" />
+              )}
+              <label>
+                <input type="radio" checked={leaverMode === "new"} onChange={() => setLeaverMode("new")} disabled={false} /> Invite a replacement{" "}
+                <span className="field-hint">(takes the leaver&apos;s seat, so this works even when seats are full)</span>
+              </label>
+              {leaverMode === "new" && (
+                <div className="field-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <div className="field" style={{ flex: "1 1 220px" }}>
+                    <label htmlFor="rep-email">Replacement&apos;s email</label>
+                    <input id="rep-email" type="email" value={leaverNew.email} onChange={(e) => setLeaverNew({ ...leaverNew, email: e.target.value })} />
+                  </div>
+                  <div className="field" style={{ flex: "1 1 180px" }}>
+                    <label htmlFor="rep-title">Title</label>
+                    <input id="rep-title" value={leaverNew.title} onChange={(e) => setLeaverNew({ ...leaverNew, title: e.target.value })} placeholder={leaver.title} />
+                  </div>
+                </div>
+              )}
+              <label><input type="radio" checked={leaverMode === "none"} onChange={() => setLeaverMode("none")} /> No replacement yet: move everything to whoever they escalated to{data.head ? " (or the Group Head)" : ""}</label>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button className="btn btn-dark" disabled={busy || (leaverMode === "new" && !leaverNew.email)} onClick={submitLeaver}>Confirm</button>
+              <button className="btn" onClick={() => setLeaver(null)}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ---- Branches ---- */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <h3 style={{ margin: 0 }}>{isGroup ? "Branches" : "This location"}</h3>
+        <p className="card-sub" style={{ margin: "4px 0 12px" }}>
+          Choose who each {isGroup ? "branch" : "location"} escalates to first. {isGroup ? "Tick several branches to set them in one go. " : ""}After that, the chain follows the people above.
+        </p>
+
+        {isGroup && (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+            <input aria-label="Search branches" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Search branch, region or manager" style={{ flex: "1 1 240px" }} />
+            {picked.size > 0 && (
+              <>
+                <span className="field-hint">{picked.size} selected</span>
+                <TargetSelect value={bulkTo} onChange={setBulkTo} targets={peopleTargets} blankLabel="Group Head (default)" />
+                <button className="btn btn-dark" disabled={busy} onClick={() => saveBranches([...picked], bulkTo)}>Set for {picked.size}</button>
+                <button className="btn" onClick={() => setPicked(new Set())}>Clear</button>
+              </>
+            )}
+          </div>
+        )}
+
+        <div style={{ overflowX: "auto" }}>
+          <table className="table" style={{ width: "100%" }}>
+            <thead>
+              <tr>
+                {isGroup && <th style={{ width: 28 }}><input type="checkbox" aria-label="Select all on this page" checked={shown.length > 0 && shown.every((b) => picked.has(b.id))} onChange={toggleAllShown} /></th>}
+                <th>{isGroup ? "Branch" : "Location"}</th>
+                <th>{data.branchTitle}</th>
+                <th>Escalates to</th>
+                <th>Then</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((b) => (
+                <tr key={b.id}>
+                  {isGroup && <td><input type="checkbox" aria-label={`Select ${b.name}`} checked={picked.has(b.id)} onChange={() => togglePick(b.id)} /></td>}
+                  <td>
+                    <strong>{b.name}</strong>
+                    {b.region && <div className="field-hint">{b.region}</div>}
+                  </td>
+                  <td>{b.managerEmail || "—"}</td>
+                  <td style={{ minWidth: 230 }}>
+                    <TargetSelect value={b.escalatesToId ?? ""} onChange={(id) => saveBranches([b.id], id)} targets={peopleTargets} blankLabel={data.head ? "Group Head (default)" : "Choose a person…"} disabled={busy} />
+                  </td>
+                  <td>
+                    <div className="field-hint">
+                      {b.chain.length ? b.chain.map((s) => `${s.label}${s.email ? ` (${s.email})` : ""}`).join(" → ") : "Nobody above this branch yet"}
+                    </div>
+                    {b.issues.map((i) => (<div key={i} className="error-text" style={{ fontSize: 12 }}>{i}</div>))}
+                  </td>
+                </tr>
+              ))}
+              {!shown.length && <tr><td colSpan={5} className="field-hint">No branches match.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+
+        {pageCount > 1 && (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 12 }}>
+            <button className="btn" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>Previous</button>
+            <span className="field-hint">Page {safePage + 1} of {pageCount} · {filtered.length} branches</span>
+            <button className="btn" disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)}>Next</button>
+          </div>
+        )}
+      </div>
+
+      {/* ---- Timing ---- */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <h3 style={{ margin: 0 }}>Time at each step</h3>
+        <p className="card-sub" style={{ margin: "4px 0 12px" }}>If a case sits untouched this long, it moves up to the next person on its own. Leave blank to escalate by hand only.</p>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <input aria-label="Hours at each step" type="number" min={1} value={slaDraft} onChange={(e) => setSlaDraft(e.target.value)} style={{ width: 110 }} placeholder="Hours" />
+          <span className="field-hint">hours</span>
+          <button className="btn btn-dark" disabled={busy} onClick={() => act({ action: "setSla", hours: slaDraft.trim() ? Number(slaDraft) : null })}>Save</button>
+        </div>
+      </div>
+
+      {/* ---- Admin bulk import ---- */}
+      {isAdmin && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h3 style={{ margin: 0 }}>Import from a file</h3>
+          <p className="card-sub" style={{ margin: "4px 0 12px" }}>
+            For first-time setup. Import the people first, then the branches. You see every row checked before anything is saved; one problem blocks the whole file.
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <select aria-label="What the file contains" value={importKind} onChange={(e) => { setImportKind(e.target.value as "people" | "branches"); setImportRows([]); setImportText(""); setImportPreview(null); }}>
+              <option value="people">People (email, title, access, escalates_to_email)</option>
+              <option value="branches">Branches (branch, escalates_to_email)</option>
+            </select>
+            <button className="btn" onClick={() => download(`escalation-${importKind}-template.csv`, TEMPLATES[importKind])}>Download template</button>
+            <input aria-label="Choose a CSV file" type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0])} />
+          </div>
+          <div className="field" style={{ marginTop: 10 }}>
+            <label htmlFor="import-text">Or paste the rows (with the header line)</label>
+            <textarea id="import-text" rows={4} value={importText} onChange={(e) => { setImportText(e.target.value); setImportRows(parseCsv(e.target.value)); setImportPreview(null); }} />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-dark" disabled={busy || !importRows.length} onClick={() => act({ action: "importPreview", kind: importKind, rows: importRows })}>Check {importRows.length || ""} row{importRows.length === 1 ? "" : "s"}</button>
+            {importPreview && !importPreview.hasErrors && (
+              <button className="btn btn-dark" disabled={busy} onClick={async () => { if (await act({ action: "importApply", kind: importKind, rows: importRows })) { setImportPreview(null); setImportRows([]); setImportText(""); } }}>Apply import</button>
+            )}
+          </div>
+          {importPreview && (
+            <div style={{ overflowX: "auto", marginTop: 12 }}>
+              <table className="table" style={{ width: "100%" }}>
+                <thead><tr><th>Row</th><th>Who</th><th>Result</th></tr></thead>
+                <tbody>
+                  {importPreview.preview.map((r, i) => (
+                    <tr key={`${r.row}-${i}`}>
+                      <td>{r.row || "—"}</td>
+                      <td>{r.label}</td>
+                      <td style={{ color: r.status === "error" ? "#b91c1c" : undefined }}>{r.status === "error" ? "Problem: " : r.status === "new" ? "New: " : r.status === "update" ? "Update: " : "Same: "}{r.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       )}
 
-      {/* 4. Timing */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3>{isGroup ? "4. How long before a case moves up on its own?" : "How long before a case moves up on its own?"}</h3>
-        <div className="field-row" style={{ alignItems: "flex-end" }}>
-          <div className="field" style={{ maxWidth: 220 }}>
-            <label>Hours at each step</label>
-            <input type="number" min="1" defaultValue={data.slaHours ?? ""} placeholder="Leave empty for manual only" onBlur={(e) => act({ action: "saveSettings", slaHours: e.target.value.trim() ? Number(e.target.value) : null })} />
-          </div>
-        </div>
-        <p className="field-hint">If a case is not resolved within this time at a step, it moves up to the next person automatically. Leave empty to escalate by hand only.</p>
-        {isGroup && (
-          <details style={{ marginTop: 8 }}>
-            <summary style={{ cursor: "pointer" }}>Different times for different steps</summary>
-            <div className="field-row" style={{ flexWrap: "wrap", marginTop: 8 }}>
-              {[{ key: "branch", name: data.branchTitle }, ...data.tiers, { key: "group", name: "Group team" }].map((t) => (
-                <div className="field" key={t.key} style={{ width: 150 }}>
-                  <label>{t.name} (hours)</label>
-                  <input type="number" min="1" defaultValue={data.slaByTier[t.key] ?? ""} placeholder={String(data.slaHours ?? "")} onBlur={(e) => act({ action: "saveSettings", slaByTier: { ...data.slaByTier, [t.key]: e.target.value.trim() ? Number(e.target.value) : 0 } })} />
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-      </div>
-
-      {/* 5. Preview */}
-      <div className="card">
-        <h3>Check the chain</h3>
-        {isGroup ? (
-          <div className="field" style={{ maxWidth: 360 }}>
-            <label>Pick a branch to see who a case would go to, step by step</label>
-            <select value={previewBranch} onChange={(e) => setPreviewBranch(e.target.value)}>
-              <option value="">Choose a branch…</option>
-              {data.branches.map((b) => (<option key={b.id} value={b.id}>{b.name}</option>))}
-            </select>
-          </div>
-        ) : (
-          <div style={{ marginTop: 6 }}>
-            <button className="btn btn-sm" onClick={() => act({ action: "preview", businessId: "self" })}>Show the chain</button>
-          </div>
-        )}
-        {preview && (
-          <ol style={{ margin: "12px 0 0", paddingLeft: 20 }}>
-            {preview.steps.map((s) => (
-              <li key={s.level} style={{ marginBottom: 4 }}>
-                <b>{s.label}</b> {s.email ? <>— {s.email}</> : <span className="field-hint">no one chosen yet</span>}
-                {s.hours ? <span className="field-hint"> · moves up after {s.hours}h</span> : null}
+      {/* ---- Change log ---- */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <h3 style={{ margin: 0 }}>Recent changes</h3>
+        <p className="card-sub" style={{ margin: "4px 0 10px" }}>Changes made here or by OodelCX both appear below.</p>
+        {data.changeLog.length ? (
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}>
+            {data.changeLog.map((l) => (
+              <li key={l.id}>
+                <span>{l.summary}</span>{" "}
+                <span className="field-hint">{new Date(l.at).toLocaleString()} · {l.byKind === "admin" ? "OodelCX" : l.by}</span>
               </li>
             ))}
-          </ol>
+          </ul>
+        ) : (
+          <p className="field-hint">No changes yet.</p>
         )}
       </div>
     </div>
