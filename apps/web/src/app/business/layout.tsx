@@ -101,7 +101,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
   const cxPulseNavProduct = viewProduct ?? primaryProductFor(business);
 
   return (
-    <div className="admin-app">
+    <div className="admin-app" data-lens={viewProduct ? (staffLens ? "staff" : "customer") : undefined}>
       <div data-no-print>
         <MobileNavToggle label={business.name} />
       </div>
@@ -111,11 +111,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
             <img className="admin-logo" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
             <div className="admin-brand-sub">BUSINESS PORTAL</div>
             {viewProduct && <ProductViewSwitcher current={viewProduct} />}
-            {viewProduct && (
-              <div className={`lens-strip ${staffLens ? "lens-staff" : "lens-customer"}`}>
-                {staffLens ? "Viewing staff experience" : "Viewing customer experience"}
-              </div>
-            )}
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
@@ -377,16 +372,6 @@ export default async function BusinessLayout({ children }: { children: ReactNode
         </div>
       </aside>
       <main className="admin-main">
-        {viewProduct && (
-          <div className={`lens-banner ${staffLens ? "lens-staff" : "lens-customer"}`} data-no-print>
-            <strong>{staffLens ? "Staff experience" : "Customer experience"}</strong>
-            <span>
-              {staffLens
-                ? "Everything on this screen is about your people. Responses are anonymous and shown only where five or more have answered."
-                : "Everything on this screen is about your customers."}
-            </span>
-          </div>
-        )}
         {isBranch && (business.enabledProducts ?? []).length === 0 ? (
           <div className="card" style={{ maxWidth: 560 }}>
             <h3>Nothing to show here</h3>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 type Product = "customer_experience" | "colleague_experience";
@@ -46,29 +46,27 @@ export function ProductViewSwitcher({ current }: { current: Product }) {
     });
   }
 
+  // Dim the page while the other lens loads; cleared when the new one has arrived.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (pending) root.dataset.lensSwitching = "true";
+    else delete root.dataset.lensSwitching;
+    return () => { delete root.dataset.lensSwitching; };
+  }, [pending]);
+
   return (
-    <div className="product-switcher" role="group" aria-label="Viewing">
-      <button
-        type="button"
-        className={`product-switcher-btn${shown === "customer_experience" ? " active" : ""}`}
-        onClick={() => switchTo("customer_experience")}
-        disabled={pending}
-      >
-        Customer
-      </button>
-      <button
-        type="button"
-        className={`product-switcher-btn${shown === "colleague_experience" ? " active" : ""}`}
-        onClick={() => switchTo("colleague_experience")}
-        disabled={pending}
-      >
-        Colleague
-      </button>
-      {pending && (
-        <span role="status" style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>
-          Switching…
-        </span>
-      )}
+    <div>
+      <div className="product-switcher" role="group" aria-label="Viewing" data-current={shown} data-busy={pending ? "true" : "false"}>
+        <span className="product-switcher-thumb" aria-hidden="true" />
+        <button type="button" className={`product-switcher-btn${shown === "customer_experience" ? " active" : ""}`} onClick={() => switchTo("customer_experience")} aria-pressed={shown === "customer_experience"}>
+          Customer
+        </button>
+        <button type="button" className={`product-switcher-btn${shown === "colleague_experience" ? " active" : ""}`} onClick={() => switchTo("colleague_experience")} aria-pressed={shown === "colleague_experience"}>
+          Colleague
+        </button>
+        <span className="product-switcher-progress" aria-hidden="true" />
+      </div>
+      <div className="lens-note" aria-live="polite">Staff responses are anonymous and shown only for 5 or more answers.</div>
     </div>
   );
 }

@@ -72,7 +72,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   const staffLens = showCe && !showCx;
 
   return (
-    <div className="admin-app">
+    <div className="admin-app" data-lens={viewProduct ? (staffLens ? "staff" : "customer") : undefined}>
       <div data-no-print>
         <MobileNavToggle label="Parent Organisation Portal" />
       </div>
@@ -82,11 +82,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
             <img className="admin-logo" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
             {viewProduct && <ProductViewSwitcher current={viewProduct} />}
-            {viewProduct && (
-              <div className={`lens-strip ${staffLens ? "lens-staff" : "lens-customer"}`}>
-                {staffLens ? "Viewing staff experience" : "Viewing customer experience"}
-              </div>
-            )}
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
@@ -357,16 +352,6 @@ export default async function GroupLayout({ children }: { children: ReactNode })
         </div>
       </aside>
       <main className="admin-main">
-        {viewProduct && !isGated && (
-          <div className={`lens-banner ${staffLens ? "lens-staff" : "lens-customer"}`} data-no-print>
-            <strong>{staffLens ? "Staff experience" : "Customer experience"}</strong>
-            <span>
-              {staffLens
-                ? "Everything on this screen is about your people. Responses are anonymous and shown only where five or more have answered."
-                : "Everything on this screen is about your customers."}
-            </span>
-          </div>
-        )}
         {isGated ? (
           <BillingLockedScreen
             billingHref="/group/billing"

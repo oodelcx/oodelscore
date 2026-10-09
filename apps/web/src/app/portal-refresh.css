@@ -277,10 +277,26 @@ table.clean td { border-bottom: 1px solid #edf2f0; }
 }
 
 /* ---- Customer / staff lens ---- */
-.lens-strip { margin-top: 10px; font-size: 11.5px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; padding: 6px 10px; border-radius: 8px; text-align: center; }
-.lens-strip.lens-customer { background: rgba(11, 122, 85, 0.16); color: #7fe0b8; }
-.lens-strip.lens-staff { background: rgba(224, 160, 40, 0.18); color: #f4c76a; }
-.lens-banner { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; padding: 9px 14px; border-radius: 10px; margin-bottom: 18px; font-size: 13px; border: 1px solid transparent; }
-.lens-banner strong { font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; }
-.lens-banner.lens-customer { background: #e1f3ea; border-color: #cfe9de; color: #0b5c40; }
-.lens-banner.lens-staff { background: #fdf3df; border-color: #f2e0b4; color: #8a5a06; }
+.admin-app { --lens: #0b7a55; --lens-bg: #e1f3ea; --lens-ink: #fff; }
+.admin-app[data-lens="staff"] { --lens: #b9770e; --lens-bg: #fbefd6; }
+.admin-app .admin-nav a.active { background: var(--lens-bg); color: var(--lens); transition: background 0.35s ease, color 0.35s ease; }
+
+.product-switcher { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 12px; padding: 3px; background: var(--bg-2); border-radius: 10px; isolation: isolate; }
+.product-switcher-thumb { position: absolute; z-index: 0; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 8px; background: var(--lens); box-shadow: 0 1px 4px rgba(14, 44, 34, 0.22); transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.34s ease; }
+.product-switcher[data-current="colleague_experience"] .product-switcher-thumb { transform: translateX(100%); }
+.product-switcher-btn { position: relative; z-index: 1; background: transparent; border: 0; padding: 7px 8px; font: inherit; font-size: 12.5px; font-weight: 600; letter-spacing: 0; color: var(--text-2); cursor: pointer; border-radius: 8px; transition: color 0.25s ease; }
+.product-switcher-btn.active { background: transparent; color: var(--lens-ink); box-shadow: none; }
+.product-switcher-btn:disabled { opacity: 1; cursor: default; }
+.product-switcher[data-busy="true"] .product-switcher-btn { pointer-events: none; }
+.product-switcher-progress { position: absolute; left: 10px; right: 10px; bottom: -5px; height: 2px; border-radius: 2px; overflow: hidden; opacity: 0; transition: opacity 0.2s; }
+.product-switcher[data-busy="true"] .product-switcher-progress { opacity: 1; }
+.product-switcher-progress::after { content: ""; position: absolute; inset: 0; width: 40%; background: var(--lens); border-radius: 2px; animation: lens-sweep 0.9s ease-in-out infinite; }
+@keyframes lens-sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+.lens-note { font-size: 11.5px; color: var(--text-3); margin-top: 8px; padding: 0 2px; max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.35s ease, opacity 0.3s ease; }
+.admin-app[data-lens="staff"] .lens-note { max-height: 40px; opacity: 1; }
+
+/* Page content: dim a touch while the other lens loads, then ease in. No blank flash. */
+html[data-lens-switching="true"] .admin-main > div { opacity: 0.45; transition: opacity 0.18s ease; }
+.admin-main > div { animation: lens-in 0.32s cubic-bezier(0.32, 0.72, 0, 1) both; }
+@keyframes lens-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .admin-main > div, .product-switcher-thumb, .product-switcher-progress::after { animation: none; transition: none; } }
