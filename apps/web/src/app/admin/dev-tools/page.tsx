@@ -1,8 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const CONFIRM_PHRASE = "DELETE ALL DATA";
+
+interface Job { state: "idle" | "running" | "done" | "error"; mode: string | null; startedAt: number | null; finishedAt: number | null; step: string; log: string[]; error: string | null; summary: string | null }
+
+function FullReseedCard() {
+  const [job, setJob] = useState<Job | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  async function poll() {
+    const res = await fetch("/api/admin/dev-tools/reseed", { cache: "no-store" }).catch(() => null);
+    const d = await res?.json().catch(() => null);
+    if (d?.job) setJob(d.job);
+  }
+  useEffect(() => { poll(); }, []);
+  useEffect(() => {
+    if (job?.state !== "running") return;
+    const t = setInterval(() => { poll(); setNow(Date.now()); }, 3000);
+    return () => clearInterval(t);
+  }, [job?.state]);
+
+  async function start() {
+    setError(null);
+    const res = await fetch("/api/admin/dev-tools/reseed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "reseed", confirm: confirmText }) });
+    const d = await res.json().catch(() => null);
+    if (!res.ok) { setError(d?.message ?? "Could not start."); if (d?.job) setJob(d.job); return; }
+    setJob(d.job);
+    setConfirmText("");
+  }
+
+  const running = job?.state === "running";
+  const secs = job?.startedAt ? Math.round(((job.finishedAt ?? now) - job.startedAt) / 1000) : 0;
+  return (
+    <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
+      <h3>Full reset and reseed (recommended)</h3>
+      <p className="card-sub">
+        Wipes all tenant data, then seeds everything for all demos in one go: the groups, branches and logins, feedback, cases, escalation setup,
+        Compass, Program Evaluation, billing, AI Insight Reports and CX Pulse. It runs on the server in the background, so closing this page or a
+        sleeping instance does not break it. Keep this page open while it runs; it also keeps a free instance awake. Takes several minutes.
+      </p>
+      {error && <p className="error-text">{error}</p>}
+      {!running && (
+        <div className="field">
+          <label>Type <code>{CONFIRM_PHRASE}</code> to start</label>
+          <input type="text" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
+        </div>
+      )}
+      <button className="btn btn-dark" disabled={running || confirmText !== CONFIRM_PHRASE} onClick={start}>{running ? `Running… ${secs}s` : "Wipe and reseed everything"}</button>
+      {job && job.state !== "idle" && (
+        <div className={`callout${job.state === "error" ? " callout-amber" : ""}`} style={{ marginTop: 12 }}>
+          <strong>{job.state === "running" ? "Working: " : job.state === "done" ? "Done. " : "Failed. "}</strong>
+          {job.state === "done" ? job.summary : job.state === "error" ? job.error : job.step}
+          <div style={{ marginTop: 8, fontSize: 12, maxHeight: 180, overflow: "auto", fontFamily: "monospace", whiteSpace: "pre-wrap" }}>{job.log.slice(-30).join("\n")}</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DevDataToolsPage() {
   const [seeding, setSeeding] = useState(false);
@@ -131,8 +189,10 @@ export default function DevDataToolsPage() {
         </div>
       </div>
 
+      <FullReseedCard />
+
       <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
-        <h3>Seed showcase data</h3>
+        <h3>Seed showcase data (older, single request)</h3>
         <p className="card-sub">
           Creates a realistic, connected dataset so you can click through every page and see how data actually
           flows, spanning every product combination and account shape the app supports: <b>Meridian Bank
