@@ -191,6 +191,8 @@ export default function DevDataToolsPage() {
 
       <FullReseedCard />
 
+      <details style={{ maxWidth: 720, marginBottom: 20 }}>
+        <summary style={{ cursor: "pointer", fontWeight: 600, marginBottom: 12 }}>Advanced: individual tools (not needed after a full reset)</summary>
       <div className="card" style={{ maxWidth: 720, marginBottom: 20 }}>
         <h3>Seed showcase data (older, single request)</h3>
         <p className="card-sub">
@@ -285,6 +287,8 @@ export default function DevDataToolsPage() {
         </button>
         {extrasDone && <div className="callout" style={{ marginTop: 12 }}>{extrasDone}</div>}
       </div>
+
+      </details>
 
       <div className="card" style={{ maxWidth: 720, borderColor: "var(--red, crimson)" }}>
         <h3 style={{ color: "var(--red, crimson)" }}>Wipe all data</h3>

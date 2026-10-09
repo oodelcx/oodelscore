@@ -8,6 +8,7 @@ import { PeriodComparisonCards, type Comparisons } from "@/components/period-com
 import { AttentionQueue } from "@/components/attention-queue";
 import { InfoTip } from "@/components/info-tip";
 import { ThemeCard } from "@/components/theme-card";
+import { ReportBarList, starTone, npsTone } from "@/components/report-widgets";
 
 interface RecurringFlagRow {
   _id: string;
@@ -44,6 +45,35 @@ function RecurringIssuesCard() {
       <a href="/group/improvement-initiatives" style={{ color: "var(--accent)" }}>
         Review in Improvement Initiatives →
       </a>
+    </div>
+  );
+}
+
+function RegionSnapshot({ regions }: { regions: RegionRow[] }) {
+  const scored = regions.filter((r) => r.starAverage !== null).sort((a, b) => (b.starAverage as number) - (a.starAverage as number));
+  if (scored.length < 2) return null;
+  const best = scored[0];
+  const weakest = scored[scored.length - 1];
+  const totalFlagged = regions.reduce((sum, r) => sum + r.flaggedCount, 0);
+  return (
+    <div className="card" style={{ marginBottom: 20 }}>
+      <h3>How the regions compare</h3>
+      <p className="card-sub">
+        <strong>{best.region}</strong> is doing best ({best.starAverage}/5). <strong>{weakest.region}</strong> needs the most support ({weakest.starAverage}/5
+        {weakest.flaggedCount ? `, ${weakest.flaggedCount} flagged` : ""}). {totalFlagged} branch{totalFlagged === 1 ? "" : "es"} flagged across all regions.
+      </p>
+      <div className="grid grid-2">
+        <ReportBarList
+          title="Average rating"
+          emptyText="No data yet."
+          rows={scored.map((r) => ({ key: r.region, label: r.region, sublabel: `${r.businessCount} branches`, value: r.starAverage, max: 5, displayValue: `${r.starAverage}/5`, tone: starTone(r.starAverage) }))}
+        />
+        <ReportBarList
+          title="NPS"
+          emptyText="No NPS data yet."
+          rows={regions.filter((r) => r.npsScore !== null).sort((a, b) => (b.npsScore as number) - (a.npsScore as number)).map((r) => ({ key: r.region, label: r.region, value: Math.max(0, (r.npsScore as number) + 100) / 2, max: 100, displayValue: formatSigned(r.npsScore as number), tone: npsTone(r.npsScore) }))}
+        />
+      </div>
     </div>
   );
 }
@@ -342,6 +372,8 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
         Outliers and regions are surfaced here first — every branch is always fully searchable in detail on Branches,
         regardless of network size.
       </div>
+
+      <RegionSnapshot regions={data.regions} />
 
       <div className="section-title">
         Regions

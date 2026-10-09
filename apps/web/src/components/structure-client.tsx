@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DetailDrawer } from "@/components/detail-drawer";
 
 interface Person {
   id: string;
@@ -289,40 +290,6 @@ export function StructureClient({ apiPath, heading = true }: { apiPath: string; 
         </div>
 
         {seatsFull && <div className="callout callout-amber" style={{ marginBottom: 12 }}>All {data.seats.limit} team seats are in use. Remove someone who has left, or request more seats from OodelCX.</div>}
-        {seatOpen && (
-          <div className="esc-form">
-            <div>
-              <label htmlFor="seat-note">What do you need? (optional)</label>
-              <textarea id="seat-note" rows={2} value={seatNote} onChange={(e) => setSeatNote(e.target.value)} placeholder="For example: two more regional managers joining in March" />
-            </div>
-            <div className="esc-actions">
-              <button className="btn btn-dark" disabled={busy} onClick={async () => { if (await act({ action: "requestSeats", note: seatNote })) { setSeatOpen(false); setSeatNote(""); } }}>Send request</button>
-              <button className="btn" onClick={() => setSeatOpen(false)}>Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {addOpen && (
-          <div className="esc-form">
-            <div className="esc-form-grid">
-              <div><label htmlFor="add-email">Email</label><input id="add-email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} placeholder="name@company.com" /></div>
-              <div><label htmlFor="add-title">Title</label><input id="add-title" type="text" value={addForm.title} onChange={(e) => setAddForm({ ...addForm, title: e.target.value })} placeholder="Regional Manager" /></div>
-              <div>
-                <label htmlFor="add-tier">Access</label>
-                <select id="add-tier" value={addForm.tier} onChange={(e) => setAddForm({ ...addForm, tier: e.target.value })}>
-                  <option value="full">Full</option>
-                  <option value="limited">Limited (own cases only)</option>
-                </select>
-              </div>
-              <div><label htmlFor="add-up">Escalates to</label><TargetSelect value={addForm.escalatesToId} onChange={(id) => setAddForm({ ...addForm, escalatesToId: id })} targets={peopleTargets} blankLabel="Choose later" /></div>
-            </div>
-            <div className="esc-actions">
-              <button className="btn btn-dark" disabled={busy || seatsFull || !addForm.email || !addForm.title} onClick={submitAdd}>Send invitation</button>
-              <span className="esc-muted">They get an email to set a password and use one team seat{seatsLeft !== null ? ` (${seatsLeft} left)` : ""}.</span>
-            </div>
-          </div>
-        )}
-
         <div className="esc-list">
           <div className="esc-row esc-people esc-th"><span>Person</span><span>Escalates to</span><span>Handles</span><span /></div>
           {data.people.map((p) => (
@@ -349,8 +316,49 @@ export function StructureClient({ apiPath, heading = true }: { apiPath: string; 
           {!data.people.length && <p className="esc-muted" style={{ padding: "14px 0" }}>No one yet. Add the people who handle escalations, or ask OodelCX to import them.</p>}
         </div>
 
+      </div>
+
+
+      <DetailDrawer open={addOpen} onClose={() => setAddOpen(false)} title="Add a person">
+        {error && <div className="callout callout-amber" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
+          <div className="esc-form" style={{ border: 0, padding: 0, background: "transparent" }}>
+            <div className="esc-form-grid">
+              <div><label htmlFor="add-email">Email</label><input id="add-email" type="email" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} placeholder="name@company.com" /></div>
+              <div><label htmlFor="add-title">Title</label><input id="add-title" type="text" value={addForm.title} onChange={(e) => setAddForm({ ...addForm, title: e.target.value })} placeholder="Regional Manager" /></div>
+              <div>
+                <label htmlFor="add-tier">Access</label>
+                <select id="add-tier" value={addForm.tier} onChange={(e) => setAddForm({ ...addForm, tier: e.target.value })}>
+                  <option value="full">Full</option>
+                  <option value="limited">Limited (own cases only)</option>
+                </select>
+              </div>
+              <div><label htmlFor="add-up">Escalates to</label><TargetSelect value={addForm.escalatesToId} onChange={(id) => setAddForm({ ...addForm, escalatesToId: id })} targets={peopleTargets} blankLabel="Choose later" /></div>
+            </div>
+            <div className="esc-actions">
+              <button className="btn btn-dark" disabled={busy || seatsFull || !addForm.email || !addForm.title} onClick={submitAdd}>Send invitation</button>
+              <span className="esc-muted">They get an email to set a password and use one team seat{seatsLeft !== null ? ` (${seatsLeft} left)` : ""}.</span>
+            </div>
+          </div>
+        
+      </DetailDrawer>
+      <DetailDrawer open={seatOpen} onClose={() => setSeatOpen(false)} title="Request more team seats">
+        {error && <div className="callout callout-amber" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
+          <div className="esc-form" style={{ border: 0, padding: 0, background: "transparent" }}>
+            <div>
+              <label htmlFor="seat-note">What do you need? (optional)</label>
+              <textarea id="seat-note" rows={2} value={seatNote} onChange={(e) => setSeatNote(e.target.value)} placeholder="For example: two more regional managers joining in March" />
+            </div>
+            <div className="esc-actions">
+              <button className="btn btn-dark" disabled={busy} onClick={async () => { if (await act({ action: "requestSeats", note: seatNote })) { setSeatOpen(false); setSeatNote(""); } }}>Send request</button>
+              <button className="btn" onClick={() => setSeatOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        
+      </DetailDrawer>
+      <DetailDrawer open={!!leaver} onClose={() => setLeaver(null)} title={leaver ? `Remove or replace ${leaver.email}` : ""}>
+        {error && <div className="callout callout-amber" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
         {leaver && (
-          <div className="esc-form" style={{ marginTop: 14, marginBottom: 0 }}>
+          <div className="esc-form" style={{ border: 0, padding: 0, background: "transparent" }}>
             <div>
               <strong>{leaver.email} is leaving</strong>
               <p className="card-sub" style={{ margin: "4px 0 0" }}>
@@ -372,8 +380,9 @@ export function StructureClient({ apiPath, heading = true }: { apiPath: string; 
               <button className="btn" onClick={() => setLeaver(null)}>Cancel</button>
             </div>
           </div>
+        
         )}
-      </div>
+      </DetailDrawer>
 
       {/* ---- Branches ---- */}
       <div className="card">
