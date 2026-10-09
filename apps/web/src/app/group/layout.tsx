@@ -220,7 +220,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 {teamMemberCanAccess(user, "caseManagement") && (
                   <a href="/group/cases">
                     <NavIcon name="cases" />
-                    {staffLens ? "Staff cases (confidential)" : "Case Management"}
+                    Case Management
                   </a>
                 )}
               </NavSection>

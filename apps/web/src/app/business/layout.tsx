@@ -247,7 +247,7 @@ export default async function BusinessLayout({ children }: { children: ReactNode
                 {teamMemberCanAccess(user, "caseManagement") && (
                   <a href="/business/cases">
                     <NavIcon name="cases" />
-                    {staffLens ? "Staff cases (confidential)" : "Case Management"}
+                    Case Management
                   </a>
                 )}
               </NavSection>
