@@ -34,6 +34,8 @@ export * from "./scoring/themeIntelligence";
 export * from "./scoring/rootCauseEvidence";
 export * from "./scoring/playbookTrigger";
 export * from "./scoring/cxExCorrelation";
+export * from "./scoring/storyStats";
+export * from "./scoring/branchStory";
 export * from "./scoring/caseAutoAttach";
 export * from "./scoring/attentionCentre";
 export * from "./scoring/highlights";

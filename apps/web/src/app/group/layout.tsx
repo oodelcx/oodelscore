@@ -68,6 +68,8 @@ export default async function GroupLayout({ children }: { children: ReactNode })
   // the one label per the branding rule (CX means whichever product you're
   // currently viewing), so only ever one is shown, never both at once.
   const cxPulseNavProduct = viewProduct ?? primaryProductFor(org);
+  // The staff lens: a Colleague Experience tab on a dual-product account, or an account that only has Colleague Experience.
+  const staffLens = showCe && !showCx;
 
   return (
     <div className="admin-app">
@@ -80,6 +82,11 @@ export default async function GroupLayout({ children }: { children: ReactNode })
             <img className="admin-logo" src="/oodelcx-logo-dark.webp" alt="OodelCX" />
             <div className="admin-brand-sub">PARENT ORGANISATION PORTAL</div>
             {viewProduct && <ProductViewSwitcher current={viewProduct} />}
+            {viewProduct && (
+              <div className={`lens-strip ${staffLens ? "lens-staff" : "lens-customer"}`}>
+                {staffLens ? "Viewing staff experience" : "Viewing customer experience"}
+              </div>
+            )}
           </div>
           {isLimitedTeamMember ? (
             <nav className="admin-nav">
@@ -97,7 +104,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
               >
                 <a href="/group">
                   <NavIcon name="overview" />
-                  Overview
+                  {staffLens ? "Staff overview" : "Overview"}
                 </a>
                 {hasFeature(org.enabledFeatures, "compass") && teamMemberCanAccess(user, "compass") && (
                   <a href="/group/compass">
@@ -117,20 +124,20 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 </a>
                 <a href="/group/compare">
                   <NavIcon name="compare" />
-                  Compare branches
+                  {staffLens ? "Compare branches (staff)" : "Compare branches"}
                 </a>
               </NavSection>
               <NavSection storageKey="group-capture" label="Capture" hrefs={["/group/raw-feedback", "/group/feedback-points"]}>
                 {teamMemberCanAccess(user, "feedbackPoints") && (
                   <a href="/group/feedback-points">
                     <NavIcon name="feedback-points" />
-                    Feedback Points
+                    {staffLens ? "Staff surveys" : "Feedback Points"}
                   </a>
                 )}
                 {teamMemberCanAccess(user, "rawFeedback") && (
                   <a href="/group/raw-feedback">
                     <NavIcon name="raw-feedback" />
-                    Raw feedback
+                    {staffLens ? "Staff comments (anonymous)" : "Raw feedback"}
                   </a>
                 )}
               </NavSection>
@@ -146,6 +153,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                   "/group/alerts",
                   "/group/business-value",
                   "/group/program-evaluation",
+                  "/group/cx-ex-correlation",
                 ]}
               >
                 {hasProduct(org, "customer_experience") &&
@@ -160,7 +168,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 {hasFeature(org.enabledFeatures, "highlights") && teamMemberCanAccess(user, "highlights") && (
                   <a href="/group/highlights">
                     <NavIcon name="insights" />
-                    Highlights
+                    {staffLens ? "Recognition" : "Highlights"}
                   </a>
                 )}
                 {hasProduct(org, "customer_experience") &&
@@ -172,16 +180,22 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                       Analytics
                     </a>
                   )}
+                {bothProductsEnabled && teamMemberCanAccess(user, "cxExCorrelation") && (
+                  <a href="/group/cx-ex-correlation">
+                    <NavIcon name="correlation" />
+                    Customer ↔ Staff story
+                  </a>
+                )}
                 {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alertRules") && (
                   <a href="/group/alert-rules">
                     <NavIcon name="alert-rules" />
-                    Alert rules
+                    {staffLens ? "Staff alert rules" : "Alert rules"}
                   </a>
                 )}
                 {hasFeature(org.enabledFeatures, "alertRules") && teamMemberCanAccess(user, "alerts") && (
                   <a href="/group/alerts">
                     <NavIcon name="alerts" />
-                    Alerts
+                    {staffLens ? "Staff alerts" : "Alerts"}
                   </a>
                 )}
                 {hasProduct(org, "customer_experience") && showCx && hasFeature(org.enabledFeatures, "businessValue") && teamMemberCanAccess(user, "businessValue") && (
@@ -211,7 +225,7 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 {teamMemberCanAccess(user, "caseManagement") && (
                   <a href="/group/cases">
                     <NavIcon name="cases" />
-                    Case Management
+                    {staffLens ? "Staff cases (confidential)" : "Case Management"}
                   </a>
                 )}
               </NavSection>
@@ -247,25 +261,18 @@ export default async function GroupLayout({ children }: { children: ReactNode })
                 // gated the same way the switcher itself is (bothProductsEnabled),
                 // not tied to whichever single product the tab happens to
                 // be on right now.
-                const showCorrelation = bothProductsEnabled && teamMemberCanAccess(user, "cxExCorrelation");
-                if (!showCxPulse && !showCorrelation) return null;
+                if (!showCxPulse) return null;
                 return (
                   <NavSection
                     storageKey="group-confirm"
                     label="Confirm"
                     defaultOpen={false}
-                    hrefs={[cxPulseHref, "/group/cx-ex-correlation"]}
+                    hrefs={[cxPulseHref]}
                   >
                     {showCxPulse && (
                       <a href={cxPulseHref}>
                         <NavIcon name="pulse" />
                         {cxPulseNavLabel}
-                      </a>
-                    )}
-                    {showCorrelation && (
-                      <a href="/group/cx-ex-correlation">
-                        <NavIcon name="correlation" />
-                        CX ↔ EX Correlation
                       </a>
                     )}
                   </NavSection>
@@ -350,6 +357,16 @@ export default async function GroupLayout({ children }: { children: ReactNode })
         </div>
       </aside>
       <main className="admin-main">
+        {viewProduct && !isGated && (
+          <div className={`lens-banner ${staffLens ? "lens-staff" : "lens-customer"}`} data-no-print>
+            <strong>{staffLens ? "Staff experience" : "Customer experience"}</strong>
+            <span>
+              {staffLens
+                ? "Everything on this screen is about your people. Responses are anonymous and shown only where five or more have answered."
+                : "Everything on this screen is about your customers."}
+            </span>
+          </div>
+        )}
         {isGated ? (
           <BillingLockedScreen
             billingHref="/group/billing"

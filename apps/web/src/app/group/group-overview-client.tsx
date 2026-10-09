@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { PeriodComparisonCards, type Comparisons } from "@/components/period-comparison-cards";
 import { AttentionQueue } from "@/components/attention-queue";
 import { InfoTip } from "@/components/info-tip";
+import { BothSignalsCallout } from "@/components/both-signals-callout";
 import { ThemeCard } from "@/components/theme-card";
 import { ReportBarList, starTone, npsTone } from "@/components/report-widgets";
 
@@ -365,6 +366,8 @@ export default function GroupOverviewClient({ tooltips }: { tooltips: Record<str
           </div>
         </div>
       </div>
+
+      <BothSignalsCallout />
 
       <PeriodComparisonCards comparisons={data.comparisons} />
 

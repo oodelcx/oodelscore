@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase, Business, hasProduct, computeCxExCorrelationRows } from "@oodelscore/shared";
+import { connectToDatabase, Business, hasProduct, computeNetworkStory } from "@oodelscore/shared";
 import { requireParentOrgOwner } from "@/lib/ownerAuth";
 
 /**
@@ -23,11 +23,12 @@ export async function GET() {
   const businesses = await Business.find({ parentOrgId: session.org._id, active: true }).select("_id");
   const now = new Date();
   const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const rows = await computeCxExCorrelationRows(
+  const story = await computeNetworkStory(
     businesses.map((b) => b._id),
     from,
     now
   );
 
-  return NextResponse.json({ status: "ok", rows });
+  // `rows` keeps its old name so anything reading it still works; the rest is the network-level story.
+  return NextResponse.json({ status: "ok", rows: story.rows, network: story.network });
 }

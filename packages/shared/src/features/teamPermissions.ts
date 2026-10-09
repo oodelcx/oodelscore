@@ -25,7 +25,7 @@ export const TEAM_RESTRICTABLE_PAGES = [
   { key: "support", label: "Support" },
   { key: "colleagueRoster", label: "Colleague Roster" },
   { key: "exPulse", label: "EX Pulse" },
-  { key: "cxExCorrelation", label: "CX ↔ EX Correlation" },
+  { key: "cxExCorrelation", label: "Customer ↔ Staff story" },
   { key: "compass", label: "OodelCX Compass" },
   { key: "highlights", label: "Highlights" },
   { key: "programEvaluation", label: "Program Evaluation" },
