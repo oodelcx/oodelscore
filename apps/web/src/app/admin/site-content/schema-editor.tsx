@@ -322,11 +322,13 @@ export function SchemaCards({
   page,
   fields,
   onFieldChange,
+  onGoto,
 }: {
   schema: SectionDef[];
   page: string;
   fields: Record<string, string>;
   onFieldChange: (page: string, key: string, value: string) => void;
+  onGoto?: (tab: string) => void;
 }) {
   return (
     <>
@@ -334,6 +336,11 @@ export function SchemaCards({
         <div className="card" key={section.title} style={section.wide ? { gridColumn: "1 / -1" } : undefined}>
           <h3>{section.title}</h3>
           {section.sub && <p className="card-sub">{section.sub}</p>}
+          {section.goto && onGoto && (
+            <button type="button" className="btn" style={{ margin: "4px 0 10px" }} onClick={() => onGoto(section.goto!.tab)}>
+              {section.goto.label}
+            </button>
+          )}
           {section.fields.map((def) => (
             <FieldEditor key={def.key} def={def} value={fields[def.key]} onChange={(v) => onFieldChange(page, def.key, typeof v === "string" ? v : JSON.stringify(v))} />
           ))}
@@ -343,7 +350,7 @@ export function SchemaCards({
   );
 }
 
-export function SchemaPanel(props: { schema: SectionDef[]; page: string; fields: Record<string, string>; onFieldChange: (page: string, key: string, value: string) => void }) {
+export function SchemaPanel(props: { schema: SectionDef[]; page: string; fields: Record<string, string>; onFieldChange: (page: string, key: string, value: string) => void; onGoto?: (tab: string) => void }) {
   return (
     <div className="grid grid-2">
       <SchemaCards {...props} />

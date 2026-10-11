@@ -17,6 +17,8 @@ export interface SectionDef {
   sub?: string;
   /** Spans the full width of the page grid. */
   wide?: boolean;
+  /** A button that jumps to another tab of this editor (for content that lives on a different page). */
+  goto?: { tab: string; label: string };
   fields: FieldDef[];
 }
 
@@ -105,7 +107,8 @@ export const HOME_SCHEMA: SectionDef[] = [
   },
   {
     title: "Industries",
-    sub: "The tiles come from the Solutions tab.",
+    sub: "The eyebrow and headline above the sector tiles. The tiles themselves (name, description, icon, show/hide) are edited on the Solutions tab.",
+    goto: { tab: "solutions", label: "Edit the sector tiles →" },
     fields: [t("industriesEyebrow", "Eyebrow"), t("industriesHeadline", "Headline")],
   },
   finalCta(),
@@ -275,7 +278,7 @@ export const SOLUTIONS_SCHEMA: SectionDef[] = [
         tabs: [
           {
             label: "Overview",
-            fields: [t("slug", "Page address", "The sector’s page is /solutions/<this>. Changing it changes the address."), t("tileBody", "Short description (shown on the sector tile)")],
+            fields: [t("slug", "Page address", "The sector’s page is /solutions/<this>. Changing it changes the address."), t("tileBody", "Short description (shown on the sector tile)"), { key: "tileIcon", label: "Tile icon", type: "select", options: [{ value: "", label: "Default for this sector" }, ...ICON_OPTIONS], hint: "The small icon on the sector tile on the home page. Leave on the default to keep the standard icon for this sector." }],
           },
           {
             label: "Customer X",

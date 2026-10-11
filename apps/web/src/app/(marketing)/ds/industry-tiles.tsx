@@ -39,12 +39,12 @@ export function iconForIndustry(slug: string): string {
   return ICON_BY_SLUG[slug] ?? "pin";
 }
 
-export function IndustryTiles({ industries }: { industries: { slug: string; name: string; tileBody?: string }[] }) {
+export function IndustryTiles({ industries }: { industries: { slug: string; name: string; tileBody?: string; tileIcon?: string }[] }) {
   return (
     <div className="ds-inds">
       {industries.map((i) => (
         <Link className="ds-ind-t" href={`/solutions/${i.slug}`} key={i.slug}>
-          <Icon name={iconForIndustry(i.slug)} />
+          <Icon name={i.tileIcon || iconForIndustry(i.slug)} />
           <b>{i.name}</b>
           <span>{i.tileBody}</span>
         </Link>

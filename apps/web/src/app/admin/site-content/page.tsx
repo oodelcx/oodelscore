@@ -151,7 +151,7 @@ export default function SiteContentPage() {
       </div>
 
       {current && activeTab === "menu" && <MenuPanel content={current} onFieldChange={updateField} onNavItemsChange={updateNavItems} />}
-      {current && activeTab === "home" && <SchemaPanel schema={HOME_SCHEMA} page="home" fields={current.fields} onFieldChange={updateField} />}
+      {current && activeTab === "home" && <SchemaPanel schema={HOME_SCHEMA} page="home" fields={current.fields} onFieldChange={updateField} onGoto={setActiveTab} />}
       {current && activeTab === "pricing" && (
         <>
           <PricingPanel content={current} onFieldChange={updateField} />

@@ -12,6 +12,8 @@ export interface IndustryDetail {
   /** "no" hides the sector everywhere on the public site; anything else shows it. */
   visible?: string;
   tileBody?: string;
+  /** Optional icon override for the home-page tile; empty keeps the standard icon for the slug. */
+  tileIcon?: string;
   cxHeadline?: string;
   cxSub?: string;
   cxChallenge?: string;
