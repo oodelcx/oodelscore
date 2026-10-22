@@ -109,6 +109,18 @@ const SHORT_BRANCH_KEYS: Record<string, string> = {
   "Precision – Peshawar University Town Lab": "peshawar",
   "Precision – Quetta Satellite Town Collection Centre": "quetta",
   "Precision – Community Education Programmes": "education",
+  "Nayatel (demo) – Islamabad Experience Centre": "isbcentre",
+  "Nayatel (demo) – Islamabad Fault Resolution Hub": "isbfaults",
+  "Nayatel (demo) – Islamabad Installation Team": "isbinstall",
+  "Nayatel (demo) – Rawalpindi Experience Centre": "rwpcentre",
+  "Nayatel (demo) – Rawalpindi Fault Resolution Hub": "rwpfaults",
+  "Nayatel (demo) – Lahore Experience Centre": "lhrcentre",
+  "Nayatel (demo) – Lahore Fault Resolution Hub": "lhrfaults",
+  "Nayatel (demo) – Faisalabad Experience Centre": "fsdcentre",
+  "Nayatel (demo) – Faisalabad Fault Resolution Hub": "fsdfaults",
+  "Nayatel (demo) – Peshawar Experience Centre": "pwrcentre",
+  "Nayatel (demo) – Peshawar Fault Resolution Hub": "pwrfaults",
+  "Nayatel (demo) – Gujranwala Experience Centre": "gjwcentre",
   "St. Augustine Downtown Medical Center": "downtown",
   "St. Augustine North Clinic": "north",
   "St. Augustine Women's Health Pavilion": "womens",
@@ -349,6 +361,21 @@ const SECTORS: SectorDef[] = [
     ],
   },
   {
+    key: "telecom",
+    industry: "Telecommunications",
+    templateName: "Broadband Customer Survey",
+    questions: [
+      { text: "How friendly and helpful was our team (installation, support or store)?", type: "star_1_5", category: "Staff Friendliness", required: true, isCsatQuestion: true },
+      { text: "How would you rate the speed and reliability of your connection?", type: "star_1_5", category: "Product Quality" },
+      { text: "How quickly was your fault or request attended to?", type: "star_1_5", category: "Service Speed" },
+      { text: "How likely are you to recommend us to family, friends or colleagues?", type: "nps_0_10", category: null, required: true },
+      { text: "How easy was it to get your connection or issue sorted?", type: "ces_1_5", category: "Service Speed" },
+      { text: "Was your issue fully resolved on the first visit or call?", type: "yes_no", category: "Communication" },
+      { text: "How clear and fair is your billing?", type: "star_1_5", category: "Value for Money" },
+      { text: "Anything else you'd like us to know?", type: "open_text", category: null },
+    ],
+  },
+  {
     key: "training",
     industry: "Community Development & Training",
     templateName: "Workshop Feedback Survey",
@@ -414,6 +441,31 @@ const DIAG_COMMENTS = {
     "Pharmacy was out of stock of the prescribed medicine again.",
     "Billing was confusing and I was charged for a test I did not ask for.",
     "The collection room was not clean and the staff were short with us.",
+  ],
+};
+// Used only for the broadband chain (demo data, no real customer feedback).
+const TELECOM_COMMENTS = {
+  positive: [
+    "The installation team arrived on time and neatly hid every cable.",
+    "Speeds have been rock solid for months, even during evening peak.",
+    "My fault was fixed the same day and the engineer called ahead.",
+    "Support picked up quickly and actually solved the problem.",
+    "Shifting my connection to the new house took one day.",
+    "Billing is clear and the app makes paying easy.",
+  ],
+  neutral: [
+    "Service is fine, but the installation slot was a few hours late.",
+    "Speed is good most of the time, slows down some evenings.",
+    "Support was polite, though I had to explain the problem twice.",
+  ],
+  negative: [
+    "My internet was down for three days and nobody gave me an update.",
+    "I reported a fault on Monday and the engineer only came on Thursday.",
+    "Speed drops badly every evening and support just says it is being looked at.",
+    "The installation team left without testing the connection.",
+    "I was charged after I had asked for the connection to be moved.",
+    "The call centre kept transferring me and nobody owned my complaint.",
+    "My ticket was closed even though the problem was not fixed.",
   ],
 };
 let COMMENT_POOL: typeof DIAG_COMMENTS | null = null;
@@ -944,7 +996,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
     parentOrgId: Types.ObjectId | null,
     recipientEmail: string
   ): Promise<ProductFeedbackInfo> {
-    COMMENT_POOL = sectorKey === "diagnostics" ? DIAG_COMMENTS : null;
+    COMMENT_POOL = sectorKey === "diagnostics" ? DIAG_COMMENTS : sectorKey === "telecom" ? TELECOM_COMMENTS : null;
     const template = templateBySector.get(sectorKey)!;
     const feedbackPoint = await FeedbackPoint.create({
       businessId: business._id,
@@ -1701,6 +1753,37 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   result.feedbackPoints += precisionPrograms.qrPoints.length + precisionPrograms.followUpPoints;
   precision.branches.push({ ...eduShell, byProduct: new Map() });
 
+  // --- 5c. Nayatel (demo): a fibre broadband provider demo group for a prospect conversation. Entirely synthetic
+  // — illustrative locations and teams, not real addresses, customers or results. CX + EX, telecom touchpoints. ---
+  const nayatel = await buildOrg({
+    key: "nayatel",
+    name: "Nayatel (demo data)",
+    industry: "Telecommunications",
+    products: ["customer_experience", "colleague_experience"],
+    branches: [
+      { name: "Nayatel (demo) – Islamabad Experience Centre", region: "Capital" },
+      { name: "Nayatel (demo) – Islamabad Fault Resolution Hub", region: "Capital" },
+      { name: "Nayatel (demo) – Islamabad Installation Team", region: "Capital" },
+      { name: "Nayatel (demo) – Rawalpindi Experience Centre", region: "Punjab North" },
+      { name: "Nayatel (demo) – Rawalpindi Fault Resolution Hub", region: "Punjab North" },
+      { name: "Nayatel (demo) – Lahore Experience Centre", region: "Punjab" },
+      { name: "Nayatel (demo) – Lahore Fault Resolution Hub", region: "Punjab" },
+      { name: "Nayatel (demo) – Faisalabad Experience Centre", region: "Punjab" },
+      { name: "Nayatel (demo) – Faisalabad Fault Resolution Hub", region: "Punjab" },
+      { name: "Nayatel (demo) – Peshawar Experience Centre", region: "Khyber Pakhtunkhwa" },
+      { name: "Nayatel (demo) – Peshawar Fault Resolution Hub", region: "Khyber Pakhtunkhwa" },
+      { name: "Nayatel (demo) – Gujranwala Experience Centre", region: "Punjab", billing: "branch_pays" },
+    ],
+    cxSectorKey: "telecom",
+    cxPointName: "Support & Installation Feedback",
+    cePointName: "Team Pulse",
+    cxCountRange: [28, 42],
+    ceCountRange: [14, 24],
+    opsRoleLabel: "Regional Operations Head",
+    shiftRoleLabel: "Field Engineer Lead",
+    secondLeadRoleLabel: "Customer Experience Lead",
+  });
+
   // ---------------------------------------------------------------------
   // Standalone businesses
   // ---------------------------------------------------------------------
@@ -1823,7 +1906,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   // Baseline cases + support tickets across every org branch
   // ---------------------------------------------------------------------
 
-  const allOrgs: OrgResult[] = [meridian, skyline, horizon, aurora, stAugustine, precision];
+  const allOrgs: OrgResult[] = [meridian, skyline, horizon, aurora, stAugustine, precision, nayatel];
   for (const org of allOrgs) {
     for (const b of org.branches) {
       for (const [, info] of b.byProduct) {
@@ -1848,6 +1931,8 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   await mapCategory("parentOrg", stAugustine.org._id, ceCategoryByName.get("Growth Opportunities")!, stAugustine.opsLead._id, { thresholdCount: 3, windowDays: 30 });
   await mapCategory("parentOrg", precision.org._id, categoryByName.get("Service Speed")!, precision.opsLead._id, { thresholdCount: 4, windowDays: 30 });
   await mapCategory("parentOrg", precision.org._id, ceCategoryByName.get("Management Support")!, precision.opsLead._id, { thresholdCount: 3, windowDays: 30 });
+  await mapCategory("parentOrg", nayatel.org._id, categoryByName.get("Service Speed")!, nayatel.opsLead._id, { thresholdCount: 4, windowDays: 30 });
+  await mapCategory("parentOrg", nayatel.org._id, ceCategoryByName.get("Management Support")!, nayatel.opsLead._id, { thresholdCount: 3, windowDays: 30 });
   await mapCategory("business", olive.business._id, categoryByName.get("Product Quality")!, olive.teamFull._id, { thresholdCount: 3, windowDays: 14 });
 
   // ---------------------------------------------------------------------
@@ -2254,6 +2339,72 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   });
   void precisionCeCases;
 
+  const nayatelMain = nayatel.branches.find((b) => b.business.name === "Nayatel (demo) – Islamabad Fault Resolution Hub")!;
+  const nayatelCases = await buildCaseNarrative({
+    parentOrgId: nayatel.org._id,
+    flagScope: "business",
+    flagScopeId: nayatelMain.business._id,
+    businessIds: [nayatelMain.business._id],
+    businessNameFor: (id) => nameByBusinessId.get(id.toString()) ?? "the hub",
+    product: "customer_experience",
+    categoryId: serviceSpeedId,
+    categoryLabel: "Service Speed",
+    comments: [
+      { businessId: nayatelMain.business._id, text: "I reported a fault on Monday and the engineer only came on Thursday.", daysAgoCreated: 38 },
+      { businessId: nayatelMain.business._id, text: "My internet was down for three days and nobody gave me an update.", daysAgoCreated: 30 },
+      { businessId: nayatelMain.business._id, text: "My ticket was closed even though the problem was not fixed.", daysAgoCreated: 21 },
+      { businessId: nayatelMain.business._id, text: "Nobody called to say when the engineer would arrive.", daysAgoCreated: 11 },
+    ],
+    initiativeTitle: "Same-day fault visit with proactive engineer ETA",
+    initiativeDescription: "Slow fault visits and silent waits kept recurring at the Islamabad Fault Resolution Hub. This initiative adds a same-day visit target and an SMS with the engineer's arrival window.",
+    initiativeOwnerId: nayatel.opsLead._id,
+    flagStatus: "converted",
+    measured: { before: 3.0, after: 4.1 },
+  });
+  await addPlaybookWithRun({
+    parentOrgId: nayatel.org._id,
+    businessId: null,
+    title: "Fault Resolution Recovery",
+    categoryId: serviceSpeedId,
+    trigger: "Fault resolution time or Service Speed falls below target at a hub",
+    steps: [
+      "Hub lead reviews open faults older than 24 hours",
+      "Confirm every waiting customer has an engineer window and a named owner",
+      "Add field engineers or extend visit hours until the backlog clears",
+      "Re-check the hub's Service Speed score after two weeks",
+    ],
+    escalationContactId: nayatel.opsLead._id,
+    run: {
+      ownerType: "parentOrg",
+      ownerId: nayatel.org._id,
+      actionBoardItem: nayatelCases[nayatelCases.length - 1],
+      status: "completed",
+      startedAt: daysAgo(26),
+      completedAt: daysAgo(3),
+      completedStepIndexes: [0, 1, 2, 3],
+    },
+  });
+  await buildCaseNarrative({
+    parentOrgId: nayatel.org._id,
+    flagScope: "parentOrg",
+    flagScopeId: nayatel.org._id,
+    businessIds: [nayatelMain.business._id],
+    businessNameFor: (id) => nameByBusinessId.get(id.toString()) ?? "the hub",
+    product: "colleague_experience",
+    categoryId: precisionManagementId,
+    categoryLabel: "Management Support",
+    comments: [
+      { businessId: nayatelMain.business._id, text: "Field engineers get no guidance when a fault needs a second visit.", daysAgoCreated: 32 },
+      { businessId: nayatelMain.business._id, text: "Our supervisor is rarely reachable during evening peak faults.", daysAgoCreated: 22 },
+      { businessId: nayatelMain.business._id, text: "Escalations about repeat faults go unanswered for days.", daysAgoCreated: 12 },
+    ],
+    initiativeTitle: "Named on-call supervisor for every evening shift",
+    initiativeDescription: "Management Support complaints at the fault hub cited no reachable supervisor in the evening. This initiative publishes a named on-call supervisor for every shift.",
+    initiativeOwnerId: nayatel.opsLead._id,
+    flagStatus: "converted",
+    measured: { before: 2.8, after: 3.8 },
+  });
+
   const oliveProductQualityId = categoryByName.get("Product Quality")!;
   const oliveCases = await buildCaseNarrative({
     parentOrgId: null,
@@ -2353,6 +2504,7 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
   await addSubscription({ ownerType: "parentOrg", ownerId: aurora.org._id, plan: "business_monthly", mrrValue: 699, status: "active", paidInvoices: 2 });
   await markOwnerComp({ ownerType: "parentOrg", ownerId: stAugustine.org._id.toString(), period: "unlimited" });
   await addSubscription({ ownerType: "parentOrg", ownerId: precision.org._id, plan: "business_monthly", mrrValue: 899, status: "active", paidInvoices: 3 });
+  await addSubscription({ ownerType: "parentOrg", ownerId: nayatel.org._id, plan: "business_monthly", mrrValue: 899, status: "active", paidInvoices: 3 });
   result.billingSubscriptions++;
 
   const horizonStemBranch = horizon.branches.find((b) => b.business.name === "Horizon STEM Academy")!;
@@ -2598,6 +2750,11 @@ export async function seedShowcaseData(adminUserId?: Types.ObjectId): Promise<Sh
       org: precision,
       heard: "Lab teams told us night shifts have no senior person to call when equipment fails.",
       doing: "A named on-call supervisor is now published for every shift at every lab.",
+    },
+    {
+      org: nayatel,
+      heard: "Field teams told us evening faults have no reachable supervisor.",
+      doing: "A named on-call supervisor is now published for every evening shift at every hub.",
     },
     {
       org: stAugustine,
